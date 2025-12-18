@@ -5,3 +5,4 @@
 export * from './types'
 export * from './api'
 export { default as leadsApi } from './api'
+export { LeadsPage } from './leads-page'
