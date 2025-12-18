@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
-import { Phone, Edit, Plus, X } from 'lucide-react'
+import { Phone, Edit, Plus } from 'lucide-react'
 import { leadsApi } from '../api'
 import type { Lead, LeadFollowup, LeadInfoChangeLog, LeadOwnershipChangeLog } from '../types'
 import {
@@ -142,14 +142,6 @@ export function LeadDetailSheet({
                   </Button>
                 </>
               )}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                className="h-7 w-7 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </SheetHeader>
