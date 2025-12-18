@@ -69,12 +69,12 @@ export function LeadsToolbar({
         </div>
 
         {/* 状态筛选 - Mira风格 */}
-        <Select value={statusFilter} onValueChange={(value) => onStatusFilterChange?.(value as LeadStatus | '')}>
+        <Select value={statusFilter || undefined} onValueChange={(value) => onStatusFilterChange?.(value === '__all__' ? '' : value as LeadStatus)}>
           <SelectTrigger className="h-8 w-[140px] text-xs">
             <SelectValue placeholder="全部状态" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">全部状态</SelectItem>
+            <SelectItem value="__all__" className="text-xs">全部状态</SelectItem>
             {Object.entries(leadStatusLabels).map(([value, label]) => (
               <SelectItem key={value} value={value} className="text-xs">
                 {label}

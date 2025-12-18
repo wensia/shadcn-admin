@@ -32,13 +32,12 @@ export const authApi = {
    * 用户登录
    */
   async login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
-    const formData = new FormData()
-    formData.append('username', data.username)
-    formData.append('password', data.password)
-
     const response = await apiClient.post<ApiResponse<LoginResponse>>(
       '/auth/login',
-      formData
+      {
+        username: data.username,
+        password: data.password
+      }
     )
     return response
   },

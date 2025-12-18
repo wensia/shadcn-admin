@@ -113,14 +113,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             <div className="space-y-2">
               <Label className="text-xs font-semibold">线索状态</Label>
               <Select
-                value={localFilters.status}
-                onValueChange={(value) => updateFilter('status', value as LeadStatus)}
+                value={localFilters.status || undefined}
+                onValueChange={(value) => updateFilter('status', value === '__all__' ? '' : value as LeadStatus)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="全部状态" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">全部状态</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">全部状态</SelectItem>
                   {Object.entries(leadStatusLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value} className="text-xs">
                       {label}
@@ -134,14 +134,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             <div className="space-y-2">
               <Label className="text-xs font-semibold">来源渠道</Label>
               <Select
-                value={localFilters.source_channel_id}
-                onValueChange={(value) => updateFilter('source_channel_id', value)}
+                value={localFilters.source_channel_id || undefined}
+                onValueChange={(value) => updateFilter('source_channel_id', value === '__all__' ? '' : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="全部渠道" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">全部渠道</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">全部渠道</SelectItem>
                   {filterOptions?.source_channels.map((channel) => (
                     <SelectItem key={channel.id} value={channel.id} className="text-xs">
                       {channel.name}
@@ -155,14 +155,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             <div className="space-y-2">
               <Label className="text-xs font-semibold">负责顾问</Label>
               <Select
-                value={localFilters.advisor_id}
-                onValueChange={(value) => updateFilter('advisor_id', value)}
+                value={localFilters.advisor_id || undefined}
+                onValueChange={(value) => updateFilter('advisor_id', value === '__all__' ? '' : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="全部顾问" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">全部顾问</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">全部顾问</SelectItem>
                   {filterOptions?.advisors.map((advisor) => (
                     <SelectItem key={advisor.id} value={advisor.id} className="text-xs">
                       {advisor.name}
@@ -176,14 +176,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             <div className="space-y-2">
               <Label className="text-xs font-semibold">创建人</Label>
               <Select
-                value={localFilters.created_by_id}
-                onValueChange={(value) => updateFilter('created_by_id', value)}
+                value={localFilters.created_by_id || undefined}
+                onValueChange={(value) => updateFilter('created_by_id', value === '__all__' ? '' : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="全部创建人" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">全部创建人</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">全部创建人</SelectItem>
                   {filterOptions?.creators.map((creator) => (
                     <SelectItem key={creator.id} value={creator.id} className="text-xs">
                       {creator.name}
@@ -197,14 +197,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             <div className="space-y-2">
               <Label className="text-xs font-semibold">归属校区</Label>
               <Select
-                value={localFilters.owner_campus_id}
-                onValueChange={(value) => updateFilter('owner_campus_id', value)}
+                value={localFilters.owner_campus_id || undefined}
+                onValueChange={(value) => updateFilter('owner_campus_id', value === '__all__' ? '' : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="全部校区" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">全部校区</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">全部校区</SelectItem>
                   {/* TODO: 获取校区列表 */}
                   <SelectItem value="campus1" className="text-xs">校区1</SelectItem>
                 </SelectContent>
@@ -215,14 +215,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             <div className="space-y-2">
               <Label className="text-xs font-semibold">意向等级</Label>
               <Select
-                value={localFilters.intention_level}
-                onValueChange={(value) => updateFilter('intention_level', value as IntentionLevel)}
+                value={localFilters.intention_level || undefined}
+                onValueChange={(value) => updateFilter('intention_level', value === '__all__' ? '' : value as IntentionLevel)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="全部意向" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs">全部意向</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">全部意向</SelectItem>
                   {Object.entries(intentionLevelLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value} className="text-xs">
                       {label}
