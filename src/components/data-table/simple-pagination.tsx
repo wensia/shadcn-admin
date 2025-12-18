@@ -116,19 +116,19 @@ export function SimplePagination({
         </div>
 
         {/* 分隔线 */}
-        <div className="h-6 w-px bg-border hidden sm:block" />
+        <div className={cn(s.size.divider, 'w-px bg-border hidden sm:block')} />
 
         {/* 页码控件 */}
-        <div className="flex items-center gap-0.5">
+        <div className={cn('flex items-center', s.gap.buttons)}>
           {/* 首页 */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => onPageChange(1)}
             disabled={!canPreviousPage}
-            className={cn(s.height.controlSm, 'w-7 p-0 hidden sm:flex')}
+            className={cn(s.height.controlSm, s.size.button, 'p-0 hidden sm:flex')}
           >
-            <DoubleArrowLeftIcon className="h-3.5 w-3.5" />
+            <DoubleArrowLeftIcon className={s.size.icon} />
           </Button>
 
           {/* 上一页 */}
@@ -137,23 +137,23 @@ export function SimplePagination({
             size="sm"
             onClick={() => onPageChange(page - 1)}
             disabled={!canPreviousPage}
-            className={cn(s.height.controlSm, 'w-7 p-0')}
+            className={cn(s.height.controlSm, s.size.button, 'p-0')}
           >
-            <ChevronLeftIcon className="h-3.5 w-3.5" />
+            <ChevronLeftIcon className={s.size.icon} />
           </Button>
 
           {/* 页码按钮 */}
-          <div className="hidden sm:flex items-center gap-0.5">
+          <div className={cn('hidden sm:flex items-center', s.gap.buttons)}>
             {pageNumbers.map((pageNumber, index) => (
               <div key={`${pageNumber}-${index}`}>
                 {pageNumber === '...' ? (
-                  <span className={cn('px-1.5 text-muted-foreground', s.text.xs)}>...</span>
+                  <span className={cn(s.padding.ellipsis, 'text-muted-foreground', s.text.xs)}>...</span>
                 ) : (
                   <Button
                     variant={page === pageNumber ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => onPageChange(pageNumber as number)}
-                    className={cn(s.height.controlSm, s.text.xs, 'min-w-7 px-2')}
+                    className={cn(s.height.controlSm, s.text.xs, s.size.buttonMin, s.padding.button)}
                   >
                     {pageNumber}
                   </Button>
@@ -163,7 +163,7 @@ export function SimplePagination({
           </div>
 
           {/* 当前页显示(移动端) */}
-          <span className={cn(s.text.xs, 'px-2 sm:hidden')}>
+          <span className={cn(s.text.xs, s.padding.ellipsis, 'sm:hidden')}>
             {page} / {totalPages}
           </span>
 
@@ -173,9 +173,9 @@ export function SimplePagination({
             size="sm"
             onClick={() => onPageChange(page + 1)}
             disabled={!canNextPage}
-            className={cn(s.height.controlSm, 'w-7 p-0')}
+            className={cn(s.height.controlSm, s.size.button, 'p-0')}
           >
-            <ChevronRightIcon className="h-3.5 w-3.5" />
+            <ChevronRightIcon className={s.size.icon} />
           </Button>
 
           {/* 末页 */}
@@ -184,9 +184,9 @@ export function SimplePagination({
             size="sm"
             onClick={() => onPageChange(totalPages)}
             disabled={!canNextPage}
-            className={cn(s.height.controlSm, 'w-7 p-0 hidden sm:flex')}
+            className={cn(s.height.controlSm, s.size.button, 'p-0 hidden sm:flex')}
           >
-            <DoubleArrowRightIcon className="h-3.5 w-3.5" />
+            <DoubleArrowRightIcon className={s.size.icon} />
           </Button>
         </div>
       </div>
