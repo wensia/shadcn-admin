@@ -254,7 +254,7 @@ export function LeadsTable({
 
   // 虚拟滚动配置 - 动态行高
   const { rows } = table.getRowModel()
-  const estimatedRowSize = style === 'mira' ? 44 : 48
+  const estimatedRowSize = style === 'mira' ? 44 : style === 'maia' ? 56 : 48
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,

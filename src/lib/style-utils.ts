@@ -51,23 +51,23 @@ export const styleClasses = {
   },
   maia: {
     text: {
-      xs: 'text-xs',
-      sm: 'text-sm',
-      base: 'text-base',
-      lg: 'text-lg',
+      xs: 'text-sm',      // 14px - 友好可读
+      sm: 'text-base',    // 16px - 舒适阅读
+      base: 'text-lg',    // 18px - 温暖友好
+      lg: 'text-xl',      // 20px - 醒目标题
     },
     height: {
-      control: 'h-10',
-      controlSm: 'h-9',
-      badge: 'h-6',
+      control: 'h-11',    // 44px - 移动端友好触摸目标
+      controlSm: 'h-10',  // 40px - 次级控件
+      badge: 'h-7',       // 28px - 标签高度
     },
     gap: {
-      tight: 'gap-3',
-      normal: 'gap-4',
+      tight: 'gap-4',     // 16px - 宽松舒适
+      normal: 'gap-6',    // 24px - 呼吸感
     },
     rounded: 'rounded-lg',
     padding: {
-      cell: 'py-2.5 px-3.5',
+      cell: 'py-3 px-4',  // 12px/16px - 宽松的单元格内边距
     },
   },
 } as const
