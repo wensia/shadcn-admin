@@ -19,4 +19,19 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    port: 3456, // 与现有Vue项目保持一致
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:9876', // 后端API端口
+        changeOrigin: true,
+        ws: true, // 支持WebSocket
+      },
+      '/health': {
+        target: 'http://127.0.0.1:9876',
+        changeOrigin: true,
+      },
+    },
+  },
 })
