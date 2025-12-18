@@ -6,8 +6,11 @@ import {
   CreditCard,
   LogOut,
   Sparkles,
+  Settings,
 } from 'lucide-react'
+import { useState } from 'react'
 import useDialogState from '@/hooks/use-dialog-state'
+import { ConfigDrawer } from '@/components/config-drawer'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -37,6 +40,7 @@ type NavUserProps = {
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
+  const [configOpen, setConfigOpen] = useState(false)
 
   return (
     <>
@@ -86,6 +90,10 @@ export function NavUser({ user }: NavUserProps) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setConfigOpen(true)}>
+                  <Settings />
+                  Theme Settings
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to='/settings/account'>
                     <BadgeCheck />
@@ -119,6 +127,7 @@ export function NavUser({ user }: NavUserProps) {
       </SidebarMenu>
 
       <SignOutDialog open={!!open} onOpenChange={setOpen} />
+      <ConfigDrawer open={configOpen} onOpenChange={setConfigOpen} showTrigger={false} />
     </>
   )
 }
