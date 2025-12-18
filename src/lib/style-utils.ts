@@ -49,6 +49,27 @@ export const styleClasses = {
       cell: 'py-2 px-3',
     },
   },
+  maia: {
+    text: {
+      xs: 'text-xs',
+      sm: 'text-sm',
+      base: 'text-base',
+      lg: 'text-lg',
+    },
+    height: {
+      control: 'h-10',
+      controlSm: 'h-9',
+      badge: 'h-6',
+    },
+    gap: {
+      tight: 'gap-3',
+      normal: 'gap-4',
+    },
+    rounded: 'rounded-lg',
+    padding: {
+      cell: 'py-2.5 px-3.5',
+    },
+  },
 } as const
 
 export type StyleClasses = typeof styleClasses['mira']

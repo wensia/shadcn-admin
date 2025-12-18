@@ -13,6 +13,7 @@ import { IconThemeLight } from '@/assets/custom/icon-theme-light'
 import { IconThemeSystem } from '@/assets/custom/icon-theme-system'
 import { IconStyleMira } from '@/assets/custom/icon-style-mira'
 import { IconStyleLyra } from '@/assets/custom/icon-style-lyra'
+import { IconStyleMaia } from '@/assets/custom/icon-style-maia'
 import { cn } from '@/lib/utils'
 import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'
@@ -237,7 +238,7 @@ function StyleConfig() {
       <Radio
         value={style}
         onValueChange={setStyle}
-        className='grid w-full max-w-md grid-cols-2 gap-4'
+        className='grid w-full max-w-md grid-cols-3 gap-4'
         aria-label='Select UI style preference'
         aria-describedby='style-description'
       >
@@ -252,12 +253,17 @@ function StyleConfig() {
             label: 'Lyra - Technical',
             icon: IconStyleLyra,
           },
+          {
+            value: 'maia',
+            label: 'Maia - Friendly',
+            icon: IconStyleMaia,
+          },
         ].map((item) => (
           <RadioGroupItem key={item.value} item={item} />
         ))}
       </Radio>
       <div id='style-description' className='sr-only'>
-        Choose between Mira (compact, dense) or Lyra (technical, sharp) UI style
+        Choose between Mira (compact, dense), Lyra (technical, sharp), or Maia (friendly, rounded, spacious) UI style
       </div>
     </div>
   )

@@ -6,7 +6,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 
-type Style = 'mira' | 'lyra'
+type Style = 'mira' | 'lyra' | 'maia'
 
 const DEFAULT_STYLE = 'mira'
 const STYLE_COOKIE_NAME = 'ui-style'
@@ -46,8 +46,9 @@ export function StyleProvider({
 
     // 应用 CSS 类
     root.classList.toggle('style-lyra', style === 'lyra')
+    root.classList.toggle('style-maia', style === 'maia')
 
-    // 应用等宽字体
+    // 应用等宽字体（仅 Lyra）
     if (style === 'lyra') {
       root.style.fontFamily = "'JetBrains Mono', 'Fira Code', 'Consolas', monospace"
     } else {

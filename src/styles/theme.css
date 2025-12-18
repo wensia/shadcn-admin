@@ -66,6 +66,11 @@
   --radius: 0;
 }
 
+/* Maia风格：柔和圆角，温暖友好 */
+:root.style-maia {
+  --radius: 0.75rem;  /* 12px - 大圆角 */
+}
+
 @theme inline {
   --font-inter: 'Inter', 'sans-serif';
   --font-manrope: 'Manrope', 'sans-serif';
