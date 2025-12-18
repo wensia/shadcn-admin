@@ -4,12 +4,13 @@
  * 支持 Mira/Lyra 风格切换
  */
 
-import { useRef, useMemo, useEffect } from 'react'
+import { useRef, useMemo, useEffect, useState } from 'react'
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  type ColumnDef
+  type ColumnDef,
+  type RowSelectionState
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -83,6 +84,7 @@ export function LeadsTable({
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const { style } = useStyle()
   const s = useStyleClasses()
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
   // Lyra 风格需要更宽的列(等宽字体)
   const getColumnSize = (baseSize: number) => {
@@ -235,22 +237,20 @@ export function LeadsTable({
     enableRowSelection: true,
     manualPagination: true,
     pageCount: Math.ceil(total / pageSize),
-    onRowSelectionChange: (updater) => {
-      // 更新选中状态
-      if (typeof updater === 'function') {
-        const newSelection = updater(table.getState().rowSelection)
-        // 通知父组件选中状态变化
-        const selectedRowIndices = Object.keys(newSelection).filter(
-          (key) => newSelection[key]
-        )
-        const selectedRows = selectedRowIndices.map((index) => data[parseInt(index)])
-        onSelectionChange?.(selectedRows)
-      }
-    },
+    onRowSelectionChange: setRowSelection,
     state: {
-      rowSelection: {}
+      rowSelection
     }
   })
+
+  // 当选中状态变化时，通知父组件
+  useEffect(() => {
+    const selectedRowIndices = Object.keys(rowSelection).filter(
+      (key) => rowSelection[key]
+    )
+    const selectedRows = selectedRowIndices.map((index) => data[parseInt(index)])
+    onSelectionChange?.(selectedRows)
+  }, [rowSelection, data, onSelectionChange])
 
   // 虚拟滚动配置 - 动态行高
   const { rows } = table.getRowModel()
