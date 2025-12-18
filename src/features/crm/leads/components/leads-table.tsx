@@ -285,14 +285,14 @@ export function LeadsTable({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      {/* 表格容器 - 边框和圆角由外层提供 */}
+    <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+      {/* 表格容器 - 独立滚动区域 */}
       <div
         ref={tableContainerRef}
-        className="flex-1 overflow-auto"
+        className="min-h-0 flex-1 overflow-auto rounded-md border"
       >
         <Table>
-          <TableHeader className="sticky top-0 z-10 bg-background">
+          <TableHeader className="sticky top-0 z-10 bg-card">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -353,7 +353,7 @@ export function LeadsTable({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         selectedCount={table.getSelectedRowModel().rows.length}
-        className="mt-auto"
+        className="mt-auto flex-shrink-0"
       />
     </div>
   )
