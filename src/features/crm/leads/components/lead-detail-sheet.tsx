@@ -31,6 +31,8 @@ import {
   ownershipChangeTypeLabels
 } from '../types'
 import { formatTime } from '@/lib/utils/time'
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
 
 interface LeadDetailSheetProps {
   leadId: string | null
@@ -47,6 +49,7 @@ export function LeadDetailSheet({
   onEdit,
   onCreateFollowup
 }: LeadDetailSheetProps) {
+  const s = useStyleClasses()
   const [activeTab, setActiveTab] = useState('basic')
 
   // 获取线索详情
@@ -100,25 +103,25 @@ export function LeadDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl p-0">
-        {/* Mira风格: 紧凑的Sheet Header */}
+        {/* Sheet Header - 响应式风格 */}
         <SheetHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <SheetTitle className="text-base">
+              <SheetTitle className={s.text.base}>
                 {lead?.child_name || '线索详情'}
               </SheetTitle>
-              <SheetDescription className="text-xs mt-0.5">
+              <SheetDescription className={cn(s.text.xs, 'mt-0.5')}>
                 {lead?.parent_phone || ''}
               </SheetDescription>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className={cn('flex items-center', s.gap.tight)}>
               {lead && (
                 <>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => onEdit?.(lead)}
-                    className="h-7 text-xs"
+                    className={cn(s.height.controlSm, s.text.xs)}
                   >
                     <Edit className="mr-1 h-3 w-3" />
                     编辑
@@ -127,7 +130,7 @@ export function LeadDetailSheet({
                     size="sm"
                     variant="outline"
                     onClick={() => toast.info('外呼功能')}
-                    className="h-7 text-xs"
+                    className={cn(s.height.controlSm, s.text.xs)}
                   >
                     <Phone className="mr-1 h-3 w-3" />
                     外呼
@@ -135,7 +138,7 @@ export function LeadDetailSheet({
                   <Button
                     size="sm"
                     onClick={() => onCreateFollowup?.(lead.id)}
-                    className="h-7 text-xs"
+                    className={cn(s.height.controlSm, s.text.xs)}
                   >
                     <Plus className="mr-1 h-3 w-3" />
                     新建跟进
@@ -146,19 +149,19 @@ export function LeadDetailSheet({
           </div>
         </SheetHeader>
 
-        {/* Mira风格: 紧凑的Tabs */}
+        {/* Tabs - 响应式风格 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-[calc(100vh-73px)]">
-          <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-9 p-0 px-4">
-            <TabsTrigger value="basic" className="text-xs h-8 data-[state=active]:shadow-none">
+          <TabsList className={cn('w-full justify-start rounded-none border-b bg-transparent p-0 px-4', s.height.control)}>
+            <TabsTrigger value="basic" className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}>
               基本信息
             </TabsTrigger>
-            <TabsTrigger value="followups" className="text-xs h-8 data-[state=active]:shadow-none">
+            <TabsTrigger value="followups" className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}>
               跟进记录 ({lead?.followup_count || 0})
             </TabsTrigger>
-            <TabsTrigger value="info-changes" className="text-xs h-8 data-[state=active]:shadow-none">
+            <TabsTrigger value="info-changes" className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}>
               信息变更
             </TabsTrigger>
-            <TabsTrigger value="ownership-changes" className="text-xs h-8 data-[state=active]:shadow-none">
+            <TabsTrigger value="ownership-changes" className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}>
               归属变更
             </TabsTrigger>
           </TabsList>
@@ -168,13 +171,13 @@ export function LeadDetailSheet({
             <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {isLoading ? (
-                  <div className="text-xs text-muted-foreground text-center py-8">加载中...</div>
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>加载中...</div>
                 ) : lead ? (
                   <>
-                    {/* 儿童信息 - Mira风格: 紧凑间距 */}
+                    {/* 儿童信息 */}
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold">儿童信息</h3>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <h3 className={cn(s.text.sm, 'font-semibold')}>儿童信息</h3>
+                      <div className={cn('grid grid-cols-2 gap-x-4 gap-y-2', s.text.xs)}>
                         <InfoItem label="姓名" value={lead.child_name} />
                         <InfoItem label="性别" value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined} />
                         <InfoItem label="年龄" value={lead.age?.toString()} />
@@ -189,8 +192,8 @@ export function LeadDetailSheet({
 
                     {/* 家长信息 */}
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold">家长信息</h3>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <h3 className={cn(s.text.sm, 'font-semibold')}>家长信息</h3>
+                      <div className={cn('grid grid-cols-2 gap-x-4 gap-y-2', s.text.xs)}>
                         <InfoItem label="家长姓名" value={lead.parent_name} />
                         <InfoItem label="手机号" value={lead.parent_phone} />
                         <InfoItem label="微信号" value={lead.parent_wechat} />
@@ -204,8 +207,8 @@ export function LeadDetailSheet({
                       <>
                         <Separator />
                         <div className="space-y-2">
-                          <h3 className="text-sm font-semibold">备用联系人</h3>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                          <h3 className={cn(s.text.sm, 'font-semibold')}>备用联系人</h3>
+                          <div className={cn('grid grid-cols-2 gap-x-4 gap-y-2', s.text.xs)}>
                             <InfoItem label="姓名" value={lead.backup_contact_name} />
                             <InfoItem label="电话" value={lead.backup_contact_phone} />
                             <InfoItem label="关系" value={lead.backup_contact_relation} />
@@ -218,8 +221,8 @@ export function LeadDetailSheet({
 
                     {/* 地址信息 */}
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold">地址信息</h3>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <h3 className={cn(s.text.sm, 'font-semibold')}>地址信息</h3>
+                      <div className={cn('grid grid-cols-2 gap-x-4 gap-y-2', s.text.xs)}>
                         <InfoItem label="省份" value={lead.province} />
                         <InfoItem label="城市" value={lead.city} />
                         <InfoItem label="区县" value={lead.district} />
@@ -231,20 +234,20 @@ export function LeadDetailSheet({
 
                     {/* 线索属性 */}
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold">线索属性</h3>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <h3 className={cn(s.text.sm, 'font-semibold')}>线索属性</h3>
+                      <div className={cn('grid grid-cols-2 gap-x-4 gap-y-2', s.text.xs)}>
                         <InfoItem label="来源渠道" value={lead.source_channel_name} />
                         <InfoItem label="来源详情" value={lead.source_detail} />
                         <div className="flex items-start gap-2">
                           <span className="text-muted-foreground shrink-0">状态:</span>
-                          <Badge variant="outline" className="text-xs h-5">
+                          <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
                             {leadStatusLabels[lead.status]}
                           </Badge>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="text-muted-foreground shrink-0">意向等级:</span>
                           {lead.intention_level ? (
-                            <Badge variant="secondary" className="text-xs h-5">
+                            <Badge variant="secondary" className={cn(s.text.xs, s.height.badge)}>
                               {intentionLevelLabels[lead.intention_level]}
                             </Badge>
                           ) : (
@@ -264,7 +267,7 @@ export function LeadDetailSheet({
                     </div>
                   </>
                 ) : (
-                  <div className="text-xs text-muted-foreground text-center py-8">暂无数据</div>
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>暂无数据</div>
                 )}
               </div>
             </ScrollArea>
@@ -276,42 +279,42 @@ export function LeadDetailSheet({
               <div className="p-4 space-y-3">
                 {followups?.data && followups.data.length > 0 ? (
                   followups.data.map((followup: LeadFollowup) => (
-                    <div key={followup.id} className="border rounded-sm p-3 space-y-2">
+                    <div key={followup.id} className={cn('border p-3 space-y-2', s.rounded)}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs h-5">
+                            <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
                               {followupMethodLabels[followup.method]}
                             </Badge>
                             {followup.result && (
-                              <Badge variant="secondary" className="text-xs h-5">
+                              <Badge variant="secondary" className={cn(s.text.xs, s.height.badge)}>
                                 {followupResultLabels[followup.result]}
                               </Badge>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className={cn(s.text.xs, 'text-muted-foreground')}>
                             {followup.followup_by_name} · {formatTime(followup.followup_at)}
                           </p>
                         </div>
                       </div>
                       {followup.content && (
-                        <p className="text-xs">{followup.content}</p>
+                        <p className={s.text.xs}>{followup.content}</p>
                       )}
                       {followup.result_remark && (
-                        <p className="text-xs text-muted-foreground">结果备注: {followup.result_remark}</p>
+                        <p className={cn(s.text.xs, 'text-muted-foreground')}>结果备注: {followup.result_remark}</p>
                       )}
                       {followup.next_action && (
-                        <p className="text-xs text-muted-foreground">下一步行动: {followup.next_action}</p>
+                        <p className={cn(s.text.xs, 'text-muted-foreground')}>下一步行动: {followup.next_action}</p>
                       )}
                       {followup.next_followup_at && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className={cn(s.text.xs, 'text-muted-foreground')}>
                           下次跟进: {formatTime(followup.next_followup_at)}
                         </p>
                       )}
                     </div>
                   ))
                 ) : (
-                  <div className="text-xs text-muted-foreground text-center py-8">暂无跟进记录</div>
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>暂无跟进记录</div>
                 )}
               </div>
             </ScrollArea>
@@ -323,20 +326,20 @@ export function LeadDetailSheet({
               <div className="p-4 space-y-3">
                 {infoChangeLogs?.data && infoChangeLogs.data.length > 0 ? (
                   infoChangeLogs.data.map((log: LeadInfoChangeLog) => (
-                    <div key={log.id} className="border rounded-sm p-3 space-y-1.5">
+                    <div key={log.id} className={cn('border p-3 space-y-1.5', s.rounded)}>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs h-5">
+                        <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
                           {infoChangeTypeLabels[log.change_type]}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
+                        <span className={cn(s.text.xs, 'text-muted-foreground')}>
                           {log.changed_by_name} · {formatTime(log.changed_at)}
                         </span>
                       </div>
-                      <p className="text-xs">{log.change_summary}</p>
+                      <p className={s.text.xs}>{log.change_summary}</p>
                       {log.changes && log.changes.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {log.changes.map((change, idx) => (
-                            <div key={idx} className="text-xs text-muted-foreground">
+                            <div key={idx} className={cn(s.text.xs, 'text-muted-foreground')}>
                               {change.field_name}: {change.old_value || '-'} → {change.new_value || '-'}
                             </div>
                           ))}
@@ -345,7 +348,7 @@ export function LeadDetailSheet({
                     </div>
                   ))
                 ) : (
-                  <div className="text-xs text-muted-foreground text-center py-8">暂无变更记录</div>
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>暂无变更记录</div>
                 )}
               </div>
             </ScrollArea>
@@ -357,17 +360,17 @@ export function LeadDetailSheet({
               <div className="p-4 space-y-3">
                 {ownershipChangeLogs?.data && ownershipChangeLogs.data.length > 0 ? (
                   ownershipChangeLogs.data.map((log: LeadOwnershipChangeLog) => (
-                    <div key={log.id} className="border rounded-sm p-3 space-y-1.5">
+                    <div key={log.id} className={cn('border p-3 space-y-1.5', s.rounded)}>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs h-5">
+                        <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
                           {ownershipChangeTypeLabels[log.change_type]}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
+                        <span className={cn(s.text.xs, 'text-muted-foreground')}>
                           {log.changed_by_name} · {formatTime(log.changed_at)}
                         </span>
                       </div>
-                      <p className="text-xs">{log.change_summary}</p>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+                      <p className={s.text.xs}>{log.change_summary}</p>
+                      <div className={cn('grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-muted-foreground', s.text.xs)}>
                         {log.previous_advisor_name && (
                           <div>原顾问: {log.previous_advisor_name}</div>
                         )}
@@ -384,7 +387,7 @@ export function LeadDetailSheet({
                     </div>
                   ))
                 ) : (
-                  <div className="text-xs text-muted-foreground text-center py-8">暂无归属变更记录</div>
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>暂无归属变更记录</div>
                 )}
               </div>
             </ScrollArea>
@@ -395,7 +398,7 @@ export function LeadDetailSheet({
   )
 }
 
-// 信息项组件 - Mira风格
+// 信息项组件 - 响应式风格
 function InfoItem({
   label,
   value,
@@ -406,7 +409,7 @@ function InfoItem({
   className?: string
 }) {
   return (
-    <div className={`flex items-start gap-2 ${className || ''}`}>
+    <div className={cn('flex items-start gap-2', className)}>
       <span className="text-muted-foreground shrink-0">{label}:</span>
       <span className="flex-1">{value || '-'}</span>
     </div>
