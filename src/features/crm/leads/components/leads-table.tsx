@@ -250,7 +250,7 @@ export function LeadsTable({
     )
     const selectedRows = selectedRowIndices.map((index) => data[parseInt(index)])
     onSelectionChange?.(selectedRows)
-  }, [rowSelection, data])
+  }, [rowSelection])
 
   // 虚拟滚动配置 - 动态行高
   const { rows } = table.getRowModel()
