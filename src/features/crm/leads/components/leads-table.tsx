@@ -1,6 +1,7 @@
 /**
  * Leads数据表格组件
  * 使用TanStack Table + TanStack Virtual实现高性能虚拟滚动
+ * Mira风格: 密集型设计、紧凑间距、小字号
  */
 
 import { useRef, useMemo } from 'react'
@@ -15,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatTime } from '@/lib/utils/time'
+import { SimplePagination } from '@/components/data-table/simple-pagination'
 import type { LeadListItem, LeadStatus, IntentionLevel } from '../types'
 import { leadStatusLabels, intentionLevelLabels, gradeLabels } from '../types'
 
@@ -107,7 +109,7 @@ export function LeadsTable({
         accessorKey: 'child_name',
         header: '儿童姓名',
         cell: ({ row }) => (
-          <div className="font-medium">{row.original.child_name || '-'}</div>
+          <div className="font-medium text-xs">{row.original.child_name || '-'}</div>
         ),
         size: 120
       },
@@ -116,7 +118,7 @@ export function LeadsTable({
         accessorKey: 'age',
         header: '年龄',
         cell: ({ row }) => (
-          <div className="text-sm">{row.original.age || '-'}</div>
+          <div className="text-xs">{row.original.age || '-'}</div>
         ),
         size: 60
       },
@@ -134,7 +136,7 @@ export function LeadsTable({
         accessorKey: 'grade',
         header: '年级',
         cell: ({ row }) => (
-          <div className="text-sm">
+          <div className="text-xs">
             {row.original.grade ? gradeLabels[row.original.grade] : '-'}
           </div>
         ),
@@ -145,7 +147,7 @@ export function LeadsTable({
         accessorKey: 'source_channel_name',
         header: '来源渠道',
         cell: ({ row }) => (
-          <div className="text-sm">{row.original.source_channel_name || '-'}</div>
+          <div className="text-xs">{row.original.source_channel_name || '-'}</div>
         ),
         size: 120
       },
@@ -154,7 +156,7 @@ export function LeadsTable({
         accessorKey: 'status',
         header: '状态',
         cell: ({ row }) => (
-          <Badge variant={getStatusVariant(row.original.status)}>
+          <Badge variant={getStatusVariant(row.original.status)} className="text-xs h-5 px-1.5">
             {leadStatusLabels[row.original.status]}
           </Badge>
         ),
@@ -166,9 +168,9 @@ export function LeadsTable({
         header: '意向等级',
         cell: ({ row }) => {
           const level = row.original.intention_level
-          if (!level) return <span className="text-sm text-muted-foreground">-</span>
+          if (!level) return <span className="text-xs text-muted-foreground">-</span>
           return (
-            <Badge variant={getIntentionVariant(level)}>
+            <Badge variant={getIntentionVariant(level)} className="text-xs h-5 px-1.5">
               {intentionLevelLabels[level]}
             </Badge>
           )
@@ -180,7 +182,7 @@ export function LeadsTable({
         accessorKey: 'advisor_name',
         header: '顾问',
         cell: ({ row }) => (
-          <div className="text-sm">{row.original.advisor_name || '-'}</div>
+          <div className="text-xs">{row.original.advisor_name || '-'}</div>
         ),
         size: 100
       },
@@ -189,7 +191,7 @@ export function LeadsTable({
         accessorKey: 'owner_campus_name',
         header: '校区',
         cell: ({ row }) => (
-          <div className="text-sm">{row.original.owner_campus_name}</div>
+          <div className="text-xs">{row.original.owner_campus_name}</div>
         ),
         size: 120
       },
@@ -198,7 +200,7 @@ export function LeadsTable({
         accessorKey: 'created_by_name',
         header: '创建人',
         cell: ({ row }) => (
-          <div className="text-sm">{row.original.created_by_name || '-'}</div>
+          <div className="text-xs">{row.original.created_by_name || '-'}</div>
         ),
         size: 100
       },
@@ -207,7 +209,7 @@ export function LeadsTable({
         accessorKey: 'created_at',
         header: '创建时间',
         cell: ({ row }) => (
-          <div className="text-sm">{formatTime(row.original.created_at)}</div>
+          <div className="text-xs">{formatTime(row.original.created_at)}</div>
         ),
         size: 150
       }
@@ -261,7 +263,7 @@ export function LeadsTable({
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-sm text-muted-foreground">加载中...</div>
+        <div className="text-xs text-muted-foreground">加载中...</div>
       </div>
     )
   }
@@ -271,7 +273,7 @@ export function LeadsTable({
       {/* 表格容器 */}
       <div
         ref={tableContainerRef}
-        className="flex-1 overflow-auto rounded-md border"
+        className="flex-1 overflow-auto rounded-sm border"
         style={{ height: 'calc(100vh - 280px)' }}
       >
         <Table>
@@ -282,7 +284,7 @@ export function LeadsTable({
                   <TableHead
                     key={header.id}
                     style={{ width: header.getSize() }}
-                    className="text-xs font-semibold"
+                    className="text-xs font-semibold h-9"
                   >
                     {header.isPlaceholder
                       ? null
@@ -311,7 +313,7 @@ export function LeadsTable({
                     <TableCell
                       key={cell.id}
                       style={{ width: cell.column.getSize() }}
-                      className="py-2 text-sm"
+                      className="py-1.5 px-2 text-xs"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -328,31 +330,16 @@ export function LeadsTable({
         </Table>
       </div>
 
-      {/* 分页器 */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          共 {total} 条记录，已选择 {table.getSelectedRowModel().rows.length} 条
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page === 1}
-          >
-            上一页
-          </button>
-          <span className="text-sm">
-            第 {page} 页 / 共 {Math.ceil(total / pageSize)} 页
-          </span>
-          <button
-            className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= Math.ceil(total / pageSize)}
-          >
-            下一页
-          </button>
-        </div>
-      </div>
+      {/* 分页器 - Mira风格 */}
+      <SimplePagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        selectedCount={table.getSelectedRowModel().rows.length}
+        className="mt-3"
+      />
     </div>
   )
 }

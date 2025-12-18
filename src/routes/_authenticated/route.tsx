@@ -19,7 +19,7 @@ export const Route = createFileRoute('/_authenticated')({
     // 如果未登录,重定向到登录页
     if (!isAuthenticated) {
       throw redirect({
-        to: '/login',
+        to: '/sign-in',
         search: {
           // 保存当前路径,登录后可以跳转回来
           redirect: location.href
