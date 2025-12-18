@@ -10,6 +10,7 @@ import {
   DoubleArrowRightIcon
 } from '@radix-ui/react-icons'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ interface SimplePaginationProps {
   onPageSizeChange: (size: number) => void
   selectedCount?: number
   className?: string
+  isLoading?: boolean
 }
 
 export function SimplePagination({
@@ -37,12 +39,13 @@ export function SimplePagination({
   onPageChange,
   onPageSizeChange,
   selectedCount = 0,
-  className
+  className,
+  isLoading = false
 }: SimplePaginationProps) {
   const s = useStyleClasses()
   const totalPages = Math.ceil(total / pageSize)
-  const canPreviousPage = page > 1
-  const canNextPage = page < totalPages
+  const canPreviousPage = page > 1 && !isLoading
+  const canNextPage = page < totalPages && !isLoading
 
   // 计算显示的页码范围
   const getPageNumbers = () => {
@@ -91,8 +94,14 @@ export function SimplePagination({
     <div className={cn('flex items-center justify-between gap-2', className)}>
       {/* 左侧:记录统计 */}
       <div className={cn(s.text.xs, 'text-muted-foreground')}>
-        共 {total} 条记录
-        {selectedCount > 0 && `，已选择 ${selectedCount} 条`}
+        {isLoading ? (
+          <Skeleton className="h-4 w-32" />
+        ) : (
+          <>
+            共 {total} 条记录
+            {selectedCount > 0 && `，已选择 ${selectedCount} 条`}
+          </>
+        )}
       </div>
 
       {/* 右侧:分页控件 */}
@@ -100,7 +109,11 @@ export function SimplePagination({
         {/* 每页条数选择器 */}
         <div className={cn('flex items-center', s.gap.tight)}>
           <span className={cn(s.text.xs, 'text-muted-foreground hidden sm:inline')}>每页</span>
-          <Select value={`${pageSize}`} onValueChange={(value) => onPageSizeChange(Number(value))}>
+          <Select
+            value={`${pageSize}`}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+            disabled={isLoading}
+          >
             <SelectTrigger className={cn(s.height.controlSm, s.text.xs, 'w-fit min-w-[65px]')}>
               <SelectValue />
             </SelectTrigger>
@@ -153,6 +166,7 @@ export function SimplePagination({
                     variant={page === pageNumber ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => onPageChange(pageNumber as number)}
+                    disabled={isLoading}
                     className={cn(s.height.controlSm, s.text.xs, s.size.buttonMin, s.padding.button)}
                   >
                     {pageNumber}

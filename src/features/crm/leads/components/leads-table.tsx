@@ -15,6 +15,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatTime } from '@/lib/utils/time'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
@@ -23,6 +24,42 @@ import { useStyle } from '@/context/style-provider'
 import { useStyleClasses } from '@/lib/style-utils'
 import type { LeadListItem, LeadStatus, IntentionLevel } from '../types'
 import { leadStatusLabels, intentionLevelLabels, gradeLabels } from '../types'
+
+// 骨架屏占位数据标识
+const SKELETON_ID_PREFIX = '__skeleton__'
+
+// 生成骨架屏占位数据
+function createSkeletonData(count: number): LeadListItem[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${SKELETON_ID_PREFIX}${i}`,
+    child_name: '',
+    parent_name: '',
+    grade: undefined,
+    source_channel_id: '',
+    source_channel_name: '',
+    status: 'pending_assign' as LeadStatus,
+    intention_level: undefined,
+    advisor_name: '',
+    owner_campus_name: '',
+    created_by_name: '',
+    created_at: '',
+    next_followup_at: '',
+    age: 0,
+    tag: '',
+    is_starred: false,
+    last_followup_at: '',
+    last_followup_result: undefined,
+    followup_count: 0,
+    import_batch_id: '',
+    batch_remark: null,
+    batch_name: null,
+  }))
+}
+
+// 判断是否是骨架屏数据
+function isSkeletonRow(id: string): boolean {
+  return id.startsWith(SKELETON_ID_PREFIX)
+}
 
 interface LeadsTableProps {
   data: LeadListItem[]
@@ -91,6 +128,11 @@ export function LeadsTable({
     return style === 'lyra' ? Math.ceil(baseSize * 1.1) : baseSize
   }
 
+  // 决定显示的数据：加载时使用骨架屏数据
+  const displayData = useMemo(() => {
+    return isLoading ? createSkeletonData(pageSize) : data
+  }, [isLoading, data, pageSize])
+
   // 定义表格列
   const columns = useMemo<ColumnDef<LeadListItem>[]>(
     () => [
@@ -103,19 +145,25 @@ export function LeadsTable({
               checked={table.getIsAllPageRowsSelected()}
               onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
               aria-label="全选"
+              disabled={isLoading}
             />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="选择行"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <div className="flex items-center justify-center" />
+          }
+          return (
+            <div className="flex items-center justify-center">
+              <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label="选择行"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )
+        },
         size: 50,
         enableSorting: false,
         enableHiding: false
@@ -124,58 +172,88 @@ export function LeadsTable({
       {
         accessorKey: 'child_name',
         header: '儿童姓名',
-        cell: ({ row }) => (
-          <div className={cn('font-medium', s.text.xs)}>{row.original.child_name || '-'}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-[80%]" />
+          }
+          return (
+            <div className={cn('font-medium', s.text.xs)}>{row.original.child_name || '-'}</div>
+          )
+        },
         size: getColumnSize(120)
       },
       // 年龄
       {
         accessorKey: 'age',
         header: '年龄',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>{row.original.age || '-'}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-8" />
+          }
+          return (
+            <div className={s.text.xs}>{row.original.age || '-'}</div>
+          )
+        },
         size: getColumnSize(60)
       },
       // 家长姓名
       {
         accessorKey: 'parent_name',
         header: '家长姓名',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>{row.original.parent_name || '-'}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-24" />
+          }
+          return (
+            <div className={s.text.xs}>{row.original.parent_name || '-'}</div>
+          )
+        },
         size: getColumnSize(120)
       },
       // 年级
       {
         accessorKey: 'grade',
         header: '年级',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>
-            {row.original.grade ? gradeLabels[row.original.grade] : '-'}
-          </div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-16" />
+          }
+          return (
+            <div className={s.text.xs}>
+              {row.original.grade ? gradeLabels[row.original.grade] : '-'}
+            </div>
+          )
+        },
         size: getColumnSize(100)
       },
       // 来源渠道
       {
         accessorKey: 'source_channel_name',
         header: '来源渠道',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>{row.original.source_channel_name || '-'}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-24" />
+          }
+          return (
+            <div className={s.text.xs}>{row.original.source_channel_name || '-'}</div>
+          )
+        },
         size: getColumnSize(120)
       },
       // 状态
       {
         accessorKey: 'status',
         header: '状态',
-        cell: ({ row }) => (
-          <Badge variant={getStatusVariant(row.original.status)} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
-            {leadStatusLabels[row.original.status]}
-          </Badge>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className={cn("h-5 w-16", s.rounded)} />
+          }
+          return (
+            <Badge variant={getStatusVariant(row.original.status)} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
+              {leadStatusLabels[row.original.status]}
+            </Badge>
+          )
+        },
         size: getColumnSize(100)
       },
       // 意向等级
@@ -183,6 +261,9 @@ export function LeadsTable({
         accessorKey: 'intention_level',
         header: '意向等级',
         cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className={cn("h-5 w-16", s.rounded)} />
+          }
           const level = row.original.intention_level
           if (!level) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
           return (
@@ -197,64 +278,85 @@ export function LeadsTable({
       {
         accessorKey: 'advisor_name',
         header: '顾问',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>{row.original.advisor_name || '-'}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-20" />
+          }
+          return (
+            <div className={s.text.xs}>{row.original.advisor_name || '-'}</div>
+          )
+        },
         size: getColumnSize(100)
       },
       // 校区
       {
         accessorKey: 'owner_campus_name',
         header: '校区',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>{row.original.owner_campus_name}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-24" />
+          }
+          return (
+            <div className={s.text.xs}>{row.original.owner_campus_name}</div>
+          )
+        },
         size: getColumnSize(120)
       },
       // 创建人
       {
         accessorKey: 'created_by_name',
         header: '创建人',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>{row.original.created_by_name || '-'}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-20" />
+          }
+          return (
+            <div className={s.text.xs}>{row.original.created_by_name || '-'}</div>
+          )
+        },
         size: getColumnSize(100)
       },
       // 创建时间
       {
         accessorKey: 'created_at',
         header: '创建时间',
-        cell: ({ row }) => (
-          <div className={s.text.xs}>{formatTime(row.original.created_at)}</div>
-        ),
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-32" />
+          }
+          return (
+            <div className={s.text.xs}>{formatTime(row.original.created_at)}</div>
+          )
+        },
         size: getColumnSize(150)
       }
     ],
-    [s, style]
+    [s, style, isLoading]
   )
 
   // 初始化表格
   const table = useReactTable({
-    data,
+    data: displayData,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    enableRowSelection: true,
+    enableRowSelection: !isLoading,
     manualPagination: true,
     pageCount: Math.ceil(total / pageSize),
     onRowSelectionChange: setRowSelection,
     state: {
-      rowSelection
+      rowSelection: isLoading ? {} : rowSelection
     }
   })
 
   // 当选中状态变化时，通知父组件
   useEffect(() => {
+    if (isLoading) return
     const selectedRowIndices = Object.keys(rowSelection).filter(
       (key) => rowSelection[key]
     )
     const selectedRows = selectedRowIndices.map((index) => data[parseInt(index)])
     onSelectionChange?.(selectedRows)
-  }, [rowSelection])
+  }, [rowSelection, isLoading])
 
   // 虚拟滚动配置 - 动态行高
   const { rows } = table.getRowModel()
@@ -280,20 +382,15 @@ export function LeadsTable({
       ? totalSize - (virtualRows?.[virtualRows.length - 1]?.end || 0)
       : 0
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className={cn(s.text.xs, 'text-muted-foreground')}>加载中...</div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-hidden">
       {/* 表格容器 - 独立滚动区域 */}
       <div
         ref={tableContainerRef}
-        className="min-h-0 flex-1 overflow-auto rounded-md border"
+        className={cn(
+          "min-h-0 flex-1 overflow-auto rounded-md border",
+          isLoading && "opacity-60 pointer-events-none transition-opacity duration-200"
+        )}
       >
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-card">
@@ -321,12 +418,15 @@ export function LeadsTable({
             )}
             {virtualRows.map((virtualRow) => {
               const row = rows[virtualRow.index]
+              const isSkeleton = isSkeletonRow(row.id)
               return (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => onRowClick?.(row.original)}
+                  className={cn(
+                    !isSkeleton && "cursor-pointer hover:bg-muted/50"
+                  )}
+                  onClick={() => !isSkeleton && onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
@@ -356,8 +456,9 @@ export function LeadsTable({
         total={total}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
-        selectedCount={table.getSelectedRowModel().rows.length}
+        selectedCount={isLoading ? 0 : table.getSelectedRowModel().rows.length}
         className="mt-auto flex-shrink-0"
+        isLoading={isLoading}
       />
     </div>
   )
