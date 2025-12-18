@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
-import { Phone, Edit, Plus } from 'lucide-react'
+import { Phone, Edit, Plus, X } from 'lucide-react'
 import { leadsApi } from '../api'
 import type { Lead, LeadFollowup, LeadInfoChangeLog, LeadOwnershipChangeLog } from '../types'
 import {
@@ -102,9 +102,9 @@ export function LeadDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl p-0">
-        {/* Sheet Header - 响应式风格，pr-12为右上角关闭按钮预留空间 */}
-        <SheetHeader className="pl-4 pr-12 py-3 border-b">
+      <SheetContent className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl p-0 [&>button]:hidden">
+        {/* Sheet Header - 响应式风格 */}
+        <SheetHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <SheetTitle className={s.text.base}>
@@ -145,6 +145,14 @@ export function LeadDetailSheet({
                   </Button>
                 </>
               )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className={cn(s.height.controlSm, 'w-8 p-0')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </SheetHeader>
