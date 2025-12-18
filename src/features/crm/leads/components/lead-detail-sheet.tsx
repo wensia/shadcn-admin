@@ -103,8 +103,8 @@ export function LeadDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl p-0">
-        {/* Sheet Header - 响应式风格 */}
-        <SheetHeader className="px-4 py-3 border-b">
+        {/* Sheet Header - 响应式风格，pr-12为右上角关闭按钮预留空间 */}
+        <SheetHeader className="pl-4 pr-12 py-3 border-b">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <SheetTitle className={s.text.base}>
