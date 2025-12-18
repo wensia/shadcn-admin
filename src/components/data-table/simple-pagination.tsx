@@ -101,7 +101,7 @@ export function SimplePagination({
         <div className={cn('flex items-center', s.gap.tight)}>
           <span className={cn(s.text.xs, 'text-muted-foreground hidden sm:inline')}>每页</span>
           <Select value={`${pageSize}`} onValueChange={(value) => onPageSizeChange(Number(value))}>
-            <SelectTrigger className={cn(s.height.controlSm, s.text.xs, 'w-[65px]')}>
+            <SelectTrigger className={cn(s.height.controlSm, s.text.xs, 'w-fit min-w-[65px]')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">
