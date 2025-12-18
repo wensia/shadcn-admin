@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { LeadsTable } from './components/leads-table'
 import { LeadsToolbar } from './components/leads-toolbar'
@@ -219,11 +219,17 @@ export function LeadsPage() {
     }).length
 
   return (
-    <div className="flex h-full flex-col p-4">
-      {/* 页面标题 - Mira风格: 更小的标题和间距 */}
-      <div className="mb-4">
-        <h1 className="text-xl font-bold tracking-tight">线索管理</h1>
-        <p className="text-xs text-muted-foreground">管理和跟进销售线索</p>
+    <div className="flex h-full flex-col gap-4 p-4 sm:gap-6">
+      {/* 页面标题 - shadcn-admin 标准布局 */}
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">线索管理</h1>
+          <p className="text-xs text-muted-foreground">管理和跟进销售线索</p>
+        </div>
+        <Button onClick={handleCreate} className="h-9">
+          <Plus className="mr-2 h-4 w-4" />
+          新建线索
+        </Button>
       </div>
 
       {/* 工具栏 */}
@@ -231,7 +237,7 @@ export function LeadsPage() {
         selectedCount={selectedRows.length}
         searchValue={searchValue}
         statusFilter={statusFilter}
-        onCreateClick={handleCreate}
+        showCreateButton={false}
         onRefreshClick={handleRefresh}
         onExportClick={handleExport}
         onFilterClick={handleFilter}
@@ -243,9 +249,9 @@ export function LeadsPage() {
         onBatchDelete={handleBatchDelete}
       />
 
-      {/* 筛选条件标签栏 - Mira风格 */}
+      {/* 筛选条件标签栏 */}
       {activeFiltersCount > 0 && (
-        <div className="flex items-center gap-1.5 pb-3 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs text-muted-foreground">筛选条件:</span>
 
           {/* 搜索关键词标签 */}
@@ -387,19 +393,21 @@ export function LeadsPage() {
         </div>
       )}
 
-      {/* 数据表格 */}
-      <div className="flex-1 overflow-hidden">
-        <LeadsTable
-          data={data?.items || []}
-          total={data?.total || 0}
-          page={pagination.page}
-          pageSize={pagination.size}
-          isLoading={isLoading}
-          onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
-          onPageSizeChange={(size) => setPagination({ page: 1, size })}
-          onRowClick={handleRowClick}
-          onSelectionChange={setSelectedRows}
-        />
+      {/* 数据表格 - shadcn-admin 标准容器 */}
+      <div className="flex-1 space-y-4">
+        <div className="overflow-hidden rounded-md border">
+          <LeadsTable
+            data={data?.items || []}
+            total={data?.total || 0}
+            page={pagination.page}
+            pageSize={pagination.size}
+            isLoading={isLoading}
+            onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+            onPageSizeChange={(size) => setPagination({ page: 1, size })}
+            onRowClick={handleRowClick}
+            onSelectionChange={setSelectedRows}
+          />
+        </div>
       </div>
 
       {/* 线索详情Sheet */}

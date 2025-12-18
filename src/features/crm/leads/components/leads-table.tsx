@@ -270,10 +270,10 @@ export function LeadsTable({
 
   return (
     <div className="flex h-full flex-col">
-      {/* 表格容器 */}
+      {/* 表格容器 - 边框和圆角由外层提供 */}
       <div
         ref={tableContainerRef}
-        className="flex-1 overflow-auto rounded-sm border"
+        className="flex-1 overflow-auto"
         style={{ height: 'calc(100vh - 280px)' }}
       >
         <Table>

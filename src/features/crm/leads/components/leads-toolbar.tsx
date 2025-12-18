@@ -26,7 +26,8 @@ interface LeadsToolbarProps {
   selectedCount: number
   searchValue?: string
   statusFilter?: LeadStatus | ''
-  onCreateClick: () => void
+  showCreateButton?: boolean
+  onCreateClick?: () => void
   onRefreshClick: () => void
   onExportClick: () => void
   onFilterClick: () => void
@@ -42,6 +43,7 @@ export function LeadsToolbar({
   selectedCount,
   searchValue = '',
   statusFilter = '',
+  showCreateButton = true,
   onCreateClick,
   onRefreshClick,
   onExportClick,
@@ -89,10 +91,12 @@ export function LeadsToolbar({
         {/* 左侧按钮组 */}
         <div className="flex items-center gap-1.5">
           {/* 新建按钮 - Mira风格 */}
-          <Button onClick={onCreateClick} size="sm" className="h-8 text-xs">
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            新建线索
-          </Button>
+          {showCreateButton && (
+            <Button onClick={onCreateClick} size="sm" className="h-8 text-xs">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              新建线索
+            </Button>
+          )}
 
           {/* 批量操作按钮 - 只在有选中时显示 */}
           {selectedCount > 0 && (
