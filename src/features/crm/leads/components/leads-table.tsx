@@ -1,10 +1,10 @@
 /**
  * Leads数据表格组件
  * 使用TanStack Table + TanStack Virtual实现高性能虚拟滚动
- * Mira风格: 密集型设计、紧凑间距、小字号
+ * 支持 Mira/Lyra 风格切换
  */
 
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -17,6 +17,9 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatTime } from '@/lib/utils/time'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { cn } from '@/lib/utils'
+import { useStyle } from '@/context/style-provider'
+import { useStyleClasses } from '@/lib/style-utils'
 import type { LeadListItem, LeadStatus, IntentionLevel } from '../types'
 import { leadStatusLabels, intentionLevelLabels, gradeLabels } from '../types'
 
@@ -78,6 +81,13 @@ export function LeadsTable({
   onSelectionChange
 }: LeadsTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const { style } = useStyle()
+  const s = useStyleClasses()
+
+  // Lyra 风格需要更宽的列(等宽字体)
+  const getColumnSize = (baseSize: number) => {
+    return style === 'lyra' ? Math.ceil(baseSize * 1.1) : baseSize
+  }
 
   // 定义表格列
   const columns = useMemo<ColumnDef<LeadListItem>[]>(
@@ -109,58 +119,58 @@ export function LeadsTable({
         accessorKey: 'child_name',
         header: '儿童姓名',
         cell: ({ row }) => (
-          <div className="font-medium text-xs">{row.original.child_name || '-'}</div>
+          <div className={cn('font-medium', s.text.xs)}>{row.original.child_name || '-'}</div>
         ),
-        size: 120
+        size: getColumnSize(120)
       },
       // 年龄
       {
         accessorKey: 'age',
         header: '年龄',
         cell: ({ row }) => (
-          <div className="text-xs">{row.original.age || '-'}</div>
+          <div className={s.text.xs}>{row.original.age || '-'}</div>
         ),
-        size: 60
+        size: getColumnSize(60)
       },
       // 家长姓名
       {
         accessorKey: 'parent_name',
         header: '家长姓名',
         cell: ({ row }) => (
-          <div>{row.original.parent_name || '-'}</div>
+          <div className={s.text.xs}>{row.original.parent_name || '-'}</div>
         ),
-        size: 120
+        size: getColumnSize(120)
       },
       // 年级
       {
         accessorKey: 'grade',
         header: '年级',
         cell: ({ row }) => (
-          <div className="text-xs">
+          <div className={s.text.xs}>
             {row.original.grade ? gradeLabels[row.original.grade] : '-'}
           </div>
         ),
-        size: 100
+        size: getColumnSize(100)
       },
       // 来源渠道
       {
         accessorKey: 'source_channel_name',
         header: '来源渠道',
         cell: ({ row }) => (
-          <div className="text-xs">{row.original.source_channel_name || '-'}</div>
+          <div className={s.text.xs}>{row.original.source_channel_name || '-'}</div>
         ),
-        size: 120
+        size: getColumnSize(120)
       },
       // 状态
       {
         accessorKey: 'status',
         header: '状态',
         cell: ({ row }) => (
-          <Badge variant={getStatusVariant(row.original.status)} className="text-xs h-5 px-1.5">
+          <Badge variant={getStatusVariant(row.original.status)} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
             {leadStatusLabels[row.original.status]}
           </Badge>
         ),
-        size: 100
+        size: getColumnSize(100)
       },
       // 意向等级
       {
@@ -168,53 +178,53 @@ export function LeadsTable({
         header: '意向等级',
         cell: ({ row }) => {
           const level = row.original.intention_level
-          if (!level) return <span className="text-xs text-muted-foreground">-</span>
+          if (!level) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
           return (
-            <Badge variant={getIntentionVariant(level)} className="text-xs h-5 px-1.5">
+            <Badge variant={getIntentionVariant(level)} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
               {intentionLevelLabels[level]}
             </Badge>
           )
         },
-        size: 100
+        size: getColumnSize(100)
       },
       // 顾问
       {
         accessorKey: 'advisor_name',
         header: '顾问',
         cell: ({ row }) => (
-          <div className="text-xs">{row.original.advisor_name || '-'}</div>
+          <div className={s.text.xs}>{row.original.advisor_name || '-'}</div>
         ),
-        size: 100
+        size: getColumnSize(100)
       },
       // 校区
       {
         accessorKey: 'owner_campus_name',
         header: '校区',
         cell: ({ row }) => (
-          <div className="text-xs">{row.original.owner_campus_name}</div>
+          <div className={s.text.xs}>{row.original.owner_campus_name}</div>
         ),
-        size: 120
+        size: getColumnSize(120)
       },
       // 创建人
       {
         accessorKey: 'created_by_name',
         header: '创建人',
         cell: ({ row }) => (
-          <div className="text-xs">{row.original.created_by_name || '-'}</div>
+          <div className={s.text.xs}>{row.original.created_by_name || '-'}</div>
         ),
-        size: 100
+        size: getColumnSize(100)
       },
       // 创建时间
       {
         accessorKey: 'created_at',
         header: '创建时间',
         cell: ({ row }) => (
-          <div className="text-xs">{formatTime(row.original.created_at)}</div>
+          <div className={s.text.xs}>{formatTime(row.original.created_at)}</div>
         ),
-        size: 150
+        size: getColumnSize(150)
       }
     ],
-    []
+    [s, style]
   )
 
   // 初始化表格
@@ -242,14 +252,20 @@ export function LeadsTable({
     }
   })
 
-  // 虚拟滚动配置
+  // 虚拟滚动配置 - 动态行高
   const { rows } = table.getRowModel()
+  const estimatedRowSize = style === 'mira' ? 44 : 48
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 44, // Mira风格：更紧凑的行高
+    estimateSize: () => estimatedRowSize,
     overscan: 10
   })
+
+  // 风格切换时重新测量虚拟滚动
+  useEffect(() => {
+    rowVirtualizer.measure()
+  }, [style, rowVirtualizer])
 
   const virtualRows = rowVirtualizer.getVirtualItems()
   const totalSize = rowVirtualizer.getTotalSize()
@@ -263,7 +279,7 @@ export function LeadsTable({
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-xs text-muted-foreground">加载中...</div>
+        <div className={cn(s.text.xs, 'text-muted-foreground')}>加载中...</div>
       </div>
     )
   }
@@ -283,7 +299,7 @@ export function LeadsTable({
                   <TableHead
                     key={header.id}
                     style={{ width: header.getSize() }}
-                    className="text-xs font-semibold h-9"
+                    className={cn(s.text.xs, 'font-semibold', s.height.control)}
                   >
                     {header.isPlaceholder
                       ? null
@@ -312,7 +328,7 @@ export function LeadsTable({
                     <TableCell
                       key={cell.id}
                       style={{ width: cell.column.getSize() }}
-                      className="py-1.5 px-2 text-xs"
+                      className={cn(s.padding.cell, s.text.xs)}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>

@@ -11,10 +11,13 @@ import { IconSidebarSidebar } from '@/assets/custom/icon-sidebar-sidebar'
 import { IconThemeDark } from '@/assets/custom/icon-theme-dark'
 import { IconThemeLight } from '@/assets/custom/icon-theme-light'
 import { IconThemeSystem } from '@/assets/custom/icon-theme-system'
+import { IconStyleMira } from '@/assets/custom/icon-style-mira'
+import { IconStyleLyra } from '@/assets/custom/icon-style-lyra'
 import { cn } from '@/lib/utils'
 import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'
 import { useTheme } from '@/context/theme-provider'
+import { useStyle } from '@/context/style-provider'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -32,12 +35,14 @@ export function ConfigDrawer() {
   const { resetDir } = useDirection()
   const { resetTheme } = useTheme()
   const { resetLayout } = useLayout()
+  const { resetStyle } = useStyle()
 
   const handleReset = () => {
     setOpen(true)
     resetDir()
     resetTheme()
     resetLayout()
+    resetStyle()
   }
 
   return (
@@ -62,6 +67,7 @@ export function ConfigDrawer() {
         </SheetHeader>
         <div className='space-y-6 overflow-y-auto px-4'>
           <ThemeConfig />
+          <StyleConfig />
           <SidebarConfig />
           <LayoutConfig />
           <DirConfig />
@@ -206,6 +212,44 @@ function ThemeConfig() {
       </Radio>
       <div id='theme-description' className='sr-only'>
         Choose between system preference, light mode, or dark mode
+      </div>
+    </div>
+  )
+}
+
+function StyleConfig() {
+  const { defaultStyle, style, setStyle } = useStyle()
+  return (
+    <div>
+      <SectionTitle
+        title='UI Style'
+        showReset={style !== defaultStyle}
+        onReset={() => setStyle(defaultStyle)}
+      />
+      <Radio
+        value={style}
+        onValueChange={setStyle}
+        className='grid w-full max-w-md grid-cols-2 gap-4'
+        aria-label='Select UI style preference'
+        aria-describedby='style-description'
+      >
+        {[
+          {
+            value: 'mira',
+            label: 'Mira - Compact',
+            icon: IconStyleMira,
+          },
+          {
+            value: 'lyra',
+            label: 'Lyra - Technical',
+            icon: IconStyleLyra,
+          },
+        ].map((item) => (
+          <RadioGroupItem key={item.value} item={item} />
+        ))}
+      </Radio>
+      <div id='style-description' className='sr-only'>
+        Choose between Mira (compact, dense) or Lyra (technical, sharp) UI style
       </div>
     </div>
   )

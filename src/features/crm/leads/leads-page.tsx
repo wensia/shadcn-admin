@@ -1,7 +1,7 @@
 /**
  * Leads主页面
  * 线索管理的主入口组件
- * Mira风格: 紧凑间距、小字号、密集布局
+ * 支持 Mira/Lyra 风格切换
  */
 
 import { useState } from 'react'
@@ -10,6 +10,8 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Plus, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { LeadsTable } from './components/leads-table'
 import { LeadsToolbar } from './components/leads-toolbar'
@@ -28,6 +30,7 @@ import { leadStatusLabels } from './types'
 
 export function LeadsPage() {
   const queryClient = useQueryClient()
+  const s = useStyleClasses()
 
   // 分页状态
   const [pagination, setPagination] = useState({
@@ -223,10 +226,10 @@ export function LeadsPage() {
       {/* 页面标题 - shadcn-admin 标准布局 */}
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">线索管理</h1>
-          <p className="text-xs text-muted-foreground">管理和跟进销售线索</p>
+          <h1 className={cn(s.text.lg, 'font-bold tracking-tight')}>线索管理</h1>
+          <p className={cn(s.text.xs, 'text-muted-foreground')}>管理和跟进销售线索</p>
         </div>
-        <Button onClick={handleCreate} className="h-9">
+        <Button onClick={handleCreate} className={s.height.control}>
           <Plus className="mr-2 h-4 w-4" />
           新建线索
         </Button>
@@ -251,12 +254,12 @@ export function LeadsPage() {
 
       {/* 筛选条件标签栏 */}
       {activeFiltersCount > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-muted-foreground">筛选条件:</span>
+        <div className={cn('flex items-center flex-wrap', s.gap.tight)}>
+          <span className={cn(s.text.xs, 'text-muted-foreground')}>筛选条件:</span>
 
           {/* 搜索关键词标签 */}
           {searchValue && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               搜索: {searchValue}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -267,7 +270,7 @@ export function LeadsPage() {
 
           {/* 状态筛选标签 */}
           {statusFilter && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               状态: {leadStatusLabels[statusFilter]}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -278,7 +281,7 @@ export function LeadsPage() {
 
           {/* 高级筛选条件标签 */}
           {filters.source_channel_id && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               来源渠道
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -291,7 +294,7 @@ export function LeadsPage() {
           )}
 
           {filters.advisor_id && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               负责顾问
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -304,7 +307,7 @@ export function LeadsPage() {
           )}
 
           {filters.created_by_id && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               创建人
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -317,7 +320,7 @@ export function LeadsPage() {
           )}
 
           {filters.owner_campus_id && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               归属校区
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -330,7 +333,7 @@ export function LeadsPage() {
           )}
 
           {filters.intention_level && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               意向等级
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -343,7 +346,7 @@ export function LeadsPage() {
           )}
 
           {(filters.created_from || filters.created_to) && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               创建时间
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -356,7 +359,7 @@ export function LeadsPage() {
           )}
 
           {filters.tag && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               标签: {filters.tag}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -369,7 +372,7 @@ export function LeadsPage() {
           )}
 
           {filters.days_without_activity && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs gap-1">
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
               无活动天数: {filters.days_without_activity}天
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -386,7 +389,7 @@ export function LeadsPage() {
             variant="ghost"
             size="sm"
             onClick={handleClearAllFilters}
-            className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+            className={cn(s.height.badge, 'px-2', s.text.xs, 'text-muted-foreground hover:text-foreground')}
           >
             清除全部
           </Button>
@@ -394,7 +397,7 @@ export function LeadsPage() {
       )}
 
       {/* 数据表格 - shadcn-admin 标准容器 */}
-      <div className="flex flex-1 flex-col overflow-hidden rounded-md border">
+      <div className={cn('flex flex-1 flex-col overflow-hidden border', s.rounded)}>
         <LeadsTable
           data={data?.items || []}
           total={data?.total || 0}
