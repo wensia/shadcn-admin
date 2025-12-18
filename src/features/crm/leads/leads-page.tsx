@@ -394,20 +394,18 @@ export function LeadsPage() {
       )}
 
       {/* 数据表格 - shadcn-admin 标准容器 */}
-      <div className="flex-1 space-y-4">
-        <div className="overflow-hidden rounded-md border">
-          <LeadsTable
-            data={data?.items || []}
-            total={data?.total || 0}
-            page={pagination.page}
-            pageSize={pagination.size}
-            isLoading={isLoading}
-            onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
-            onPageSizeChange={(size) => setPagination({ page: 1, size })}
-            onRowClick={handleRowClick}
-            onSelectionChange={setSelectedRows}
-          />
-        </div>
+      <div className="flex flex-1 flex-col overflow-hidden rounded-md border">
+        <LeadsTable
+          data={data?.items || []}
+          total={data?.total || 0}
+          page={pagination.page}
+          pageSize={pagination.size}
+          isLoading={isLoading}
+          onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+          onPageSizeChange={(size) => setPagination({ page: 1, size })}
+          onRowClick={handleRowClick}
+          onSelectionChange={setSelectedRows}
+        />
       </div>
 
       {/* 线索详情Sheet */}

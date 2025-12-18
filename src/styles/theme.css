@@ -61,6 +61,11 @@
   --chart-5: oklch(0.645 0.246 16.439);
 }
 
+/* Lyra风格：无圆角，技术感强 */
+:root.style-lyra {
+  --radius: 0;
+}
+
 @theme inline {
   --font-inter: 'Inter', 'sans-serif';
   --font-manrope: 'Manrope', 'sans-serif';

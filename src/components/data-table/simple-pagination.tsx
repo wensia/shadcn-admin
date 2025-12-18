@@ -1,6 +1,6 @@
 /**
  * 简化分页组件
- * 用于手动分页场景 - Mira风格
+ * 用于手动分页场景 - 支持 Mira/Lyra 风格切换
  */
 
 import {
@@ -18,6 +18,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
 
 interface SimplePaginationProps {
   page: number
@@ -38,6 +39,7 @@ export function SimplePagination({
   selectedCount = 0,
   className
 }: SimplePaginationProps) {
+  const s = useStyleClasses()
   const totalPages = Math.ceil(total / pageSize)
   const canPreviousPage = page > 1
   const canNextPage = page < totalPages
@@ -88,29 +90,29 @@ export function SimplePagination({
   return (
     <div className={cn('flex items-center justify-between gap-2', className)}>
       {/* 左侧:记录统计 */}
-      <div className="text-xs text-muted-foreground">
+      <div className={cn(s.text.xs, 'text-muted-foreground')}>
         共 {total} 条记录
         {selectedCount > 0 && `，已选择 ${selectedCount} 条`}
       </div>
 
       {/* 右侧:分页控件 */}
-      <div className="flex items-center gap-1.5">
-        {/* 每页条数选择器 - Mira风格 */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground hidden sm:inline">每页</span>
+      <div className={cn('flex items-center', s.gap.tight)}>
+        {/* 每页条数选择器 */}
+        <div className={cn('flex items-center', s.gap.tight)}>
+          <span className={cn(s.text.xs, 'text-muted-foreground hidden sm:inline')}>每页</span>
           <Select value={`${pageSize}`} onValueChange={(value) => onPageSizeChange(Number(value))}>
-            <SelectTrigger className="h-7 w-[65px] text-xs">
+            <SelectTrigger className={cn(s.height.controlSm, s.text.xs, 'w-[65px]')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">
               {[10, 20, 50, 100, 200].map((size) => (
-                <SelectItem key={size} value={`${size}`} className="text-xs">
+                <SelectItem key={size} value={`${size}`} className={s.text.xs}>
                   {size}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <span className="text-xs text-muted-foreground hidden sm:inline">条</span>
+          <span className={cn(s.text.xs, 'text-muted-foreground hidden sm:inline')}>条</span>
         </div>
 
         {/* 分隔线 */}
@@ -124,7 +126,7 @@ export function SimplePagination({
             size="sm"
             onClick={() => onPageChange(1)}
             disabled={!canPreviousPage}
-            className="h-7 w-7 p-0 hidden sm:flex"
+            className={cn(s.height.controlSm, 'w-7 p-0 hidden sm:flex')}
           >
             <DoubleArrowLeftIcon className="h-3.5 w-3.5" />
           </Button>
@@ -135,23 +137,23 @@ export function SimplePagination({
             size="sm"
             onClick={() => onPageChange(page - 1)}
             disabled={!canPreviousPage}
-            className="h-7 w-7 p-0"
+            className={cn(s.height.controlSm, 'w-7 p-0')}
           >
             <ChevronLeftIcon className="h-3.5 w-3.5" />
           </Button>
 
-          {/* 页码按钮 - Mira风格 */}
+          {/* 页码按钮 */}
           <div className="hidden sm:flex items-center gap-0.5">
             {pageNumbers.map((pageNumber, index) => (
               <div key={`${pageNumber}-${index}`}>
                 {pageNumber === '...' ? (
-                  <span className="px-1.5 text-xs text-muted-foreground">...</span>
+                  <span className={cn('px-1.5 text-muted-foreground', s.text.xs)}>...</span>
                 ) : (
                   <Button
                     variant={page === pageNumber ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => onPageChange(pageNumber as number)}
-                    className="h-7 min-w-7 px-2 text-xs"
+                    className={cn(s.height.controlSm, s.text.xs, 'min-w-7 px-2')}
                   >
                     {pageNumber}
                   </Button>
@@ -161,7 +163,7 @@ export function SimplePagination({
           </div>
 
           {/* 当前页显示(移动端) */}
-          <span className="text-xs px-2 sm:hidden">
+          <span className={cn(s.text.xs, 'px-2 sm:hidden')}>
             {page} / {totalPages}
           </span>
 
@@ -171,7 +173,7 @@ export function SimplePagination({
             size="sm"
             onClick={() => onPageChange(page + 1)}
             disabled={!canNextPage}
-            className="h-7 w-7 p-0"
+            className={cn(s.height.controlSm, 'w-7 p-0')}
           >
             <ChevronRightIcon className="h-3.5 w-3.5" />
           </Button>
@@ -182,7 +184,7 @@ export function SimplePagination({
             size="sm"
             onClick={() => onPageChange(totalPages)}
             disabled={!canNextPage}
-            className="h-7 w-7 p-0 hidden sm:flex"
+            className={cn(s.height.controlSm, 'w-7 p-0 hidden sm:flex')}
           >
             <DoubleArrowRightIcon className="h-3.5 w-3.5" />
           </Button>

@@ -269,12 +269,11 @@ export function LeadsTable({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-1 flex-col gap-4">
       {/* 表格容器 - 边框和圆角由外层提供 */}
       <div
         ref={tableContainerRef}
         className="flex-1 overflow-auto"
-        style={{ height: 'calc(100vh - 280px)' }}
       >
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-background">
@@ -330,7 +329,7 @@ export function LeadsTable({
         </Table>
       </div>
 
-      {/* 分页器 - Mira风格 */}
+      {/* 分页器 - 固定在底部 */}
       <SimplePagination
         page={page}
         pageSize={pageSize}
@@ -338,7 +337,7 @@ export function LeadsTable({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         selectedCount={table.getSelectedRowModel().rows.length}
-        className="mt-3"
+        className="mt-auto"
       />
     </div>
   )
