@@ -99,7 +99,7 @@ export function LeadDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl p-0">
+      <SheetContent className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl p-0">
         {/* Mira风格: 紧凑的Sheet Header */}
         <SheetHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between">
