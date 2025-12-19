@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+// import { persist } from 'zustand/middleware' // 暂时禁用
 
 /**
  * Tab信息接口
@@ -56,10 +56,9 @@ const HOME_TAB: TabInfo = {
 
 /**
  * Tab状态Store
- * 使用persist中间件实现localStorage持久化
+ * 暂时禁用persist来调试
  */
 export const useTabsStore = create<TabsState>()(
-  persist(
     (set, get) => ({
       // 初始状态 - 默认包含首页tab
       tabs: [HOME_TAB],
@@ -196,16 +195,7 @@ export const useTabsStore = create<TabsState>()(
 
         set({ tabs: newTabs })
       },
-    }),
-    {
-      name: 'tabs-storage', // localStorage key
-      // 只持久化这些字段
-      partialize: (state) => ({
-        tabs: state.tabs,
-        activeTabId: state.activeTabId,
-      }),
-    }
-  )
+    })
 )
 
 /**
