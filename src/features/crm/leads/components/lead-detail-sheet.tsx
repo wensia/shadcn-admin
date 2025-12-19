@@ -60,29 +60,51 @@ import { FollowupMethodPie } from './detail/charts/followup-method-pie'
 import { FollowupResultPie } from './detail/charts/followup-result-pie'
 
 /**
- * 格式化额外字段的值
- * 处理不同类型：字符串、数字、布尔、数组、对象等
+ * 扁平化嵌套的 JSON 对象为 key-value 数组
+ * 支持递归处理嵌套结构
  */
-function formatExtraFieldValue(value: unknown): string {
-  if (value === null || value === undefined) {
-    return '-'
+function flattenExtraInfo(
+  obj: Record<string, unknown>,
+  prefix = ''
+): Array<{ key: string; value: string }> {
+  const result: Array<{ key: string; value: string }> = []
+
+  for (const [key, value] of Object.entries(obj)) {
+    const displayKey = prefix ? `${prefix}.${key}` : key
+
+    if (value === null || value === undefined) {
+      result.push({ key: displayKey, value: '-' })
+    } else if (typeof value === 'string') {
+      result.push({ key: displayKey, value: value || '-' })
+    } else if (typeof value === 'number') {
+      result.push({ key: displayKey, value: value.toString() })
+    } else if (typeof value === 'boolean') {
+      result.push({ key: displayKey, value: value ? '是' : '否' })
+    } else if (Array.isArray(value)) {
+      // 数组：如果是简单类型数组则用顿号连接，否则展开
+      if (value.length === 0) {
+        result.push({ key: displayKey, value: '-' })
+      } else if (value.every((item) => typeof item !== 'object')) {
+        result.push({ key: displayKey, value: value.join('、') })
+      } else {
+        // 对象数组，逐个展开
+        value.forEach((item, index) => {
+          if (typeof item === 'object' && item !== null) {
+            result.push(...flattenExtraInfo(item as Record<string, unknown>, `${displayKey}[${index}]`))
+          } else {
+            result.push({ key: `${displayKey}[${index}]`, value: String(item) })
+          }
+        })
+      }
+    } else if (typeof value === 'object') {
+      // 嵌套对象，递归处理
+      result.push(...flattenExtraInfo(value as Record<string, unknown>, displayKey))
+    } else {
+      result.push({ key: displayKey, value: String(value) })
+    }
   }
-  if (typeof value === 'string') {
-    return value || '-'
-  }
-  if (typeof value === 'number') {
-    return value.toString()
-  }
-  if (typeof value === 'boolean') {
-    return value ? '是' : '否'
-  }
-  if (Array.isArray(value)) {
-    return value.length > 0 ? value.join('、') : '-'
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value)
-  }
-  return String(value)
+
+  return result
 }
 
 interface LeadDetailSheetProps {
@@ -398,12 +420,12 @@ export function LeadDetailSheet({
                       <InfoGrid>
                         <InfoItem label="渠道名称" value={lead.source_channel_name} />
                         <InfoItem label="来源详情" value={lead.source_detail} />
-                        {/* 渠道额外字段 */}
-                        {lead.source_extra_info && Object.entries(lead.source_extra_info).map(([key, value]) => (
+                        {/* 渠道额外字段（扁平化嵌套 JSON） */}
+                        {lead.source_extra_info && flattenExtraInfo(lead.source_extra_info).map((item) => (
                           <InfoItem
-                            key={key}
-                            label={key}
-                            value={formatExtraFieldValue(value)}
+                            key={item.key}
+                            label={item.key}
+                            value={item.value}
                           />
                         ))}
                       </InfoGrid>
