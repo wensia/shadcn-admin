@@ -25,6 +25,7 @@ import {
   FormMessage
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { FormDatePicker } from '@/components/date-picker'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -326,7 +327,12 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                         <FormItem>
                           <FormLabel className="text-xs">生日</FormLabel>
                           <FormControl>
-                            <Input {...field} type="date" className="h-8 text-xs" />
+                            <FormDatePicker
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="选择生日"
+                              maxDate={new Date()}
+                            />
                           </FormControl>
                           <FormMessage className="text-xs" />
                         </FormItem>

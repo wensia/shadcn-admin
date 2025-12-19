@@ -33,6 +33,9 @@ src/
 - `Badge` - 扩展了 success/warning/info/purple 等语义化 variant
 - `Timeline` - 时间轴组件 (shadcn 原版没有)
 - `SimplePagination` - 简化分页组件
+- `DatePicker` - 日期选择器 (支持三种 UI 风格 + 中文格式)
+- `DateRangePicker` - 日期范围选择器
+- `FormDatePicker` - 表单用日期选择器 (兼容 react-hook-form)
 
 ### 2. 其次参考 shadcn-admin 示例项目
 
@@ -184,6 +187,64 @@ type BadgeVariant =
   | 'info'         // 蓝色/信息
   | 'purple'       // 紫色
 ```
+
+## 日期选择器规范
+
+**重要：禁止使用原生 `<input type="date">`，统一使用项目 DatePicker 组件**
+
+```tsx
+import { DatePicker, DateRangePicker, FormDatePicker } from '@/components/date-picker'
+
+// 1. 基础日期选择器
+<DatePicker
+  selected={date}
+  onSelect={setDate}
+  placeholder="选择日期"
+  dateFormat="yyyy/MM/dd"
+/>
+
+// 2. 日期范围选择 (用于筛选)
+<DateRangePicker
+  startDate={filters.created_from}
+  endDate={filters.created_to}
+  onStartDateChange={(date) => updateFilter('created_from', date)}
+  onEndDateChange={(date) => updateFilter('created_to', date)}
+  startPlaceholder="开始日期"
+  endPlaceholder="结束日期"
+/>
+
+// 3. 表单日期选择 (兼容 react-hook-form)
+<FormField
+  control={form.control}
+  name="birthday"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>生日</FormLabel>
+      <FormControl>
+        <FormDatePicker
+          value={field.value}
+          onChange={field.onChange}
+          placeholder="选择生日"
+          maxDate={new Date()}
+        />
+      </FormControl>
+    </FormItem>
+  )}
+/>
+```
+
+### DatePicker 属性
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| selected | Date \| undefined | 选中的日期 |
+| onSelect | (date: Date \| undefined) => void | 选择回调 |
+| placeholder | string | 占位文本 |
+| dateFormat | string | 日期格式 (默认 yyyy/MM/dd) |
+| minDate | Date | 最小可选日期 |
+| maxDate | Date | 最大可选日期 |
+| disabled | boolean | 是否禁用 |
+| fullWidth | boolean | 是否全宽 |
 
 ## 数据表格布局
 

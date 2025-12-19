@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { DateRangePicker } from '@/components/date-picker'
 import {
   Select,
   SelectContent,
@@ -239,22 +240,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             {/* 创建时间范围 */}
             <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
               <Label className={cn(s.text.xs, 'font-semibold')}>创建时间</Label>
-              <div className={cn('grid grid-cols-2', s.gap.tight)}>
-                <Input
-                  type="date"
-                  className={cn(s.height.control, s.text.xs)}
-                  value={localFilters.created_from || ''}
-                  onChange={(e) => updateFilter('created_from', e.target.value)}
-                  placeholder="开始日期"
-                />
-                <Input
-                  type="date"
-                  className={cn(s.height.control, s.text.xs)}
-                  value={localFilters.created_to || ''}
-                  onChange={(e) => updateFilter('created_to', e.target.value)}
-                  placeholder="结束日期"
-                />
-              </div>
+              <DateRangePicker
+                startDate={localFilters.created_from}
+                endDate={localFilters.created_to}
+                onStartDateChange={(date) => updateFilter('created_from', date)}
+                onEndDateChange={(date) => updateFilter('created_to', date)}
+                startPlaceholder="开始日期"
+                endPlaceholder="结束日期"
+              />
             </div>
 
             {/* 标签 */}
