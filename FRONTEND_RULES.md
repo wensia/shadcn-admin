@@ -13,6 +13,55 @@ shadcn-admin (React + shadcn/ui) 前端开发的核心规范。
 - Tailwind CSS 样式
 - recharts 图表库
 
+## 组件使用优先级
+
+**重要：组件和样式选择遵循以下优先级顺序：**
+
+### 1. 优先使用 shadcn-admin 项目已有组件
+
+首先检查本项目 `src/` 目录下是否已有相关组件：
+
+```
+src/
+├── components/ui/          # 基础 UI 组件 (已扩展)
+├── components/data-table/  # 数据表格相关组件
+├── components/layout/      # 布局组件
+└── features/*/components/  # 业务模块组件
+```
+
+**已扩展的组件示例：**
+- `Badge` - 扩展了 success/warning/info/purple 等语义化 variant
+- `Timeline` - 时间轴组件 (shadcn 原版没有)
+- `SimplePagination` - 简化分页组件
+
+### 2. 其次参考 shadcn-admin 示例项目
+
+- GitHub: https://github.com/satnaing/shadcn-admin
+- Demo: https://shadcn-admin.netlify.app
+
+参考其布局模式、组件组合方式、样式处理等。
+
+### 3. 最后降级使用 shadcn/ui 默认组件
+
+- 官方文档: https://ui.shadcn.com/docs/components
+- 如需新增组件，使用 `npx shadcn@latest add <component>` 安装
+
+### 使用检查流程
+
+```
+需要某个组件/样式时：
+  │
+  ├─ 1. 项目内是否已有？ ──是──> 直接使用
+  │         │
+  │        否
+  │         │
+  ├─ 2. shadcn-admin 示例是否有类似实现？ ──是──> 参考其实现方式
+  │         │
+  │        否
+  │         │
+  └─ 3. 使用 shadcn/ui 默认组件，必要时扩展
+```
+
 ## 端口配置
 
 **前端端口: 3457** - 禁止随意更改
