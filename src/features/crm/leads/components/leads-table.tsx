@@ -22,8 +22,9 @@ import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { cn } from '@/lib/utils'
 import { useStyle } from '@/context/style-provider'
 import { useStyleClasses } from '@/lib/style-utils'
-import type { LeadListItem, LeadStatus, IntentionLevel } from '../types'
-import { leadStatusLabels, intentionLevelLabels, gradeLabels } from '../types'
+import type { LeadListItem } from '../types'
+import { gradeLabels } from '../types'
+import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
 
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
@@ -73,39 +74,6 @@ interface LeadsTableProps {
   onSelectionChange?: (selectedRows: LeadListItem[]) => void
 }
 
-/**
- * 获取状态Badge的variant
- */
-function getStatusVariant(status: LeadStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
-  switch (status) {
-    case 'paid':
-      return 'default' // 绿色
-    case 'invalid':
-    case 'closed':
-      return 'destructive' // 红色
-    case 'pending_assign':
-    case 'pending_followup':
-      return 'outline' // 灰色
-    default:
-      return 'secondary' // 蓝色
-  }
-}
-
-/**
- * 获取意向等级Badge的variant
- */
-function getIntentionVariant(level?: IntentionLevel): 'default' | 'secondary' | 'outline' {
-  switch (level) {
-    case 'high':
-      return 'default' // 绿色
-    case 'medium':
-      return 'secondary' // 黄色
-    case 'low':
-      return 'outline' // 灰色
-    default:
-      return 'outline'
-  }
-}
 
 export function LeadsTable({
   data,
@@ -248,9 +216,10 @@ export function LeadsTable({
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className={cn("h-5 w-16", s.rounded)} />
           }
+          const statusStyle = getLeadStatusStyle(row.original.status)
           return (
-            <Badge variant={getStatusVariant(row.original.status)} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
-              {leadStatusLabels[row.original.status]}
+            <Badge variant={statusStyle.variant} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
+              {statusStyle.label}
             </Badge>
           )
         },
@@ -266,9 +235,10 @@ export function LeadsTable({
           }
           const level = row.original.intention_level
           if (!level) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
+          const intentionStyle = getIntentionLevelStyle(level)
           return (
-            <Badge variant={getIntentionVariant(level)} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
-              {intentionLevelLabels[level]}
+            <Badge variant={intentionStyle.variant} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
+              {intentionStyle.label}
             </Badge>
           )
         },

@@ -16,6 +16,15 @@ const badgeVariants = cva(
           'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
         outline:
           'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
+        // 语义化颜色 variant
+        success:
+          'border-transparent bg-green-500 text-white [a&]:hover:bg-green-500/90 dark:bg-green-600',
+        warning:
+          'border-transparent bg-yellow-500 text-white [a&]:hover:bg-yellow-500/90 dark:bg-yellow-600',
+        info:
+          'border-transparent bg-blue-500 text-white [a&]:hover:bg-blue-500/90 dark:bg-blue-600',
+        purple:
+          'border-transparent bg-purple-500 text-white [a&]:hover:bg-purple-500/90 dark:bg-purple-600',
       },
     },
     defaultVariants: {

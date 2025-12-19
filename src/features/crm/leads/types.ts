@@ -4,8 +4,8 @@
  */
 
 // ==================== 样式配置接口 ====================
-// shadcn/ui Badge组件支持的variant类型
-export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+// shadcn/ui Badge组件支持的variant类型（包含语义化扩展）
+export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'purple'
 
 // 枚举样式配置
 export interface EnumStyleConfig {

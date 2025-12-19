@@ -22,17 +22,15 @@ import { Phone, Edit, Plus, X } from 'lucide-react'
 import { leadsApi } from '../api'
 import type { Lead, LeadFollowup, LeadInfoChangeLog, LeadOwnershipChangeLog } from '../types'
 import {
-  leadStatusLabels,
-  intentionLevelLabels,
   gradeLabels,
   followupMethodLabels,
-  followupResultLabels,
   infoChangeTypeLabels,
   ownershipChangeTypeLabels
 } from '../types'
 import { formatTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
+import { getLeadStatusStyle, getIntentionLevelStyle, getFollowupResultStyle } from '@/lib/status-styles'
 
 interface LeadDetailSheetProps {
   leadId: string | null
@@ -248,15 +246,15 @@ export function LeadDetailSheet({
                         <InfoItem label="来源详情" value={lead.source_detail} />
                         <div className="flex items-start gap-2">
                           <span className="text-muted-foreground shrink-0">状态:</span>
-                          <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
-                            {leadStatusLabels[lead.status]}
+                          <Badge variant={getLeadStatusStyle(lead.status).variant} className={cn(s.text.xs, s.height.badge)}>
+                            {getLeadStatusStyle(lead.status).label}
                           </Badge>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="text-muted-foreground shrink-0">意向等级:</span>
                           {lead.intention_level ? (
-                            <Badge variant="secondary" className={cn(s.text.xs, s.height.badge)}>
-                              {intentionLevelLabels[lead.intention_level]}
+                            <Badge variant={getIntentionLevelStyle(lead.intention_level).variant} className={cn(s.text.xs, s.height.badge)}>
+                              {getIntentionLevelStyle(lead.intention_level).label}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground">-</span>
@@ -295,8 +293,8 @@ export function LeadDetailSheet({
                               {followupMethodLabels[followup.method]}
                             </Badge>
                             {followup.result && (
-                              <Badge variant="secondary" className={cn(s.text.xs, s.height.badge)}>
-                                {followupResultLabels[followup.result]}
+                              <Badge variant={getFollowupResultStyle(followup.result).variant} className={cn(s.text.xs, s.height.badge)}>
+                                {getFollowupResultStyle(followup.result).label}
                               </Badge>
                             )}
                           </div>

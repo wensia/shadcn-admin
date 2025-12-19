@@ -27,8 +27,8 @@ import {
   BatchDeleteDialog
 } from './components/batch-dialogs'
 import { leadsApi } from './api'
-import type { LeadListParams, LeadListItem, Lead, LeadStatus } from './types'
-import { leadStatusLabels } from './types'
+import type { LeadListParams, LeadListItem, Lead, LeadStatus, IntentionLevel } from './types'
+import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
 
 export function LeadsPage() {
   const queryClient = useQueryClient()
@@ -42,7 +42,8 @@ export function LeadsPage() {
 
   // 搜索和快捷筛选
   const [searchValue, setSearchValue] = useState('')
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | ''>('')
+  const [statusFilter, setStatusFilter] = useState<LeadStatus[]>([])
+  const [intentionFilter, setIntentionFilter] = useState<IntentionLevel[]>([])
 
   // 搜索防抖:用户输入500ms后才触发查询
   const debouncedSearch = useDebouncedValue(searchValue, 500)
@@ -68,12 +69,14 @@ export function LeadsPage() {
 
   // 获取线索列表 - 使用防抖搜索提升性能
   const { data, isLoading } = useQuery({
-    queryKey: ['leads', pagination, filters, debouncedSearch, statusFilter],
+    queryKey: ['leads', pagination, filters, debouncedSearch, statusFilter, intentionFilter],
     queryFn: async () => {
       const response = await leadsApi.getLeads({
         ...filters,
         search: debouncedSearch || undefined,
-        status: statusFilter || undefined,
+        // 如果有多个状态选中，暂时只取第一个（API 可能需要支持多状态筛选）
+        status: statusFilter.length > 0 ? statusFilter[0] : undefined,
+        intention_level: intentionFilter.length > 0 ? intentionFilter[0] : undefined,
         page: pagination.page,
         size: pagination.size,
         include_styles: true
@@ -188,9 +191,15 @@ export function LeadsPage() {
     setPagination((prev) => ({ ...prev, page: 1 })) // 重置到第一页
   }
 
-  // 状态筛选变化
-  const handleStatusFilterChange = (value: LeadStatus | '') => {
-    setStatusFilter(value)
+  // 状态筛选变化（支持多选）
+  const handleStatusFilterChange = (values: LeadStatus[]) => {
+    setStatusFilter(values)
+    setPagination((prev) => ({ ...prev, page: 1 })) // 重置到第一页
+  }
+
+  // 意向等级筛选变化（支持多选）
+  const handleIntentionFilterChange = (values: IntentionLevel[]) => {
+    setIntentionFilter(values)
     setPagination((prev) => ({ ...prev, page: 1 })) // 重置到第一页
   }
 
@@ -202,14 +211,29 @@ export function LeadsPage() {
 
   // 移除状态筛选
   const handleRemoveStatus = () => {
-    setStatusFilter('')
+    setStatusFilter([])
+    setPagination((prev) => ({ ...prev, page: 1 }))
+  }
+
+  // 移除意向筛选
+  const handleRemoveIntention = () => {
+    setIntentionFilter([])
+    setPagination((prev) => ({ ...prev, page: 1 }))
+  }
+
+  // 重置工具栏筛选
+  const handleResetToolbarFilters = () => {
+    setSearchValue('')
+    setStatusFilter([])
+    setIntentionFilter([])
     setPagination((prev) => ({ ...prev, page: 1 }))
   }
 
   // 清除所有筛选
   const handleClearAllFilters = () => {
     setSearchValue('')
-    setStatusFilter('')
+    setStatusFilter([])
+    setIntentionFilter([])
     setFilters({})
     setPagination((prev) => ({ ...prev, page: 1 }))
   }
@@ -217,7 +241,8 @@ export function LeadsPage() {
   // 计算活跃筛选条件数量
   const activeFiltersCount =
     (searchValue ? 1 : 0) +
-    (statusFilter ? 1 : 0) +
+    (statusFilter.length > 0 ? 1 : 0) +
+    (intentionFilter.length > 0 ? 1 : 0) +
     Object.keys(filters).filter((key) => {
       const value = filters[key as keyof LeadListParams]
       return value !== undefined && value !== '' && value !== null
@@ -234,8 +259,8 @@ export function LeadsPage() {
               <h1 className={cn(s.text.lg, 'font-bold tracking-tight')}>线索管理</h1>
               <p className={cn(s.text.xs, 'text-muted-foreground')}>管理和跟进销售线索</p>
             </div>
-            <Button onClick={handleCreate} className={s.height.control}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button onClick={handleCreate} size="sm" className="h-8">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
               新建线索
             </Button>
           </div>
@@ -246,12 +271,15 @@ export function LeadsPage() {
               selectedCount={selectedRows.length}
               searchValue={searchValue}
               statusFilter={statusFilter}
+              intentionFilter={intentionFilter}
               showCreateButton={false}
               onRefreshClick={handleRefresh}
               onExportClick={handleExport}
               onFilterClick={handleFilter}
               onSearchChange={handleSearchChange}
               onStatusFilterChange={handleStatusFilterChange}
+              onIntentionFilterChange={handleIntentionFilterChange}
+              onResetFilters={handleResetToolbarFilters}
               onBatchAssign={handleBatchAssign}
               onBatchRelease={handleBatchRelease}
               onBatchUpdateStatus={handleBatchUpdateStatus}
@@ -276,12 +304,23 @@ export function LeadsPage() {
           )}
 
           {/* 状态筛选标签 */}
-          {statusFilter && (
+          {statusFilter.length > 0 && (
             <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              状态: {leadStatusLabels[statusFilter]}
+              状态: {statusFilter.map(status => getLeadStatusStyle(status).label).join(', ')}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
                 onClick={handleRemoveStatus}
+              />
+            </Badge>
+          )}
+
+          {/* 意向等级筛选标签 */}
+          {intentionFilter.length > 0 && (
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+              意向: {intentionFilter.map(level => getIntentionLevelStyle(level).label).join(', ')}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-destructive"
+                onClick={handleRemoveIntention}
               />
             </Badge>
           )}
