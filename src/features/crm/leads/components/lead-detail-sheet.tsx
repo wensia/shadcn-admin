@@ -256,18 +256,27 @@ export function LeadDetailSheet({
         {/* ==================== Tabs 区域 ==================== */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
           <TabsList className={cn(
-            'w-full justify-start rounded-none border-b bg-transparent px-4 shrink-0',
-            s.height.control
+            'w-full justify-start rounded-none border-b bg-transparent px-4 h-auto shrink-0'
           )}>
             <TabsTrigger
               value="overview"
-              className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}
+              className={cn(
+                s.text.xs,
+                'rounded-none border-b-2 border-transparent px-4 py-2',
+                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+              )}
             >
               概览
             </TabsTrigger>
             <TabsTrigger
               value="followups"
-              className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}
+              className={cn(
+                s.text.xs,
+                'rounded-none border-b-2 border-transparent px-4 py-2',
+                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+              )}
             >
               跟进记录
               <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
@@ -276,13 +285,23 @@ export function LeadDetailSheet({
             </TabsTrigger>
             <TabsTrigger
               value="statistics"
-              className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}
+              className={cn(
+                s.text.xs,
+                'rounded-none border-b-2 border-transparent px-4 py-2',
+                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+              )}
             >
               统计图表
             </TabsTrigger>
             <TabsTrigger
               value="history"
-              className={cn(s.text.xs, s.height.controlSm, 'data-[state=active]:shadow-none')}
+              className={cn(
+                s.text.xs,
+                'rounded-none border-b-2 border-transparent px-4 py-2',
+                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+              )}
             >
               变更历史
             </TabsTrigger>
