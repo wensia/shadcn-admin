@@ -255,16 +255,16 @@ export function LeadDetailSheet({
 
         {/* ==================== Tabs 区域 ==================== */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
-          <TabsList className={cn(
-            'w-full justify-start rounded-none border-b bg-transparent px-4 h-auto shrink-0'
-          )}>
+          <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 h-auto shrink-0">
             <TabsTrigger
               value="overview"
               className={cn(
                 s.text.xs,
-                'rounded-none border-b-2 border-transparent px-4 py-2',
-                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+                'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
+                'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold',
+                'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
+                'after:bg-transparent data-[state=active]:after:bg-primary'
               )}
             >
               概览
@@ -273,9 +273,11 @@ export function LeadDetailSheet({
               value="followups"
               className={cn(
                 s.text.xs,
-                'rounded-none border-b-2 border-transparent px-4 py-2',
-                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+                'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
+                'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold',
+                'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
+                'after:bg-transparent data-[state=active]:after:bg-primary'
               )}
             >
               跟进记录
@@ -287,9 +289,11 @@ export function LeadDetailSheet({
               value="statistics"
               className={cn(
                 s.text.xs,
-                'rounded-none border-b-2 border-transparent px-4 py-2',
-                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+                'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
+                'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold',
+                'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
+                'after:bg-transparent data-[state=active]:after:bg-primary'
               )}
             >
               统计图表
@@ -298,9 +302,11 @@ export function LeadDetailSheet({
               value="history"
               className={cn(
                 s.text.xs,
-                'rounded-none border-b-2 border-transparent px-4 py-2',
-                'data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                'data-[state=active]:text-foreground data-[state=active]:font-semibold'
+                'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
+                'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                'data-[state=active]:text-foreground data-[state=active]:font-semibold',
+                'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
+                'after:bg-transparent data-[state=active]:after:bg-primary'
               )}
             >
               变更历史
