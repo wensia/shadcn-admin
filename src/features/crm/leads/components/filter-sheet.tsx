@@ -1,6 +1,6 @@
 /**
  * 高级筛选Sheet组件
- * 支持 Mira/Lyra 风格切换
+ * 遵循 Lyra 风格设计：方正锐利、分组布局、网格排列
  */
 
 import { useState } from 'react'
@@ -24,16 +24,62 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { X } from 'lucide-react'
+import { X, FileText, Users, Calendar, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
 import type { LeadListParams, LeadStatus, IntentionLevel } from '../types'
-import { leadStatusLabels, intentionLevelLabels, gradeLabels } from '../types'
+import { leadStatusLabels, intentionLevelLabels } from '../types'
 
+// ==================== FilterGroup 子组件 ====================
+interface FilterGroupProps {
+  title: string
+  icon: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}
+
+function FilterGroup({ title, icon, children, className }: FilterGroupProps) {
+  const s = useStyleClasses()
+
+  return (
+    <div className={cn('border border-border p-3', s.rounded, className)}>
+      <div className={cn('flex items-center gap-2 mb-3')}>
+        <span className={cn('text-muted-foreground', s.size.icon)}>{icon}</span>
+        <span className={cn(s.text.sm, 'font-semibold')}>{title}</span>
+      </div>
+      <div className={cn('space-y-3')}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ==================== FilterField 子组件 ====================
+interface FilterFieldProps {
+  label: string
+  children: React.ReactNode
+  description?: string
+  className?: string
+}
+
+function FilterField({ label, children, description, className }: FilterFieldProps) {
+  const s = useStyleClasses()
+
+  return (
+    <div className={cn('space-y-1.5', className)}>
+      <Label className={cn(s.text.xs, 'text-muted-foreground')}>{label}</Label>
+      {children}
+      {description && (
+        <p className={cn(s.text.xs, 'text-muted-foreground')}>{description}</p>
+      )}
+    </div>
+  )
+}
+
+// ==================== 主组件 ====================
 interface FilterSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -84,9 +130,9 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md p-0 [&>button:last-child]:hidden">
-        {/* Sheet Header */}
-        <SheetHeader className="px-4 py-3 border-b">
+      <SheetContent className={cn('w-full sm:max-w-lg p-0 flex flex-col [&>button:last-child]:hidden', s.rounded)}>
+        {/* ==================== Header ==================== */}
+        <SheetHeader className="px-4 py-3 border-b shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <SheetTitle className={s.text.base}>高级筛选</SheetTitle>
@@ -94,7 +140,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
                 多条件组合筛选线索
                 {activeFiltersCount > 0 && (
                   <Badge variant="secondary" className={cn('ml-2', s.text.xs, s.height.badge, s.rounded)}>
-                    {activeFiltersCount}个筛选条件
+                    {activeFiltersCount}个条件
                   </Badge>
                 )}
               </SheetDescription>
@@ -103,203 +149,214 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="h-8 w-8 shrink-0"
+              className={cn('shrink-0', s.size.button, s.size.button)}
             >
-              <X className="h-4 w-4" />
+              <X className={s.size.icon} />
               <span className="sr-only">关闭</span>
             </Button>
           </div>
         </SheetHeader>
 
-        {/* 筛选表单 */}
-        <ScrollArea className="h-[calc(100vh-130px)]">
-          <div className={cn('p-4', s.gap.normal, 'space-y-0 flex flex-col')}>
-            {/* 状态筛选 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>线索状态</Label>
-              <Select
-                value={localFilters.status || undefined}
-                onValueChange={(value) => updateFilter('status', value === '__all__' ? '' : value as LeadStatus)}
+        {/* ==================== 筛选表单 ==================== */}
+        <ScrollArea className="flex-1 overflow-auto">
+          <div className={cn('p-4', s.gap.normal, 'space-y-4')}>
+
+            {/* ========== 基本信息 ========== */}
+            <FilterGroup title="基本信息" icon={<FileText className={s.size.icon} />}>
+              {/* 状态 + 意向等级 并排 */}
+              <div className="grid grid-cols-2 gap-3">
+                <FilterField label="线索状态">
+                  <Select
+                    value={localFilters.status || undefined}
+                    onValueChange={(value) => updateFilter('status', value === '__all__' ? '' : value as LeadStatus)}
+                  >
+                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
+                      <SelectValue placeholder="全部状态" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__" className={s.text.xs}>全部状态</SelectItem>
+                      {Object.entries(leadStatusLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value} className={s.text.xs}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterField>
+
+                <FilterField label="意向等级">
+                  <Select
+                    value={localFilters.intention_level || undefined}
+                    onValueChange={(value) => updateFilter('intention_level', value === '__all__' ? '' : value as IntentionLevel)}
+                  >
+                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
+                      <SelectValue placeholder="全部意向" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__" className={s.text.xs}>全部意向</SelectItem>
+                      {Object.entries(intentionLevelLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value} className={s.text.xs}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterField>
+              </div>
+
+              {/* 来源渠道 单独一行 */}
+              <FilterField label="来源渠道">
+                <Select
+                  value={localFilters.source_channel_id || undefined}
+                  onValueChange={(value) => updateFilter('source_channel_id', value === '__all__' ? '' : value)}
+                >
+                  <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
+                    <SelectValue placeholder="全部渠道" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__" className={s.text.xs}>全部渠道</SelectItem>
+                    {filterOptions?.source_channels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id} className={s.text.xs}>
+                        {channel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FilterField>
+            </FilterGroup>
+
+            {/* ========== 人员相关 ========== */}
+            <FilterGroup title="人员相关" icon={<Users className={s.size.icon} />}>
+              {/* 负责顾问 + 创建人 并排 */}
+              <div className="grid grid-cols-2 gap-3">
+                <FilterField label="负责顾问">
+                  <Select
+                    value={localFilters.advisor_id || undefined}
+                    onValueChange={(value) => updateFilter('advisor_id', value === '__all__' ? '' : value)}
+                  >
+                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
+                      <SelectValue placeholder="全部顾问" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__" className={s.text.xs}>全部顾问</SelectItem>
+                      {filterOptions?.advisors.map((advisor) => (
+                        <SelectItem key={advisor.id} value={advisor.id} className={s.text.xs}>
+                          {advisor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterField>
+
+                <FilterField label="创建人">
+                  <Select
+                    value={localFilters.created_by_id || undefined}
+                    onValueChange={(value) => updateFilter('created_by_id', value === '__all__' ? '' : value)}
+                  >
+                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
+                      <SelectValue placeholder="全部创建人" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__" className={s.text.xs}>全部创建人</SelectItem>
+                      {filterOptions?.creators.map((creator) => (
+                        <SelectItem key={creator.id} value={creator.id} className={s.text.xs}>
+                          {creator.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FilterField>
+              </div>
+
+              {/* 归属校区 单独一行 */}
+              <FilterField label="归属校区">
+                <Select
+                  value={localFilters.owner_campus_id || undefined}
+                  onValueChange={(value) => updateFilter('owner_campus_id', value === '__all__' ? '' : value)}
+                >
+                  <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
+                    <SelectValue placeholder="全部校区" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__" className={s.text.xs}>全部校区</SelectItem>
+                    {filterOptions?.campuses?.map((campus) => (
+                      <SelectItem key={campus.id} value={campus.id} className={s.text.xs}>
+                        {campus.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FilterField>
+            </FilterGroup>
+
+            {/* ========== 时间条件 ========== */}
+            <FilterGroup title="时间条件" icon={<Calendar className={s.size.icon} />}>
+              <FilterField label="创建时间">
+                <DateRangePicker
+                  startDate={localFilters.created_from}
+                  endDate={localFilters.created_to}
+                  onStartDateChange={(date) => updateFilter('created_from', date)}
+                  onEndDateChange={(date) => updateFilter('created_to', date)}
+                  startPlaceholder="开始日期"
+                  endPlaceholder="结束日期"
+                />
+              </FilterField>
+
+              <FilterField
+                label="无活动天数"
+                description="筛选N天内无跟进/创建/激活记录的线索"
               >
-                <SelectTrigger className={cn(s.height.control, s.text.xs)}>
-                  <SelectValue placeholder="全部状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className={s.text.xs}>全部状态</SelectItem>
-                  {Object.entries(leadStatusLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value} className={s.text.xs}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <Input
+                  type="number"
+                  className={cn(s.height.control, s.text.xs, s.rounded)}
+                  value={localFilters.days_without_activity || ''}
+                  onChange={(e) =>
+                    updateFilter('days_without_activity', e.target.value ? parseInt(e.target.value) : undefined)
+                  }
+                  placeholder="如: 7"
+                />
+              </FilterField>
+            </FilterGroup>
 
-            {/* 来源渠道 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>来源渠道</Label>
-              <Select
-                value={localFilters.source_channel_id || undefined}
-                onValueChange={(value) => updateFilter('source_channel_id', value === '__all__' ? '' : value)}
-              >
-                <SelectTrigger className={cn(s.height.control, s.text.xs)}>
-                  <SelectValue placeholder="全部渠道" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className={s.text.xs}>全部渠道</SelectItem>
-                  {filterOptions?.source_channels.map((channel) => (
-                    <SelectItem key={channel.id} value={channel.id} className={s.text.xs}>
-                      {channel.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* ========== 其他条件 ========== */}
+            <FilterGroup title="其他条件" icon={<Tag className={s.size.icon} />}>
+              <div className="grid grid-cols-2 gap-3">
+                <FilterField label="标签">
+                  <Input
+                    className={cn(s.height.control, s.text.xs, s.rounded)}
+                    value={localFilters.tag || ''}
+                    onChange={(e) => updateFilter('tag', e.target.value)}
+                    placeholder="输入标签"
+                  />
+                </FilterField>
 
-            {/* 负责顾问 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>负责顾问</Label>
-              <Select
-                value={localFilters.advisor_id || undefined}
-                onValueChange={(value) => updateFilter('advisor_id', value === '__all__' ? '' : value)}
-              >
-                <SelectTrigger className={cn(s.height.control, s.text.xs)}>
-                  <SelectValue placeholder="全部顾问" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className={s.text.xs}>全部顾问</SelectItem>
-                  {filterOptions?.advisors.map((advisor) => (
-                    <SelectItem key={advisor.id} value={advisor.id} className={s.text.xs}>
-                      {advisor.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <FilterField label="搜索关键词">
+                  <Input
+                    className={cn(s.height.control, s.text.xs, s.rounded)}
+                    value={localFilters.search || ''}
+                    onChange={(e) => updateFilter('search', e.target.value)}
+                    placeholder="姓名/手机号"
+                  />
+                </FilterField>
+              </div>
+            </FilterGroup>
 
-            {/* 创建人 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>创建人</Label>
-              <Select
-                value={localFilters.created_by_id || undefined}
-                onValueChange={(value) => updateFilter('created_by_id', value === '__all__' ? '' : value)}
-              >
-                <SelectTrigger className={cn(s.height.control, s.text.xs)}>
-                  <SelectValue placeholder="全部创建人" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className={s.text.xs}>全部创建人</SelectItem>
-                  {filterOptions?.creators.map((creator) => (
-                    <SelectItem key={creator.id} value={creator.id} className={s.text.xs}>
-                      {creator.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 归属校区 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>归属校区</Label>
-              <Select
-                value={localFilters.owner_campus_id || undefined}
-                onValueChange={(value) => updateFilter('owner_campus_id', value === '__all__' ? '' : value)}
-              >
-                <SelectTrigger className={cn(s.height.control, s.text.xs)}>
-                  <SelectValue placeholder="全部校区" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className={s.text.xs}>全部校区</SelectItem>
-                  {/* TODO: 获取校区列表 */}
-                  <SelectItem value="campus1" className={s.text.xs}>校区1</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 意向等级 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>意向等级</Label>
-              <Select
-                value={localFilters.intention_level || undefined}
-                onValueChange={(value) => updateFilter('intention_level', value === '__all__' ? '' : value as IntentionLevel)}
-              >
-                <SelectTrigger className={cn(s.height.control, s.text.xs)}>
-                  <SelectValue placeholder="全部意向" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className={s.text.xs}>全部意向</SelectItem>
-                  {Object.entries(intentionLevelLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value} className={s.text.xs}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 创建时间范围 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>创建时间</Label>
-              <DateRangePicker
-                startDate={localFilters.created_from}
-                endDate={localFilters.created_to}
-                onStartDateChange={(date) => updateFilter('created_from', date)}
-                onEndDateChange={(date) => updateFilter('created_to', date)}
-                startPlaceholder="开始日期"
-                endPlaceholder="结束日期"
-              />
-            </div>
-
-            {/* 标签 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>标签</Label>
-              <Input
-                className={cn(s.height.control, s.text.xs)}
-                value={localFilters.tag || ''}
-                onChange={(e) => updateFilter('tag', e.target.value)}
-                placeholder="输入标签"
-              />
-            </div>
-
-            {/* 无活动天数 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>无活动天数</Label>
-              <Input
-                type="number"
-                className={cn(s.height.control, s.text.xs)}
-                value={localFilters.days_without_activity || ''}
-                onChange={(e) =>
-                  updateFilter('days_without_activity', e.target.value ? parseInt(e.target.value) : undefined)
-                }
-                placeholder="如: 7"
-              />
-              <p className={cn(s.text.xs, 'text-muted-foreground')}>筛选N天内无跟进/创建/激活记录的线索</p>
-            </div>
-
-            {/* 搜索关键词 */}
-            <div className={cn(s.gap.tight, 'space-y-0 flex flex-col')}>
-              <Label className={cn(s.text.xs, 'font-semibold')}>搜索关键词</Label>
-              <Input
-                className={cn(s.height.control, s.text.xs)}
-                value={localFilters.search || ''}
-                onChange={(e) => updateFilter('search', e.target.value)}
-                placeholder="姓名/手机号"
-              />
-            </div>
           </div>
         </ScrollArea>
 
-        {/* Sheet Footer */}
-        <SheetFooter className={cn('px-4 py-3 border-t', s.gap.tight)}>
+        {/* ==================== Footer ==================== */}
+        <SheetFooter className="px-4 py-3 border-t flex flex-row gap-3 shrink-0">
           <Button
             variant="outline"
-            size="sm"
             onClick={handleReset}
-            className={cn(s.height.control, s.text.xs, 'flex-1')}
+            className={cn(s.height.control, s.text.sm, s.rounded, 'flex-1')}
           >
             重置
           </Button>
-          <Button size="sm" onClick={handleApply} className={cn(s.height.control, s.text.xs, 'flex-1')}>
+          <Button
+            onClick={handleApply}
+            className={cn(s.height.control, s.text.sm, s.rounded, 'flex-1')}
+          >
             应用筛选
           </Button>
         </SheetFooter>
