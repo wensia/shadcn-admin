@@ -35,6 +35,7 @@ import {
   MapPin,
   Tag,
   UserPlus,
+  UserCog,
 } from 'lucide-react'
 import { leadsApi } from '../api'
 import type { Lead, LeadFollowup, LeadInfoChangeLog, LeadOwnershipChangeLog } from '../types'
@@ -57,6 +58,32 @@ import { ChangeHistoryTimeline } from './detail/change-history-timeline'
 import { FollowupFrequencyChart } from './detail/charts/followup-frequency-chart'
 import { FollowupMethodPie } from './detail/charts/followup-method-pie'
 import { FollowupResultPie } from './detail/charts/followup-result-pie'
+
+/**
+ * 格式化额外字段的值
+ * 处理不同类型：字符串、数字、布尔、数组、对象等
+ */
+function formatExtraFieldValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '-'
+  }
+  if (typeof value === 'string') {
+    return value || '-'
+  }
+  if (typeof value === 'number') {
+    return value.toString()
+  }
+  if (typeof value === 'boolean') {
+    return value ? '是' : '否'
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join('、') : '-'
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value)
+  }
+  return String(value)
+}
 
 interface LeadDetailSheetProps {
   leadId: string | null
@@ -366,11 +393,25 @@ export function LeadDetailSheet({
                       </InfoGrid>
                     </InfoCard>
 
-                    {/* 线索属性 */}
-                    <InfoCard title="线索属性" icon={<Tag className={s.size.icon} />}>
+                    {/* 来源渠道 */}
+                    <InfoCard title="来源渠道" icon={<Tag className={s.size.icon} />}>
                       <InfoGrid>
-                        <InfoItem label="来源渠道" value={lead.source_channel_name} />
+                        <InfoItem label="渠道名称" value={lead.source_channel_name} />
                         <InfoItem label="来源详情" value={lead.source_detail} />
+                        {/* 渠道额外字段 */}
+                        {lead.source_extra_info && Object.entries(lead.source_extra_info).map(([key, value]) => (
+                          <InfoItem
+                            key={key}
+                            label={key}
+                            value={formatExtraFieldValue(value)}
+                          />
+                        ))}
+                      </InfoGrid>
+                    </InfoCard>
+
+                    {/* 线索属性 */}
+                    <InfoCard title="线索属性" icon={<UserCog className={s.size.icon} />}>
+                      <InfoGrid>
                         <InfoItem label="负责顾问" value={lead.advisor_name} />
                         <InfoItem label="归属校区" value={lead.owner_campus_name} />
                         <InfoItem label="创建人" value={lead.created_by_name} />
