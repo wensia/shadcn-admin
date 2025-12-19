@@ -74,9 +74,9 @@ export function LeadsPage() {
       const response = await leadsApi.getLeads({
         ...filters,
         search: debouncedSearch || undefined,
-        // 如果有多个状态选中，暂时只取第一个（API 可能需要支持多状态筛选）
-        status: statusFilter.length > 0 ? statusFilter[0] : undefined,
-        intention_level: intentionFilter.length > 0 ? intentionFilter[0] : undefined,
+        // 合并 toolbar 快捷筛选和高级筛选的状态/意向等级（支持多选）
+        status: statusFilter.length > 0 ? statusFilter : filters.status,
+        intention_level: intentionFilter.length > 0 ? intentionFilter : filters.intention_level,
         page: pagination.page,
         size: pagination.size,
         include_styles: true
@@ -237,6 +237,10 @@ export function LeadsPage() {
     (intentionFilter.length > 0 ? 1 : 0) +
     Object.keys(filters).filter((key) => {
       const value = filters[key as keyof LeadListParams]
+      // 处理数组类型的筛选条件
+      if (Array.isArray(value)) {
+        return value.length > 0
+      }
       return value !== undefined && value !== '' && value !== null
     }).length
 
@@ -316,10 +320,23 @@ export function LeadsPage() {
             </Badge>
           )}
 
-          {/* 高级筛选条件标签 */}
-          {filters.source_channel_id && (
+          {/* 高级筛选条件标签（多选字段显示选中数量） */}
+          {filters.status && filters.status.length > 0 && (
             <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              来源渠道
+              状态{filters.status.length > 1 ? ` (${filters.status.length})` : ''}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-destructive"
+                onClick={() => {
+                  const { status, ...rest } = filters
+                  setFilters(rest)
+                }}
+              />
+            </Badge>
+          )}
+
+          {filters.source_channel_id && filters.source_channel_id.length > 0 && (
+            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+              来源渠道{filters.source_channel_id.length > 1 ? ` (${filters.source_channel_id.length})` : ''}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
                 onClick={() => {
@@ -330,9 +347,9 @@ export function LeadsPage() {
             </Badge>
           )}
 
-          {filters.advisor_id && (
+          {filters.advisor_id && filters.advisor_id.length > 0 && (
             <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              负责顾问
+              负责顾问{filters.advisor_id.length > 1 ? ` (${filters.advisor_id.length})` : ''}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
                 onClick={() => {
@@ -343,9 +360,9 @@ export function LeadsPage() {
             </Badge>
           )}
 
-          {filters.created_by_id && (
+          {filters.created_by_id && filters.created_by_id.length > 0 && (
             <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              创建人
+              创建人{filters.created_by_id.length > 1 ? ` (${filters.created_by_id.length})` : ''}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
                 onClick={() => {
@@ -356,9 +373,9 @@ export function LeadsPage() {
             </Badge>
           )}
 
-          {filters.owner_campus_id && (
+          {filters.owner_campus_id && filters.owner_campus_id.length > 0 && (
             <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              归属校区
+              归属校区{filters.owner_campus_id.length > 1 ? ` (${filters.owner_campus_id.length})` : ''}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
                 onClick={() => {
@@ -369,9 +386,9 @@ export function LeadsPage() {
             </Badge>
           )}
 
-          {filters.intention_level && (
+          {filters.intention_level && filters.intention_level.length > 0 && (
             <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              意向等级
+              意向等级{filters.intention_level.length > 1 ? ` (${filters.intention_level.length})` : ''}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
                 onClick={() => {

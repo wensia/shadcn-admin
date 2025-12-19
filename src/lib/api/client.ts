@@ -11,6 +11,7 @@ import axios, {
   type InternalAxiosRequestConfig,
   type AxiosResponse
 } from 'axios'
+import qs from 'qs'
 import { toast } from 'sonner'
 import type { ApiResponse, ApiError } from './types'
 
@@ -35,6 +36,8 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      // 数组参数序列化：使用 repeat 格式 (status=new&status=following)
+      paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
     })
 
     this.setupInterceptors()

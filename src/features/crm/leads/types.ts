@@ -373,12 +373,12 @@ export interface LeadOwnershipChangeLog {
 export interface LeadListParams {
   page?: number
   size?: number
-  status?: LeadStatus
-  source_channel_id?: string
-  intention_level?: IntentionLevel
-  advisor_id?: string
-  created_by_id?: string
-  owner_campus_id?: string
+  status?: LeadStatus[]  // 多选
+  source_channel_id?: string[]  // 多选
+  intention_level?: IntentionLevel[]  // 多选
+  advisor_id?: string[]  // 多选
+  created_by_id?: string[]  // 多选
+  owner_campus_id?: string[]  // 多选
   created_from?: string
   created_to?: string
   search?: string

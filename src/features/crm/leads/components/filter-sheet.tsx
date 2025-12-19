@@ -81,7 +81,7 @@ function FilterField({ label, children, description, className }: FilterFieldPro
   )
 }
 
-// ==================== FormFacetedFilter 子组件 ====================
+// ==================== FormFacetedFilter 子组件（多选模式）====================
 interface FilterOption {
   label: string
   value: string
@@ -90,22 +90,43 @@ interface FilterOption {
 interface FormFacetedFilterProps {
   placeholder: string
   options: FilterOption[]
-  value?: string
-  onChange: (value: string | undefined) => void
+  value?: string[]  // 改为数组
+  onChange: (value: string[] | undefined) => void
   className?: string
 }
 
 function FormFacetedFilter({
   placeholder,
   options,
-  value,
+  value = [],
   onChange,
   className
 }: FormFacetedFilterProps) {
   const [open, setOpen] = useState(false)
   const s = useStyleClasses()
 
-  const selectedOption = options.find(opt => opt.value === value)
+  const selectedValues = new Set(value)
+
+  // 获取选中项的标签用于显示
+  const selectedLabels = options
+    .filter(opt => selectedValues.has(opt.value))
+    .map(opt => opt.label)
+
+  const handleSelect = (optionValue: string) => {
+    const newSelectedValues = new Set(selectedValues)
+    if (newSelectedValues.has(optionValue)) {
+      newSelectedValues.delete(optionValue)
+    } else {
+      newSelectedValues.add(optionValue)
+    }
+    const result = Array.from(newSelectedValues)
+    onChange(result.length > 0 ? result : undefined)
+  }
+
+  const handleClear = () => {
+    onChange(undefined)
+    setOpen(false)
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -119,32 +140,34 @@ function FormFacetedFilter({
             s.height.control,
             s.text.xs,
             s.rounded,
-            !value && 'text-muted-foreground',
+            selectedValues.size === 0 && 'text-muted-foreground',
             className
           )}
         >
           <span className="truncate">
-            {selectedOption?.label || placeholder}
+            {selectedValues.size === 0
+              ? placeholder
+              : selectedValues.size <= 2
+                ? selectedLabels.join(', ')
+                : `已选 ${selectedValues.size} 项`
+            }
           </span>
           <ChevronDown className={cn('shrink-0 opacity-50', s.size.icon)} />
         </Button>
       </PopoverTrigger>
       <PopoverContent className={cn('w-[200px] p-0', s.rounded)} align="start">
         <Command>
-          <CommandInput placeholder={`搜索...`} className={s.text.xs} />
+          <CommandInput placeholder="搜索..." className={s.text.xs} />
           <CommandList>
             <CommandEmpty className={s.text.xs}>未找到结果</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
-                const isSelected = value === option.value
+                const isSelected = selectedValues.has(option.value)
                 return (
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={() => {
-                      onChange(isSelected ? undefined : option.value)
-                      setOpen(false)
-                    }}
+                    onSelect={() => handleSelect(option.value)}
                     className={s.text.xs}
                   >
                     <div
@@ -163,15 +186,12 @@ function FormFacetedFilter({
                 )
               })}
             </CommandGroup>
-            {value && (
+            {selectedValues.size > 0 && (
               <>
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem
-                    onSelect={() => {
-                      onChange(undefined)
-                      setOpen(false)
-                    }}
+                    onSelect={handleClear}
                     className={cn('justify-center text-center', s.text.xs)}
                   >
                     清除选择
