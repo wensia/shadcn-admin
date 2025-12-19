@@ -1,25 +1,23 @@
 /**
- * ChangeHistoryTimeline 变更历史时间轴组件
- * 合并展示信息变更和归属变更记录
+ * ChangeHistoryTimeline 变更历史组件
+ * 以表格形式展示信息变更和归属变更记录
  */
 
 import * as React from 'react'
 import { FileEdit, UserCog, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
-import {
-  Timeline,
-  TimelineItem,
-  TimelineNode,
-  TimelineContent,
-  TimelineHeader,
-  TimelineBody,
-  TimelineDescription,
-} from '@/components/ui/timeline'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { formatTime, formatRelativeTime } from '@/lib/utils/time'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { formatTime } from '@/lib/utils/time'
 import { EmptyState } from './empty-state'
 import type { LeadInfoChangeLog, LeadOwnershipChangeLog } from '../../types'
 import { infoChangeTypeLabels, ownershipChangeTypeLabels } from '../../types'
@@ -33,27 +31,6 @@ interface ChangeHistoryTimelineProps {
   className?: string
 }
 
-// 合并后的变更记录类型
-interface MergedChangeLog {
-  id: string
-  type: 'info' | 'ownership'
-  changed_at: string
-  changed_by_name: string
-  change_summary: string
-  change_type: string
-  // 信息变更特有
-  changes?: Array<{
-    field_name: string
-    old_value: string | null
-    new_value: string | null
-  }>
-  // 归属变更特有
-  previous_advisor_name?: string
-  current_advisor_name?: string
-  previous_campus_name?: string
-  current_campus_name?: string
-}
-
 export function ChangeHistoryTimeline({
   infoChanges,
   ownershipChanges,
@@ -63,43 +40,6 @@ export function ChangeHistoryTimeline({
   const s = useStyleClasses()
   const [filter, setFilter] = React.useState<ChangeFilter>('all')
 
-  // 合并并排序变更记录
-  const mergedChanges = React.useMemo<MergedChangeLog[]>(() => {
-    const infoItems: MergedChangeLog[] = (infoChanges || []).map((log) => ({
-      id: log.id,
-      type: 'info' as const,
-      changed_at: log.changed_at,
-      changed_by_name: log.changed_by_name,
-      change_summary: log.change_summary,
-      change_type: log.change_type,
-      changes: log.changes,
-    }))
-
-    const ownershipItems: MergedChangeLog[] = (ownershipChanges || []).map((log) => ({
-      id: log.id,
-      type: 'ownership' as const,
-      changed_at: log.changed_at,
-      changed_by_name: log.changed_by_name,
-      change_summary: log.change_summary,
-      change_type: log.change_type,
-      previous_advisor_name: log.previous_advisor_name,
-      current_advisor_name: log.current_advisor_name,
-      previous_campus_name: log.previous_campus_name,
-      current_campus_name: log.current_campus_name,
-    }))
-
-    // 合并并按时间倒序排序
-    return [...infoItems, ...ownershipItems].sort(
-      (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime()
-    )
-  }, [infoChanges, ownershipChanges])
-
-  // 根据筛选条件过滤
-  const filteredChanges = React.useMemo(() => {
-    if (filter === 'all') return mergedChanges
-    return mergedChanges.filter((log) => log.type === filter)
-  }, [mergedChanges, filter])
-
   if (isLoading) {
     return (
       <div className={cn('flex items-center justify-center py-12', s.text.xs, 'text-muted-foreground')}>
@@ -108,17 +48,21 @@ export function ChangeHistoryTimeline({
     )
   }
 
+  const hasInfoChanges = infoChanges && infoChanges.length > 0
+  const hasOwnershipChanges = ownershipChanges && ownershipChanges.length > 0
+  const hasNoData = !hasInfoChanges && !hasOwnershipChanges
+
   return (
-    <div className={className}>
+    <div className={cn('space-y-6', className)}>
       {/* 筛选按钮 */}
-      <div className={cn('flex gap-2 mb-4', s.gap.tight)}>
+      <div className={cn('flex gap-2', s.gap.tight)}>
         <Button
           size="sm"
           variant={filter === 'all' ? 'default' : 'outline'}
           onClick={() => setFilter('all')}
           className={cn(s.height.controlSm, s.text.xs)}
         >
-          全部 ({mergedChanges.length})
+          全部 ({(infoChanges?.length || 0) + (ownershipChanges?.length || 0)})
         </Button>
         <Button
           size="sm"
@@ -138,100 +82,285 @@ export function ChangeHistoryTimeline({
         </Button>
       </div>
 
-      {/* 时间轴 */}
-      {filteredChanges.length === 0 ? (
+      {hasNoData ? (
         <EmptyState
           icon={<FileEdit />}
           title="暂无变更记录"
           description="线索的信息和归属变更将在这里展示"
         />
       ) : (
-        <Timeline>
-          {filteredChanges.map((log, index) => {
-            const isLast = index === filteredChanges.length - 1
-            const isInfo = log.type === 'info'
+        <>
+          {/* 信息变更表格 */}
+          {(filter === 'all' || filter === 'info') && hasInfoChanges && (
+            <InfoChangeTable
+              data={infoChanges}
+              showTitle={filter === 'all'}
+            />
+          )}
 
-            return (
-              <TimelineItem key={`${log.type}-${log.id}`}>
-                <TimelineNode
-                  variant={isInfo ? 'info' : 'warning'}
-                  icon={isInfo ? <FileEdit className="h-4 w-4" /> : <UserCog className="h-4 w-4" />}
-                  showConnector={!isLast}
-                />
-                <TimelineContent>
-                  {/* 头部: 变更类型徽章 + 相对时间 */}
-                  <TimelineHeader>
-                    <Badge
-                      variant={isInfo ? 'info' : 'warning'}
-                      className={cn(s.text.xs, s.height.badge)}
-                    >
-                      {isInfo
-                        ? infoChangeTypeLabels[log.change_type as keyof typeof infoChangeTypeLabels]
-                        : ownershipChangeTypeLabels[log.change_type as keyof typeof ownershipChangeTypeLabels]}
-                    </Badge>
-                    <span className={cn(s.text.xs, 'text-muted-foreground ml-auto')}>
-                      {formatRelativeTime(log.changed_at)}
-                    </span>
-                  </TimelineHeader>
+          {/* 归属变更表格 */}
+          {(filter === 'all' || filter === 'ownership') && hasOwnershipChanges && (
+            <OwnershipChangeTable
+              data={ownershipChanges}
+              showTitle={filter === 'all'}
+            />
+          )}
 
-                  {/* 操作人信息 */}
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <Avatar className="h-5 w-5">
-                      <AvatarFallback className={cn(s.text.xs)}>
-                        {log.changed_by_name?.[0] || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <TimelineDescription>
-                      {log.changed_by_name} · {formatTime(log.changed_at)}
-                    </TimelineDescription>
-                  </div>
-
-                  {/* 变更摘要 */}
-                  <TimelineBody>
-                    {log.change_summary}
-                  </TimelineBody>
-
-                  {/* 信息变更详情 */}
-                  {isInfo && log.changes && log.changes.length > 0 && (
-                    <div className={cn('mt-2 space-y-1', s.text.xs, 'text-muted-foreground')}>
-                      {log.changes.map((change, idx) => (
-                        <div key={idx} className="flex items-center gap-1 flex-wrap">
-                          <span className="font-medium">{change.field_name}:</span>
-                          <span className="text-red-500 line-through">
-                            {change.old_value || '-'}
-                          </span>
-                          <ArrowRight className="h-3 w-3" />
-                          <span className="text-green-600">
-                            {change.new_value || '-'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 归属变更详情 */}
-                  {!isInfo && (log.previous_advisor_name || log.current_advisor_name || log.previous_campus_name || log.current_campus_name) && (
-                    <div className={cn('mt-2 grid grid-cols-2 gap-x-4 gap-y-1', s.text.xs, 'text-muted-foreground')}>
-                      {(log.previous_advisor_name || log.current_advisor_name) && (
-                        <>
-                          <div>原顾问: {log.previous_advisor_name || '-'}</div>
-                          <div>现顾问: {log.current_advisor_name || '-'}</div>
-                        </>
-                      )}
-                      {(log.previous_campus_name || log.current_campus_name) && (
-                        <>
-                          <div>原校区: {log.previous_campus_name || '-'}</div>
-                          <div>现校区: {log.current_campus_name || '-'}</div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </TimelineContent>
-              </TimelineItem>
-            )
-          })}
-        </Timeline>
+          {/* 当筛选后无数据时的提示 */}
+          {filter === 'info' && !hasInfoChanges && (
+            <EmptyState
+              icon={<FileEdit />}
+              title="暂无信息变更"
+              description="线索信息变更记录将在这里展示"
+            />
+          )}
+          {filter === 'ownership' && !hasOwnershipChanges && (
+            <EmptyState
+              icon={<UserCog />}
+              title="暂无归属变更"
+              description="线索归属变更记录将在这里展示"
+            />
+          )}
+        </>
       )}
+    </div>
+  )
+}
+
+/**
+ * 信息变更表格
+ */
+function InfoChangeTable({
+  data,
+  showTitle,
+}: {
+  data: LeadInfoChangeLog[]
+  showTitle?: boolean
+}) {
+  const s = useStyleClasses()
+
+  // 展开 changes 数组，每个字段变更一行
+  const flattenedData = React.useMemo(() => {
+    const rows: Array<{
+      id: string
+      rowKey: string
+      changed_at: string
+      changed_by_name: string
+      change_type: string
+      field_name: string
+      old_value: string | null | undefined
+      new_value: string | null | undefined
+      change_reason?: string
+      isFirstInGroup: boolean
+      groupSize: number
+    }> = []
+
+    data.forEach((log) => {
+      // 多字段变更
+      if (log.changes && log.changes.length > 0) {
+        log.changes.forEach((change, idx) => {
+          rows.push({
+            id: log.id,
+            rowKey: `${log.id}-${idx}`,
+            changed_at: log.changed_at,
+            changed_by_name: log.changed_by_name || '-',
+            change_type: log.change_type,
+            field_name: change.field_name,
+            old_value: change.old_value,
+            new_value: change.new_value,
+            change_reason: log.change_reason,
+            isFirstInGroup: idx === 0,
+            groupSize: log.changes!.length,
+          })
+        })
+      }
+      // 单字段变更
+      else if (log.field_name) {
+        rows.push({
+          id: log.id,
+          rowKey: log.id,
+          changed_at: log.changed_at,
+          changed_by_name: log.changed_by_name || '-',
+          change_type: log.change_type,
+          field_name: log.field_name,
+          old_value: log.old_value,
+          new_value: log.new_value,
+          change_reason: log.change_reason,
+          isFirstInGroup: true,
+          groupSize: 1,
+        })
+      }
+    })
+
+    return rows
+  }, [data])
+
+  return (
+    <div className="space-y-2">
+      {showTitle && (
+        <div className="flex items-center gap-2">
+          <FileEdit className={cn(s.size.icon, 'text-blue-500')} />
+          <h3 className={cn(s.text.sm, 'font-semibold')}>信息变更</h3>
+          <Badge variant="info" className={cn(s.text.xs, s.height.badge)}>
+            {data.length}
+          </Badge>
+        </div>
+      )}
+      <div className={cn('rounded-md border', s.rounded)}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className={cn(s.text.xs, 'w-[140px]')}>变更时间</TableHead>
+              <TableHead className={cn(s.text.xs, 'w-[90px]')}>变更类型</TableHead>
+              <TableHead className={cn(s.text.xs, 'w-[100px]')}>字段</TableHead>
+              <TableHead className={cn(s.text.xs)}>原值</TableHead>
+              <TableHead className={cn(s.text.xs, 'w-[30px]')}></TableHead>
+              <TableHead className={cn(s.text.xs)}>新值</TableHead>
+              <TableHead className={cn(s.text.xs, 'w-[80px]')}>操作人</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {flattenedData.map((row) => (
+              <TableRow key={row.rowKey}>
+                {row.isFirstInGroup ? (
+                  <TableCell
+                    className={cn(s.text.xs, 'align-top')}
+                    rowSpan={row.groupSize}
+                  >
+                    {formatTime(row.changed_at)}
+                  </TableCell>
+                ) : null}
+                {row.isFirstInGroup ? (
+                  <TableCell
+                    className={cn(s.text.xs, 'align-top')}
+                    rowSpan={row.groupSize}
+                  >
+                    <Badge variant="outline" className={cn(s.text.xs, 'h-5')}>
+                      {infoChangeTypeLabels[row.change_type as keyof typeof infoChangeTypeLabels] || row.change_type}
+                    </Badge>
+                  </TableCell>
+                ) : null}
+                <TableCell className={cn(s.text.xs, 'font-medium')}>
+                  {row.field_name}
+                </TableCell>
+                <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
+                  <span className="text-red-500/80 line-through">
+                    {row.old_value || '-'}
+                  </span>
+                </TableCell>
+                <TableCell className={cn(s.text.xs)}>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                </TableCell>
+                <TableCell className={cn(s.text.xs)}>
+                  <span className="text-green-600">
+                    {row.new_value || '-'}
+                  </span>
+                </TableCell>
+                {row.isFirstInGroup ? (
+                  <TableCell
+                    className={cn(s.text.xs, 'align-top')}
+                    rowSpan={row.groupSize}
+                  >
+                    {row.changed_by_name}
+                  </TableCell>
+                ) : null}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 归属变更表格
+ */
+function OwnershipChangeTable({
+  data,
+  showTitle,
+}: {
+  data: LeadOwnershipChangeLog[]
+  showTitle?: boolean
+}) {
+  const s = useStyleClasses()
+
+  return (
+    <div className="space-y-2">
+      {showTitle && (
+        <div className="flex items-center gap-2">
+          <UserCog className={cn(s.size.icon, 'text-yellow-500')} />
+          <h3 className={cn(s.text.sm, 'font-semibold')}>归属变更</h3>
+          <Badge variant="warning" className={cn(s.text.xs, s.height.badge)}>
+            {data.length}
+          </Badge>
+        </div>
+      )}
+      <div className={cn('rounded-md border', s.rounded)}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className={cn(s.text.xs, 'w-[140px]')}>变更时间</TableHead>
+              <TableHead className={cn(s.text.xs, 'w-[90px]')}>变更类型</TableHead>
+              <TableHead className={cn(s.text.xs)}>顾问变更</TableHead>
+              <TableHead className={cn(s.text.xs)}>校区变更</TableHead>
+              <TableHead className={cn(s.text.xs, 'w-[80px]')}>操作人</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((log) => {
+              const hasAdvisorChange = log.previous_advisor_name || log.current_advisor_name
+              const hasCampusChange = log.previous_campus_name || log.current_campus_name
+
+              return (
+                <TableRow key={log.id}>
+                  <TableCell className={cn(s.text.xs)}>
+                    {formatTime(log.changed_at)}
+                  </TableCell>
+                  <TableCell className={cn(s.text.xs)}>
+                    <Badge variant="outline" className={cn(s.text.xs, 'h-5')}>
+                      {ownershipChangeTypeLabels[log.change_type as keyof typeof ownershipChangeTypeLabels] || log.change_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className={cn(s.text.xs)}>
+                    {hasAdvisorChange ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-red-500/80 line-through">
+                          {log.previous_advisor_name || '无'}
+                        </span>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="text-green-600">
+                          {log.current_advisor_name || '无'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className={cn(s.text.xs)}>
+                    {hasCampusChange ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-red-500/80 line-through">
+                          {log.previous_campus_name || '无'}
+                        </span>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="text-green-600">
+                          {log.current_campus_name || '无'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className={cn(s.text.xs)}>
+                    {log.changed_by_name || '-'}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
