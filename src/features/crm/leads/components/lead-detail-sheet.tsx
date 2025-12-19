@@ -97,6 +97,26 @@ function parseSourceExtraInfo(
 /**
  * 格式化字段值
  */
+/**
+ * 家长关系映射
+ */
+const parentRelationLabels: Record<string, string> = {
+  father: '父亲',
+  mother: '母亲',
+  grandfather: '爷爷',
+  grandmother: '奶奶',
+  grandpa_maternal: '外公',
+  grandma_maternal: '外婆',
+  uncle: '叔叔',
+  aunt: '阿姨',
+  other: '其他',
+}
+
+function formatParentRelation(relation?: string): string | undefined {
+  if (!relation) return undefined
+  return parentRelationLabels[relation] || relation
+}
+
 function formatFieldValue(value: unknown): string {
   if (value === null || value === undefined || value === '') {
     return '-'
@@ -385,35 +405,43 @@ export function LeadDetailSheet({
                   </div>
                 ) : lead ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* 儿童信息 */}
-                    <InfoCard title="儿童信息" icon={<Baby className={s.size.icon} />}>
-                      <InfoGrid>
-                        <InfoItem label="姓名" value={lead.child_name} />
-                        <InfoItem
-                          label="性别"
-                          value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined}
-                        />
-                        <InfoItem label="年龄" value={lead.age?.toString()} />
-                        <InfoItem label="生日" value={lead.child_birthday} />
-                        <InfoItem label="年级" value={lead.grade ? gradeLabels[lead.grade] : undefined} />
-                        <InfoItem label="学校" value={lead.school_name} />
-                        <InfoItem
-                          label="课程兴趣"
-                          value={lead.course_interests?.join('、')}
-                          span={2}
-                        />
-                      </InfoGrid>
-                    </InfoCard>
-
-                    {/* 家长信息 */}
-                    <InfoCard title="家长信息" icon={<Users className={s.size.icon} />}>
-                      <InfoGrid>
-                        <InfoItem label="家长姓名" value={lead.parent_name} />
-                        <InfoItem label="关系" value={lead.parent_relation} />
-                        <InfoItem label="手机号" value={lead.parent_phone} copyable />
-                        <InfoItem label="微信号" value={lead.parent_wechat} copyable />
-                        <InfoItem label="邮箱" value={lead.parent_email} span={2} />
-                      </InfoGrid>
+                    {/* 客户信息（儿童+家长） */}
+                    <InfoCard title="客户信息" icon={<Users className={s.size.icon} />} className="lg:col-span-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 儿童信息 */}
+                        <div>
+                          <h4 className={cn(s.text.xs, 'font-semibold text-muted-foreground mb-2 flex items-center gap-1.5')}>
+                            <Baby className="h-3.5 w-3.5" />
+                            儿童信息
+                          </h4>
+                          <InfoGrid cols={1}>
+                            <InfoItem label="姓名" value={lead.child_name} />
+                            <InfoItem
+                              label="性别"
+                              value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined}
+                            />
+                            <InfoItem label="年龄" value={lead.age?.toString()} />
+                            <InfoItem label="生日" value={lead.child_birthday} />
+                            <InfoItem label="年级" value={lead.grade ? gradeLabels[lead.grade] : undefined} />
+                            <InfoItem label="学校" value={lead.school_name} />
+                            <InfoItem label="课程兴趣" value={lead.course_interests?.join('、')} />
+                          </InfoGrid>
+                        </div>
+                        {/* 家长信息 */}
+                        <div>
+                          <h4 className={cn(s.text.xs, 'font-semibold text-muted-foreground mb-2 flex items-center gap-1.5')}>
+                            <Users className="h-3.5 w-3.5" />
+                            家长信息
+                          </h4>
+                          <InfoGrid cols={1}>
+                            <InfoItem label="姓名" value={lead.parent_name} />
+                            <InfoItem label="关系" value={formatParentRelation(lead.parent_relation)} />
+                            <InfoItem label="手机号" value={lead.parent_phone} copyable />
+                            <InfoItem label="微信号" value={lead.parent_wechat} copyable />
+                            <InfoItem label="邮箱" value={lead.parent_email} />
+                          </InfoGrid>
+                        </div>
+                      </div>
                     </InfoCard>
 
                     {/* 地址信息 */}
