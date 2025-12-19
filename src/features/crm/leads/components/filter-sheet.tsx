@@ -140,7 +140,7 @@ function FormFacetedFilter({
             className
           )}
         >
-          <span className="truncate flex-1 text-left">
+          <span className="truncate">
             {selectedValues.size === 0
               ? placeholder
               : selectedValues.size <= 2
@@ -148,26 +148,7 @@ function FormFacetedFilter({
                 : `已选 ${selectedValues.size} 项`
             }
           </span>
-          <div className="flex items-center shrink-0">
-            {selectedValues.size > 0 && (
-              <span
-                role="button"
-                className={cn('opacity-50 hover:opacity-100 cursor-pointer mr-1 flex items-center justify-center')}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                }}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  handleClear()
-                }}
-              >
-                <X className={s.size.icon} />
-              </span>
-            )}
-            <ChevronDown className={cn('opacity-50', s.size.icon)} />
-          </div>
+          <ChevronDown className={cn('shrink-0 opacity-50', s.size.icon)} />
         </Button>
       </PopoverTrigger>
       <PopoverContent className={cn('w-[200px] p-0', s.rounded)} align="start">
