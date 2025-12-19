@@ -60,51 +60,64 @@ import { FollowupMethodPie } from './detail/charts/followup-method-pie'
 import { FollowupResultPie } from './detail/charts/followup-result-pie'
 
 /**
- * 扁平化嵌套的 JSON 对象为 key-value 数组
- * 支持递归处理嵌套结构
+ * 解析来源渠道额外信息
+ * 支持表单字段格式：{ field_name: { label: "显示名", value: "值" } }
  */
-function flattenExtraInfo(
-  obj: Record<string, unknown>,
-  prefix = ''
-): Array<{ key: string; value: string }> {
-  const result: Array<{ key: string; value: string }> = []
+function parseSourceExtraInfo(
+  obj: Record<string, unknown>
+): Array<{ label: string; value: string }> {
+  const result: Array<{ label: string; value: string }> = []
 
-  for (const [key, value] of Object.entries(obj)) {
-    const displayKey = prefix ? `${prefix}.${key}` : key
-
-    if (value === null || value === undefined) {
-      result.push({ key: displayKey, value: '-' })
-    } else if (typeof value === 'string') {
-      result.push({ key: displayKey, value: value || '-' })
-    } else if (typeof value === 'number') {
-      result.push({ key: displayKey, value: value.toString() })
-    } else if (typeof value === 'boolean') {
-      result.push({ key: displayKey, value: value ? '是' : '否' })
-    } else if (Array.isArray(value)) {
-      // 数组：如果是简单类型数组则用顿号连接，否则展开
-      if (value.length === 0) {
-        result.push({ key: displayKey, value: '-' })
-      } else if (value.every((item) => typeof item !== 'object')) {
-        result.push({ key: displayKey, value: value.join('、') })
-      } else {
-        // 对象数组，逐个展开
-        value.forEach((item, index) => {
-          if (typeof item === 'object' && item !== null) {
-            result.push(...flattenExtraInfo(item as Record<string, unknown>, `${displayKey}[${index}]`))
-          } else {
-            result.push({ key: `${displayKey}[${index}]`, value: String(item) })
-          }
-        })
-      }
-    } else if (typeof value === 'object') {
-      // 嵌套对象，递归处理
-      result.push(...flattenExtraInfo(value as Record<string, unknown>, displayKey))
+  for (const [_key, fieldData] of Object.entries(obj)) {
+    // 检查是否是 { label, value } 格式的表单字段
+    if (
+      fieldData &&
+      typeof fieldData === 'object' &&
+      !Array.isArray(fieldData) &&
+      'label' in fieldData &&
+      'value' in fieldData
+    ) {
+      const field = fieldData as { label: string; value: unknown }
+      result.push({
+        label: String(field.label || _key),
+        value: formatFieldValue(field.value),
+      })
     } else {
-      result.push({ key: displayKey, value: String(value) })
+      // 非表单字段格式，直接使用 key 作为 label
+      result.push({
+        label: _key,
+        value: formatFieldValue(fieldData),
+      })
     }
   }
 
   return result
+}
+
+/**
+ * 格式化字段值
+ */
+function formatFieldValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number') {
+    return value.toString()
+  }
+  if (typeof value === 'boolean') {
+    return value ? '是' : '否'
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '-'
+    return value.map((item) => formatFieldValue(item)).join('、')
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value)
+  }
+  return String(value)
 }
 
 interface LeadDetailSheetProps {
@@ -420,11 +433,11 @@ export function LeadDetailSheet({
                       <InfoGrid>
                         <InfoItem label="渠道名称" value={lead.source_channel_name} />
                         <InfoItem label="来源详情" value={lead.source_detail} />
-                        {/* 渠道额外字段（扁平化嵌套 JSON） */}
-                        {lead.source_extra_info && flattenExtraInfo(lead.source_extra_info).map((item) => (
+                        {/* 渠道额外字段 */}
+                        {lead.source_extra_info && parseSourceExtraInfo(lead.source_extra_info).map((item, index) => (
                           <InfoItem
-                            key={item.key}
-                            label={item.key}
+                            key={index}
+                            label={item.label}
                             value={item.value}
                           />
                         ))}
