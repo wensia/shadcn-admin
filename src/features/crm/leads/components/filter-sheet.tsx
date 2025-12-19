@@ -3,7 +3,7 @@
  * 遵循 Lyra 风格设计：方正锐利、分组布局、网格排列
  */
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CheckIcon } from '@radix-ui/react-icons'
 import { ChevronDown, X } from 'lucide-react'
@@ -38,7 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
-import type { LeadListParams, LeadStatus, IntentionLevel } from '../types'
+import type { LeadListParams, LeadStatus, IntentionLevel, SourceChannelExtraField } from '../types'
 import { leadStatusLabels, intentionLevelLabels } from '../types'
 
 // ==================== FilterGroup 子组件 ====================
@@ -224,15 +224,45 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
     enabled: open
   })
 
+  // 额外字段筛选状态
+  const [sourceExtraFilters, setSourceExtraFilters] = useState<Record<string, string>>({})
+
+  // 计算当前选中渠道的 extra_fields（仅单选时显示）
+  const selectedChannelExtraFields = useMemo<SourceChannelExtraField[]>(() => {
+    if (localFilters.source_channel_id?.length === 1) {
+      const selectedChannel = filterOptions?.source_channels?.find(
+        (ch: { id: string; extra_fields?: SourceChannelExtraField[] }) =>
+          ch.id === localFilters.source_channel_id?.[0]
+      )
+      return selectedChannel?.extra_fields || []
+    }
+    return []
+  }, [localFilters.source_channel_id, filterOptions?.source_channels])
+
+  // 渠道变更时清空额外字段筛选
+  useEffect(() => {
+    if (localFilters.source_channel_id?.length !== 1) {
+      setSourceExtraFilters({})
+    }
+  }, [localFilters.source_channel_id])
+
   // 计算活跃筛选数
   const activeFiltersCount = Object.keys(localFilters).filter((key) => {
     const value = localFilters[key as keyof LeadListParams]
+    if (Array.isArray(value)) return value.length > 0
     return value !== undefined && value !== '' && value !== null
-  }).length
+  }).length + (Object.keys(sourceExtraFilters).length > 0 ? 1 : 0)
 
   // 应用筛选
   const handleApply = () => {
-    onApplyFilters(localFilters)
+    const filtersToApply: LeadListParams = {
+      ...localFilters,
+      // 仅当有额外字段筛选值时才添加
+      source_extra_filters: Object.keys(sourceExtraFilters).length > 0
+        ? sourceExtraFilters
+        : undefined
+    }
+    onApplyFilters(filtersToApply)
     onOpenChange(false)
   }
 
@@ -240,6 +270,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
   const handleReset = () => {
     const emptyFilters: LeadListParams = {}
     setLocalFilters(emptyFilters)
+    setSourceExtraFilters({})
     onApplyFilters(emptyFilters)
   }
 
@@ -249,6 +280,17 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
       ...prev,
       [key]: value || undefined
     }))
+  }
+
+  // 更新额外字段筛选
+  const updateExtraFilter = (fieldName: string, value: string) => {
+    setSourceExtraFilters(prev => {
+      if (!value) {
+        const { [fieldName]: _, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [fieldName]: value }
+    })
   }
 
   return (
@@ -284,6 +326,51 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
         <ScrollArea className="flex-1 overflow-auto">
           <div className="p-4 divide-y divide-border">
 
+            {/* ========== 来源渠道（独立分组） ========== */}
+            <FilterGroup>
+              <FilterField label="来源渠道">
+                <FormFacetedFilter
+                  placeholder="全部渠道"
+                  options={filterOptions?.source_channels?.map((channel: { id: string; name: string }) => ({
+                    value: channel.id,
+                    label: channel.name
+                  })) || []}
+                  value={localFilters.source_channel_id}
+                  onChange={(value) => updateFilter('source_channel_id', value)}
+                />
+              </FilterField>
+
+              {/* 动态额外字段（仅单选渠道时显示） */}
+              {selectedChannelExtraFields.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <p className={cn(s.text.xs, 'text-muted-foreground')}>
+                    渠道额外字段（包含匹配）
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedChannelExtraFields.map((field) => (
+                      <FilterField key={field.field_name} label={field.field_label}>
+                        {field.field_type === 'select' && field.options ? (
+                          <FormFacetedFilter
+                            placeholder={field.placeholder || `选择${field.field_label}`}
+                            options={field.options.map(opt => ({ value: opt, label: opt }))}
+                            value={sourceExtraFilters[field.field_name] ? [sourceExtraFilters[field.field_name]] : []}
+                            onChange={(val) => updateExtraFilter(field.field_name, val?.[0] || '')}
+                          />
+                        ) : (
+                          <Input
+                            className={cn(s.height.control, s.text.xs, s.rounded)}
+                            value={sourceExtraFilters[field.field_name] || ''}
+                            onChange={(e) => updateExtraFilter(field.field_name, e.target.value)}
+                            placeholder={field.placeholder || `输入${field.field_label}`}
+                          />
+                        )}
+                      </FilterField>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </FilterGroup>
+
             {/* ========== 基本信息 ========== */}
             <FilterGroup>
               {/* 状态 + 意向等级 并排 */}
@@ -312,19 +399,6 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
                   />
                 </FilterField>
               </div>
-
-              {/* 来源渠道 单独一行 */}
-              <FilterField label="来源渠道">
-                <FormFacetedFilter
-                  placeholder="全部渠道"
-                  options={filterOptions?.source_channels.map((channel) => ({
-                    value: channel.id,
-                    label: channel.name
-                  })) || []}
-                  value={localFilters.source_channel_id}
-                  onChange={(value) => updateFilter('source_channel_id', value)}
-                />
-              </FilterField>
             </FilterGroup>
 
             {/* ========== 人员相关 ========== */}

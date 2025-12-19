@@ -388,6 +388,18 @@ export interface LeadListParams {
   import_batch_id?: string
   days_without_activity?: number  // X天内无活动（无跟进/创建/激活记录）
   include_styles?: boolean  // 是否包含样式配置
+  source_extra_filters?: Record<string, string>  // 来源渠道额外字段筛选
+}
+
+// ==================== 来源渠道额外字段配置 ====================
+
+export interface SourceChannelExtraField {
+  field_name: string
+  field_label: string
+  field_type: 'text' | 'select' | 'date' | 'number'
+  required?: boolean
+  placeholder?: string
+  options?: string[]
 }
 
 // ==================== 统计数据接口 ====================
