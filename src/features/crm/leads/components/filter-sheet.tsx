@@ -5,6 +5,8 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { CheckIcon } from '@radix-ui/react-icons'
+import { ChevronDown, X } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -18,15 +20,21 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { DateRangePicker } from '@/components/date-picker'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
@@ -70,6 +78,111 @@ function FilterField({ label, children, description, className }: FilterFieldPro
         <p className={cn(s.text.xs, 'text-muted-foreground')}>{description}</p>
       )}
     </div>
+  )
+}
+
+// ==================== FormFacetedFilter 子组件 ====================
+interface FilterOption {
+  label: string
+  value: string
+}
+
+interface FormFacetedFilterProps {
+  placeholder: string
+  options: FilterOption[]
+  value?: string
+  onChange: (value: string | undefined) => void
+  className?: string
+}
+
+function FormFacetedFilter({
+  placeholder,
+  options,
+  value,
+  onChange,
+  className
+}: FormFacetedFilterProps) {
+  const [open, setOpen] = useState(false)
+  const s = useStyleClasses()
+
+  const selectedOption = options.find(opt => opt.value === value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            'w-full justify-between font-normal',
+            s.height.control,
+            s.text.xs,
+            s.rounded,
+            !value && 'text-muted-foreground',
+            className
+          )}
+        >
+          <span className="truncate">
+            {selectedOption?.label || placeholder}
+          </span>
+          <ChevronDown className={cn('shrink-0 opacity-50', s.size.icon)} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className={cn('w-[200px] p-0', s.rounded)} align="start">
+        <Command>
+          <CommandInput placeholder={`搜索...`} className={s.text.xs} />
+          <CommandList>
+            <CommandEmpty className={s.text.xs}>未找到结果</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => {
+                const isSelected = value === option.value
+                return (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={() => {
+                      onChange(isSelected ? undefined : option.value)
+                      setOpen(false)
+                    }}
+                    className={s.text.xs}
+                  >
+                    <div
+                      className={cn(
+                        'flex size-4 items-center justify-center border border-primary mr-2',
+                        s.rounded,
+                        isSelected
+                          ? 'bg-primary text-primary-foreground'
+                          : 'opacity-50 [&_svg]:invisible'
+                      )}
+                    >
+                      <CheckIcon className="h-3 w-3" />
+                    </div>
+                    <span>{option.label}</span>
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+            {value && (
+              <>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={() => {
+                      onChange(undefined)
+                      setOpen(false)
+                    }}
+                    className={cn('justify-center text-center', s.text.xs)}
+                  >
+                    清除选择
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -160,62 +273,41 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
               {/* 状态 + 意向等级 并排 */}
               <div className="grid grid-cols-2 gap-3">
                 <FilterField label="线索状态">
-                  <Select
-                    value={localFilters.status || undefined}
-                    onValueChange={(value) => updateFilter('status', value === '__all__' ? '' : value as LeadStatus)}
-                  >
-                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
-                      <SelectValue placeholder="全部状态" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__" className={s.text.xs}>全部状态</SelectItem>
-                      {Object.entries(leadStatusLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value} className={s.text.xs}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormFacetedFilter
+                    placeholder="全部状态"
+                    options={Object.entries(leadStatusLabels).map(([value, label]) => ({
+                      value,
+                      label
+                    }))}
+                    value={localFilters.status}
+                    onChange={(value) => updateFilter('status', value as LeadStatus)}
+                  />
                 </FilterField>
 
                 <FilterField label="意向等级">
-                  <Select
-                    value={localFilters.intention_level || undefined}
-                    onValueChange={(value) => updateFilter('intention_level', value === '__all__' ? '' : value as IntentionLevel)}
-                  >
-                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
-                      <SelectValue placeholder="全部意向" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__" className={s.text.xs}>全部意向</SelectItem>
-                      {Object.entries(intentionLevelLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value} className={s.text.xs}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormFacetedFilter
+                    placeholder="全部意向"
+                    options={Object.entries(intentionLevelLabels).map(([value, label]) => ({
+                      value,
+                      label
+                    }))}
+                    value={localFilters.intention_level}
+                    onChange={(value) => updateFilter('intention_level', value as IntentionLevel)}
+                  />
                 </FilterField>
               </div>
 
               {/* 来源渠道 单独一行 */}
               <FilterField label="来源渠道">
-                <Select
-                  value={localFilters.source_channel_id || undefined}
-                  onValueChange={(value) => updateFilter('source_channel_id', value === '__all__' ? '' : value)}
-                >
-                  <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
-                    <SelectValue placeholder="全部渠道" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__" className={s.text.xs}>全部渠道</SelectItem>
-                    {filterOptions?.source_channels.map((channel) => (
-                      <SelectItem key={channel.id} value={channel.id} className={s.text.xs}>
-                        {channel.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormFacetedFilter
+                  placeholder="全部渠道"
+                  options={filterOptions?.source_channels.map((channel) => ({
+                    value: channel.id,
+                    label: channel.name
+                  })) || []}
+                  value={localFilters.source_channel_id}
+                  onChange={(value) => updateFilter('source_channel_id', value)}
+                />
               </FilterField>
             </FilterGroup>
 
@@ -224,62 +316,41 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
               {/* 负责顾问 + 创建人 并排 */}
               <div className="grid grid-cols-2 gap-3">
                 <FilterField label="负责顾问">
-                  <Select
-                    value={localFilters.advisor_id || undefined}
-                    onValueChange={(value) => updateFilter('advisor_id', value === '__all__' ? '' : value)}
-                  >
-                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
-                      <SelectValue placeholder="全部顾问" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__" className={s.text.xs}>全部顾问</SelectItem>
-                      {filterOptions?.advisors.map((advisor) => (
-                        <SelectItem key={advisor.id} value={advisor.id} className={s.text.xs}>
-                          {advisor.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormFacetedFilter
+                    placeholder="全部顾问"
+                    options={filterOptions?.advisors.map((advisor) => ({
+                      value: advisor.id,
+                      label: advisor.name
+                    })) || []}
+                    value={localFilters.advisor_id}
+                    onChange={(value) => updateFilter('advisor_id', value)}
+                  />
                 </FilterField>
 
                 <FilterField label="创建人">
-                  <Select
-                    value={localFilters.created_by_id || undefined}
-                    onValueChange={(value) => updateFilter('created_by_id', value === '__all__' ? '' : value)}
-                  >
-                    <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
-                      <SelectValue placeholder="全部创建人" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__" className={s.text.xs}>全部创建人</SelectItem>
-                      {filterOptions?.creators.map((creator) => (
-                        <SelectItem key={creator.id} value={creator.id} className={s.text.xs}>
-                          {creator.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormFacetedFilter
+                    placeholder="全部创建人"
+                    options={filterOptions?.creators.map((creator) => ({
+                      value: creator.id,
+                      label: creator.name
+                    })) || []}
+                    value={localFilters.created_by_id}
+                    onChange={(value) => updateFilter('created_by_id', value)}
+                  />
                 </FilterField>
               </div>
 
               {/* 归属校区 单独一行 */}
               <FilterField label="归属校区">
-                <Select
-                  value={localFilters.owner_campus_id || undefined}
-                  onValueChange={(value) => updateFilter('owner_campus_id', value === '__all__' ? '' : value)}
-                >
-                  <SelectTrigger className={cn(s.height.control, s.text.xs, s.rounded)}>
-                    <SelectValue placeholder="全部校区" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__" className={s.text.xs}>全部校区</SelectItem>
-                    {filterOptions?.campuses?.map((campus) => (
-                      <SelectItem key={campus.id} value={campus.id} className={s.text.xs}>
-                        {campus.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormFacetedFilter
+                  placeholder="全部校区"
+                  options={filterOptions?.campuses?.map((campus) => ({
+                    value: campus.id,
+                    label: campus.name
+                  })) || []}
+                  value={localFilters.owner_campus_id}
+                  onChange={(value) => updateFilter('owner_campus_id', value)}
+                />
               </FilterField>
             </FilterGroup>
 
