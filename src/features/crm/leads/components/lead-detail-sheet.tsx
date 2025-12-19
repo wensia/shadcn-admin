@@ -17,7 +17,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import {
@@ -217,34 +216,11 @@ export function LeadDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl p-0 flex flex-col [&>button]:hidden">
         {/* ==================== Header 区域 ==================== */}
-        <SheetHeader className="px-4 py-3 border-b shrink-0">
-          {/* 第一行：Avatar + 名称/电话 + 关闭按钮 */}
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 shrink-0">
-              <AvatarFallback className={cn(s.text.sm, 'font-semibold')}>
-                {lead?.child_name?.[0] || '线'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <SheetTitle className={cn(s.text.base, 'truncate')}>
-                {lead?.child_name || '线索详情'}
-              </SheetTitle>
-              <SheetDescription className={cn(s.text.xs, 'mt-0.5')}>
-                {lead?.parent_phone || ''}
-              </SheetDescription>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8 p-0 shrink-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* 第二行：状态标签 + 快速操作按钮 */}
-          <div className="flex items-center justify-between mt-3">
+        <SheetHeader className="px-4 py-2.5 border-b shrink-0">
+          <SheetTitle className="sr-only">线索详情</SheetTitle>
+          <SheetDescription className="sr-only">查看和管理线索信息</SheetDescription>
+          <div className="flex items-center gap-2">
+            {/* 状态标签 */}
             <div className="flex items-center gap-2 flex-wrap">
               {statusStyle && (
                 <Badge variant={statusStyle.variant} className={cn(s.text.xs, s.height.badge, s.rounded)}>
@@ -260,7 +236,9 @@ export function LeadDetailSheet({
                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
               )}
             </div>
-            <div className={cn('flex items-center', s.gap.buttons)}>
+
+            {/* 操作按钮 */}
+            <div className={cn('flex items-center ml-auto', s.gap.buttons)}>
               {lead && (
                 <>
                   <Button
@@ -291,6 +269,14 @@ export function LeadDetailSheet({
                   </Button>
                 </>
               )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="h-8 w-8 p-0 shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </SheetHeader>
