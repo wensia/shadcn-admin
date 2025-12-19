@@ -221,14 +221,6 @@ export function LeadsPage() {
     setPagination((prev) => ({ ...prev, page: 1 }))
   }
 
-  // 重置工具栏筛选
-  const handleResetToolbarFilters = () => {
-    setSearchValue('')
-    setStatusFilter([])
-    setIntentionFilter([])
-    setPagination((prev) => ({ ...prev, page: 1 }))
-  }
-
   // 清除所有筛选
   const handleClearAllFilters = () => {
     setSearchValue('')
@@ -279,7 +271,6 @@ export function LeadsPage() {
               onSearchChange={handleSearchChange}
               onStatusFilterChange={handleStatusFilterChange}
               onIntentionFilterChange={handleIntentionFilterChange}
-              onResetFilters={handleResetToolbarFilters}
               onBatchAssign={handleBatchAssign}
               onBatchRelease={handleBatchRelease}
               onBatchUpdateStatus={handleBatchUpdateStatus}

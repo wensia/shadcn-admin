@@ -4,7 +4,6 @@
  * 包含搜索、FacetedFilter筛选、批量操作等功能
  */
 
-import { Cross2Icon } from '@radix-ui/react-icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -53,7 +52,6 @@ interface LeadsToolbarProps {
   onSearchChange?: (value: string) => void
   onStatusFilterChange?: (values: LeadStatus[]) => void
   onIntentionFilterChange?: (values: IntentionLevel[]) => void
-  onResetFilters?: () => void
   onBatchAssign?: () => void
   onBatchRelease?: () => void
   onBatchUpdateStatus?: () => void
@@ -74,15 +72,12 @@ export function LeadsToolbar({
   onSearchChange,
   onStatusFilterChange,
   onIntentionFilterChange,
-  onResetFilters,
   onBatchAssign,
   onBatchRelease,
   onBatchUpdateStatus,
   onBatchDelete
 }: LeadsToolbarProps) {
   const s = useStyleClasses()
-
-  const isFiltered = searchValue || statusFilter.length > 0 || intentionFilter.length > 0
 
   return (
     <div className="flex items-center justify-between pb-4">
@@ -110,18 +105,6 @@ export function LeadsToolbar({
             onSelectedChange={(values) => onIntentionFilterChange?.(Array.from(values) as IntentionLevel[])}
           />
         </div>
-
-        {/* 重置按钮 */}
-        {isFiltered && (
-          <Button
-            variant="ghost"
-            onClick={onResetFilters}
-            className="h-8 px-2 lg:px-3"
-          >
-            重置
-            <Cross2Icon className="ml-2 h-4 w-4" />
-          </Button>
-        )}
 
         {/* 高级筛选按钮 */}
         <Button variant="outline" size="sm" onClick={onFilterClick} className="h-8">
