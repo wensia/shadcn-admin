@@ -1,13 +1,12 @@
 /**
  * InfoItem 信息项组件
- * 用于展示单条 label: value 信息
+ * 渲染为表格单元格 (td)，用于在 InfoGrid 内展示
  */
 
 import * as React from 'react'
 import { Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
-import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
 interface InfoItemProps {
@@ -30,7 +29,10 @@ export function InfoItem({
   const s = useStyleClasses()
   const [copied, setCopied] = React.useState(false)
 
-  const handleCopy = async () => {
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
     if (!value || typeof value !== 'string') return
 
     try {
@@ -43,42 +45,53 @@ export function InfoItem({
     }
   }
 
-  const spanClass = span === 2 ? 'col-span-1 sm:col-span-2' : ''
+  // span=2 时合并列
+  const colSpan = span === 2 ? 3 : 1
 
   return (
-    <div
-      className={cn(
-        'flex items-start gap-2 group',
-        spanClass,
-        className
-      )}
-    >
-      <span className="text-muted-foreground shrink-0">{label}:</span>
-      <span
+    <>
+      <td
         className={cn(
-          'flex-1 break-words',
-          highlight && 'text-primary font-medium'
+          'py-1.5 pr-3 text-muted-foreground whitespace-nowrap align-top',
+          span === 2 && 'w-auto',
+          className
         )}
+        colSpan={span === 2 ? 1 : undefined}
       >
-        {value || '-'}
-      </span>
-      {copyable && value && typeof value === 'string' && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            'h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0',
-            copied && 'opacity-100'
+        {label}
+      </td>
+      <td
+        className={cn(
+          'py-1.5 align-top',
+          span === 2 && 'pr-0',
+          highlight && 'text-destructive font-medium'
+        )}
+        colSpan={span === 2 ? colSpan : undefined}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="break-words">
+            {value || <span className="text-muted-foreground">-</span>}
+          </span>
+          {copyable && value && typeof value === 'string' && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className={cn(
+                'inline-flex items-center justify-center shrink-0',
+                'h-5 w-5 rounded hover:bg-muted transition-colors',
+                'text-muted-foreground hover:text-foreground'
+              )}
+              title="复制"
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </button>
           )}
-          onClick={handleCopy}
-        >
-          {copied ? (
-            <Check className="h-3 w-3 text-green-500" />
-          ) : (
-            <Copy className="h-3 w-3" />
-          )}
-        </Button>
-      )}
-    </div>
+        </div>
+      </td>
+    </>
   )
 }
