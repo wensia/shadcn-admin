@@ -10,6 +10,13 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
+
+  /* Remove focus outlines from all elements */
+  *:focus,
+  *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
   html {
     @apply overflow-x-hidden;
   }
