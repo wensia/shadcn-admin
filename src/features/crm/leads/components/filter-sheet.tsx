@@ -123,10 +123,7 @@ function FormFacetedFilter({
     onChange(result.length > 0 ? result : undefined)
   }
 
-  const handleClear = (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation() // 阻止触发 Popover 打开
-    }
+  const handleClear = () => {
     onChange(undefined)
     setOpen(false)
   }
@@ -157,10 +154,21 @@ function FormFacetedFilter({
           </span>
           <div className="flex items-center shrink-0">
             {selectedValues.size > 0 && (
-              <X
-                className={cn('opacity-50 hover:opacity-100 cursor-pointer mr-1', s.size.icon)}
-                onClick={handleClear}
-              />
+              <span
+                role="button"
+                className={cn('opacity-50 hover:opacity-100 cursor-pointer mr-1 flex items-center justify-center')}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleClear()
+                }}
+              >
+                <X className={s.size.icon} />
+              </span>
             )}
             <ChevronDown className={cn('opacity-50', s.size.icon)} />
           </div>
