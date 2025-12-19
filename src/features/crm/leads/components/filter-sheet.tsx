@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { X, FileText, Users, Calendar, Tag } from 'lucide-react'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
@@ -35,21 +35,15 @@ import { leadStatusLabels, intentionLevelLabels } from '../types'
 
 // ==================== FilterGroup 子组件 ====================
 interface FilterGroupProps {
-  title: string
-  icon: React.ReactNode
   children: React.ReactNode
   className?: string
 }
 
-function FilterGroup({ title, icon, children, className }: FilterGroupProps) {
+function FilterGroup({ children, className }: FilterGroupProps) {
   const s = useStyleClasses()
 
   return (
     <div className={cn('border border-border p-3', s.rounded, className)}>
-      <div className={cn('flex items-center gap-2 mb-3')}>
-        <span className={cn('text-muted-foreground', s.size.icon)}>{icon}</span>
-        <span className={cn(s.text.sm, 'font-semibold')}>{title}</span>
-      </div>
       <div className={cn('space-y-3')}>
         {children}
       </div>
@@ -162,7 +156,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
           <div className={cn('p-4', s.gap.normal, 'space-y-4')}>
 
             {/* ========== 基本信息 ========== */}
-            <FilterGroup title="基本信息" icon={<FileText className={s.size.icon} />}>
+            <FilterGroup>
               {/* 状态 + 意向等级 并排 */}
               <div className="grid grid-cols-2 gap-3">
                 <FilterField label="线索状态">
@@ -226,7 +220,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             </FilterGroup>
 
             {/* ========== 人员相关 ========== */}
-            <FilterGroup title="人员相关" icon={<Users className={s.size.icon} />}>
+            <FilterGroup>
               {/* 负责顾问 + 创建人 并排 */}
               <div className="grid grid-cols-2 gap-3">
                 <FilterField label="负责顾问">
@@ -290,7 +284,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             </FilterGroup>
 
             {/* ========== 时间条件 ========== */}
-            <FilterGroup title="时间条件" icon={<Calendar className={s.size.icon} />}>
+            <FilterGroup>
               <FilterField label="创建时间">
                 <DateRangePicker
                   startDate={localFilters.created_from}
@@ -319,7 +313,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
             </FilterGroup>
 
             {/* ========== 其他条件 ========== */}
-            <FilterGroup title="其他条件" icon={<Tag className={s.size.icon} />}>
+            <FilterGroup>
               <div className="grid grid-cols-2 gap-3">
                 <FilterField label="标签">
                   <Input
