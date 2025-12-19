@@ -281,46 +281,6 @@ export function LeadDetailSheet({
           </div>
         </SheetHeader>
 
-        {/* ==================== KPI 卡片区域 ==================== */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 py-3 border-b bg-muted/30 shrink-0">
-          <MiniStatCard
-            icon={<PhoneCall className={s.size.icon} />}
-            label="跟进次数"
-            value={lead?.followup_count || 0}
-            subtext={statistics.lastFollowupDaysAgo !== null ? `${statistics.lastFollowupDaysAgo}天前` : '暂无'}
-          />
-          <MiniStatCard
-            icon={<TrendingUp className={s.size.icon} />}
-            label="意向等级"
-            value={intentionStyle?.label || '未评级'}
-            variant={
-              intentionStyle?.variant === 'success' ? 'success' :
-              intentionStyle?.variant === 'warning' ? 'warning' : 'default'
-            }
-          />
-          <MiniStatCard
-            icon={<Target className={s.size.icon} />}
-            label="销售阶段"
-            value={statistics.statusStage}
-            progress={statistics.statusProgress}
-          />
-          <MiniStatCard
-            icon={<Clock className={s.size.icon} />}
-            label="下次跟进"
-            value={
-              statistics.daysUntilNextFollowup === null
-                ? '未设置'
-                : statistics.daysUntilNextFollowup === 0
-                ? '今天'
-                : statistics.daysUntilNextFollowup > 0
-                ? `${statistics.daysUntilNextFollowup}天后`
-                : `逾期${Math.abs(statistics.daysUntilNextFollowup)}天`
-            }
-            variant={statistics.isOverdue ? 'danger' : 'default'}
-            highlight={statistics.isOverdue}
-          />
-        </div>
-
         {/* ==================== Tabs 区域 ==================== */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 h-auto shrink-0">
