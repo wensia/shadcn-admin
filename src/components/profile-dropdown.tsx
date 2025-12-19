@@ -13,9 +13,26 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { useCurrentUser } from '@/stores/auth-store'
+
+/**
+ * 获取用户头像缩写
+ */
+function getAvatarFallback(name?: string): string {
+  if (!name) return 'U'
+  if (/[\u4e00-\u9fa5]/.test(name)) {
+    return name.slice(0, 2)
+  }
+  return name.charAt(0).toUpperCase()
+}
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
+  const currentUser = useCurrentUser()
+
+  const displayName = currentUser?.name || currentUser?.username || '未登录'
+  const displayEmail = currentUser?.email || currentUser?.phone || ''
+  const avatarFallback = getAvatarFallback(currentUser?.name || currentUser?.username)
 
   return (
     <>
@@ -23,17 +40,17 @@ export function ProfileDropdown() {
         <DropdownMenuTrigger asChild>
           <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
             <Avatar className='h-8 w-8'>
-              <AvatarImage src='/avatars/01.png' alt='@shadcn' />
-              <AvatarFallback>SN</AvatarFallback>
+              <AvatarImage src='' alt={displayName} />
+              <AvatarFallback>{avatarFallback}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className='w-56' align='end' forceMount>
           <DropdownMenuLabel className='font-normal'>
             <div className='flex flex-col gap-1.5'>
-              <p className='text-sm leading-none font-medium'>satnaing</p>
+              <p className='text-sm leading-none font-medium'>{displayName}</p>
               <p className='text-xs leading-none text-muted-foreground'>
-                satnaingdev@gmail.com
+                {displayEmail}
               </p>
             </div>
           </DropdownMenuLabel>
@@ -41,27 +58,26 @@ export function ProfileDropdown() {
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Profile
+                个人资料
                 <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Billing
+                账单管理
                 <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Settings
+                系统设置
                 <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>New Team</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
-            Sign out
+            退出登录
             <DropdownMenuShortcut className='text-current'>
               ⇧⌘Q
             </DropdownMenuShortcut>

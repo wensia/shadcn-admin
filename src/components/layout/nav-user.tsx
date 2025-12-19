@@ -5,7 +5,6 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
-  Sparkles,
   Settings,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -28,19 +27,33 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { useCurrentUser } from '@/stores/auth-store'
 
-type NavUserProps = {
-  user: {
-    name: string
-    email: string
-    avatar: string
+/**
+ * 获取用户头像缩写（取名字前两个字符）
+ */
+function getAvatarFallback(name?: string): string {
+  if (!name) return 'U'
+  // 如果是中文名，取前两个字
+  if (/[\u4e00-\u9fa5]/.test(name)) {
+    return name.slice(0, 2)
   }
+  // 英文名取首字母大写
+  return name.charAt(0).toUpperCase()
 }
 
-export function NavUser({ user }: NavUserProps) {
+export function NavUser() {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
   const [configOpen, setConfigOpen] = useState(false)
+
+  // 从 auth store 获取真实用户信息
+  const currentUser = useCurrentUser()
+
+  // 用户显示信息
+  const displayName = currentUser?.name || currentUser?.username || '未登录'
+  const displayEmail = currentUser?.email || currentUser?.phone || ''
+  const avatarFallback = getAvatarFallback(currentUser?.name || currentUser?.username)
 
   return (
     <>
@@ -53,12 +66,12 @@ export function NavUser({ user }: NavUserProps) {
                 className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
               >
                 <Avatar className='h-8 w-8 rounded-lg'>
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                  <AvatarImage src='' alt={displayName} />
+                  <AvatarFallback className='rounded-lg'>{avatarFallback}</AvatarFallback>
                 </Avatar>
                 <div className='grid flex-1 text-start text-sm leading-tight'>
-                  <span className='truncate font-semibold'>{user.name}</span>
-                  <span className='truncate text-xs'>{user.email}</span>
+                  <span className='truncate font-semibold'>{displayName}</span>
+                  <span className='truncate text-xs'>{displayEmail}</span>
                 </div>
                 <ChevronsUpDown className='ms-auto size-4' />
               </SidebarMenuButton>
@@ -72,44 +85,37 @@ export function NavUser({ user }: NavUserProps) {
               <DropdownMenuLabel className='p-0 font-normal'>
                 <div className='flex items-center gap-2 px-1 py-1.5 text-start text-sm'>
                   <Avatar className='h-8 w-8 rounded-lg'>
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                    <AvatarImage src='' alt={displayName} />
+                    <AvatarFallback className='rounded-lg'>{avatarFallback}</AvatarFallback>
                   </Avatar>
                   <div className='grid flex-1 text-start text-sm leading-tight'>
-                    <span className='truncate font-semibold'>{user.name}</span>
-                    <span className='truncate text-xs'>{user.email}</span>
+                    <span className='truncate font-semibold'>{displayName}</span>
+                    <span className='truncate text-xs'>{displayEmail}</span>
                   </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Sparkles />
-                  Upgrade to Pro
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
                 <DropdownMenuItem onClick={() => setConfigOpen(true)}>
                   <Settings />
-                  Theme Settings
+                  主题设置
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to='/settings/account'>
                     <BadgeCheck />
-                    Account
+                    账户信息
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to='/settings'>
                     <CreditCard />
-                    Billing
+                    账单管理
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to='/settings/notifications'>
                     <Bell />
-                    Notifications
+                    通知设置
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -119,7 +125,7 @@ export function NavUser({ user }: NavUserProps) {
                 onClick={() => setOpen(true)}
               >
                 <LogOut />
-                Sign out
+                退出登录
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

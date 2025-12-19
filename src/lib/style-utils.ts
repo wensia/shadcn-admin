@@ -75,26 +75,26 @@ export const styleClasses = {
       lg: 'text-xl',      // 20px - 醒目标题
     },
     height: {
-      control: 'h-11',    // 44px - 移动端友好触摸目标
-      controlSm: 'h-10',  // 40px - 次级控件
-      badge: 'h-6',       // 24px - 标签高度（调整为更合适的大小）
+      control: 'h-8',     // 32px - 与导出按钮一致
+      controlSm: 'h-7',   // 28px - 次级控件
+      badge: 'h-5',       // 20px - 标签高度
     },
     gap: {
-      tight: 'gap-4',     // 16px - 宽松舒适
-      normal: 'gap-6',    // 24px - 呼吸感
-      buttons: 'gap-2',   // 按钮组间距 - 8px
+      tight: 'gap-3',     // 12px - 紧凑舒适
+      normal: 'gap-4',    // 16px - 适度呼吸感
+      buttons: 'gap-1.5', // 按钮组间距 - 6px
     },
-    rounded: 'rounded-lg',
+    rounded: 'rounded-lg', // 保持大圆角，保留 maia 友好特征
     padding: {
-      cell: 'py-3 px-4',  // 12px/16px - 宽松的单元格内边距
-      button: 'px-3',     // 按钮内边距 - 12px
-      ellipsis: 'px-2',   // 省略号内边距 - 8px
+      cell: 'py-2 px-3',  // 8px/12px - 紧凑的单元格内边距
+      button: 'px-2.5',   // 按钮内边距 - 10px
+      ellipsis: 'px-1.5', // 省略号内边距 - 6px
     },
     size: {
-      icon: 'h-5 w-5',       // 图标尺寸 - 20px (更大更友好)
-      button: 'w-10',        // 按钮尺寸 - 40px (触摸友好)
-      buttonMin: 'min-w-10', // 按钮最小尺寸 - 40px
-      divider: 'h-8',        // 分隔线高度 - 32px
+      icon: 'h-4 w-4',       // 图标尺寸 - 16px
+      button: 'w-8',         // 按钮尺寸 - 32px
+      buttonMin: 'min-w-8',  // 按钮最小尺寸 - 32px
+      divider: 'h-6',        // 分隔线高度 - 24px
     },
   },
 } as const

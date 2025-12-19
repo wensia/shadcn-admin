@@ -83,11 +83,11 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md p-0">
+      <SheetContent className="w-full sm:max-w-md p-0 [&>button:last-child]:hidden">
         {/* Sheet Header */}
         <SheetHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <SheetTitle className={s.text.base}>高级筛选</SheetTitle>
               <SheetDescription className={cn(s.text.xs, 'mt-0.5')}>
                 多条件组合筛选线索
@@ -99,12 +99,13 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
               </SheetDescription>
             </div>
             <Button
-              size="sm"
               variant="ghost"
+              size="icon"
               onClick={() => onOpenChange(false)}
-              className={cn(s.height.controlSm, 'w-7 p-0')}
+              className="h-8 w-8 shrink-0"
             >
               <X className="h-4 w-4" />
+              <span className="sr-only">关闭</span>
             </Button>
           </div>
         </SheetHeader>

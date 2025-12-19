@@ -8,7 +8,7 @@ import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 
 type Style = 'mira' | 'lyra' | 'maia'
 
-const DEFAULT_STYLE = 'maia'
+const DEFAULT_STYLE = 'lyra'
 const STYLE_COOKIE_NAME = 'ui-style'
 const STYLE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
 

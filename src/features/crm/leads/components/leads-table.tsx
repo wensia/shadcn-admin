@@ -318,6 +318,11 @@ export function LeadsTable({
     }
   })
 
+  // 当数据变化时，清空选中状态
+  useEffect(() => {
+    setRowSelection({})
+  }, [data, page, pageSize])
+
   // 当选中状态变化时，通知父组件
   useEffect(() => {
     if (isLoading) return
