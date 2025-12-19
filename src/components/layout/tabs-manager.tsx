@@ -97,7 +97,8 @@ export function TabsManager() {
   const tabsContainerRef = useRef<HTMLDivElement>(null)
   // 用于跟踪是否是内部导航触发的变化，避免无限循环
   const isInternalNavigation = useRef(false)
-  const lastPathRef = useRef(location.pathname)
+  // 使用空字符串初始化，确保首次渲染时会处理当前路径
+  const lastPathRef = useRef('')
 
   const {
     tabs,

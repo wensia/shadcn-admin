@@ -5,7 +5,8 @@
  */
 
 import { create } from 'zustand'
-// import { persist } from 'zustand/middleware' // 暂时禁用
+import { persist } from 'zustand/middleware'
+import { hasRouteComponent } from '@/lib/route-components'
 
 /**
  * Tab信息接口
@@ -56,9 +57,10 @@ const HOME_TAB: TabInfo = {
 
 /**
  * Tab状态Store
- * 暂时禁用persist来调试
+ * 使用persist中间件实现localStorage持久化
  */
 export const useTabsStore = create<TabsState>()(
+  persist(
     (set, get) => ({
       // 初始状态 - 默认包含首页tab
       tabs: [HOME_TAB],
@@ -195,7 +197,57 @@ export const useTabsStore = create<TabsState>()(
 
         set({ tabs: newTabs })
       },
-    })
+    }),
+    {
+      name: 'tabs-storage',
+      version: 1,
+      // 迁移旧版本数据
+      migrate: (persistedState, version) => {
+        // 旧版本数据（无版本号）直接返回，由merge函数处理验证
+        return persistedState as TabsState
+      },
+      // 合并恢复的数据，进行验证和清理
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<TabsState> | undefined
+
+        if (!persisted || !persisted.tabs) {
+          return currentState
+        }
+
+        // 过滤无效的tab路径，只保留有对应路由配置的tab
+        let validTabs = persisted.tabs.filter(t =>
+          t.path === '/' || hasRouteComponent(t.path)
+        )
+
+        // 确保首页tab存在且配置正确
+        const homeTabIndex = validTabs.findIndex(t => t.path === '/')
+        if (homeTabIndex === -1) {
+          // 首页tab不存在，添加到开头
+          validTabs = [HOME_TAB, ...validTabs]
+        } else {
+          // 确保首页tab的配置正确（id固定，不可关闭）
+          validTabs[homeTabIndex] = {
+            ...validTabs[homeTabIndex],
+            id: 'tab-home',
+            closable: false,
+          }
+        }
+
+        // 验证activeTabId是否有效
+        let activeTabId = persisted.activeTabId || 'tab-home'
+        const activeTabExists = validTabs.some(t => t.id === activeTabId)
+        if (!activeTabExists) {
+          activeTabId = 'tab-home'
+        }
+
+        return {
+          ...currentState,
+          tabs: validTabs,
+          activeTabId,
+        }
+      },
+    }
+  )
 )
 
 /**
