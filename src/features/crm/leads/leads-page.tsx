@@ -29,6 +29,8 @@ import {
 import { leadsApi } from './api'
 import type { LeadListParams, LeadListItem, Lead, LeadStatus, IntentionLevel } from './types'
 import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
+import { leadStatusLabels, intentionLevelLabels } from './types'
+import { useMemo } from 'react'
 
 export function LeadsPage() {
   const queryClient = useQueryClient()
@@ -66,6 +68,36 @@ export function LeadsPage() {
   // 当前选中/编辑的线索
   const [currentLeadId, setCurrentLeadId] = useState<string | null>(null)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
+
+  // 获取筛选选项（用于显示筛选标签的名称）
+  const { data: filterOptions } = useQuery({
+    queryKey: ['filter-options'],
+    queryFn: async () => {
+      const response = await leadsApi.getFilterOptions()
+      return response.data
+    },
+    staleTime: 5 * 60 * 1000 // 5分钟内不重新获取
+  })
+
+  // 构建 ID -> 名称 的映射
+  const filterMaps = useMemo(() => {
+    if (!filterOptions) return null
+    return {
+      channels: new Map(filterOptions.source_channels.map(c => [c.id, c.name])),
+      advisors: new Map(filterOptions.advisors.map(a => [a.id, a.name])),
+      creators: new Map(filterOptions.creators.map(c => [c.id, c.name])),
+      campuses: new Map(filterOptions.campuses?.map(c => [c.id, c.name]) || [])
+    }
+  }, [filterOptions])
+
+  // 辅助函数：将 ID 数组转换为名称显示
+  const getFilterLabel = (ids: string[] | undefined, map: Map<string, string> | undefined, fieldName: string) => {
+    if (!ids || ids.length === 0) return null
+    if (!map) return `${fieldName} (${ids.length})`
+    const names = ids.map(id => map.get(id) || id).filter(Boolean)
+    if (names.length <= 2) return names.join(', ')
+    return `${names.slice(0, 2).join(', ')} 等${names.length}项`
+  }
 
   // 获取线索列表 - 使用防抖搜索提升性能
   const { data, isLoading } = useQuery({
@@ -320,13 +352,18 @@ export function LeadsPage() {
             </Badge>
           )}
 
-          {/* 高级筛选条件标签（多选字段显示选中数量） */}
+          {/* 高级筛选条件标签（显示具体值，点击可编辑） */}
           {filters.status && filters.status.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              状态{filters.status.length > 1 ? ` (${filters.status.length})` : ''}
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              状态: {filters.status.map(s => leadStatusLabels[s]).join(', ')}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { status, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -335,11 +372,16 @@ export function LeadsPage() {
           )}
 
           {filters.source_channel_id && filters.source_channel_id.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              来源渠道{filters.source_channel_id.length > 1 ? ` (${filters.source_channel_id.length})` : ''}
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              渠道: {getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道')}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { source_channel_id, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -348,11 +390,16 @@ export function LeadsPage() {
           )}
 
           {filters.advisor_id && filters.advisor_id.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              负责顾问{filters.advisor_id.length > 1 ? ` (${filters.advisor_id.length})` : ''}
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              顾问: {getFilterLabel(filters.advisor_id, filterMaps?.advisors, '负责顾问')}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { advisor_id, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -361,11 +408,16 @@ export function LeadsPage() {
           )}
 
           {filters.created_by_id && filters.created_by_id.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              创建人{filters.created_by_id.length > 1 ? ` (${filters.created_by_id.length})` : ''}
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              创建人: {getFilterLabel(filters.created_by_id, filterMaps?.creators, '创建人')}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { created_by_id, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -374,11 +426,16 @@ export function LeadsPage() {
           )}
 
           {filters.owner_campus_id && filters.owner_campus_id.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              归属校区{filters.owner_campus_id.length > 1 ? ` (${filters.owner_campus_id.length})` : ''}
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              校区: {getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区')}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { owner_campus_id, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -387,11 +444,16 @@ export function LeadsPage() {
           )}
 
           {filters.intention_level && filters.intention_level.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              意向等级{filters.intention_level.length > 1 ? ` (${filters.intention_level.length})` : ''}
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              意向: {filters.intention_level.map(l => intentionLevelLabels[l]).join(', ')}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { intention_level, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -400,11 +462,16 @@ export function LeadsPage() {
           )}
 
           {(filters.created_from || filters.created_to) && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              创建时间
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              时间: {filters.created_from || '...'} ~ {filters.created_to || '...'}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { created_from, created_to, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -413,11 +480,16 @@ export function LeadsPage() {
           )}
 
           {filters.tag && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
               标签: {filters.tag}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { tag, ...rest } = filters
                   setFilters(rest)
                 }}
@@ -426,11 +498,16 @@ export function LeadsPage() {
           )}
 
           {filters.days_without_activity && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-              无活动天数: {filters.days_without_activity}天
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              无活动: {filters.days_without_activity}天
               <X
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   const { days_without_activity, ...rest } = filters
                   setFilters(rest)
                 }}
