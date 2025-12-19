@@ -223,7 +223,8 @@ export function TabsManager() {
       </div>
 
       {/* Tab内容区域 - 使用Outlet渲染当前路由组件 */}
-      <div className='flex-1 overflow-auto'>
+      {/* flex flex-col 确保子元素高度受约束，overflow-hidden 让内部组件控制滚动 */}
+      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
         <Outlet />
       </div>
     </div>

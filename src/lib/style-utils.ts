@@ -77,7 +77,7 @@ export const styleClasses = {
     height: {
       control: 'h-11',    // 44px - 移动端友好触摸目标
       controlSm: 'h-10',  // 40px - 次级控件
-      badge: 'h-7',       // 28px - 标签高度
+      badge: 'h-6',       // 24px - 标签高度（调整为更合适的大小）
     },
     gap: {
       tight: 'gap-4',     // 16px - 宽松舒适
