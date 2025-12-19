@@ -123,7 +123,10 @@ function FormFacetedFilter({
     onChange(result.length > 0 ? result : undefined)
   }
 
-  const handleClear = () => {
+  const handleClear = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation() // 阻止触发 Popover 打开
+    }
     onChange(undefined)
     setOpen(false)
   }
@@ -144,7 +147,7 @@ function FormFacetedFilter({
             className
           )}
         >
-          <span className="truncate">
+          <span className="truncate flex-1 text-left">
             {selectedValues.size === 0
               ? placeholder
               : selectedValues.size <= 2
@@ -152,7 +155,15 @@ function FormFacetedFilter({
                 : `已选 ${selectedValues.size} 项`
             }
           </span>
-          <ChevronDown className={cn('shrink-0 opacity-50', s.size.icon)} />
+          <div className="flex items-center shrink-0">
+            {selectedValues.size > 0 && (
+              <X
+                className={cn('opacity-50 hover:opacity-100 cursor-pointer mr-1', s.size.icon)}
+                onClick={handleClear}
+              />
+            )}
+            <ChevronDown className={cn('opacity-50', s.size.icon)} />
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent className={cn('w-[200px] p-0', s.rounded)} align="start">
