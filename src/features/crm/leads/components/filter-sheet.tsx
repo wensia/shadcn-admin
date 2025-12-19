@@ -48,13 +48,9 @@ interface FilterGroupProps {
 }
 
 function FilterGroup({ children, className }: FilterGroupProps) {
-  const s = useStyleClasses()
-
   return (
-    <div className={cn('border border-border p-3', s.rounded, className)}>
-      <div className={cn('space-y-3')}>
-        {children}
-      </div>
+    <div className={cn('space-y-3 py-4 first:pt-0 last:pb-0', className)}>
+      {children}
     </div>
   )
 }
@@ -305,7 +301,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
 
         {/* ==================== 筛选表单 ==================== */}
         <ScrollArea className="flex-1 overflow-auto">
-          <div className={cn('p-4', s.gap.normal, 'space-y-4')}>
+          <div className="p-4 divide-y divide-border">
 
             {/* ========== 基本信息 ========== */}
             <FilterGroup>
