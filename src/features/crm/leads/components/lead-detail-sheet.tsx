@@ -428,11 +428,13 @@ export function LeadDetailSheet({
                       </InfoGrid>
                     </InfoCard>
 
-                    {/* 来源渠道 */}
-                    <InfoCard title="来源渠道" icon={<Tag className={s.size.icon} />}>
+                    {/* 来源信息 */}
+                    <InfoCard title="来源信息" icon={<Tag className={s.size.icon} />}>
                       <InfoGrid>
-                        <InfoItem label="渠道名称" value={lead.source_channel_name} />
+                        <InfoItem label="来源渠道" value={lead.source_channel_name} />
                         <InfoItem label="来源详情" value={lead.source_detail} />
+                        <InfoItem label="创建人" value={lead.created_by_name} />
+                        <InfoItem label="创建时间" value={formatTime(lead.created_at)} />
                         {/* 渠道额外字段 */}
                         {lead.source_extra_info && parseSourceExtraInfo(lead.source_extra_info).map((item, index) => (
                           <InfoItem
@@ -444,13 +446,11 @@ export function LeadDetailSheet({
                       </InfoGrid>
                     </InfoCard>
 
-                    {/* 线索属性 */}
-                    <InfoCard title="线索属性" icon={<UserCog className={s.size.icon} />}>
+                    {/* 跟进信息 */}
+                    <InfoCard title="跟进信息" icon={<UserCog className={s.size.icon} />}>
                       <InfoGrid>
                         <InfoItem label="负责顾问" value={lead.advisor_name} />
                         <InfoItem label="归属校区" value={lead.owner_campus_name} />
-                        <InfoItem label="创建人" value={lead.created_by_name} />
-                        <InfoItem label="创建时间" value={formatTime(lead.created_at)} />
                         <InfoItem
                           label="下次跟进"
                           value={lead.next_followup_at ? formatTime(lead.next_followup_at) : undefined}
