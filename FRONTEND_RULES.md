@@ -1,0 +1,218 @@
+# React 前端开发规则
+
+shadcn-admin (React + shadcn/ui) 前端开发的核心规范。
+
+## 技术栈
+
+- React 18+ 函数组件 + Hooks
+- shadcn/ui 组件库 (基于 Radix UI)
+- Vite 构建工具
+- TypeScript 5+
+- TanStack Query (React Query) 数据获取
+- TanStack Table 高级表格
+- Tailwind CSS 样式
+- recharts 图表库
+
+## 端口配置
+
+**前端端口: 3457** - 禁止随意更改
+
+## 三种 UI 风格
+
+项目支持 Mira/Lyra/Maia 三种风格切换，使用 `useStyleClasses()` Hook：
+
+```tsx
+import { useStyleClasses } from '@/lib/style-utils'
+
+function MyComponent() {
+  const s = useStyleClasses()
+
+  return (
+    <div className={cn(s.text.xs, s.height.control, s.rounded)}>
+      内容
+    </div>
+  )
+}
+```
+
+### 风格尺寸对比
+
+| 属性 | Mira | Lyra | Maia |
+|------|------|------|------|
+| text.xs | text-xs | text-xs | text-sm |
+| text.sm | text-xs | text-sm | text-base |
+| text.base | text-sm | text-base | text-lg |
+| height.control | h-8 | h-9 | h-11 |
+| height.badge | h-5 | h-6 | h-6 |
+| gap.tight | gap-1.5 | gap-2 | gap-4 |
+| rounded | rounded-sm | rounded-none | rounded-lg |
+
+## Sheet/抽屉组件规范
+
+### 关闭按钮位置
+
+**重要：Sheet 组件的关闭按钮必须放在 SheetHeader 内的标题旁边，而非默认的右上角位置。**
+
+```tsx
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { X } from 'lucide-react'
+
+<Sheet open={open} onOpenChange={onOpenChange}>
+  {/*
+    关键配置：
+    1. p-0 移除默认内边距
+    2. [&>button:last-child]:hidden 隐藏 Sheet 默认的关闭按钮
+  */}
+  <SheetContent className="w-full sm:max-w-md p-0 [&>button:last-child]:hidden">
+    <SheetHeader className="px-4 py-3 border-b">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <SheetTitle>标题</SheetTitle>
+          <SheetDescription>描述文本</SheetDescription>
+        </div>
+        {/* 自定义关闭按钮放在标题旁边 */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onOpenChange(false)}
+          className="h-8 w-8 shrink-0"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">关闭</span>
+        </Button>
+      </div>
+    </SheetHeader>
+
+    {/* 内容区域 */}
+  </SheetContent>
+</Sheet>
+```
+
+### Sheet 宽度配置
+
+```tsx
+// 筛选抽屉 (窄)
+className="w-full sm:max-w-md"
+
+// 详情抽屉 (宽)
+className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl"
+
+// 编辑表单抽屉 (中等)
+className="w-full sm:max-w-lg"
+```
+
+## Badge 状态样式
+
+使用全局状态样式配置：
+
+```tsx
+import { getLeadStatusStyle, getIntentionLevelStyle, getFollowupResultStyle } from '@/lib/status-styles'
+
+// 线索状态
+const statusStyle = getLeadStatusStyle(lead.status)
+<Badge variant={statusStyle.variant}>{statusStyle.label}</Badge>
+
+// 意向等级
+const intentionStyle = getIntentionLevelStyle(lead.intention_level)
+<Badge variant={intentionStyle.variant}>{intentionStyle.label}</Badge>
+
+// 跟进结果
+const resultStyle = getFollowupResultStyle(followup.result)
+<Badge variant={resultStyle.variant}>{resultStyle.label}</Badge>
+```
+
+### Badge Variant 类型
+
+```typescript
+type BadgeVariant =
+  | 'default'      // 主色
+  | 'secondary'    // 次要色
+  | 'destructive'  // 红色/危险
+  | 'outline'      // 轮廓
+  | 'success'      // 绿色/成功
+  | 'warning'      // 黄色/警告
+  | 'info'         // 蓝色/信息
+  | 'purple'       // 紫色
+```
+
+## 数据表格布局
+
+使用 TanStack Table + TanStack Virtual 实现高性能虚拟滚动：
+
+```tsx
+// 表格容器必须有固定高度和 overflow-auto
+<div className="flex flex-1 flex-col gap-4 overflow-hidden">
+  <div ref={tableContainerRef} className="min-h-0 flex-1 overflow-auto rounded-md border">
+    <Table>...</Table>
+  </div>
+  <SimplePagination ... />
+</div>
+```
+
+## 时间处理规范
+
+**重要：后端返回的时间是 UTC 时间，前端显示时必须转换为本地时间**
+
+使用 `@/lib/utils/time` 中的工具函数：
+
+```tsx
+import { formatTime, formatDate, formatRelativeTime } from '@/lib/utils/time'
+
+// 完整时间: "2025/12/16 15:44"
+formatTime(lead.created_at)
+
+// 仅日期: "2025/12/16"
+formatDate(lead.created_at)
+
+// 相对时间: "3天前"
+formatRelativeTime(lead.last_followup_at)
+```
+
+## 目录结构
+
+```
+src/
+├── components/ui/     # shadcn/ui 基础组件
+├── features/          # 功能模块 (按业务划分)
+│   └── crm/leads/     # 线索管理模块
+│       ├── components/  # 组件
+│       ├── hooks/       # 自定义 Hooks
+│       ├── api.ts       # API 接口
+│       └── types.ts     # 类型定义
+├── lib/               # 工具函数
+│   ├── utils.ts       # 通用工具
+│   ├── style-utils.ts # 风格工具
+│   └── status-styles.ts # 状态样式
+├── context/           # React Context
+└── routes/            # 路由配置
+```
+
+## 开发命令
+
+```bash
+npm run dev         # 开发服务器 (端口3457)
+npm run build       # 构建生产版本
+npx tsc --noEmit    # 类型检查
+```
+
+## 常用组件导入
+
+```tsx
+// shadcn/ui 组件
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+
+// 图标
+import { Phone, Edit, Plus, X, Star } from 'lucide-react'
+
+// 工具
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
+```
