@@ -14,12 +14,13 @@ import {
 } from '@/components/ui/collapsible'
 
 interface InfoCardProps {
-  title: string
+  title?: string
   icon?: React.ReactNode
   children: React.ReactNode
   collapsible?: boolean
   defaultExpanded?: boolean
   compact?: boolean
+  hideTitle?: boolean
   className?: string
 }
 
@@ -30,12 +31,15 @@ export function InfoCard({
   collapsible = false,
   defaultExpanded = true,
   compact = false,
+  hideTitle = false,
   className,
 }: InfoCardProps) {
   const s = useStyleClasses()
   const [isOpen, setIsOpen] = React.useState(defaultExpanded)
 
-  const headerContent = (
+  const showHeader = !hideTitle && title
+
+  const headerContent = showHeader ? (
     <div className={cn('flex items-center gap-2', collapsible && 'cursor-pointer')}>
       {icon && (
         <span className={cn('text-muted-foreground', s.size.icon)}>
@@ -52,15 +56,15 @@ export function InfoCard({
         />
       )}
     </div>
-  )
+  ) : null
 
   const content = (
-    <div className={cn(compact ? 'mt-2' : 'mt-3')}>
+    <div className={cn(showHeader && (compact ? 'mt-2' : 'mt-3'))}>
       {children}
     </div>
   )
 
-  if (collapsible) {
+  if (collapsible && showHeader) {
     return (
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div

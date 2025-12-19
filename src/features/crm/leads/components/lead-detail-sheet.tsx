@@ -392,46 +392,34 @@ export function LeadDetailSheet({
                 ) : lead ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* 客户信息（儿童+家长） */}
-                    <InfoCard title="客户信息" icon={<Users className={s.size.icon} />} className="lg:col-span-2">
+                    <InfoCard hideTitle className="lg:col-span-2">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* 儿童信息 */}
-                        <div>
-                          <h4 className={cn(s.text.xs, 'font-semibold text-muted-foreground mb-2 flex items-center gap-1.5')}>
-                            <Baby className="h-3.5 w-3.5" />
-                            儿童信息
-                          </h4>
-                          <InfoGrid cols={1}>
-                            <InfoItem label="姓名" value={lead.child_name} />
-                            <InfoItem
-                              label="性别"
-                              value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined}
-                            />
-                            <InfoItem label="年龄" value={lead.age?.toString()} />
-                            <InfoItem label="生日" value={lead.child_birthday} />
-                            <InfoItem label="年级" value={lead.grade ? gradeLabels[lead.grade] : undefined} />
-                            <InfoItem label="学校" value={lead.school_name} />
-                            <InfoItem label="课程兴趣" value={lead.course_interests?.join('、')} />
-                          </InfoGrid>
-                        </div>
+                        <InfoGrid cols={1}>
+                          <InfoItem label="儿童姓名" value={lead.child_name} />
+                          <InfoItem
+                            label="性别"
+                            value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined}
+                          />
+                          <InfoItem label="年龄" value={lead.age?.toString()} />
+                          <InfoItem label="生日" value={lead.child_birthday} />
+                          <InfoItem label="年级" value={lead.grade ? gradeLabels[lead.grade] : undefined} />
+                          <InfoItem label="学校" value={lead.school_name} />
+                          <InfoItem label="课程兴趣" value={lead.course_interests?.join('、')} />
+                        </InfoGrid>
                         {/* 家长信息 */}
-                        <div>
-                          <h4 className={cn(s.text.xs, 'font-semibold text-muted-foreground mb-2 flex items-center gap-1.5')}>
-                            <Users className="h-3.5 w-3.5" />
-                            家长信息
-                          </h4>
-                          <InfoGrid cols={1}>
-                            <InfoItem label="姓名" value={lead.parent_name} />
-                            <InfoItem label="关系" value={formatParentRelation(lead.parent_relation)} />
-                            <InfoItem label="手机号" value={lead.parent_phone} copyable />
-                            <InfoItem label="微信号" value={lead.parent_wechat} copyable />
-                            <InfoItem label="邮箱" value={lead.parent_email} />
-                          </InfoGrid>
-                        </div>
+                        <InfoGrid cols={1}>
+                          <InfoItem label="家长姓名" value={lead.parent_name} />
+                          <InfoItem label="关系" value={formatParentRelation(lead.parent_relation)} />
+                          <InfoItem label="手机号" value={lead.parent_phone} copyable />
+                          <InfoItem label="微信号" value={lead.parent_wechat} copyable />
+                          <InfoItem label="邮箱" value={lead.parent_email} />
+                        </InfoGrid>
                       </div>
                     </InfoCard>
 
                     {/* 地址信息 */}
-                    <InfoCard title="地址信息" icon={<MapPin className={s.size.icon} />}>
+                    <InfoCard hideTitle>
                       <InfoGrid>
                         <InfoItem
                           label="省市区"
@@ -443,7 +431,7 @@ export function LeadDetailSheet({
                     </InfoCard>
 
                     {/* 来源信息 */}
-                    <InfoCard title="来源信息" icon={<Tag className={s.size.icon} />}>
+                    <InfoCard hideTitle>
                       <InfoGrid>
                         <InfoItem label="来源渠道" value={lead.source_channel_name} />
                         <InfoItem label="来源详情" value={lead.source_detail} />
@@ -461,7 +449,7 @@ export function LeadDetailSheet({
                     </InfoCard>
 
                     {/* 跟进信息 */}
-                    <InfoCard title="跟进信息" icon={<UserCog className={s.size.icon} />}>
+                    <InfoCard hideTitle>
                       <InfoGrid>
                         <InfoItem label="负责顾问" value={lead.advisor_name} />
                         <InfoItem label="归属校区" value={lead.owner_campus_name} />
@@ -482,14 +470,9 @@ export function LeadDetailSheet({
 
                     {/* 备用联系人 */}
                     {(lead.backup_contact_name || lead.backup_contact_phone) && (
-                      <InfoCard
-                        title="备用联系人"
-                        icon={<UserPlus className={s.size.icon} />}
-                        compact
-                        className="lg:col-span-2"
-                      >
+                      <InfoCard hideTitle compact className="lg:col-span-2">
                         <InfoGrid cols={3}>
-                          <InfoItem label="姓名" value={lead.backup_contact_name} />
+                          <InfoItem label="备用联系人" value={lead.backup_contact_name} />
                           <InfoItem label="电话" value={lead.backup_contact_phone} copyable />
                           <InfoItem label="关系" value={lead.backup_contact_relation} />
                         </InfoGrid>
