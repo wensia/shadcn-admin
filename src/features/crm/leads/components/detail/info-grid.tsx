@@ -54,7 +54,13 @@ export function InfoGrid({
     <table className={cn('w-full', s.text.xs, className)}>
       <tbody>
         {rows.map((row, rowIndex) => (
-          <tr key={rowIndex}>
+          <tr
+            key={rowIndex}
+            className={cn(
+              'transition-colors',
+              rowIndex % 2 === 0 ? 'bg-muted/30' : 'bg-transparent'
+            )}
+          >
             {row.map((item, colIndex) => {
               const span = React.isValidElement(item) && item.props.span === 2 ? 2 : 1
               return (
