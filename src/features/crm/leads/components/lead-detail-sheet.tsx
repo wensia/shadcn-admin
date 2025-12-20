@@ -4,7 +4,7 @@
  * 支持 Mira/Lyra/Maia 三种风格
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Sheet,
@@ -15,12 +15,21 @@ import {
 } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { toast } from 'sonner'
 import {
   Phone,
+  PhoneOff,
   Edit,
   Plus,
   X,
@@ -35,15 +44,16 @@ import {
   Tag,
   UserPlus,
   UserCog,
+  Loader2,
 } from 'lucide-react'
-import { leadsApi } from '../api'
-import type { Lead, LeadFollowup, LeadInfoChangeLog, LeadOwnershipChangeLog } from '../types'
-import { gradeLabels } from '../types'
+import { leadsApi, yunkeApi } from '../api'
+import type { Lead, LeadFollowup, LeadInfoChangeLog, LeadOwnershipChangeLog, FollowupMethod, FollowupResult } from '../types'
+import { gradeLabels, followupMethodLabels, followupResultLabels } from '../types'
 import { formatTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
-import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
 import { useLeadStatistics } from '../hooks/use-lead-statistics'
+import { LeadStatusBadge, IntentionLevelBadge, FollowupResultBadge } from './status-badges'
 
 // 详情组件
 import { MiniStatCard } from './detail/mini-stat-card'
@@ -157,6 +167,79 @@ export function LeadDetailSheet({
   const s = useStyleClasses()
   const [activeTab, setActiveTab] = useState('overview')
 
+  // ==================== 外呼状态 ====================
+  const [isInCall, setIsInCall] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null)
+  const [outboundLoading, setOutboundLoading] = useState(false)
+  const callTimerRef = useRef<number | null>(null)
+  const callStartTimeRef = useRef<Date | null>(null)
+
+  // 格式化通话时长
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // 开始计时
+  const startCallTimer = useCallback(() => {
+    setIsInCall(true)
+    callStartTimeRef.current = new Date()
+    callTimerRef.current = window.setInterval(() => {
+      if (callStartTimeRef.current) {
+        setCallDuration(Math.floor((Date.now() - callStartTimeRef.current.getTime()) / 1000))
+      }
+    }, 1000)
+  }, [])
+
+  // 停止计时
+  const stopCallTimer = useCallback(() => {
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current)
+      callTimerRef.current = null
+    }
+    setIsInCall(false)
+    setCallDuration(0)
+    setCurrentCallId(null)
+    callStartTimeRef.current = null
+  }, [])
+
+  // 外呼
+  const makeOutboundCall = useCallback(async (phone: string) => {
+    if (!phone || isInCall || outboundLoading) return false
+    setOutboundLoading(true)
+    try {
+      const response = await yunkeApi.dialPhone(phone)
+      if (response.data?.call_id) {
+        setCurrentCallId(response.data.call_id)
+        startCallTimer()
+        toast.success('拨号成功')
+        return true
+      }
+      toast.error('拨号失败')
+      return false
+    } catch {
+      toast.error('外呼失败')
+      return false
+    } finally {
+      setOutboundLoading(false)
+    }
+  }, [isInCall, outboundLoading, startCallTimer])
+
+  // 挂断
+  const hangUpCall = useCallback(async () => {
+    if (currentCallId) {
+      try {
+        await yunkeApi.hangUpCall(currentCallId)
+      } catch {
+        // 静默失败
+      }
+    }
+    stopCallTimer()
+    toast.success('通话已挂断')
+  }, [currentCallId, stopCallTimer])
+
   // 获取线索详情
   const { data: lead, isLoading } = useQuery({
     queryKey: ['lead', leadId],
@@ -204,9 +287,45 @@ export function LeadDetailSheet({
   // 计算统计数据
   const statistics = useLeadStatistics(lead || null, followupsResponse?.data)
 
-  // 状态和意向样式
-  const statusStyle = lead ? getLeadStatusStyle(lead.status) : null
-  const intentionStyle = lead?.intention_level ? getIntentionLevelStyle(lead.intention_level) : null
+  
+  // ==================== 快捷键监听 ====================
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // 检查焦点是否在可编辑元素上
+      const el = document.activeElement as HTMLElement
+      const isEditable = el?.tagName === 'INPUT' ||
+        el?.tagName === 'TEXTAREA' ||
+        el?.isContentEditable
+
+      // 空格键外呼
+      if (event.code === 'Space' && !isEditable && open && !isInCall && !outboundLoading && lead?.parent_phone) {
+        event.preventDefault()
+        makeOutboundCall(lead.parent_phone)
+      }
+
+      // ESC 键挂断（阻止关闭抽屉）
+      if (event.key === 'Escape' && isInCall) {
+        event.preventDefault()
+        event.stopPropagation()
+        hangUpCall()
+      }
+    }
+
+    if (open) {
+      // 使用 capture 阶段监听，确保在 Sheet 组件之前处理 ESC 键
+      window.addEventListener('keydown', handleKeyDown, true)
+      return () => window.removeEventListener('keydown', handleKeyDown, true)
+    }
+  }, [open, isInCall, outboundLoading, lead?.parent_phone, makeOutboundCall, hangUpCall])
+
+  // 清理计时器
+  useEffect(() => {
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current)
+      }
+    }
+  }, [])
 
   if (!lead && !isLoading) {
     return null
@@ -222,15 +341,11 @@ export function LeadDetailSheet({
           <div className="flex items-center gap-2">
             {/* 状态标签 */}
             <div className="flex items-center gap-2 flex-wrap">
-              {statusStyle && (
-                <Badge variant={statusStyle.variant} className={cn(s.text.xs, s.height.badge, s.rounded)}>
-                  {statusStyle.label}
-                </Badge>
+              {lead && (
+                <LeadStatusBadge status={lead.status} className={cn(s.text.xs, s.height.badge, s.rounded)} />
               )}
-              {intentionStyle && (
-                <Badge variant={intentionStyle.variant} className={cn(s.text.xs, s.height.badge, s.rounded)}>
-                  {intentionStyle.label}
-                </Badge>
+              {lead?.intention_level && (
+                <IntentionLevelBadge level={lead.intention_level} className={cn(s.text.xs, s.height.badge, s.rounded)} />
               )}
               {lead?.is_starred && (
                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
@@ -252,12 +367,19 @@ export function LeadDetailSheet({
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => toast.info('外呼功能')}
+                    variant={isInCall ? "destructive" : "outline"}
+                    onClick={() => isInCall ? hangUpCall() : makeOutboundCall(lead.parent_phone || '')}
+                    disabled={outboundLoading || (!isInCall && !lead?.parent_phone)}
                     className={cn(s.height.controlSm, s.text.xs)}
                   >
-                    <Phone className="mr-1 h-3 w-3" />
-                    外呼
+                    {outboundLoading ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : isInCall ? (
+                      <PhoneOff className="mr-1 h-3 w-3" />
+                    ) : (
+                      <Phone className="mr-1 h-3 w-3" />
+                    )}
+                    {isInCall ? `挂断 ${formatCallDuration(callDuration)}` : '外呼'}
                   </Button>
                   <Button
                     size="sm"
@@ -378,21 +500,9 @@ export function LeadDetailSheet({
                       </div>
                     </InfoCard>
 
-                    {/* 地址信息 */}
-                    <InfoCard hideTitle>
-                      <InfoGrid>
-                        <InfoItem
-                          label="省市区"
-                          value={[lead.province, lead.city, lead.district].filter(Boolean).join(' ') || undefined}
-                          span={2}
-                        />
-                        <InfoItem label="详细地址" value={lead.address_detail} span={2} />
-                      </InfoGrid>
-                    </InfoCard>
-
                     {/* 来源信息 */}
-                    <InfoCard hideTitle>
-                      <InfoGrid>
+                    <InfoCard hideTitle className="lg:col-span-2">
+                      <InfoGrid cols={4}>
                         <InfoItem label="来源渠道" value={lead.source_channel_name} />
                         <InfoItem label="来源详情" value={lead.source_detail} />
                         <InfoItem label="创建人" value={lead.created_by_name} />
@@ -422,6 +532,11 @@ export function LeadDetailSheet({
                           label="最后跟进"
                           value={lead.last_followup_at ? formatTime(lead.last_followup_at) : undefined}
                         />
+                        <InfoItem
+                          label="省市区"
+                          value={[lead.province, lead.city, lead.district].filter(Boolean).join(' ') || undefined}
+                        />
+                        <InfoItem label="详细地址" value={lead.address_detail} />
                         {lead.notes && (
                           <InfoItem label="备注" value={lead.notes} span={2} />
                         )}
@@ -452,10 +567,52 @@ export function LeadDetailSheet({
           <TabsContent value="followups" className="flex-1 m-0 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-4">
-                <FollowupTimeline
-                  followups={followupsResponse?.data || []}
-                  isLoading={isFollowupsLoading}
-                />
+                {isFollowupsLoading ? (
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
+                    加载中...
+                  </div>
+                ) : !followupsResponse?.data?.length ? (
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
+                    暂无跟进记录
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className={cn(s.text.xs, 'w-[140px]')}>跟进时间</TableHead>
+                        <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进方式</TableHead>
+                        <TableHead className={cn(s.text.xs, 'w-[90px]')}>跟进结果</TableHead>
+                        <TableHead className={cn(s.text.xs)}>跟进内容</TableHead>
+                        <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进人</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {followupsResponse.data.map((followup: LeadFollowup) => (
+                        <TableRow key={followup.id}>
+                          <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
+                            {formatTime(followup.followup_at)}
+                          </TableCell>
+                          <TableCell className={s.text.xs}>
+                            {followupMethodLabels[followup.method] || followup.method}
+                          </TableCell>
+                          <TableCell className={s.text.xs}>
+                            {followup.result ? (
+                              <FollowupResultBadge result={followup.result} className={cn(s.text.xs, s.rounded, s.height.badge)} />
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className={cn(s.text.xs, 'max-w-[200px] truncate')} title={followup.content}>
+                            {followup.content || '-'}
+                          </TableCell>
+                          <TableCell className={s.text.xs}>
+                            {followup.followup_by_name || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </ScrollArea>
           </TabsContent>

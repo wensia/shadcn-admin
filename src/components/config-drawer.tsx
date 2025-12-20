@@ -1,6 +1,6 @@
 import { type SVGProps } from 'react'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
-import { CircleCheck, RotateCcw, Settings } from 'lucide-react'
+import { Check, CircleCheck, RotateCcw, Settings } from 'lucide-react'
 import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
 import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
@@ -19,6 +19,7 @@ import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'
 import { useTheme } from '@/context/theme-provider'
 import { useStyle } from '@/context/style-provider'
+import { useAccentColor, ACCENT_COLORS, type AccentColor } from '@/context/accent-color-provider'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -43,6 +44,7 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
   const { resetTheme } = useTheme()
   const { resetLayout } = useLayout()
   const { resetStyle } = useStyle()
+  const { resetAccentColor } = useAccentColor()
 
   const handleReset = () => {
     setOpen(true)
@@ -50,6 +52,7 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
     resetTheme()
     resetLayout()
     resetStyle()
+    resetAccentColor()
   }
 
   return (
@@ -76,6 +79,7 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
         </SheetHeader>
         <div className='space-y-6 overflow-y-auto px-4'>
           <ThemeConfig />
+          <AccentColorConfig />
           <StyleConfig />
           <SidebarConfig />
           <LayoutConfig />
@@ -221,6 +225,53 @@ function ThemeConfig() {
       </Radio>
       <div id='theme-description' className='sr-only'>
         Choose between system preference, light mode, or dark mode
+      </div>
+    </div>
+  )
+}
+
+function AccentColorConfig() {
+  const { defaultAccentColor, accentColor, setAccentColor } = useAccentColor()
+  return (
+    <div>
+      <SectionTitle
+        title='Accent Color'
+        showReset={accentColor !== defaultAccentColor}
+        onReset={() => setAccentColor(defaultAccentColor)}
+      />
+      <div
+        className='grid grid-cols-6 gap-2'
+        role='radiogroup'
+        aria-label='Select accent color'
+      >
+        {ACCENT_COLORS.map((colorOption) => (
+          <button
+            key={colorOption.value}
+            type='button'
+            onClick={() => setAccentColor(colorOption.value as AccentColor)}
+            className={cn(
+              'relative flex h-9 w-9 items-center justify-center rounded-full transition-all',
+              'hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+              accentColor === colorOption.value && 'ring-2 ring-offset-2 ring-primary'
+            )}
+            style={{ backgroundColor: colorOption.color }}
+            aria-label={colorOption.label}
+            aria-pressed={accentColor === colorOption.value}
+            title={colorOption.description || colorOption.label}
+          >
+            {accentColor === colorOption.value && (
+              <Check className='h-4 w-4 text-white drop-shadow-md' />
+            )}
+          </button>
+        ))}
+      </div>
+      <div className='mt-2 text-xs text-muted-foreground'>
+        {ACCENT_COLORS.find(c => c.value === accentColor)?.label}
+        {ACCENT_COLORS.find(c => c.value === accentColor)?.description && (
+          <span className='ml-1 text-muted-foreground/70'>
+            - {ACCENT_COLORS.find(c => c.value === accentColor)?.description}
+          </span>
+        )}
       </div>
     </div>
   )

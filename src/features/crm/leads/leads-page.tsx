@@ -27,6 +27,7 @@ import {
   BatchDeleteDialog
 } from './components/batch-dialogs'
 import { leadsApi } from './api'
+import { apiClient } from '@/lib/api/client'
 import type { LeadListParams, LeadListItem, Lead, LeadStatus, IntentionLevel } from './types'
 import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
 import { leadStatusLabels, intentionLevelLabels } from './types'
@@ -79,16 +80,26 @@ export function LeadsPage() {
     staleTime: 5 * 60 * 1000 // 5分钟内不重新获取
   })
 
+  // 获取来源渠道列表（用于显示筛选标签的名称）
+  const { data: sourceChannels } = useQuery({
+    queryKey: ['source-channels-active'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ code: number; data: { items: Array<{ id: string; name: string; category: string }> } }>(
+        '/source-channels',
+        { params: { page: 1, size: 100, is_active: true } }
+      )
+      return response.data?.items || []
+    },
+    staleTime: 5 * 60 * 1000 // 5分钟内不重新获取
+  })
+
   // 构建 ID -> 名称 的映射
   const filterMaps = useMemo(() => {
-    if (!filterOptions) return null
     return {
-      channels: new Map(filterOptions.source_channels.map(c => [c.id, c.name])),
-      advisors: new Map(filterOptions.advisors.map(a => [a.id, a.name])),
-      creators: new Map(filterOptions.creators.map(c => [c.id, c.name])),
-      campuses: new Map(filterOptions.campuses?.map(c => [c.id, c.name]) || [])
+      channels: new Map(sourceChannels?.map(c => [c.id, c.name]) || []),
+      campuses: new Map(filterOptions?.campuses?.map(c => [c.id, c.name]) || [])
     }
-  }, [filterOptions])
+  }, [filterOptions, sourceChannels])
 
   // 辅助函数：将 ID 数组转换为名称显示
   const getFilterLabel = (ids: string[] | undefined, map: Map<string, string> | undefined, fieldName: string) => {
@@ -360,14 +371,17 @@ export function LeadsPage() {
               onClick={() => setFilterSheetOpen(true)}
             >
               状态: {filters.status.map(s => leadStatusLabels[s]).join(', ')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
                   const { status, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
@@ -378,50 +392,59 @@ export function LeadsPage() {
               onClick={() => setFilterSheetOpen(true)}
             >
               渠道: {getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
                   const { source_channel_id, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
-          {filters.advisor_id && filters.advisor_id.length > 0 && (
+          {filters.advisor_name && (
             <Badge
               variant="secondary"
               className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
               onClick={() => setFilterSheetOpen(true)}
             >
-              顾问: {getFilterLabel(filters.advisor_id, filterMaps?.advisors, '负责顾问')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              顾问: {filters.advisor_name}
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
-                  const { advisor_id, ...rest } = filters
+                  const { advisor_name, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
-          {filters.created_by_id && filters.created_by_id.length > 0 && (
+          {filters.created_by_name && (
             <Badge
               variant="secondary"
               className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
               onClick={() => setFilterSheetOpen(true)}
             >
-              创建人: {getFilterLabel(filters.created_by_id, filterMaps?.creators, '创建人')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              创建人: {filters.created_by_name}
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
-                  const { created_by_id, ...rest } = filters
+                  const { created_by_name, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
@@ -432,14 +455,17 @@ export function LeadsPage() {
               onClick={() => setFilterSheetOpen(true)}
             >
               校区: {getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
                   const { owner_campus_id, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
@@ -450,14 +476,17 @@ export function LeadsPage() {
               onClick={() => setFilterSheetOpen(true)}
             >
               意向: {filters.intention_level.map(l => intentionLevelLabels[l]).join(', ')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
                   const { intention_level, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
@@ -468,14 +497,17 @@ export function LeadsPage() {
               onClick={() => setFilterSheetOpen(true)}
             >
               时间: {filters.created_from || '...'} ~ {filters.created_to || '...'}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
                   const { created_from, created_to, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
@@ -486,14 +518,17 @@ export function LeadsPage() {
               onClick={() => setFilterSheetOpen(true)}
             >
               标签: {filters.tag}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
                   const { tag, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
@@ -504,14 +539,17 @@ export function LeadsPage() {
               onClick={() => setFilterSheetOpen(true)}
             >
               无活动: {filters.days_without_activity}天
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
                 onClick={(e) => {
                   e.stopPropagation()
                   const { days_without_activity, ...rest } = filters
                   setFilters(rest)
                 }}
-              />
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 

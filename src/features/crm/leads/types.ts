@@ -4,10 +4,14 @@
  */
 
 // ==================== 样式配置接口 ====================
-// shadcn/ui Badge组件支持的variant类型（包含语义化扩展）
-export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'purple'
+// shadcn/ui Badge组件支持的variant类型（包含语义化扩展和状态颜色）
+export type BadgeVariant =
+  | 'default' | 'secondary' | 'destructive' | 'outline'
+  | 'success' | 'warning' | 'info' | 'purple'
+  | 'status-blue' | 'status-amber' | 'status-cyan' | 'status-gray'
+  | 'status-purple' | 'status-green' | 'status-emerald' | 'status-red' | 'status-slate'
 
-// 枚举样式配置
+// 枚举样式配置（旧版，保留兼容）
 export interface EnumStyleConfig {
   label: string        // 中文标签
   variant: BadgeVariant // shadcn/ui badge variant
@@ -376,8 +380,10 @@ export interface LeadListParams {
   status?: LeadStatus[]  // 多选
   source_channel_id?: string[]  // 多选
   intention_level?: IntentionLevel[]  // 多选
-  advisor_id?: string[]  // 多选
-  created_by_id?: string[]  // 多选
+  advisor_id?: string[]  // 多选（保留兼容）
+  advisor_name?: string  // 顾问姓名文本搜索
+  created_by_id?: string[]  // 多选（保留兼容）
+  created_by_name?: string  // 创建人姓名文本搜索
   owner_campus_id?: string[]  // 多选
   created_from?: string
   created_to?: string
@@ -388,18 +394,26 @@ export interface LeadListParams {
   import_batch_id?: string
   days_without_activity?: number  // X天内无活动（无跟进/创建/激活记录）
   include_styles?: boolean  // 是否包含样式配置
-  source_extra_filters?: Record<string, string>  // 来源渠道额外字段筛选
+  collector_name?: string  // 地推采单人姓名
+  collection_location?: string  // 地推采单地点
+  source_extra_filters?: Record<string, string>  // 来源渠道额外字段筛选（其他字段）
 }
 
 // ==================== 来源渠道额外字段配置 ====================
 
+// options 选项格式（后端返回的格式）
+export interface SourceChannelExtraFieldOption {
+  label: string
+  value: string
+}
+
 export interface SourceChannelExtraField {
   field_name: string
   field_label: string
-  field_type: 'text' | 'select' | 'date' | 'number'
+  field_type: 'text' | 'select' | 'date' | 'datetime' | 'number'
   required?: boolean
   placeholder?: string
-  options?: string[]
+  options?: SourceChannelExtraFieldOption[]  // 选项列表（仅 select 类型使用）
 }
 
 // ==================== 统计数据接口 ====================

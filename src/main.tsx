@@ -10,6 +10,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { handleServerError } from '@/lib/handle-server-error'
+import { AccentColorProvider } from './context/accent-color-provider'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { StyleProvider } from './context/style-provider'
@@ -96,13 +97,15 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <FontProvider>
-            <StyleProvider>
-              <DirectionProvider>
-                <RouterProvider router={router} />
-              </DirectionProvider>
-            </StyleProvider>
-          </FontProvider>
+          <AccentColorProvider>
+            <FontProvider>
+              <StyleProvider>
+                <DirectionProvider>
+                  <RouterProvider router={router} />
+                </DirectionProvider>
+              </StyleProvider>
+            </FontProvider>
+          </AccentColorProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </StrictMode>

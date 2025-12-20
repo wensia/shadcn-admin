@@ -33,16 +33,17 @@ const METHOD_COLORS: Record<FollowupMethod, string> = {
   email: 'hsl(199, 89%, 48%)',
 }
 
-// 跟进结果颜色
+// 跟进结果颜色（基于 StatusColor）
 const RESULT_COLORS: Record<string, string> = {
-  success: 'hsl(142, 76%, 36%)',
-  warning: 'hsl(38, 92%, 50%)',
-  destructive: 'hsl(0, 84%, 60%)',
-  default: 'hsl(var(--primary))',
-  secondary: 'hsl(var(--muted-foreground))',
-  outline: 'hsl(var(--muted-foreground))',
-  info: 'hsl(199, 89%, 48%)',
+  blue: 'hsl(217, 91%, 60%)',
+  amber: 'hsl(38, 92%, 50%)',
+  cyan: 'hsl(186, 91%, 45%)',
+  gray: 'hsl(var(--muted-foreground))',
   purple: 'hsl(262, 83%, 58%)',
+  green: 'hsl(142, 76%, 36%)',
+  emerald: 'hsl(160, 84%, 39%)',
+  red: 'hsl(0, 84%, 60%)',
+  slate: 'hsl(var(--muted-foreground))',
 }
 
 interface LeadStatistics {
@@ -222,7 +223,7 @@ function calculateResultDistribution(followups: LeadFollowup[]): ResultDistribut
       return {
         name: style.label,
         value,
-        color: RESULT_COLORS[style.variant] || RESULT_COLORS.default,
+        color: RESULT_COLORS[style.color] || RESULT_COLORS.gray,
       }
     })
     .sort((a, b) => b.value - a.value)

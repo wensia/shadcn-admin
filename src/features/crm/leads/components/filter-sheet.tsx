@@ -38,8 +38,17 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
+import { apiClient } from '@/lib/api/client'
 import type { LeadListParams, LeadStatus, IntentionLevel, SourceChannelExtraField } from '../types'
 import { leadStatusLabels, intentionLevelLabels } from '../types'
+
+// 来源渠道响应类型
+interface SourceChannelItem {
+  id: string
+  name: string
+  category: string
+  extra_fields?: SourceChannelExtraField[]
+}
 
 // ==================== FilterGroup 子组件 ====================
 interface FilterGroupProps {
@@ -214,14 +223,29 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
   const [localFilters, setLocalFilters] = useState<LeadListParams>(filters)
   const s = useStyleClasses()
 
-  // 获取筛选选项
+  // 获取来源渠道（使用专门的 API，包含 extra_fields）
+  const { data: sourceChannels } = useQuery({
+    queryKey: ['source-channels-active'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ code: number; data: { items: SourceChannelItem[] } }>(
+        '/source-channels',
+        { params: { page: 1, size: 100, is_active: true } }
+      )
+      return response.data?.items || []
+    },
+    enabled: open,
+    staleTime: 5 * 60 * 1000 // 5分钟缓存
+  })
+
+  // 获取其他筛选选项（校区等）
   const { data: filterOptions } = useQuery({
     queryKey: ['filter-options'],
     queryFn: async () => {
       const response = await leadsApi.getFilterOptions()
       return response.data
     },
-    enabled: open
+    enabled: open,
+    staleTime: 5 * 60 * 1000
   })
 
   // 额外字段筛选状态
@@ -229,15 +253,14 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
 
   // 计算当前选中渠道的 extra_fields（仅单选时显示）
   const selectedChannelExtraFields = useMemo<SourceChannelExtraField[]>(() => {
-    if (localFilters.source_channel_id?.length === 1) {
-      const selectedChannel = filterOptions?.source_channels?.find(
-        (ch: { id: string; extra_fields?: SourceChannelExtraField[] }) =>
-          ch.id === localFilters.source_channel_id?.[0]
+    if (localFilters.source_channel_id?.length === 1 && sourceChannels) {
+      const selectedChannel = sourceChannels.find(
+        (ch) => ch.id === localFilters.source_channel_id?.[0]
       )
       return selectedChannel?.extra_fields || []
     }
     return []
-  }, [localFilters.source_channel_id, filterOptions?.source_channels])
+  }, [localFilters.source_channel_id, sourceChannels])
 
   // 渠道变更时清空额外字段筛选
   useEffect(() => {
@@ -255,11 +278,17 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
 
   // 应用筛选
   const handleApply = () => {
+    // 分离已有独立参数的字段和需要放入 source_extra_filters 的字段
+    const { collector_name, collection_location, collection_method, collection_time, ...otherExtraFilters } = sourceExtraFilters
+
     const filtersToApply: LeadListParams = {
       ...localFilters,
-      // 仅当有额外字段筛选值时才添加
-      source_extra_filters: Object.keys(sourceExtraFilters).length > 0
-        ? sourceExtraFilters
+      // 采单人和采单地点使用独立参数（后端已支持）
+      collector_name: collector_name || undefined,
+      collection_location: collection_location || undefined,
+      // 其他额外字段（如采单方式、采单时间）放入 source_extra_filters
+      source_extra_filters: Object.keys(otherExtraFilters).length > 0
+        ? otherExtraFilters
         : undefined
     }
     onApplyFilters(filtersToApply)
@@ -331,7 +360,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
               <FilterField label="来源渠道">
                 <FormFacetedFilter
                   placeholder="全部渠道"
-                  options={filterOptions?.source_channels?.map((channel: { id: string; name: string }) => ({
+                  options={sourceChannels?.map((channel) => ({
                     value: channel.id,
                     label: channel.name
                   })) || []}
@@ -349,10 +378,10 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
                   <div className="grid grid-cols-2 gap-3">
                     {selectedChannelExtraFields.map((field) => (
                       <FilterField key={field.field_name} label={field.field_label}>
-                        {field.field_type === 'select' && field.options ? (
+                        {field.field_type === 'select' && field.options && field.options.length > 0 ? (
                           <FormFacetedFilter
                             placeholder={field.placeholder || `选择${field.field_label}`}
-                            options={field.options.map(opt => ({ value: opt, label: opt }))}
+                            options={field.options}
                             value={sourceExtraFilters[field.field_name] ? [sourceExtraFilters[field.field_name]] : []}
                             onChange={(val) => updateExtraFilter(field.field_name, val?.[0] || '')}
                           />
@@ -403,29 +432,23 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
 
             {/* ========== 人员相关 ========== */}
             <FilterGroup>
-              {/* 负责顾问 + 创建人 并排 */}
+              {/* 负责顾问 + 创建人 并排 - 改为文本输入 */}
               <div className="grid grid-cols-2 gap-3">
                 <FilterField label="负责顾问">
-                  <FormFacetedFilter
-                    placeholder="全部顾问"
-                    options={filterOptions?.advisors.map((advisor) => ({
-                      value: advisor.id,
-                      label: advisor.name
-                    })) || []}
-                    value={localFilters.advisor_id}
-                    onChange={(value) => updateFilter('advisor_id', value)}
+                  <Input
+                    className={cn(s.height.control, s.text.xs, s.rounded)}
+                    value={localFilters.advisor_name || ''}
+                    onChange={(e) => updateFilter('advisor_name', e.target.value)}
+                    placeholder="输入顾问姓名"
                   />
                 </FilterField>
 
                 <FilterField label="创建人">
-                  <FormFacetedFilter
-                    placeholder="全部创建人"
-                    options={filterOptions?.creators.map((creator) => ({
-                      value: creator.id,
-                      label: creator.name
-                    })) || []}
-                    value={localFilters.created_by_id}
-                    onChange={(value) => updateFilter('created_by_id', value)}
+                  <Input
+                    className={cn(s.height.control, s.text.xs, s.rounded)}
+                    value={localFilters.created_by_name || ''}
+                    onChange={(e) => updateFilter('created_by_name', e.target.value)}
+                    placeholder="输入创建人姓名"
                   />
                 </FilterField>
               </div>

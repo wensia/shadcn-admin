@@ -3,8 +3,9 @@
  * Mira风格: 紧凑布局、小字号
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Search, RefreshCw, Check } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -33,8 +36,18 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { leadsApi } from '../api'
+import { leadsApi, employeeApi, type EmployeeListItem, type Campus } from '../api'
 import type { LeadStatus } from '../types'
 import { leadStatusLabels } from '../types'
 
@@ -53,17 +66,54 @@ export function BatchAssignDialog({
   onSuccess
 }: BatchAssignDialogProps) {
   const queryClient = useQueryClient()
-  const [selectedAdvisorId, setSelectedAdvisorId] = useState('')
+
+  // 状态
+  const [selectedAdvisor, setSelectedAdvisor] = useState<EmployeeListItem | null>(null)
+  const [searchText, setSearchText] = useState('')
+  const [selectedCampus, setSelectedCampus] = useState('')
+  const [page, setPage] = useState(1)
+  const pageSize = 5
+
+  // 获取校区列表
+  const { data: campuses = [] } = useQuery({
+    queryKey: ['user-campuses'],
+    queryFn: async () => {
+      return await employeeApi.getCurrentUserCampuses()
+    },
+    enabled: open,
+    staleTime: 5 * 60 * 1000
+  })
 
   // 获取顾问列表
-  const { data: filterOptions } = useQuery({
-    queryKey: ['filter-options'],
+  const { data: advisorData, isLoading, refetch } = useQuery({
+    queryKey: ['course-advisors', page, pageSize, searchText, selectedCampus],
     queryFn: async () => {
-      const response = await leadsApi.getFilterOptions()
+      const response = await employeeApi.getCourseAdvisors({
+        page,
+        size: pageSize,
+        search: searchText || undefined,
+        campus_name: selectedCampus || undefined,
+        is_active: true
+      })
       return response.data
     },
     enabled: open
   })
+
+  // 弹框关闭时重置状态
+  useEffect(() => {
+    if (!open) {
+      setSelectedAdvisor(null)
+      setSearchText('')
+      setSelectedCampus('')
+      setPage(1)
+    }
+  }, [open])
+
+  // 搜索时重置页码
+  useEffect(() => {
+    setPage(1)
+  }, [searchText, selectedCampus])
 
   // 批量分配Mutation
   const assignMutation = useMutation({
@@ -76,7 +126,6 @@ export function BatchAssignDialog({
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       onSuccess()
       onOpenChange(false)
-      setSelectedAdvisorId('')
     },
     onError: (error: any) => {
       toast.error(error.message || '批量分配失败')
@@ -84,47 +133,210 @@ export function BatchAssignDialog({
   })
 
   const handleSubmit = () => {
-    if (!selectedAdvisorId) {
+    if (!selectedAdvisor) {
       toast.warning('请选择顾问')
       return
     }
     assignMutation.mutate({
       lead_ids: selectedLeadIds,
-      advisor_id: selectedAdvisorId
+      advisor_id: selectedAdvisor.id
     })
+  }
+
+  const handleRefresh = () => {
+    setSearchText('')
+    setSelectedCampus('')
+    setPage(1)
+    refetch()
+  }
+
+  const handleSelectAdvisor = (advisor: EmployeeListItem) => {
+    if (selectedAdvisor?.id === advisor.id) {
+      setSelectedAdvisor(null)
+    } else {
+      setSelectedAdvisor(advisor)
+    }
+  }
+
+  // 获取顾问的校区和部门信息
+  const getAdvisorInfo = (advisor: EmployeeListItem) => {
+    const identity = advisor.employee_identities?.[0]
+    return {
+      campus: identity?.campus?.name || advisor.campus_name || '-',
+      department: identity?.department?.name || advisor.department_name || '-',
+      position: identity?.position?.name || advisor.position?.name || '-'
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0">
-        <DialogHeader className="px-4 py-3 border-b">
-          <DialogTitle className="text-base">批量分配线索</DialogTitle>
+      <DialogContent className="sm:max-w-4xl p-0 max-h-[85vh] flex flex-col">
+        <DialogHeader className="px-4 py-3 border-b shrink-0">
+          <DialogTitle className="text-base">选择课程顾问</DialogTitle>
           <DialogDescription className="text-xs">
-            将{selectedLeadIds.length}条线索分配给顾问
+            将 {selectedLeadIds.length} 条线索分配给顾问
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-4 space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="advisor" className="text-xs font-semibold">
-              选择顾问 <span className="text-destructive">*</span>
-            </Label>
-            <Select value={selectedAdvisorId} onValueChange={setSelectedAdvisorId}>
-              <SelectTrigger id="advisor" className="h-8 text-xs">
-                <SelectValue placeholder="请选择顾问" />
-              </SelectTrigger>
-              <SelectContent>
-                {filterOptions?.advisors.map((advisor) => (
-                  <SelectItem key={advisor.id} value={advisor.id} className="text-xs">
-                    {advisor.name} ({advisor.username})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex-1 overflow-hidden flex flex-col p-4 space-y-4">
+          {/* 搜索栏 */}
+          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">搜索顾问</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="输入姓名或用户名搜索"
+                  className="h-8 text-xs pl-8 w-48"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">校区</Label>
+              <Select value={selectedCampus} onValueChange={setSelectedCampus}>
+                <SelectTrigger className="h-8 text-xs w-36">
+                  <SelectValue placeholder="全部校区" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value=" " className="text-xs">全部校区</SelectItem>
+                  {campuses.map((campus) => (
+                    <SelectItem key={campus.id} value={campus.name} className="text-xs">
+                      {campus.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              className="h-8 text-xs"
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              刷新
+            </Button>
+          </div>
+
+          {/* 顾问表格 */}
+          <ScrollArea className="flex-1 border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-14 text-xs text-center">选择</TableHead>
+                  <TableHead className="w-24 text-xs">姓名</TableHead>
+                  <TableHead className="w-28 text-xs">用户名</TableHead>
+                  <TableHead className="w-24 text-xs">职位</TableHead>
+                  <TableHead className="w-28 text-xs">校区</TableHead>
+                  <TableHead className="w-24 text-xs">部门</TableHead>
+                  <TableHead className="w-16 text-xs text-center">状态</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground">
+                      加载中...
+                    </TableCell>
+                  </TableRow>
+                ) : advisorData?.items?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground">
+                      暂无顾问数据
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  advisorData?.items?.map((advisor) => {
+                    const isSelected = selectedAdvisor?.id === advisor.id
+                    const info = getAdvisorInfo(advisor)
+                    return (
+                      <TableRow
+                        key={advisor.id}
+                        className={cn(
+                          'cursor-pointer hover:bg-muted/50 transition-colors',
+                          isSelected && 'bg-primary/5'
+                        )}
+                        onClick={() => handleSelectAdvisor(advisor)}
+                      >
+                        <TableCell className="text-center">
+                          <div
+                            className={cn(
+                              'w-4 h-4 rounded-full border-2 mx-auto flex items-center justify-center transition-colors',
+                              isSelected
+                                ? 'border-primary bg-primary'
+                                : 'border-muted-foreground/30'
+                            )}
+                          >
+                            {isSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                          </div>
+                        </TableCell>
+                        <TableCell className={cn('text-xs', isSelected && 'font-semibold text-primary')}>
+                          {advisor.name}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {advisor.username}
+                        </TableCell>
+                        <TableCell>
+                          {info.position !== '-' && (
+                            <Badge variant="secondary" className="text-xs h-5">
+                              {info.position}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">{info.campus}</TableCell>
+                        <TableCell className="text-xs">{info.department}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={advisor.is_active ? 'default' : 'destructive'}
+                            className="text-xs h-5"
+                          >
+                            {advisor.is_active ? '在职' : '离职'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+
+          {/* 分页 */}
+          <div className="flex items-center justify-center gap-4 shrink-0 pt-2 border-t">
+            <span className="text-xs text-muted-foreground">
+              共 {advisorData?.total || 0} 位顾问
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs px-2"
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+              >
+                上一页
+              </Button>
+              <span className="text-xs px-2">
+                第 {page} / {Math.max(1, Math.ceil((advisorData?.total || 0) / pageSize))} 页
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs px-2"
+                disabled={page >= Math.ceil((advisorData?.total || 0) / pageSize)}
+                onClick={() => setPage(p => p + 1)}
+              >
+                下一页
+              </Button>
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="px-4 py-3 border-t gap-2">
+        <DialogFooter className="px-4 py-3 border-t gap-2 shrink-0">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
@@ -137,9 +349,9 @@ export function BatchAssignDialog({
             onClick={handleSubmit}
             size="sm"
             className="h-8 text-xs"
-            disabled={assignMutation.isPending}
+            disabled={!selectedAdvisor || assignMutation.isPending}
           >
-            {assignMutation.isPending ? '分配中...' : '确定分配'}
+            {assignMutation.isPending ? '分配中...' : selectedAdvisor ? `确定选择 ${selectedAdvisor.name}` : '请先选择顾问'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -216,10 +428,11 @@ export function BatchReleaseDialog({
                 <SelectValue placeholder="请选择释放理由" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="无效线索" className="text-xs">无效线索</SelectItem>
-                <SelectItem value="长期无跟进" className="text-xs">长期无跟进</SelectItem>
-                <SelectItem value="顾问调整" className="text-xs">顾问调整</SelectItem>
-                <SelectItem value="其他" className="text-xs">其他</SelectItem>
+                <SelectItem value="INVALID_LEAD" className="text-xs">无效线索</SelectItem>
+                <SelectItem value="NO_FOLLOWUP" className="text-xs">长期无跟进</SelectItem>
+                <SelectItem value="ADVISOR_TRANSFER" className="text-xs">顾问调整</SelectItem>
+                <SelectItem value="MANUAL_RELEASE" className="text-xs">手动释放</SelectItem>
+                <SelectItem value="OTHER" className="text-xs">其他</SelectItem>
               </SelectContent>
             </Select>
           </div>

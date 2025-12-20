@@ -618,7 +618,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {filterOptions?.source_channels.map((channel) => (
+                              {filterOptions?.source_channels?.map((channel) => (
                                 <SelectItem
                                   key={channel.id}
                                   value={channel.id}

@@ -260,6 +260,91 @@ import { DatePicker, DateRangePicker, FormDatePicker } from '@/components/date-p
 </div>
 ```
 
+## 数据表格骨架屏规范
+
+**重要：所有数据表格在加载中状态必须使用骨架屏，禁止使用纯文本 "加载中..." 或 spinner**
+
+### 行内骨架屏模式（推荐）
+
+在表格列渲染器中检测骨架屏行并显示占位符：
+
+```tsx
+import {
+  SKELETON_ID_PREFIX,
+  isSkeletonRow,
+  createSkeletonData,
+  TextSkeleton,
+  BadgeSkeleton
+} from '@/components/ui/table-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
+
+// 1. 生成骨架屏占位数据
+const displayData = useMemo(() => {
+  return isLoading ? createSkeletonData(pageSize) : data
+}, [isLoading, data, pageSize])
+
+// 2. 在列渲染器中检测并显示骨架屏
+const columns = [
+  {
+    accessorKey: 'name',
+    header: '姓名',
+    cell: ({ row }) => {
+      if (isSkeletonRow(row.original.id)) {
+        return <Skeleton className="h-4 w-20" />
+        // 或使用封装组件: return <TextSkeleton width={80} />
+      }
+      return row.original.name
+    }
+  },
+  {
+    accessorKey: 'status',
+    header: '状态',
+    cell: ({ row }) => {
+      if (isSkeletonRow(row.original.id)) {
+        return <Skeleton className="h-5 w-16 rounded-full" />
+        // 或使用封装组件: return <BadgeSkeleton width={60} />
+      }
+      return <Badge>{row.original.status}</Badge>
+    }
+  }
+]
+```
+
+### 骨架屏工具函数
+
+```tsx
+import {
+  SKELETON_ID_PREFIX,     // 骨架屏 ID 前缀
+  isSkeletonRow,          // 判断是否骨架屏行
+  createSkeletonData,     // 生成骨架屏占位数据
+  TextSkeleton,           // 文本骨架屏
+  BadgeSkeleton,          // Badge 骨架屏
+  AvatarSkeleton,         // 头像骨架屏
+  TableSkeleton           // 完整表格骨架屏
+} from '@/components/ui/table-skeleton'
+```
+
+### 骨架屏样式规范
+
+| 元素类型 | 骨架屏样式 |
+|---------|-----------|
+| 普通文本 | `<Skeleton className="h-4 w-[70%]" />` |
+| 状态标签 | `<Skeleton className="h-5 w-16 rounded-full" />` |
+| 头像 | `<Skeleton className="h-8 w-8 rounded-full" />` |
+| 按钮 | `<Skeleton className="h-8 w-20 rounded" />` |
+
+### 加载状态容器样式
+
+```tsx
+// 表格容器在加载时添加半透明效果
+<div className={cn(
+  "overflow-auto rounded-md border",
+  isLoading && "opacity-60 pointer-events-none"
+)}>
+  <Table>...</Table>
+</div>
+```
+
 ## 时间处理规范
 
 **重要：后端返回的时间是 UTC 时间，前端显示时必须转换为本地时间**

@@ -14,7 +14,6 @@ import {
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatTime } from '@/lib/utils/time'
@@ -24,7 +23,7 @@ import { useStyle } from '@/context/style-provider'
 import { useStyleClasses } from '@/lib/style-utils'
 import type { LeadListItem } from '../types'
 import { gradeLabels } from '../types'
-import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
+import { LeadStatusBadge, IntentionLevelBadge } from './status-badges'
 
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
@@ -216,12 +215,7 @@ export function LeadsTable({
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className={cn("h-5 w-16", s.rounded)} />
           }
-          const statusStyle = getLeadStatusStyle(row.original.status)
-          return (
-            <Badge variant={statusStyle.variant} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
-              {statusStyle.label}
-            </Badge>
-          )
+          return <LeadStatusBadge status={row.original.status} className={cn(s.text.xs, s.height.badge, s.rounded)} />
         },
         size: getColumnSize(100)
       },
@@ -235,12 +229,7 @@ export function LeadsTable({
           }
           const level = row.original.intention_level
           if (!level) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
-          const intentionStyle = getIntentionLevelStyle(level)
-          return (
-            <Badge variant={intentionStyle.variant} className={cn(s.text.xs, s.height.badge, s.rounded, 'px-1.5')}>
-              {intentionStyle.label}
-            </Badge>
-          )
+          return <IntentionLevelBadge level={level} className={cn(s.text.xs, s.height.badge, s.rounded)} />
         },
         size: getColumnSize(100)
       },

@@ -36,9 +36,17 @@ const leadsApi = {
    * 获取线索列表
    */
   async getLeads(params?: LeadListParams): Promise<ApiResponse<PaginatedResponse<LeadListItem>>> {
+    // 处理 source_extra_filters: 后端期望 JSON 字符串格式
+    const processedParams = params ? {
+      ...params,
+      source_extra_filters: params.source_extra_filters
+        ? JSON.stringify(params.source_extra_filters)
+        : undefined
+    } : undefined
+
     const response = await apiClient.get<ApiResponse<PaginatedResponse<LeadListItem>>>(
       '/leads',
-      { params }
+      { params: processedParams }
     )
     return response
   },
@@ -530,3 +538,144 @@ const leadsApi = {
 export default leadsApi
 export { leadsApi }
 export const leadApi = leadsApi
+
+// ==================== 员工相关类型 ====================
+
+/**
+ * 员工身份信息
+ */
+export interface EmployeeIdentity {
+  id: string
+  employee_id: string
+  campus_id: string
+  department_id: string
+  position_id: string
+  can_manage_leads: boolean
+  can_access_pool: boolean
+  max_lead_count: number
+  is_active: boolean
+  campus?: {
+    id: string
+    name: string
+  }
+  department?: {
+    id: string
+    name: string
+  }
+  position?: {
+    id: string
+    name: string
+    level: number
+  }
+}
+
+/**
+ * 员工列表项
+ */
+export interface EmployeeListItem {
+  id: string
+  username: string
+  name: string
+  email?: string
+  phone?: string
+  is_active: boolean
+  position?: {
+    id: string
+    name: string
+    level: number
+  }
+  campus_name?: string
+  department_name?: string
+  lead_count?: number
+  current_lead_count?: number
+  max_lead_count?: number
+  employee_identities?: EmployeeIdentity[]
+}
+
+/**
+ * 校区信息
+ */
+export interface Campus {
+  id: string
+  name: string
+}
+
+/**
+ * 员工 API
+ */
+export const employeeApi = {
+  /**
+   * 获取课程顾问列表（用于线索分配）
+   */
+  async getCourseAdvisors(params?: {
+    page?: number
+    size?: number
+    search?: string
+    campus_name?: string
+    is_active?: boolean
+  }): Promise<ApiResponse<{
+    items: EmployeeListItem[]
+    total: number
+    page: number
+    size: number
+    pages: number
+  }>> {
+    const advisorParams = {
+      ...params,
+      position_names: '顾问,销售顾问,课程顾问,课程销售',
+      is_active: params?.is_active !== false,
+      include_identities: true,
+      use_cache: false
+    }
+
+    // 过滤掉 undefined 值
+    const filteredParams = Object.fromEntries(
+      Object.entries(advisorParams).filter(([_, value]) => value !== undefined)
+    )
+
+    const response = await apiClient.get<ApiResponse<{
+      items: EmployeeListItem[]
+      total: number
+      page: number
+      size: number
+      pages: number
+    }>>('/employees', { params: filteredParams })
+    return response
+  },
+
+  /**
+   * 获取当前用户可访问的校区列表
+   */
+  async getCurrentUserCampuses(): Promise<Campus[]> {
+    const response = await apiClient.get<ApiResponse<Campus[]>>('/auth/campuses')
+    return response.data || []
+  }
+}
+
+/**
+ * 云客外呼 API
+ * 用于拨打电话和挂断通话
+ */
+export const yunkeApi = {
+  /**
+   * 拨打电话
+   */
+  async dialPhone(phone: string): Promise<ApiResponse<{ call_id: string; status: string; message?: string }>> {
+    const response = await apiClient.post<ApiResponse<{ call_id: string; status: string; message?: string }>>(
+      '/yunke/call/dial',
+      { phone }
+    )
+    return response
+  },
+
+  /**
+   * 挂断通话
+   */
+  async hangUpCall(callId: string): Promise<ApiResponse<{ success: boolean; message?: string }>> {
+    const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>(
+      '/yunke/call/hangup',
+      { call_id: callId }
+    )
+    return response
+  }
+}

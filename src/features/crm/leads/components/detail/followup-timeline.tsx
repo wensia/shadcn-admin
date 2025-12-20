@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { formatTime, formatRelativeTime } from '@/lib/utils/time'
 import { getFollowupResultStyle } from '@/lib/status-styles'
 import { EmptyState } from './empty-state'
+import { FollowupResultBadge } from '../status-badges'
 import type { LeadFollowup, FollowupMethod, FollowupResult } from '../../types'
 import { followupMethodLabels } from '../../types'
 
@@ -39,19 +40,21 @@ const methodIcons: Record<FollowupMethod, React.ReactNode> = {
   email: <Mail className="h-4 w-4" />,
 }
 
-// 跟进结果对应的节点颜色
+// 跟进结果对应的节点颜色（基于新的颜色系统）
 function getNodeVariant(result?: FollowupResult): 'default' | 'success' | 'warning' | 'destructive' | 'info' | 'muted' {
   if (!result) return 'muted'
 
   const style = getFollowupResultStyle(result)
-  switch (style.variant) {
-    case 'success':
+  switch (style.color) {
+    case 'green':
+    case 'emerald':
       return 'success'
-    case 'warning':
+    case 'amber':
       return 'warning'
-    case 'destructive':
+    case 'red':
       return 'destructive'
-    case 'info':
+    case 'blue':
+    case 'cyan':
       return 'info'
     default:
       return 'default'
@@ -87,7 +90,6 @@ export function FollowupTimeline({
     <Timeline className={className}>
       {followups.map((followup, index) => {
         const isLast = index === followups.length - 1
-        const resultStyle = followup.result ? getFollowupResultStyle(followup.result) : null
 
         return (
           <TimelineItem key={followup.id}>
@@ -102,13 +104,11 @@ export function FollowupTimeline({
                 <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
                   {followupMethodLabels[followup.method]}
                 </Badge>
-                {resultStyle && (
-                  <Badge
-                    variant={resultStyle.variant}
+                {followup.result && (
+                  <FollowupResultBadge
+                    result={followup.result}
                     className={cn(s.text.xs, s.height.badge)}
-                  >
-                    {resultStyle.label}
-                  </Badge>
+                  />
                 )}
                 <span className={cn(s.text.xs, 'text-muted-foreground ml-auto')}>
                   {formatRelativeTime(followup.followup_at)}
