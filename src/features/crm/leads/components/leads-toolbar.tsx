@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { StandaloneFacetedFilter } from '@/components/data-table/standalone-faceted-filter'
 import { DataTableViewOptions } from '@/components/data-table/view-options'
-import { Plus, RefreshCw, Download, Filter, MoreHorizontal } from 'lucide-react'
+import { Plus, RefreshCw, Filter, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import {
@@ -47,7 +47,6 @@ interface LeadsToolbarProps {
   showCreateButton?: boolean
   onCreateClick?: () => void
   onRefreshClick: () => void
-  onExportClick: () => void
   onFilterClick: () => void
   onSearchChange?: (value: string) => void
   onStatusFilterChange?: (values: LeadStatus[]) => void
@@ -67,7 +66,6 @@ export function LeadsToolbar({
   showCreateButton = true,
   onCreateClick,
   onRefreshClick,
-  onExportClick,
   onFilterClick,
   onSearchChange,
   onStatusFilterChange,
@@ -163,12 +161,6 @@ export function LeadsToolbar({
         {/* 刷新 */}
         <Button variant="outline" size="sm" onClick={onRefreshClick} className="h-8 w-8 p-0">
           <RefreshCw className="h-3.5 w-3.5" />
-        </Button>
-
-        {/* 导出 */}
-        <Button variant="outline" size="sm" onClick={onExportClick} className="h-8">
-          <Download className="mr-1.5 h-3.5 w-3.5" />
-          导出
         </Button>
 
         {/* 列显示控制 */}

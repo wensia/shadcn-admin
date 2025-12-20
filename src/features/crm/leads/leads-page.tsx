@@ -134,22 +134,6 @@ export function LeadsPage() {
     toast.success('已刷新')
   }
 
-  // 导出
-  const handleExport = async () => {
-    try {
-      const blob = await leadsApi.exportLeads({ ...filters })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `线索数据_${new Date().getTime()}.xlsx`
-      a.click()
-      window.URL.revokeObjectURL(url)
-      toast.success('导出成功')
-    } catch (error) {
-      toast.error('导出失败')
-    }
-  }
-
   // 新建线索
   const handleCreate = () => {
     setEditingLead(null)
@@ -313,7 +297,6 @@ export function LeadsPage() {
               intentionFilter={intentionFilter}
               showCreateButton={false}
               onRefreshClick={handleRefresh}
-              onExportClick={handleExport}
               onFilterClick={handleFilter}
               onSearchChange={handleSearchChange}
               onStatusFilterChange={handleStatusFilterChange}
