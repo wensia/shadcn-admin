@@ -73,6 +73,12 @@ export const routeComponents: Record<string, RouteConfig> = {
     title: '快捷外呼',
   },
 
+  // CRM - Batch Import
+  '/crm/batch-import': {
+    component: lazy(() => import('@/features/crm/batch-import').then(m => ({ default: m.BatchImportPage }))),
+    title: '批量导入',
+  },
+
   // Settings
   '/settings': {
     component: lazy(() => import('@/features/settings/profile').then(m => ({ default: m.SettingsProfile }))),

@@ -41,6 +41,7 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
+import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
 import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
 
@@ -211,6 +212,12 @@ const AuthenticatedCrmContinuousCallRoute =
     path: '/crm/continuous-call',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCrmBatchImportRoute =
+  AuthenticatedCrmBatchImportRouteImport.update({
+    id: '/crm/batch-import',
+    path: '/crm/batch-import',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCrmLeadsIndexRoute =
   AuthenticatedCrmLeadsIndexRouteImport.update({
     id: '/crm/leads/',
@@ -239,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -271,6 +279,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -308,6 +317,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/crm/batch-import'
     | '/crm/continuous-call'
     | '/errors/$error'
     | '/settings/account'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/crm/batch-import'
     | '/crm/continuous-call'
     | '/errors/$error'
     | '/settings/account'
@@ -411,6 +423,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
+    | '/_authenticated/crm/batch-import'
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/errors/$error'
     | '/_authenticated/settings/account'
@@ -672,6 +685,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmContinuousCallRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/crm/batch-import': {
+      id: '/_authenticated/crm/batch-import'
+      path: '/crm/batch-import'
+      fullPath: '/crm/batch-import'
+      preLoaderRoute: typeof AuthenticatedCrmBatchImportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/crm/leads/': {
       id: '/_authenticated/crm/leads/'
       path: '/crm/leads'
@@ -715,6 +735,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
@@ -729,6 +750,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
