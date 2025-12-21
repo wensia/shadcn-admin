@@ -13,7 +13,7 @@ import { Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
-import { Header } from '@/components/layout/header'
+// Header is available if needed from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { LeadsTable } from './components/leads-table'
 import { LeadsToolbar } from './components/leads-toolbar'
@@ -136,8 +136,11 @@ export function LeadsPage() {
       // 当前页没有数据，但总数据量大于0，且不在第一页
       if (items.length === 0 && total > 0 && pagination.page > 1) {
         // 计算最后一页的页码
-        const lastPage = Math.ceil(total / pagination.size)
-        setPagination(prev => ({ ...prev, page: lastPage }))
+        const lastPage = Math.max(1, Math.ceil(total / pagination.size))
+        // 只有当 lastPage 与当前页不同时才跳转，防止无限循环
+        if (lastPage !== pagination.page) {
+          setPagination(prev => ({ ...prev, page: lastPage }))
+        }
       }
     }
   }, [data, isLoading, pagination.page, pagination.size])
@@ -221,7 +224,7 @@ export function LeadsPage() {
   }
 
   // 创建跟进记录
-  const handleCreateFollowup = (leadId: string) => {
+  const handleCreateFollowup = (_leadId: string) => {
     toast.info('打开创建跟进记录对话框')
     // TODO: 实现跟进记录Dialog
   }
@@ -293,7 +296,7 @@ export function LeadsPage() {
           {/* 页面标题 - flex-shrink-0 防止收缩 */}
           <div className="flex flex-shrink-0 flex-wrap items-end justify-between gap-2">
             <div>
-              <h1 className={cn(s.text.lg, 'font-bold tracking-tight')}>线索管理</h1>
+              <h1 className="text-lg font-bold tracking-tight">线索管理</h1>
               <p className={cn(s.text.xs, 'text-muted-foreground')}>管理和跟进销售线索</p>
             </div>
             <Button onClick={handleCreate} size="sm" className="h-8">

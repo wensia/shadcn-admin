@@ -268,11 +268,13 @@ const leadsApi = {
     source_channels: Array<{ id: string; name: string; category: string }>
     creators: Array<{ id: string; name: string; username: string }>
     advisors: Array<{ id: string; name: string; username: string }>
+    campuses?: Array<{ id: string; name: string }>
   }>> {
     const response = await apiClient.get<ApiResponse<{
       source_channels: Array<{ id: string; name: string; category: string }>
       creators: Array<{ id: string; name: string; username: string }>
       advisors: Array<{ id: string; name: string; username: string }>
+      campuses?: Array<{ id: string; name: string }>
     }>>('/leads/filter-options')
     return response
   },

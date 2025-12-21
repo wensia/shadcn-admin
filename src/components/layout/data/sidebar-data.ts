@@ -1,11 +1,9 @@
 import {
-  LayoutDashboard,
   Users,
   FileUp,
   Phone,
   Calendar,
   BarChart3,
-  Building2,
   Home,
   GraduationCap,
   BookOpen,

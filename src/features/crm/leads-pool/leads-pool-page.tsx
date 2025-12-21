@@ -12,7 +12,6 @@ import {
   useReactTable,
   type ColumnDef
 } from '@tanstack/react-table'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { RefreshCw, Search, UserPlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
@@ -39,7 +38,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import { SimplePagination } from '@/components/ui/simple-pagination'
+import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
 import { leadsPoolApi } from './api'
@@ -279,7 +278,7 @@ export function LeadsPoolPage() {
           {/* 页面标题 */}
           <div className="flex flex-shrink-0 flex-wrap items-end justify-between gap-2">
             <div>
-              <h1 className={cn(s.text.lg, 'font-bold tracking-tight')}>公海线索</h1>
+              <h1 className="text-lg font-bold tracking-tight">公海线索</h1>
               <p className={cn(s.text.xs, 'text-muted-foreground')}>
                 从公海池领取未分配的线索
               </p>
@@ -459,8 +458,8 @@ export function LeadsPoolPage() {
                 page={pagination.page}
                 pageSize={pagination.size}
                 total={data?.total || 0}
-                onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
-                onPageSizeChange={(size) => setPagination({ page: 1, size })}
+                onPageChange={(page: number) => setPagination(prev => ({ ...prev, page }))}
+                onPageSizeChange={(size: number) => setPagination({ page: 1, size })}
               />
             </div>
           </div>
