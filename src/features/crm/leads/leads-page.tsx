@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,13 +35,14 @@ import { leadStatusLabels, intentionLevelLabels } from './types'
 import { useMemo } from 'react'
 
 export function LeadsPage() {
+  useDocumentTitle('线索管理')
   const queryClient = useQueryClient()
   const s = useStyleClasses()
 
   // 分页状态
   const [pagination, setPagination] = useState({
     page: 1,
-    size: 50
+    size: 20
   })
 
   // 搜索和快捷筛选

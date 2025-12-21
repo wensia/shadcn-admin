@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { toast } from 'sonner'
 import {
   flexRender,
@@ -54,11 +55,12 @@ const intentionOptions = [
 ]
 
 export function LeadsPoolPage() {
+  useDocumentTitle('公海线索')
   const queryClient = useQueryClient()
   const s = useStyleClasses()
 
   // 分页状态
-  const [pagination, setPagination] = useState({ page: 1, size: 50 })
+  const [pagination, setPagination] = useState({ page: 1, size: 20 })
 
   // 搜索和筛选
   const [searchValue, setSearchValue] = useState('')

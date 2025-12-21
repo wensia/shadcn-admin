@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Phone, X, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -85,6 +86,7 @@ const resultMapping: Record<string, FollowupResult> = {
 }
 
 export function ContinuousCallPage() {
+  useDocumentTitle('连续外呼')
   const queryClient = useQueryClient()
   const callTimerRef = useRef<NodeJS.Timeout | null>(null)
 
