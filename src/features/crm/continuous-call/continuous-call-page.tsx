@@ -674,20 +674,20 @@ export function ContinuousCallPage() {
         </div>
       </Header>
 
-      <Main>
-        <div className="h-[calc(100vh-8rem)]">
+      <Main fixed className="min-h-0">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
           {callDrawerVisible ? (
-            <ResizablePanelGroup direction="horizontal">
+            <ResizablePanelGroup orientation="horizontal" className="min-h-0">
               <ResizablePanel defaultSize={60} minSize={40}>
-                <div className="h-full p-2">{renderLeadDetail()}</div>
+                <div className="h-full overflow-hidden p-2">{renderLeadDetail()}</div>
               </ResizablePanel>
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={40} minSize={30}>
-                <div className="h-full p-2">{renderCallPanel()}</div>
+                <div className="h-full overflow-auto p-2">{renderCallPanel()}</div>
               </ResizablePanel>
             </ResizablePanelGroup>
           ) : (
-            <div className="h-full p-2">{renderLeadDetail()}</div>
+            <div className="h-full w-full overflow-hidden p-2">{renderLeadDetail()}</div>
           )}
         </div>
       </Main>
