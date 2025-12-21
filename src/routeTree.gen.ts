@@ -40,7 +40,8 @@ import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
-import { Route as AuthenticatedCrmLeadsRouteImport } from './routes/_authenticated/crm/leads'
+import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
+import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -203,11 +204,18 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedCrmLeadsRoute = AuthenticatedCrmLeadsRouteImport.update({
-  id: '/crm/leads',
-  path: '/crm/leads',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AuthenticatedCrmLeadsIndexRoute =
+  AuthenticatedCrmLeadsIndexRouteImport.update({
+    id: '/crm/leads/',
+    path: '/crm/leads/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCrmLeadsPoolRoute =
+  AuthenticatedCrmLeadsPoolRouteImport.update({
+    id: '/crm/leads/pool',
+    path: '/crm/leads/pool',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -224,7 +232,6 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
-  '/crm/leads': typeof AuthenticatedCrmLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -239,6 +246,8 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
+  '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -254,7 +263,6 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
-  '/crm/leads': typeof AuthenticatedCrmLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -269,6 +277,8 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
+  '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -289,7 +299,6 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/crm/leads': typeof AuthenticatedCrmLeadsRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -304,6 +313,8 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
+  '/_authenticated/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -322,7 +333,6 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
-    | '/crm/leads'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -337,6 +347,8 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks'
     | '/users'
+    | '/crm/leads/pool'
+    | '/crm/leads'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -352,7 +364,6 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
-    | '/crm/leads'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -367,6 +378,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/crm/leads/pool'
+    | '/crm/leads'
   id:
     | '__root__'
     | '/_authenticated'
@@ -386,7 +399,6 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
-    | '/_authenticated/crm/leads'
     | '/_authenticated/errors/$error'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
@@ -401,6 +413,8 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
+    | '/_authenticated/crm/leads/pool'
+    | '/_authenticated/crm/leads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -638,11 +652,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/crm/leads': {
-      id: '/_authenticated/crm/leads'
+    '/_authenticated/crm/leads/': {
+      id: '/_authenticated/crm/leads/'
       path: '/crm/leads'
       fullPath: '/crm/leads'
-      preLoaderRoute: typeof AuthenticatedCrmLeadsRouteImport
+      preLoaderRoute: typeof AuthenticatedCrmLeadsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crm/leads/pool': {
+      id: '/_authenticated/crm/leads/pool'
+      path: '/crm/leads/pool'
+      fullPath: '/crm/leads/pool'
+      preLoaderRoute: typeof AuthenticatedCrmLeadsPoolRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
@@ -674,25 +695,27 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedCrmLeadsRoute: typeof AuthenticatedCrmLeadsRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedCrmLeadsPoolRoute: typeof AuthenticatedCrmLeadsPoolRoute
+  AuthenticatedCrmLeadsIndexRoute: typeof AuthenticatedCrmLeadsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedCrmLeadsRoute: AuthenticatedCrmLeadsRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedCrmLeadsPoolRoute: AuthenticatedCrmLeadsPoolRoute,
+  AuthenticatedCrmLeadsIndexRoute: AuthenticatedCrmLeadsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

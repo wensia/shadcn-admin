@@ -647,7 +647,7 @@ export const employeeApi = {
    * 获取当前用户可访问的校区列表
    */
   async getCurrentUserCampuses(): Promise<Campus[]> {
-    const response = await apiClient.get<ApiResponse<Campus[]>>('/auth/campuses')
+    const response = await apiClient.get<ApiResponse<Campus[]>>('/auth/me/campuses')
     return response.data || []
   }
 }

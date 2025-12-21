@@ -4,7 +4,7 @@
  * 支持 Mira/Lyra/Maia 风格切换
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -127,6 +127,20 @@ export function LeadsPage() {
       return response.data
     }
   })
+
+  // 当前页为空但还有数据时，自动跳转到最后一页
+  useEffect(() => {
+    if (data && !isLoading) {
+      const items = data.items || []
+      const total = data.total || 0
+      // 当前页没有数据，但总数据量大于0，且不在第一页
+      if (items.length === 0 && total > 0 && pagination.page > 1) {
+        // 计算最后一页的页码
+        const lastPage = Math.ceil(total / pagination.size)
+        setPagination(prev => ({ ...prev, page: lastPage }))
+      }
+    }
+  }, [data, isLoading, pagination.page, pagination.size])
 
   // 刷新数据
   const handleRefresh = () => {

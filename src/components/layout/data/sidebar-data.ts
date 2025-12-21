@@ -1,203 +1,113 @@
 import {
-  Construction,
   LayoutDashboard,
-  Monitor,
-  Bug,
-  ListTodo,
-  FileX,
-  HelpCircle,
-  Lock,
-  Bell,
-  Package,
-  Palette,
-  ServerOff,
-  Settings,
-  Wrench,
-  UserCog,
-  UserX,
   Users,
-  MessagesSquare,
-  ShieldCheck,
-  AudioWaveform,
+  FileUp,
+  Phone,
+  Calendar,
+  BarChart3,
+  Building2,
+  Home,
+  GraduationCap,
+  BookOpen,
+  UserCog,
+  Wallet,
+  TrendingUp,
+  Headphones,
   Command,
-  GalleryVerticalEnd,
 } from 'lucide-react'
-import { ClerkLogo } from '@/assets/clerk-logo'
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
   user: {
-    name: 'satnaing',
-    email: 'satnaingdev@gmail.com',
+    name: 'RMF CRM',
+    email: 'admin@rmf.com',
     avatar: '/avatars/shadcn.jpg',
   },
   teams: [
     {
-      name: 'Shadcn Admin',
+      name: 'RMF CRM',
       logo: Command,
-      plan: 'Vite + ShadcnUI',
-    },
-    {
-      name: 'Acme Inc',
-      logo: GalleryVerticalEnd,
-      plan: 'Enterprise',
-    },
-    {
-      name: 'Acme Corp.',
-      logo: AudioWaveform,
-      plan: 'Startup',
+      plan: 'CRM 系统',
     },
   ],
   navGroups: [
     {
-      title: 'General',
+      title: '市场部',
       items: [
         {
-          title: 'Dashboard',
-          url: '/',
-          icon: LayoutDashboard,
+          title: '批量导入',
+          url: '/crm/batch-import',
+          icon: FileUp,
         },
         {
-          title: 'Tasks',
-          url: '/tasks',
-          icon: ListTodo,
+          title: '批次回访池',
+          url: '/crm/lead-pools',
+          icon: Phone,
         },
         {
-          title: 'Apps',
-          url: '/apps',
-          icon: Package,
+          title: '数据统计',
+          url: '/crm/data-statistics/marketing',
+          icon: BarChart3,
         },
+      ],
+    },
+    {
+      title: '咨询部',
+      items: [
         {
-          title: 'Chats',
-          url: '/chats',
-          badge: '3',
-          icon: MessagesSquare,
-        },
-        {
-          title: 'Users',
-          url: '/users',
+          title: '线索管理',
+          url: '/crm/leads',
           icon: Users,
         },
         {
-          title: 'Secured by Clerk',
-          icon: ClerkLogo,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/clerk/sign-in',
-            },
-            {
-              title: 'Sign Up',
-              url: '/clerk/sign-up',
-            },
-            {
-              title: 'User Management',
-              url: '/clerk/user-management',
-            },
-          ],
+          title: '公海线索',
+          url: '/crm/leads/pool',
+          icon: Home,
+        },
+        {
+          title: '连续外呼',
+          url: '/crm/continuous-call',
+          icon: Headphones,
+        },
+        {
+          title: '到访表',
+          url: '/crm/visit-schedule',
+          icon: Calendar,
+        },
+        {
+          title: '数据统计',
+          url: '/crm/data-statistics/consulting',
+          icon: TrendingUp,
         },
       ],
     },
     {
-      title: 'Pages',
+      title: '教管部',
       items: [
         {
-          title: 'Auth',
-          icon: ShieldCheck,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/sign-in',
-            },
-            {
-              title: 'Sign In (2 Col)',
-              url: '/sign-in-2',
-            },
-            {
-              title: 'Sign Up',
-              url: '/sign-up',
-            },
-            {
-              title: 'Forgot Password',
-              url: '/forgot-password',
-            },
-            {
-              title: 'OTP',
-              url: '/otp',
-            },
-          ],
+          title: '学员管理',
+          url: '/crm/students',
+          icon: GraduationCap,
         },
         {
-          title: 'Errors',
-          icon: Bug,
-          items: [
-            {
-              title: 'Unauthorized',
-              url: '/errors/unauthorized',
-              icon: Lock,
-            },
-            {
-              title: 'Forbidden',
-              url: '/errors/forbidden',
-              icon: UserX,
-            },
-            {
-              title: 'Not Found',
-              url: '/errors/not-found',
-              icon: FileX,
-            },
-            {
-              title: 'Internal Server Error',
-              url: '/errors/internal-server-error',
-              icon: ServerOff,
-            },
-            {
-              title: 'Maintenance Error',
-              url: '/errors/maintenance-error',
-              icon: Construction,
-            },
-          ],
+          title: '课程安排',
+          url: '/crm/courses',
+          icon: BookOpen,
         },
       ],
     },
     {
-      title: 'Other',
+      title: '行政部',
       items: [
         {
-          title: 'Settings',
-          icon: Settings,
-          items: [
-            {
-              title: 'Profile',
-              url: '/settings',
-              icon: UserCog,
-            },
-            {
-              title: 'Account',
-              url: '/settings/account',
-              icon: Wrench,
-            },
-            {
-              title: 'Appearance',
-              url: '/settings/appearance',
-              icon: Palette,
-            },
-            {
-              title: 'Notifications',
-              url: '/settings/notifications',
-              icon: Bell,
-            },
-            {
-              title: 'Display',
-              url: '/settings/display',
-              icon: Monitor,
-            },
-          ],
+          title: '人事管理',
+          url: '/crm/hr',
+          icon: UserCog,
         },
         {
-          title: 'Help Center',
-          url: '/help-center',
-          icon: HelpCircle,
+          title: '财务管理',
+          url: '/crm/finance',
+          icon: Wallet,
         },
       ],
     },
