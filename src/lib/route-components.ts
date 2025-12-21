@@ -61,6 +61,18 @@ export const routeComponents: Record<string, RouteConfig> = {
     title: '线索管理',
   },
 
+  // CRM - Leads Pool
+  '/crm/leads/pool': {
+    component: lazy(() => import('@/features/crm/leads-pool').then(m => ({ default: m.LeadsPoolPage }))),
+    title: '公海线索',
+  },
+
+  // CRM - Continuous Call
+  '/crm/continuous-call': {
+    component: lazy(() => import('@/features/crm/continuous-call').then(m => ({ default: m.ContinuousCallPage }))),
+    title: '快捷外呼',
+  },
+
   // Settings
   '/settings': {
     component: lazy(() => import('@/features/settings/profile').then(m => ({ default: m.SettingsProfile }))),
