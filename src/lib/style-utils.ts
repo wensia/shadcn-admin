@@ -40,9 +40,9 @@ export const styleClasses = {
   },
   lyra: {
     text: {
-      xs: 'text-xs',
-      sm: 'text-sm',
-      base: 'text-base',
+      xs: 'text-sm',      // 14px (原 12px，增大 2px)
+      sm: 'text-base',    // 16px (原 14px，增大 2px)
+      base: 'text-lg',    // 18px (原 16px，增大 2px)
     },
     height: {
       control: 'h-9',
