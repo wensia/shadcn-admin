@@ -29,6 +29,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
+import { useSidebar } from '@/components/ui/sidebar'
 
 import { continuousCallApi } from './api'
 import { leadsApi, yunkeApi } from '../leads/api'
@@ -89,6 +90,7 @@ export function ContinuousCallPage() {
   useDocumentTitle('连续外呼')
   const queryClient = useQueryClient()
   const callTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const { setOpen: setSidebarOpen } = useSidebar()
 
   // 状态
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
@@ -148,6 +150,13 @@ export function ContinuousCallPage() {
       selectLead(leads[0])
     }
   }, [leads, currentLead])
+
+  // 通话面板激活时自动收缩侧边栏
+  useEffect(() => {
+    if (callDrawerVisible) {
+      setSidebarOpen(false)
+    }
+  }, [callDrawerVisible, setSidebarOpen])
 
   // 选择线索
   const selectLead = useCallback((lead: ContinuousCallLead) => {
