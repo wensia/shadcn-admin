@@ -5,10 +5,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Phone, X, RotateCcw, Loader2 } from 'lucide-react'
+import { Phone, X, RotateCcw, Loader2, Send } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Header } from '@/components/layout/header'
+import { DateTimePicker } from '@/components/date-time-picker'
 import { Main } from '@/components/layout/main'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -108,6 +109,8 @@ export function ContinuousCallPage() {
   const [intentionLevel, setIntentionLevel] = useState<IntentionLevel>(IntentionLevel.MEDIUM)
   const [wechatAdded, setWechatAdded] = useState(false)
   const [followupContent, setFollowupContent] = useState('')
+  const [nextFollowupAt, setNextFollowupAt] = useState<string>('')
+  const [sendToDingding, setSendToDingding] = useState(false)
 
   // 获取统计数据
   const { data: statsData } = useQuery({
@@ -313,6 +316,7 @@ export function ContinuousCallPage() {
         result: resultMapping[followupResult] || FollowupResult.OTHER,
         content: followupContent || undefined,
         result_remark: followupContent || undefined,
+        next_followup_at: nextFollowupAt || undefined,
       }
 
       // 保存跟进记录
