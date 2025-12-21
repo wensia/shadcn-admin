@@ -38,6 +38,9 @@ import {
   LeadStatus,
   intentionLevelLabels,
   followupResultLabels,
+  gradeLabels,
+  type Lead,
+  type Grade,
 } from '../leads/types'
 import type { ContinuousCallLead, ContinuousCallStats } from './types'
 import type { LeadFollowupCreate } from '../leads/types'
@@ -118,6 +121,8 @@ export function ContinuousCallPage() {
   // 状态
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
   const [currentLead, setCurrentLead] = useState<ContinuousCallLead | null>(null)
+  const [leadDetail, setLeadDetail] = useState<Lead | null>(null) // 完整的线索详情
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [callDrawerVisible, setCallDrawerVisible] = useState(false)
   const [currentCallId, setCurrentCallId] = useState('')
   const [callDuration, setCallDuration] = useState('00:00')
@@ -174,7 +179,7 @@ export function ContinuousCallPage() {
   }, [leads, currentLead])
 
   // 选择线索
-  const selectLead = useCallback((lead: ContinuousCallLead) => {
+  const selectLead = useCallback(async (lead: ContinuousCallLead) => {
     setCurrentLead(lead)
     setFollowupResult('')
     setFollowupContent('')
@@ -182,6 +187,19 @@ export function ContinuousCallPage() {
     setIntentionLevel(
       (lead.intention_level as IntentionLevel) || IntentionLevel.MEDIUM
     )
+
+    // 获取完整的线索详情
+    setLoadingDetail(true)
+    try {
+      const res = await leadsApi.getLead(lead.id, true)
+      if (res.success && res.data) {
+        setLeadDetail(res.data)
+      }
+    } catch (error) {
+      console.error('获取线索详情失败:', error)
+    } finally {
+      setLoadingDetail(false)
+    }
   }, [])
 
   // 开始通话计时
@@ -215,7 +233,7 @@ export function ContinuousCallPage() {
 
   // 发起外呼
   const startCall = useCallback(async () => {
-    const phone = currentLead?.parent_phone || currentLead?.phone
+    const phone = leadDetail?.parent_phone || currentLead?.parent_phone || currentLead?.phone
     if (!phone) {
       toast.error('当前线索没有手机号，无法外呼')
       return
@@ -490,13 +508,19 @@ export function ContinuousCallPage() {
       )
     }
 
+    // 使用完整详情或基础数据
+    const detail = leadDetail || currentLead
+
     // 构建地址信息
     const addressParts = [
-      currentLead.province,
-      currentLead.city,
-      currentLead.district,
+      detail.province,
+      detail.city,
+      detail.district,
     ].filter(Boolean)
     const regionText = addressParts.length > 0 ? addressParts.join(' ') : undefined
+
+    // 获取年级显示
+    const gradeLabel = detail.grade ? gradeLabels[detail.grade as Grade] || detail.grade : undefined
 
     return (
       <Card className="h-full overflow-auto">
@@ -504,11 +528,11 @@ export function ContinuousCallPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CardTitle className="text-lg">
-                {currentLead.child_name || '未填写'}
+                {detail.child_name || '未填写'}
               </CardTitle>
-              {currentLead.intention_level && (
+              {detail.intention_level && (
                 <IntentionLevelBadge
-                  level={currentLead.intention_level as IntentionLevel}
+                  level={detail.intention_level as IntentionLevel}
                 />
               )}
             </div>
@@ -516,7 +540,7 @@ export function ContinuousCallPage() {
             {!callDrawerVisible && (
               <Button
                 onClick={startCall}
-                disabled={!currentLead.parent_phone && !currentLead.phone}
+                disabled={!detail.parent_phone}
               >
                 <Phone className="mr-2 h-4 w-4" />
                 按空格键外呼
@@ -525,70 +549,111 @@ export function ContinuousCallPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {loadingDetail && (
+            <div className="text-center text-sm text-muted-foreground py-2">
+              加载详情中...
+            </div>
+          )}
+
           {/* 客户信息 */}
           <InfoCard title="客户信息" icon={<Baby className="h-4 w-4" />}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* 儿童信息 */}
               <InfoGrid cols={1}>
-                <InfoItem label="子女姓名" value={currentLead.child_name} />
+                <InfoItem label="子女姓名" value={detail.child_name} />
                 <InfoItem
                   label="年龄"
-                  value={currentLead.age ? `${currentLead.age}岁` : undefined}
+                  value={detail.age ? `${detail.age}岁` : undefined}
                 />
                 <InfoItem
                   label="性别"
                   value={
-                    currentLead.child_gender
-                      ? genderLabels[currentLead.child_gender]
+                    detail.child_gender
+                      ? genderLabels[detail.child_gender as string]
                       : undefined
                   }
                 />
-                <InfoItem label="年级" value={currentLead.grade} />
-                <InfoItem label="在读学校" value={currentLead.school_name} />
+                <InfoItem label="年级" value={gradeLabel} />
+                <InfoItem label="在读学校" value={detail.school_name} />
               </InfoGrid>
 
-              {/* 家长信息 */}
+              {/* 家长和联系信息 */}
               <InfoGrid cols={1}>
                 <InfoItem
+                  label="家长姓名"
+                  value={(detail as Lead).parent_name}
+                />
+                <InfoItem
                   label="家长电话"
-                  value={currentLead.parent_phone || currentLead.phone}
+                  value={detail.parent_phone}
                   copyable
                 />
                 <InfoItem
-                  label="来源渠道"
-                  value={currentLead.source_channel_name}
+                  label="微信号"
+                  value={(detail as Lead).parent_wechat}
+                  copyable
                 />
                 <InfoItem
-                  label="创建时间"
-                  value={formatTime(currentLead.created_at)}
-                />
-                <InfoItem
-                  label="最后跟进"
-                  value={formatTime(currentLead.last_followup_time)}
-                />
-                <InfoItem
-                  label="下次跟进"
-                  value={formatTime(currentLead.next_followup_time)}
+                  label="家长关系"
+                  value={(detail as Lead).parent_relation}
                 />
               </InfoGrid>
             </div>
           </InfoCard>
 
+          {/* 来源和跟进信息 */}
+          <InfoCard title="来源和跟进" icon={<User className="h-4 w-4" />}>
+            <InfoGrid cols={2}>
+              <InfoItem
+                label="来源渠道"
+                value={detail.source_channel_name}
+              />
+              <InfoItem
+                label="来源详情"
+                value={(detail as Lead).source_detail}
+              />
+              <InfoItem
+                label="负责顾问"
+                value={(detail as Lead).advisor_name}
+              />
+              <InfoItem
+                label="归属校区"
+                value={(detail as Lead).owner_campus_name}
+              />
+              <InfoItem
+                label="创建时间"
+                value={formatTime(detail.created_at)}
+              />
+              <InfoItem
+                label="创建人"
+                value={(detail as Lead).created_by_name}
+              />
+              <InfoItem
+                label="最后跟进"
+                value={formatTime((detail as Lead).last_followup_at)}
+              />
+              <InfoItem
+                label="下次跟进"
+                value={formatTime((detail as Lead).next_followup_at)}
+              />
+            </InfoGrid>
+          </InfoCard>
+
           {/* 地址信息 */}
-          {(regionText || currentLead.address_detail) && (
+          {(regionText || detail.address_detail) && (
             <InfoCard title="地址信息" icon={<MapPin className="h-4 w-4" />}>
               <InfoGrid cols={2}>
                 <InfoItem label="省市区" value={regionText} />
-                <InfoItem label="详细地址" value={currentLead.address_detail} />
+                <InfoItem label="详细地址" value={detail.address_detail} />
               </InfoGrid>
             </InfoCard>
           )}
 
           {/* 备注信息 */}
-          {currentLead.note && (
+          {(detail as Lead).notes && (
             <InfoCard title="备注" icon={<User className="h-4 w-4" />}>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {currentLead.note}
+                {(detail as Lead).notes}
               </p>
             </InfoCard>
           )}
