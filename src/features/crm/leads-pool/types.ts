@@ -5,6 +5,20 @@
 import type { IntentionLevel, LeadStatus } from '../leads/types'
 
 /**
+ * 公海信息
+ */
+export interface PoolInfo {
+  pooled_at: string
+  pool_reason: string
+  pool_remark?: string
+  previous_advisor_name?: string
+  days_in_pool: number
+  is_claimable: boolean
+  priority_score: number
+  tags?: string[]
+}
+
+/**
  * 公海线索列表项
  */
 export interface LeadPoolItem {
@@ -16,7 +30,7 @@ export interface LeadPoolItem {
   parent_name?: string
   parent_phone: string
   parent_wechat?: string
-  age: number
+  age?: number
   intention_level?: IntentionLevel
   status: LeadStatus
 
@@ -25,30 +39,18 @@ export interface LeadPoolItem {
   source_channel_name?: string
   source_detail?: string
 
-  // 公海信息
-  campus_id: string
-  campus_name?: string
-  pooled_at: string
-  pooled_by_id: string
-  pooled_by_name?: string
-  pool_reason: string
-  pool_remark?: string
-  previous_advisor_name?: string
-  days_in_pool: number
-  is_claimable: boolean
-  priority_score: number
+  // 校区信息
+  owner_campus_name?: string
+
+  // 公海信息（嵌套结构）
+  pool_info: PoolInfo
 
   // 创建信息
-  created_at: string
+  created_at?: string
   created_by_name?: string
 
-  // 跟进信息
-  followup_count: number
-  last_followup_at?: string
-
-  // 标签和星标
+  // 标签
   tag?: string
-  is_starred?: boolean
 }
 
 /**

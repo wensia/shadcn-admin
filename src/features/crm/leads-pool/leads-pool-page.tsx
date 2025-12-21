@@ -3,7 +3,7 @@
  * 从 Vue 项目 LeadsPoolView.vue 迁移
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -100,6 +100,9 @@ export function LeadsPoolPage() {
     }
   })
 
+  // 稳定的表格数据引用 - 避免每次渲染创建新数组
+  const tableData = useMemo(() => data?.items || [], [data?.items])
+
   // 批量领取 mutation
   const claimMutation = useMutation({
     mutationFn: async (leadIds: string[]) => {
@@ -125,23 +128,36 @@ export function LeadsPoolPage() {
     if (data && !isLoading) {
       const items = data.items || []
       const total = data.total || 0
+      // 当前页没有数据，但总数据量大于0，且不在第一页
       if (items.length === 0 && total > 0 && pagination.page > 1) {
-        const lastPage = Math.ceil(total / pagination.size)
-        setPagination(prev => ({ ...prev, page: lastPage }))
+        const lastPage = Math.max(1, Math.ceil(total / pagination.size))
+        // 只有当 lastPage 与当前页不同时才跳转，防止无限循环
+        if (lastPage !== pagination.page) {
+          setPagination(prev => ({ ...prev, page: lastPage }))
+        }
       }
     }
   }, [data, isLoading, pagination.page, pagination.size])
 
-  // 同步选中状态
+  // 同步选中状态 - 只在选择变化时更新
   useEffect(() => {
-    if (data?.items) {
-      const selected = data.items.filter(item => rowSelection[item.id])
-      setSelectedRows(selected)
+    if (tableData.length > 0) {
+      const selected = tableData.filter(item => rowSelection[item.id])
+      // 只有当选中的行数变化时才更新，避免不必要的渲染
+      setSelectedRows(prev => {
+        if (prev.length !== selected.length) return selected
+        // 比较 ID 是否相同
+        const prevIds = new Set(prev.map(r => r.id))
+        const sameSelection = selected.every(r => prevIds.has(r.id))
+        return sameSelection ? prev : selected
+      })
+    } else {
+      setSelectedRows([])
     }
-  }, [rowSelection, data?.items])
+  }, [rowSelection, tableData])
 
-  // 表格列定义
-  const columns: ColumnDef<LeadPoolItem>[] = [
+  // 表格列定义 - 使用 useMemo 防止每次渲染重新创建
+  const columns: ColumnDef<LeadPoolItem>[] = useMemo(() => [
     {
       id: 'select',
       header: ({ table }) => (
@@ -200,34 +216,43 @@ export function LeadsPoolPage() {
       }
     },
     {
-      accessorKey: 'previous_advisor_name',
+      accessorKey: 'pool_info.previous_advisor_name',
       header: '原负责顾问',
       size: 120,
-      cell: ({ row }) => row.original.previous_advisor_name || '-'
+      cell: ({ row }) => row.original.pool_info?.previous_advisor_name || '-'
     },
     {
-      accessorKey: 'days_in_pool',
+      accessorKey: 'pool_info.days_in_pool',
       header: '公海天数',
       size: 80,
-      cell: ({ row }) => `${row.original.days_in_pool}天`
+      cell: ({ row }) => row.original.pool_info?.days_in_pool != null ? `${row.original.pool_info.days_in_pool}天` : '-'
     },
     {
-      accessorKey: 'pooled_at',
+      accessorKey: 'pool_info.pooled_at',
       header: '进入公海时间',
       size: 150,
-      cell: ({ row }) => formatTime(row.original.pooled_at)
+      cell: ({ row }) => formatTime(row.original.pool_info?.pooled_at)
     }
-  ]
+  ], [])
 
   // 创建表格实例
   const table = useReactTable({
-    data: data?.items || [],
+    data: tableData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     onRowSelectionChange: setRowSelection,
     state: { rowSelection },
     getRowId: (row) => row.id
   })
+
+  // 分页处理 - 使用 useCallback 防止每次渲染重新创建
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }))
+  }, [])
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPagination({ page: 1, size })
+  }, [])
 
   // 行点击处理
   const handleRowClick = (row: LeadPoolItem, event: React.MouseEvent) => {
@@ -450,16 +475,13 @@ export function LeadsPoolPage() {
             </div>
 
             {/* 分页 */}
-            <div className="flex items-center justify-between border-t px-4 py-2">
-              <div className={cn('text-muted-foreground', s.text.xs)}>
-                共 {data?.total || 0} 条记录
-              </div>
+            <div className="border-t px-4 py-2">
               <SimplePagination
                 page={pagination.page}
                 pageSize={pagination.size}
                 total={data?.total || 0}
-                onPageChange={(page: number) => setPagination(prev => ({ ...prev, page }))}
-                onPageSizeChange={(size: number) => setPagination({ page: 1, size })}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
               />
             </div>
           </div>
