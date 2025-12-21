@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Phone, X, RotateCcw, ChevronRight, User } from 'lucide-react'
+import { Phone, X, RotateCcw, User, Baby, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Header } from '@/components/layout/header'
@@ -41,7 +41,6 @@ import {
 } from '../leads/types'
 import type { ContinuousCallLead, ContinuousCallStats } from './types'
 import type { LeadFollowupCreate } from '../leads/types'
-import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
 import { InfoCard } from '../leads/components/detail/info-card'
 import { InfoGrid } from '../leads/components/detail/info-grid'
 import { InfoItem } from '../leads/components/detail/info-item'
@@ -125,8 +124,6 @@ export function ContinuousCallPage() {
   const [callStartTime, setCallStartTime] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [hangingUp, setHangingUp] = useState(false)
-  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
 
   // 跟进表单状态
   const [followupResult, setFollowupResult] = useState('')
@@ -448,12 +445,6 @@ export function ContinuousCallPage() {
     }
   }, [])
 
-  // 查看线索详情
-  const viewLeadDetail = useCallback((leadId: string) => {
-    setSelectedLeadId(leadId)
-    setDetailSheetOpen(true)
-  }, [])
-
   // 渲染渠道选择器
   const renderChannelSelector = () => {
     if (!statsData) return null
@@ -499,26 +490,43 @@ export function ContinuousCallPage() {
       )
     }
 
+    // 构建地址信息
+    const addressParts = [
+      currentLead.province,
+      currentLead.city,
+      currentLead.district,
+    ].filter(Boolean)
+    const regionText = addressParts.length > 0 ? addressParts.join(' ') : undefined
+
     return (
       <Card className="h-full overflow-auto">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">
-              {currentLead.child_name || '未填写'}
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => viewLeadDetail(currentLead.id)}
-            >
-              查看详情
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">
+                {currentLead.child_name || '未填写'}
+              </CardTitle>
+              {currentLead.intention_level && (
+                <IntentionLevelBadge
+                  level={currentLead.intention_level as IntentionLevel}
+                />
+              )}
+            </div>
+            {/* 外呼按钮 - 放在标题栏 */}
+            {!callDrawerVisible && (
+              <Button
+                onClick={startCall}
+                disabled={!currentLead.parent_phone && !currentLead.phone}
+              >
+                <Phone className="mr-2 h-4 w-4" />
+                按空格键外呼
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* 使用 InfoCard 和 InfoGrid 展示信息 */}
-          <InfoCard hideTitle>
+          {/* 客户信息 */}
+          <InfoCard title="客户信息" icon={<Baby className="h-4 w-4" />}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* 儿童信息 */}
               <InfoGrid cols={1}>
@@ -535,25 +543,16 @@ export function ContinuousCallPage() {
                       : undefined
                   }
                 />
+                <InfoItem label="年级" value={currentLead.grade} />
                 <InfoItem label="在读学校" value={currentLead.school_name} />
               </InfoGrid>
 
-              {/* 联系和来源信息 */}
+              {/* 家长信息 */}
               <InfoGrid cols={1}>
                 <InfoItem
                   label="家长电话"
                   value={currentLead.parent_phone || currentLead.phone}
                   copyable
-                />
-                <InfoItem
-                  label="意向等级"
-                  value={
-                    currentLead.intention_level ? (
-                      <IntentionLevelBadge
-                        level={currentLead.intention_level as IntentionLevel}
-                      />
-                    ) : undefined
-                  }
                 />
                 <InfoItem
                   label="来源渠道"
@@ -563,21 +562,35 @@ export function ContinuousCallPage() {
                   label="创建时间"
                   value={formatTime(currentLead.created_at)}
                 />
+                <InfoItem
+                  label="最后跟进"
+                  value={formatTime(currentLead.last_followup_time)}
+                />
+                <InfoItem
+                  label="下次跟进"
+                  value={formatTime(currentLead.next_followup_time)}
+                />
               </InfoGrid>
             </div>
           </InfoCard>
 
-          {/* 外呼按钮 */}
-          {!callDrawerVisible && (
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={startCall}
-              disabled={!currentLead.parent_phone && !currentLead.phone}
-            >
-              <Phone className="mr-2 h-4 w-4" />
-              按空格键外呼
-            </Button>
+          {/* 地址信息 */}
+          {(regionText || currentLead.address_detail) && (
+            <InfoCard title="地址信息" icon={<MapPin className="h-4 w-4" />}>
+              <InfoGrid cols={2}>
+                <InfoItem label="省市区" value={regionText} />
+                <InfoItem label="详细地址" value={currentLead.address_detail} />
+              </InfoGrid>
+            </InfoCard>
+          )}
+
+          {/* 备注信息 */}
+          {currentLead.note && (
+            <InfoCard title="备注" icon={<User className="h-4 w-4" />}>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {currentLead.note}
+              </p>
+            </InfoCard>
           )}
         </CardContent>
       </Card>
@@ -773,13 +786,6 @@ export function ContinuousCallPage() {
           )}
         </div>
       </Main>
-
-      {/* 线索详情抽屉 */}
-      <LeadDetailSheet
-        leadId={selectedLeadId}
-        open={detailSheetOpen}
-        onOpenChange={setDetailSheetOpen}
-      />
     </>
   )
 }
