@@ -264,12 +264,12 @@ export function BatchImportPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="w-[200px]"
               />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="选择状态" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">全部状态</SelectItem>
+                  <SelectItem value="all">全部状态</SelectItem>
                   {statusOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -277,12 +277,12 @@ export function BatchImportPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={methodFilter} onValueChange={setMethodFilter}>
+              <Select value={methodFilter || 'all'} onValueChange={(v) => setMethodFilter(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="导入方式" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">全部方式</SelectItem>
+                  <SelectItem value="all">全部方式</SelectItem>
                   {methodOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
