@@ -36,11 +36,10 @@ import {
   FollowupMethod,
   FollowupResult,
   LeadStatus,
-  type Lead,
 } from '../leads/types'
 import type { ContinuousCallLead, ContinuousCallStats } from './types'
 import type { LeadFollowupCreate } from '../leads/types'
-import { LeadInfoDisplay } from '../leads/components/detail/lead-info-display'
+import { LeadDetailTabs } from '../leads/components/detail/lead-detail-tabs'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 
 
@@ -92,8 +91,6 @@ export function ContinuousCallPage() {
   // 状态
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
   const [currentLead, setCurrentLead] = useState<ContinuousCallLead | null>(null)
-  const [leadDetail, setLeadDetail] = useState<Lead | null>(null) // 完整的线索详情
-  const [loadingDetail, setLoadingDetail] = useState(false)
   const [callDrawerVisible, setCallDrawerVisible] = useState(false)
   const [currentCallId, setCurrentCallId] = useState('')
   const [callDuration, setCallDuration] = useState('00:00')
@@ -150,7 +147,7 @@ export function ContinuousCallPage() {
   }, [leads, currentLead])
 
   // 选择线索
-  const selectLead = useCallback(async (lead: ContinuousCallLead) => {
+  const selectLead = useCallback((lead: ContinuousCallLead) => {
     setCurrentLead(lead)
     setFollowupResult('')
     setFollowupContent('')
@@ -158,19 +155,6 @@ export function ContinuousCallPage() {
     setIntentionLevel(
       (lead.intention_level as IntentionLevel) || IntentionLevel.MEDIUM
     )
-
-    // 获取完整的线索详情
-    setLoadingDetail(true)
-    try {
-      const res = await leadsApi.getLead(lead.id, true)
-      if (res.success && res.data) {
-        setLeadDetail(res.data)
-      }
-    } catch (error) {
-      console.error('获取线索详情失败:', error)
-    } finally {
-      setLoadingDetail(false)
-    }
   }, [])
 
   // 开始通话计时
@@ -204,7 +188,7 @@ export function ContinuousCallPage() {
 
   // 发起外呼
   const startCall = useCallback(async () => {
-    const phone = leadDetail?.parent_phone || currentLead?.parent_phone || currentLead?.phone
+    const phone = currentLead?.parent_phone || currentLead?.phone
     if (!phone) {
       toast.error('当前线索没有手机号，无法外呼')
       return
@@ -479,12 +463,9 @@ export function ContinuousCallPage() {
       )
     }
 
-    // 使用完整详情
-    const detail = leadDetail
-
     return (
-      <Card className="h-full overflow-auto">
-        <CardHeader className="pb-3">
+      <Card className="h-full flex flex-col overflow-hidden">
+        <CardHeader className="pb-3 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CardTitle className="text-lg">
@@ -508,19 +489,13 @@ export function ContinuousCallPage() {
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          {loadingDetail ? (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              加载详情中...
-            </div>
-          ) : detail ? (
-            <LeadInfoDisplay lead={detail} />
-          ) : (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              暂无详情数据
-            </div>
-          )}
-        </CardContent>
+        <div className="flex-1 min-h-0">
+          <LeadDetailTabs
+            leadId={currentLead.id}
+            useScrollArea={true}
+            height="h-full"
+          />
+        </div>
       </Card>
     )
   }
