@@ -42,6 +42,34 @@ import {
 import type { ContinuousCallLead, ContinuousCallStats } from './types'
 import type { LeadFollowupCreate } from '../leads/types'
 import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
+import { InfoCard } from '../leads/components/detail/info-card'
+import { InfoGrid } from '../leads/components/detail/info-grid'
+import { InfoItem } from '../leads/components/detail/info-item'
+import { IntentionLevelBadge } from '../leads/components/status-badges'
+
+// 格式化时间
+const formatTime = (time?: string | null) => {
+  if (!time) return undefined
+  try {
+    return new Date(time).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return undefined
+  }
+}
+
+// 性别显示
+const genderLabels: Record<string, string> = {
+  MALE: '男',
+  FEMALE: '女',
+  male: '男',
+  female: '女',
+}
 
 // 跟进结果分组
 const followupResultGroups = {
@@ -489,48 +517,55 @@ export function ContinuousCallPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-muted-foreground">家长电话</Label>
-              <p className="font-medium">
-                {currentLead.parent_phone || currentLead.phone || '-'}
-              </p>
+          {/* 使用 InfoCard 和 InfoGrid 展示信息 */}
+          <InfoCard hideTitle>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* 儿童信息 */}
+              <InfoGrid cols={1}>
+                <InfoItem label="子女姓名" value={currentLead.child_name} />
+                <InfoItem
+                  label="年龄"
+                  value={currentLead.age ? `${currentLead.age}岁` : undefined}
+                />
+                <InfoItem
+                  label="性别"
+                  value={
+                    currentLead.child_gender
+                      ? genderLabels[currentLead.child_gender]
+                      : undefined
+                  }
+                />
+                <InfoItem label="在读学校" value={currentLead.school_name} />
+              </InfoGrid>
+
+              {/* 联系和来源信息 */}
+              <InfoGrid cols={1}>
+                <InfoItem
+                  label="家长电话"
+                  value={currentLead.parent_phone || currentLead.phone}
+                  copyable
+                />
+                <InfoItem
+                  label="意向等级"
+                  value={
+                    currentLead.intention_level ? (
+                      <IntentionLevelBadge
+                        level={currentLead.intention_level as IntentionLevel}
+                      />
+                    ) : undefined
+                  }
+                />
+                <InfoItem
+                  label="来源渠道"
+                  value={currentLead.source_channel_name}
+                />
+                <InfoItem
+                  label="创建时间"
+                  value={formatTime(currentLead.created_at)}
+                />
+              </InfoGrid>
             </div>
-            <div>
-              <Label className="text-muted-foreground">年龄</Label>
-              <p className="font-medium">
-                {currentLead.age ? `${currentLead.age}岁` : '-'}
-              </p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">来源渠道</Label>
-              <p className="font-medium">
-                {currentLead.source_channel_name || '-'}
-              </p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">意向等级</Label>
-              <p className="font-medium">
-                {currentLead.intention_level
-                  ? intentionLevelLabels[
-                      currentLead.intention_level as IntentionLevel
-                    ]
-                  : '-'}
-              </p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">在读学校</Label>
-              <p className="font-medium">{currentLead.school_name || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">创建时间</Label>
-              <p className="font-medium">
-                {currentLead.created_at
-                  ? new Date(currentLead.created_at).toLocaleString('zh-CN')
-                  : '-'}
-              </p>
-            </div>
-          </div>
+          </InfoCard>
 
           {/* 外呼按钮 */}
           {!callDrawerVisible && (
@@ -538,9 +573,7 @@ export function ContinuousCallPage() {
               className="w-full"
               size="lg"
               onClick={startCall}
-              disabled={
-                !currentLead.parent_phone && !currentLead.phone
-              }
+              disabled={!currentLead.parent_phone && !currentLead.phone}
             >
               <Phone className="mr-2 h-4 w-4" />
               按空格键外呼
