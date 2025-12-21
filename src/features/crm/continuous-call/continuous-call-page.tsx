@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Phone, X, RotateCcw } from 'lucide-react'
+import { Phone, X, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Header } from '@/components/layout/header'
@@ -99,6 +99,7 @@ export function ContinuousCallPage() {
   const [callStartTime, setCallStartTime] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [hangingUp, setHangingUp] = useState(false)
+  const [dialing, setDialing] = useState(false)
 
   // 跟进表单状态
   const [followupResult, setFollowupResult] = useState('')
@@ -197,6 +198,7 @@ export function ContinuousCallPage() {
     }
 
     try {
+      setDialing(true)
       const res = await yunkeApi.dialPhone(phone)
       if (res.success && res.data) {
         setCurrentCallId(res.data.call_id)
@@ -209,6 +211,8 @@ export function ContinuousCallPage() {
       }
     } catch (error: any) {
       toast.error(error?.message || '外呼失败')
+    } finally {
+      setDialing(false)
     }
   }, [currentLead])
 
@@ -392,7 +396,8 @@ export function ContinuousCallPage() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const phone = currentLead?.parent_phone || currentLead?.phone
-      if (event.code === 'Space' && phone && !callDrawerVisible) {
+      // 添加 dialing 检查，防止重复触发
+      if (event.code === 'Space' && phone && !callDrawerVisible && !dialing) {
         const target = event.target as HTMLElement
         if (
           target &&
@@ -409,7 +414,7 @@ export function ContinuousCallPage() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [currentLead, callDrawerVisible, startCall])
+  }, [currentLead, callDrawerVisible, startCall, dialing])
 
   // 清理定时器
   useEffect(() => {
@@ -483,10 +488,14 @@ export function ContinuousCallPage() {
             {!callDrawerVisible && (
               <Button
                 onClick={startCall}
-                disabled={!currentLead.parent_phone}
+                disabled={!currentLead.parent_phone || dialing}
               >
-                <Phone className="mr-2 h-4 w-4" />
-                按空格键外呼
+                {dialing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Phone className="mr-2 h-4 w-4" />
+                )}
+                {dialing ? '正在呼叫...' : '按空格键外呼'}
               </Button>
             )}
           </div>
