@@ -20,7 +20,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3456, // 与现有Vue项目保持一致
+    port: 3457, // React项目端口
     host: true,
     proxy: {
       '/api': {
