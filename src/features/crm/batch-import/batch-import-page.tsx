@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { StandaloneFacetedFilter } from '@/components/data-table/standalone-faceted-filter'
 import {
   Table,
   TableBody,
@@ -125,8 +126,8 @@ export function BatchImportPage() {
 
   // 搜索状态
   const [searchValue, setSearchValue] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [methodFilter, setMethodFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<BatchStatus[]>([])
+  const [methodFilter, setMethodFilter] = useState<ImportMethod[]>([])
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 })
 
   // 弹窗状态
@@ -141,8 +142,8 @@ export function BatchImportPage() {
     page: pagination.page,
     page_size: pagination.pageSize,
     search: searchValue || undefined,
-    status: (statusFilter || undefined) as BatchStatus | undefined,
-    import_method: (methodFilter || undefined) as ImportMethod | undefined,
+    status: statusFilter.length > 0 ? statusFilter[0] : undefined,
+    import_method: methodFilter.length > 0 ? methodFilter[0] : undefined,
   }), [pagination, searchValue, statusFilter, methodFilter])
 
   // 获取批量导入列表
@@ -211,8 +212,8 @@ export function BatchImportPage() {
   // 重置筛选
   const handleReset = useCallback(() => {
     setSearchValue('')
-    setStatusFilter('')
-    setMethodFilter('')
+    setStatusFilter([])
+    setMethodFilter([])
     setPagination({ page: 1, pageSize: 20 })
   }, [])
 
@@ -241,7 +242,7 @@ export function BatchImportPage() {
   }, [queryClient])
 
   // 是否有筛选条件
-  const isFiltered = searchValue || statusFilter || methodFilter
+  const isFiltered = searchValue || statusFilter.length > 0 || methodFilter.length > 0
 
   return (
     <>
@@ -291,38 +292,24 @@ export function BatchImportPage() {
               className="h-8 w-[150px] lg:w-[250px]"
             />
             <div className="flex gap-x-2">
-              <Select value={statusFilter || 'all'} onValueChange={(v) => {
-                setStatusFilter(v === 'all' ? '' : v)
-                setPagination((prev) => ({ ...prev, page: 1 }))
-              }}>
-                <SelectTrigger className="h-8 w-[120px]">
-                  <SelectValue placeholder="状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部状态</SelectItem>
-                  {statusOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={methodFilter || 'all'} onValueChange={(v) => {
-                setMethodFilter(v === 'all' ? '' : v)
-                setPagination((prev) => ({ ...prev, page: 1 }))
-              }}>
-                <SelectTrigger className="h-8 w-[120px]">
-                  <SelectValue placeholder="导入方式" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部方式</SelectItem>
-                  {methodOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <StandaloneFacetedFilter
+                title="状态"
+                options={statusOptions}
+                selectedValues={new Set(statusFilter)}
+                onSelectedChange={(values) => {
+                  setStatusFilter(Array.from(values) as BatchStatus[])
+                  setPagination((prev) => ({ ...prev, page: 1 }))
+                }}
+              />
+              <StandaloneFacetedFilter
+                title="导入方式"
+                options={methodOptions}
+                selectedValues={new Set(methodFilter)}
+                onSelectedChange={(values) => {
+                  setMethodFilter(Array.from(values) as ImportMethod[])
+                  setPagination((prev) => ({ ...prev, page: 1 }))
+                }}
+              />
             </div>
             {isFiltered && (
               <Button
@@ -335,8 +322,8 @@ export function BatchImportPage() {
               </Button>
             )}
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
+            <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
 
