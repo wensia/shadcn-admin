@@ -251,7 +251,29 @@ export function BatchImportPage() {
       </Header>
 
       <Main fixed className="flex flex-1 flex-col gap-4">
-        {/* 工具栏：左侧筛选，右侧操作按钮 */}
+        {/* 操作栏 */}
+        <div className="flex items-center justify-end space-x-2">
+          <Button size="sm" className="h-8" onClick={() => setUploadDialogOpen(true)}>
+            上传文件
+            <Upload className="ml-1 h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-8" onClick={handleDownloadTemplate}>
+            下载模板
+            <Download className="ml-1 h-4 w-4" />
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8"
+            onClick={handleDeleteProcessingBatches}
+            disabled={!hasProcessingBatches}
+          >
+            删除处理中批次
+            <Trash2 className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* 筛选栏 */}
         <div className="flex items-center justify-between">
           <div className="flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2">
             <Input
@@ -294,29 +316,9 @@ export function BatchImportPage() {
               </Button>
             )}
           </div>
-          <div className="flex items-center space-x-2">
-            <Button size="sm" className="h-8" onClick={() => setUploadDialogOpen(true)}>
-              上传文件
-              <Upload className="ml-1 h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" className="h-8" onClick={handleDownloadTemplate}>
-              下载模板
-              <Download className="ml-1 h-4 w-4" />
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-8"
-              onClick={handleDeleteProcessingBatches}
-              disabled={!hasProcessingBatches}
-            >
-              删除处理中批次
-              <Trash2 className="ml-1 h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         {/* 数据表格 */}
