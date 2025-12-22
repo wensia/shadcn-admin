@@ -93,8 +93,8 @@ const methodOptions = [
 
 // 列定义
 const columnDefs = [
-  { id: 'batch_name', label: '批次名称', defaultVisible: true },
-  { id: 'import_method', label: '导入方式', defaultVisible: true },
+  { id: 'batch_name', label: '批次名称', defaultVisible: false },
+  { id: 'import_method', label: '导入方式', defaultVisible: false },
   { id: 'import_source_file', label: '文件名', defaultVisible: false },
   { id: 'total_count', label: '总数量', defaultVisible: true },
   { id: 'success_count', label: '成功数', defaultVisible: true },
