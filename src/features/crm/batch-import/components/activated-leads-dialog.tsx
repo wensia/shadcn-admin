@@ -67,18 +67,25 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
     }
   }, [open, batch])
 
-  // 获取激活线索列表
+  // 获取激活线索列表（API 返回全部数据，前端分页）
   const { data, isLoading } = useQuery({
-    queryKey: ['batch-import-activated-leads', batch?.id, pagination],
-    queryFn: () => batchImportApi.getActivatedLeads(batch!.id, {
-      page: pagination.page,
-      page_size: pagination.pageSize,
-    }),
+    queryKey: ['batch-import-activated-leads', batch?.id],
+    queryFn: () => batchImportApi.getActivatedLeads(batch!.id, {}),
     enabled: !!batch && open,
   })
 
-  const leadsList = data?.data?.items || []
-  const totalCount = data?.data?.total || 0
+  // API 返回的 data 可能是数组或分页对象
+  const responseData = data?.data
+  const allLeads = Array.isArray(responseData)
+    ? responseData
+    : (responseData?.items || [])
+  const totalCount = allLeads.length
+
+  // 前端分页
+  const leadsList = allLeads.slice(
+    (pagination.page - 1) * pagination.pageSize,
+    pagination.page * pagination.pageSize
+  )
 
   // 下载激活线索
   const handleDownload = useCallback(async () => {
