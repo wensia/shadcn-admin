@@ -68,6 +68,16 @@ export interface ActivatedLeadItem {
   advisor_change?: string
 }
 
+// 失败记录列表响应（包含类型统计）
+export interface FailureListResponse {
+  items: ImportFailureItem[]
+  total: number
+  page: number
+  size: number
+  pages: number
+  type_counts: Record<string, number>
+}
+
 // 查询参数
 export interface BatchImportQueryParams {
   page?: number

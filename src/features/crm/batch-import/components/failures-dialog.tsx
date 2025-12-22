@@ -32,6 +32,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
 import { batchImportApi } from '../api'
 import type { BatchImportItem, ImportFailureItem, FailureType } from '../types'
 import { failureTypeLabels } from '../types'
@@ -56,6 +58,7 @@ const failureTypeVariants: Record<FailureType, 'default' | 'secondary' | 'destru
 }
 
 export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProps) {
+  const s = useStyleClasses()
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 })
 
   // 重置分页状态
@@ -65,7 +68,7 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
     }
   }, [open, batch])
 
-  // 获取失败记录列表
+  // 获取失败记录列表（包含 type_counts）
   const { data: failuresData, isLoading: loadingFailures } = useQuery({
     queryKey: ['batch-import-failures', batch?.id, pagination],
     queryFn: () => batchImportApi.getFailureList(batch!.id, {
@@ -75,16 +78,9 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
     enabled: !!batch && open,
   })
 
-  // 获取失败类型统计
-  const { data: typeCountsData } = useQuery({
-    queryKey: ['batch-import-failure-types', batch?.id],
-    queryFn: () => batchImportApi.getFailureTypeCounts(batch!.id),
-    enabled: !!batch && open,
-  })
-
   const failureList = failuresData?.data?.items || []
   const totalCount = failuresData?.data?.total || 0
-  const typeCounts = typeCountsData?.data || {}
+  const typeCounts = failuresData?.data?.type_counts || {}
 
   // 下载失败记录
   const handleDownload = useCallback(async () => {
@@ -112,8 +108,8 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center justify-between pr-8">
             <span>失败记录 - {batch.batch_name}</span>
-            <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className={s.height.controlSm} onClick={handleDownload}>
+              <Download className={cn("mr-2", s.size.icon)} />
               下载失败记录
             </Button>
           </DialogTitle>
@@ -121,12 +117,12 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
 
         {/* 失败类型统计 */}
         {Object.keys(typeCounts).length > 0 && (
-          <div className="flex flex-wrap gap-2 pb-3 border-b shrink-0">
+          <div className={cn("flex flex-wrap pb-3 border-b shrink-0", s.gap.tight)}>
             {Object.entries(typeCounts).map(([type, count]) => (
               <Badge
                 key={type}
                 variant={failureTypeVariants[type as FailureType] || 'outline'}
-                className="gap-1"
+                className={cn(s.height.badge, s.text.xs, s.gap.tight)}
               >
                 {failureTypeLabels[type as FailureType] || type}
                 <span className="font-bold">{count}</span>
@@ -195,21 +191,21 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
 
         {/* 分页 */}
         <div className="border-t pt-3 flex items-center justify-between shrink-0">
-          <span className="text-sm text-muted-foreground">
+          <span className={cn("text-muted-foreground", s.text.xs)}>
             共 {totalCount} 条失败记录
           </span>
-          <div className="flex items-center gap-2">
+          <div className={cn("flex items-center", s.gap.tight)}>
             <Select
               value={String(pagination.pageSize)}
               onValueChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
             >
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className={cn("w-[100px]", s.height.controlSm)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {[10, 20, 50, 100].map((size) => (
                   <SelectItem key={size} value={String(size)}>
-                    {size} 条/页
+                    {size}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -218,17 +214,19 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
               <Button
                 variant="outline"
                 size="sm"
+                className={s.height.controlSm}
                 disabled={pagination.page <= 1}
                 onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
               >
                 上一页
               </Button>
-              <span className="px-2 text-sm">
+              <span className={cn("px-2", s.text.xs)}>
                 第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className={s.height.controlSm}
                 disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
                 onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
               >

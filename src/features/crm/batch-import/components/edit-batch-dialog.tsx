@@ -30,6 +30,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
 import { batchImportApi } from '../api'
 import type { BatchImportItem } from '../types'
 
@@ -49,6 +51,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBatchDialogProps) {
+  const s = useStyleClasses()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -111,7 +114,7 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
                 <FormItem>
                   <FormLabel>批次名称</FormLabel>
                   <FormControl>
-                    <Input placeholder="请输入批次名称" {...field} />
+                    <Input placeholder="请输入批次名称" className={s.height.controlSm} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,15 +143,17 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
+                className={s.height.controlSm}
                 onClick={handleClose}
                 disabled={updateMutation.isPending}
               >
                 取消
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button type="submit" size="sm" className={s.height.controlSm} disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className={cn("mr-2 animate-spin", s.size.icon)} />
                     保存中
                   </>
                 ) : (

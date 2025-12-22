@@ -7,7 +7,6 @@ import { useState, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
-  Search,
   Upload,
   Download,
   Trash2,
@@ -22,9 +21,9 @@ import {
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
+import { Cross2Icon } from '@radix-ui/react-icons'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -209,11 +208,6 @@ export function BatchImportPage() {
     }
   }, [batchList, queryClient])
 
-  // 搜索处理
-  const handleSearch = useCallback(() => {
-    setPagination((prev) => ({ ...prev, page: 1 }))
-  }, [])
-
   // 重置筛选
   const handleReset = useCallback(() => {
     setSearchValue('')
@@ -246,27 +240,62 @@ export function BatchImportPage() {
     queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
   }, [queryClient])
 
+  // 是否有筛选条件
+  const isFiltered = searchValue || statusFilter || methodFilter
+
   return (
     <>
       <Header fixed>
         <h1 className="text-lg font-semibold">批量导入</h1>
       </Header>
 
-      <Main fixed className="flex flex-col gap-4">
-        {/* 筛选区域 */}
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <Input
-                placeholder="搜索批次名称或文件名"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-[200px]"
-              />
-              <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="选择状态" />
+      <Main fixed className="flex flex-1 flex-col gap-4">
+        {/* 标题行：左边标题，右边操作按钮 */}
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">批量导入记录</h2>
+            <p className="text-muted-foreground">管理线索批量导入任务</p>
+          </div>
+          <div className="flex gap-2">
+            <Button className="space-x-1" onClick={() => setUploadDialogOpen(true)}>
+              <span>上传文件</span>
+              <Upload size={18} />
+            </Button>
+            <Button variant="outline" className="space-x-1" onClick={handleDownloadTemplate}>
+              <span>下载模板</span>
+              <Download size={18} />
+            </Button>
+            <Button
+              variant="destructive"
+              className="space-x-1"
+              onClick={handleDeleteProcessingBatches}
+              disabled={!hasProcessingBatches}
+            >
+              <span>删除处理中批次</span>
+              <Trash2 size={18} />
+            </Button>
+          </div>
+        </div>
+
+        {/* 筛选工具栏 */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2">
+            <Input
+              placeholder="搜索批次名称或文件名"
+              value={searchValue}
+              onChange={(e) => {
+                setSearchValue(e.target.value)
+                setPagination((prev) => ({ ...prev, page: 1 }))
+              }}
+              className="h-8 w-[150px] lg:w-[250px]"
+            />
+            <div className="flex gap-x-2">
+              <Select value={statusFilter || 'all'} onValueChange={(v) => {
+                setStatusFilter(v === 'all' ? '' : v)
+                setPagination((prev) => ({ ...prev, page: 1 }))
+              }}>
+                <SelectTrigger className="h-8 w-[120px]">
+                  <SelectValue placeholder="状态" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部状态</SelectItem>
@@ -277,8 +306,11 @@ export function BatchImportPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={methodFilter || 'all'} onValueChange={(v) => setMethodFilter(v === 'all' ? '' : v)}>
-                <SelectTrigger className="w-[140px]">
+              <Select value={methodFilter || 'all'} onValueChange={(v) => {
+                setMethodFilter(v === 'all' ? '' : v)
+                setPagination((prev) => ({ ...prev, page: 1 }))
+              }}>
+                <SelectTrigger className="h-8 w-[120px]">
                   <SelectValue placeholder="导入方式" />
                 </SelectTrigger>
                 <SelectContent>
@@ -290,47 +322,26 @@ export function BatchImportPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleSearch}>
-                <Search className="mr-2 h-4 w-4" />
-                搜索
-              </Button>
-              <Button variant="outline" onClick={handleReset}>
+            </div>
+            {isFiltered && (
+              <Button
+                variant="ghost"
+                onClick={handleReset}
+                className="h-8 px-2 lg:px-3"
+              >
                 重置
+                <Cross2Icon className="ms-2 h-4 w-4" />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
 
-        {/* 数据表格卡片 */}
-        <Card className="flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="py-3 px-4 border-b shrink-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">批量导入记录</CardTitle>
-              <div className="flex items-center gap-2">
-                <Button onClick={() => setUploadDialogOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  上传文件
-                </Button>
-                <Button variant="outline" onClick={handleDownloadTemplate}>
-                  <Download className="mr-2 h-4 w-4" />
-                  下载模板
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteProcessingBatches}
-                  disabled={!hasProcessingBatches}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  删除处理中批次
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => refetch()}>
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="flex-1 overflow-auto p-0">
+        {/* 数据表格 */}
+        <div className="flex-1 flex flex-col overflow-hidden rounded-md border">
+          <div className="flex-1 overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
@@ -346,7 +357,7 @@ export function BatchImportPage() {
                   <TableHead className="w-[100px]">创建人</TableHead>
                   <TableHead className="w-[160px]">开始时间</TableHead>
                   <TableHead className="w-[100px]">耗时</TableHead>
-                  <TableHead className="w-[140px]">操作</TableHead>
+                  <TableHead className="w-[140px] sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -423,7 +434,7 @@ export function BatchImportPage() {
                             : '-'}
                         </TableCell>
                         <TableCell>{formatDuration(batch.processing_duration)}</TableCell>
-                        <TableCell>
+                        <TableCell className="sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
                           <div className="flex items-center gap-1">
                             {batch.failed_count > 0 && (
                               <TooltipProvider>
@@ -482,53 +493,55 @@ export function BatchImportPage() {
                 )}
               </TableBody>
             </Table>
-          </CardContent>
+          </div>
+        </div>
 
-          {/* 分页 */}
-          <div className="border-t px-4 py-3 flex items-center justify-between shrink-0">
-            <span className="text-sm text-muted-foreground">
-              共 {totalCount} 条记录
-            </span>
-            <div className="flex items-center gap-2">
-              <Select
-                value={String(pagination.pageSize)}
-                onValueChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
+        {/* 分页 */}
+        <div className="flex items-center justify-between mt-auto">
+          <span className="text-sm text-muted-foreground">
+            共 {totalCount} 条记录
+          </span>
+          <div className="flex items-center space-x-2">
+            <Select
+              value={String(pagination.pageSize)}
+              onValueChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center space-x-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={pagination.page <= 1}
+                onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
               >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[10, 20, 50, 100].map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size} 条/页
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.page <= 1}
-                  onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
-                >
-                  上一页
-                </Button>
-                <span className="px-2 text-sm">
-                  第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
-                  onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
-                >
-                  下一页
-                </Button>
-              </div>
+                上一页
+              </Button>
+              <span className="px-2 text-sm">
+                {pagination.page} / {Math.ceil(totalCount / pagination.pageSize) || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
+                onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+              >
+                下一页
+              </Button>
             </div>
           </div>
-        </Card>
+        </div>
       </Main>
 
       {/* 弹窗组件 */}

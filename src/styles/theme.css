@@ -267,9 +267,16 @@
   --ring: oklch(0.852 0.199 91.936);
 }
 
-/* Lyra风格：无圆角，技术感强 */
+/* Lyra风格：无圆角，技术感强，使用默认字体大小 */
 :root.style-lyra {
   --radius: 0;
+
+  /* Lyra 使用与 Mira 相同的默认字体大小（覆盖任何继承） */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.8125rem;  /* 13px */
+  --font-size-base: 0.875rem; /* 14px */
+  --font-size-lg: 1rem;       /* 16px */
+  --font-size-xl: 1.125rem;   /* 18px */
 }
 
 /* Maia风格：柔和圆角，温暖友好，大字号体系 */

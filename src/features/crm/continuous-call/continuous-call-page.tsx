@@ -398,6 +398,8 @@ export function ContinuousCallPage() {
     setFollowupResult('')
     setFollowupContent('')
     setWechatAdded(false)
+    setNextFollowupAt('')
+    setSendToDingding(false)
     if (currentLead) {
       setIntentionLevel(
         (currentLead.intention_level as IntentionLevel) || IntentionLevel.MEDIUM
@@ -641,14 +643,38 @@ export function ContinuousCallPage() {
             </RadioGroup>
           </div>
 
-          {/* 添加微信 */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="wechat-added"
-              checked={wechatAdded}
-              onCheckedChange={(checked) => setWechatAdded(checked as boolean)}
+          {/* 下次回访时间 */}
+          <div>
+            <Label className="mb-2 block">下次回访时间</Label>
+            <DateTimePicker
+              value={nextFollowupAt}
+              onChange={(val) => setNextFollowupAt(val || '')}
+              placeholder="选择时间"
+              showQuickButtons={true}
             />
-            <Label htmlFor="wechat-added">已添加微信</Label>
+          </div>
+
+          {/* 复选框区域 */}
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="wechat-added"
+                checked={wechatAdded}
+                onCheckedChange={(checked) => setWechatAdded(checked as boolean)}
+              />
+              <Label htmlFor="wechat-added">已添加微信</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="send-dingding"
+                checked={sendToDingding}
+                onCheckedChange={(checked) => setSendToDingding(checked as boolean)}
+              />
+              <Label htmlFor="send-dingding" className="flex items-center gap-1">
+                <Send className="h-3 w-3" />
+                发送到钉钉群
+              </Label>
+            </div>
           </div>
 
           {/* 跟进内容 */}
@@ -658,7 +684,7 @@ export function ContinuousCallPage() {
               placeholder="输入跟进内容..."
               value={followupContent}
               onChange={(e) => setFollowupContent(e.target.value)}
-              rows={3}
+              rows={2}
             />
           </div>
         </CardContent>

@@ -7,10 +7,10 @@ import { apiClient } from '@/lib/api/client'
 import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
 import type {
   BatchImportItem,
-  ImportFailureItem,
   ActivatedLeadItem,
   BatchImportQueryParams,
   UploadOptions,
+  FailureListResponse,
 } from './types'
 
 /**
@@ -114,26 +114,15 @@ export const batchImportApi = {
   },
 
   /**
-   * 获取失败记录列表
+   * 获取失败记录列表（包含类型统计 type_counts）
    */
   async getFailureList(
     batchId: string,
     params: { page?: number; page_size?: number }
-  ): Promise<ApiResponse<PaginatedResponse<ImportFailureItem>>> {
-    return apiClient.get<ApiResponse<PaginatedResponse<ImportFailureItem>>>(
+  ): Promise<ApiResponse<FailureListResponse>> {
+    return apiClient.get<ApiResponse<FailureListResponse>>(
       `/lead-batch-import/failures/${batchId}`,
       { params }
-    )
-  },
-
-  /**
-   * 获取失败类型统计
-   */
-  async getFailureTypeCounts(
-    batchId: string
-  ): Promise<ApiResponse<Record<string, number>>> {
-    return apiClient.get<ApiResponse<Record<string, number>>>(
-      `/lead-batch-import/failures/${batchId}/type-counts`
     )
   },
 

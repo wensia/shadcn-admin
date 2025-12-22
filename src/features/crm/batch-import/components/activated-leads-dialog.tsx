@@ -39,6 +39,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
 import { batchImportApi } from '../api'
 import type { BatchImportItem, ActivatedLeadItem } from '../types'
 
@@ -55,6 +57,7 @@ function maskPhone(phone: string): string {
 }
 
 export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLeadsDialogProps) {
+  const s = useStyleClasses()
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 })
 
   // 重置分页状态
@@ -103,8 +106,8 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center justify-between pr-8">
             <span>激活线索 - {batch.batch_name}</span>
-            <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className={s.height.controlSm} onClick={handleDownload}>
+              <Download className={cn("mr-2", s.size.icon)} />
               下载激活线索
             </Button>
           </DialogTitle>
@@ -168,19 +171,19 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
                         : '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                      <div className={cn("flex flex-wrap", s.gap.buttons)}>
                         {item.status_change && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className={cn(s.height.badge, s.text.xs)}>
                             状态: {item.status_change}
                           </Badge>
                         )}
                         {item.campus_change && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className={cn(s.height.badge, s.text.xs)}>
                             校区: {item.campus_change}
                           </Badge>
                         )}
                         {item.advisor_change && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className={cn(s.height.badge, s.text.xs)}>
                             顾问: {item.advisor_change}
                           </Badge>
                         )}
@@ -196,21 +199,21 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
 
         {/* 分页 */}
         <div className="border-t pt-3 flex items-center justify-between shrink-0">
-          <span className="text-sm text-muted-foreground">
+          <span className={cn("text-muted-foreground", s.text.xs)}>
             共 {totalCount} 条激活线索
           </span>
-          <div className="flex items-center gap-2">
+          <div className={cn("flex items-center", s.gap.tight)}>
             <Select
               value={String(pagination.pageSize)}
               onValueChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
             >
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className={cn("w-[100px]", s.height.controlSm)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {[10, 20, 50, 100].map((size) => (
                   <SelectItem key={size} value={String(size)}>
-                    {size} 条/页
+                    {size}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -219,17 +222,19 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
               <Button
                 variant="outline"
                 size="sm"
+                className={s.height.controlSm}
                 disabled={pagination.page <= 1}
                 onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
               >
                 上一页
               </Button>
-              <span className="px-2 text-sm">
+              <span className={cn("px-2", s.text.xs)}>
                 第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className={s.height.controlSm}
                 disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
                 onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
               >

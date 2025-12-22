@@ -21,6 +21,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
 import { batchImportApi } from '../api'
 
 interface UploadDialogProps {
@@ -30,6 +32,7 @@ interface UploadDialogProps {
 }
 
 export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProps) {
+  const s = useStyleClasses()
   const [file, setFile] = useState<File | null>(null)
   const [batchDescription, setBatchDescription] = useState('')
   const [startRow, setStartRow] = useState<number | ''>('')
@@ -213,6 +216,7 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
                 placeholder="默认从第2行开始"
                 value={startRow}
                 onChange={(e) => setStartRow(e.target.value ? Number(e.target.value) : '')}
+                className={s.height.controlSm}
               />
               <p className="text-xs text-muted-foreground">跳过表头的行数</p>
             </div>
@@ -225,6 +229,7 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
                 placeholder="默认导入全部"
                 value={importCount}
                 onChange={(e) => setImportCount(e.target.value ? Number(e.target.value) : '')}
+                className={s.height.controlSm}
               />
               <p className="text-xs text-muted-foreground">限制导入的记录数</p>
             </div>
@@ -243,18 +248,18 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={uploadMutation.isPending}>
+          <Button variant="outline" size="sm" className={s.height.controlSm} onClick={handleClose} disabled={uploadMutation.isPending}>
             取消
           </Button>
-          <Button onClick={handleSubmit} disabled={!file || uploadMutation.isPending}>
+          <Button size="sm" className={s.height.controlSm} onClick={handleSubmit} disabled={!file || uploadMutation.isPending}>
             {uploadMutation.isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className={cn("mr-2 animate-spin", s.size.icon)} />
                 上传中
               </>
             ) : (
               <>
-                <Upload className="mr-2 h-4 w-4" />
+                <Upload className={cn("mr-2", s.size.icon)} />
                 上传
               </>
             )}
