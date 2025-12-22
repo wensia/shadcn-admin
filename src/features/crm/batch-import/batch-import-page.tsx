@@ -257,22 +257,23 @@ export function BatchImportPage() {
             <p className="text-muted-foreground">管理线索批量导入任务</p>
           </div>
           <div className="flex gap-2">
-            <Button className="space-x-1" onClick={() => setUploadDialogOpen(true)}>
-              <span>上传文件</span>
-              <Upload size={18} />
+            <Button size="sm" className="h-8" onClick={() => setUploadDialogOpen(true)}>
+              上传文件
+              <Upload className="ml-1 h-4 w-4" />
             </Button>
-            <Button variant="outline" className="space-x-1" onClick={handleDownloadTemplate}>
-              <span>下载模板</span>
-              <Download size={18} />
+            <Button variant="outline" size="sm" className="h-8" onClick={handleDownloadTemplate}>
+              下载模板
+              <Download className="ml-1 h-4 w-4" />
             </Button>
             <Button
               variant="destructive"
-              className="space-x-1"
+              size="sm"
+              className="h-8"
               onClick={handleDeleteProcessingBatches}
               disabled={!hasProcessingBatches}
             >
-              <span>删除处理中批次</span>
-              <Trash2 size={18} />
+              删除处理中批次
+              <Trash2 className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
