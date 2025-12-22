@@ -21,7 +21,7 @@ import {
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
-import { Cross2Icon } from '@radix-ui/react-icons'
+import { Cross2Icon, MixerHorizontalIcon } from '@radix-ui/react-icons'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 import { batchImportApi } from './api'
 import type {
@@ -82,6 +90,28 @@ const methodOptions = [
   { value: 'manual', label: '手动' },
   { value: 'api', label: 'API' },
 ]
+
+// 列定义
+const columnDefs = [
+  { id: 'batch_name', label: '批次名称', defaultVisible: true },
+  { id: 'import_method', label: '导入方式', defaultVisible: true },
+  { id: 'import_source_file', label: '文件名', defaultVisible: false },
+  { id: 'total_count', label: '总数量', defaultVisible: true },
+  { id: 'success_count', label: '成功数', defaultVisible: true },
+  { id: 'activated_count', label: '激活数', defaultVisible: true },
+  { id: 'failed_count', label: '失败数', defaultVisible: true },
+  { id: 'success_rate', label: '成功率', defaultVisible: true },
+  { id: 'status', label: '状态', defaultVisible: true },
+  { id: 'created_by_name', label: '创建人', defaultVisible: true },
+  { id: 'started_at', label: '开始时间', defaultVisible: true },
+  { id: 'processing_duration', label: '耗时', defaultVisible: true },
+]
+
+// 默认列可见性
+const defaultColumnVisibility = columnDefs.reduce((acc, col) => {
+  acc[col.id] = col.defaultVisible
+  return acc
+}, {} as Record<string, boolean>)
 
 // 格式化处理耗时
 function formatDuration(seconds?: number): string {
@@ -129,6 +159,9 @@ export function BatchImportPage() {
   const [statusFilter, setStatusFilter] = useState<BatchStatus[]>([])
   const [methodFilter, setMethodFilter] = useState<ImportMethod[]>([])
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 })
+
+  // 列可见性状态
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(defaultColumnVisibility)
 
   // 弹窗状态
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
@@ -316,9 +349,34 @@ export function BatchImportPage() {
               </Button>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  <MixerHorizontalIcon className="mr-1.5 h-3.5 w-3.5" />
+                  列
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[150px]">
+                <DropdownMenuLabel>显示列</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {columnDefs.map((col) => (
+                  <DropdownMenuCheckboxItem
+                    key={col.id}
+                    checked={columnVisibility[col.id]}
+                    onCheckedChange={(checked) =>
+                      setColumnVisibility((prev) => ({ ...prev, [col.id]: checked }))
+                    }
+                  >
+                    {col.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         {/* 数据表格 */}
@@ -327,31 +385,31 @@ export function BatchImportPage() {
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead className="w-[160px]">批次名称</TableHead>
-                  <TableHead className="w-[120px]">导入方式</TableHead>
-                  <TableHead className="w-[160px]">文件名</TableHead>
-                  <TableHead className="w-[80px] text-right">总数量</TableHead>
-                  <TableHead className="w-[80px] text-right">成功数</TableHead>
-                  <TableHead className="w-[80px] text-right">激活数</TableHead>
-                  <TableHead className="w-[80px] text-right">失败数</TableHead>
-                  <TableHead className="w-[120px]">成功率</TableHead>
-                  <TableHead className="w-[100px]">状态</TableHead>
-                  <TableHead className="w-[100px]">创建人</TableHead>
-                  <TableHead className="w-[160px]">开始时间</TableHead>
-                  <TableHead className="w-[100px]">耗时</TableHead>
+                  {columnVisibility.batch_name && <TableHead className="w-[160px]">批次名称</TableHead>}
+                  {columnVisibility.import_method && <TableHead className="w-[120px]">导入方式</TableHead>}
+                  {columnVisibility.import_source_file && <TableHead className="w-[160px]">文件名</TableHead>}
+                  {columnVisibility.total_count && <TableHead className="w-[80px] text-right">总数量</TableHead>}
+                  {columnVisibility.success_count && <TableHead className="w-[80px] text-right">成功数</TableHead>}
+                  {columnVisibility.activated_count && <TableHead className="w-[80px] text-right">激活数</TableHead>}
+                  {columnVisibility.failed_count && <TableHead className="w-[80px] text-right">失败数</TableHead>}
+                  {columnVisibility.success_rate && <TableHead className="w-[120px]">成功率</TableHead>}
+                  {columnVisibility.status && <TableHead className="w-[100px]">状态</TableHead>}
+                  {columnVisibility.created_by_name && <TableHead className="w-[100px]">创建人</TableHead>}
+                  {columnVisibility.started_at && <TableHead className="w-[160px]">开始时间</TableHead>}
+                  {columnVisibility.processing_duration && <TableHead className="w-[100px]">耗时</TableHead>}
                   <TableHead className="w-[140px] sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="h-24 text-center">
+                    <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 1} className="h-24 text-center">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : batchList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 1} className="h-24 text-center text-muted-foreground">
                       暂无数据
                     </TableCell>
                   </TableRow>
@@ -362,60 +420,84 @@ export function BatchImportPage() {
                       : 0
                     return (
                       <TableRow key={batch.id}>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="truncate block max-w-[150px]">
-                                  {batch.batch_name}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{batch.batch_name}</p>
-                                {batch.batch_description && (
-                                  <p className="text-muted-foreground">{batch.batch_description}</p>
-                                )}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          <MethodBadge method={batch.import_method} />
-                        </TableCell>
-                        <TableCell>
-                          <span className="truncate block max-w-[150px]">
-                            {batch.import_source_file || '-'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">{batch.total_count}</TableCell>
-                        <TableCell className="text-right text-green-600">
-                          {batch.success_count}
-                        </TableCell>
-                        <TableCell className="text-right text-yellow-600">
-                          {batch.activated_count}
-                        </TableCell>
-                        <TableCell className="text-right text-red-600">
-                          {batch.failed_count}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress
-                              value={successRate}
-                              className="h-2 w-16"
-                            />
-                            <span className="text-xs">{successRate}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={batch.status} />
-                        </TableCell>
-                        <TableCell>{batch.created_by_name}</TableCell>
-                        <TableCell>
-                          {batch.started_at
-                            ? format(new Date(batch.started_at), 'yyyy-MM-dd HH:mm')
-                            : '-'}
-                        </TableCell>
-                        <TableCell>{formatDuration(batch.processing_duration)}</TableCell>
+                        {columnVisibility.batch_name && (
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="truncate block max-w-[150px]">
+                                    {batch.batch_name}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{batch.batch_name}</p>
+                                  {batch.batch_description && (
+                                    <p className="text-muted-foreground">{batch.batch_description}</p>
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                        )}
+                        {columnVisibility.import_method && (
+                          <TableCell>
+                            <MethodBadge method={batch.import_method} />
+                          </TableCell>
+                        )}
+                        {columnVisibility.import_source_file && (
+                          <TableCell>
+                            <span className="truncate block max-w-[150px]">
+                              {batch.import_source_file || '-'}
+                            </span>
+                          </TableCell>
+                        )}
+                        {columnVisibility.total_count && (
+                          <TableCell className="text-right">{batch.total_count}</TableCell>
+                        )}
+                        {columnVisibility.success_count && (
+                          <TableCell className="text-right text-green-600">
+                            {batch.success_count}
+                          </TableCell>
+                        )}
+                        {columnVisibility.activated_count && (
+                          <TableCell className="text-right text-yellow-600">
+                            {batch.activated_count}
+                          </TableCell>
+                        )}
+                        {columnVisibility.failed_count && (
+                          <TableCell className="text-right text-red-600">
+                            {batch.failed_count}
+                          </TableCell>
+                        )}
+                        {columnVisibility.success_rate && (
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Progress
+                                value={successRate}
+                                className="h-2 w-16"
+                              />
+                              <span className="text-xs">{successRate}%</span>
+                            </div>
+                          </TableCell>
+                        )}
+                        {columnVisibility.status && (
+                          <TableCell>
+                            <StatusBadge status={batch.status} />
+                          </TableCell>
+                        )}
+                        {columnVisibility.created_by_name && (
+                          <TableCell>{batch.created_by_name}</TableCell>
+                        )}
+                        {columnVisibility.started_at && (
+                          <TableCell>
+                            {batch.started_at
+                              ? format(new Date(batch.started_at), 'yyyy-MM-dd HH:mm')
+                              : '-'}
+                          </TableCell>
+                        )}
+                        {columnVisibility.processing_duration && (
+                          <TableCell>{formatDuration(batch.processing_duration)}</TableCell>
+                        )}
                         <TableCell className="sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
                           <div className="flex items-center gap-1">
                             {batch.failed_count > 0 && (
