@@ -251,35 +251,7 @@ export function BatchImportPage() {
       </Header>
 
       <Main fixed className="flex flex-1 flex-col gap-4">
-        {/* 标题行：左边标题，右边操作按钮 */}
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">批量导入记录</h2>
-            <p className="text-muted-foreground">管理线索批量导入任务</p>
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" className="h-8" onClick={() => setUploadDialogOpen(true)}>
-              上传文件
-              <Upload className="ml-1 h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" className="h-8" onClick={handleDownloadTemplate}>
-              下载模板
-              <Download className="ml-1 h-4 w-4" />
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-8"
-              onClick={handleDeleteProcessingBatches}
-              disabled={!hasProcessingBatches}
-            >
-              删除处理中批次
-              <Trash2 className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* 筛选工具栏 */}
+        {/* 工具栏：左侧筛选，右侧操作按钮 */}
         <div className="flex items-center justify-between">
           <div className="flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2">
             <Input
@@ -322,9 +294,29 @@ export function BatchImportPage() {
               </Button>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button size="sm" className="h-8" onClick={() => setUploadDialogOpen(true)}>
+              上传文件
+              <Upload className="ml-1 h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" className="h-8" onClick={handleDownloadTemplate}>
+              下载模板
+              <Download className="ml-1 h-4 w-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-8"
+              onClick={handleDeleteProcessingBatches}
+              disabled={!hasProcessingBatches}
+            >
+              删除处理中批次
+              <Trash2 className="ml-1 h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         {/* 数据表格 */}
