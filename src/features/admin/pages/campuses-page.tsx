@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, Building2, Filter } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Building2, Filter, RefreshCw } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -450,6 +450,9 @@ export function CampusesPage() {
           </Select>
           <Button variant="outline" onClick={handleSearch}>
             搜索
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
 

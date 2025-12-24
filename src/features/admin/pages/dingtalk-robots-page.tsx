@@ -13,7 +13,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Bot, Plus, Pencil, Trash2, Search, Play, CheckCircle, AlertCircle, X } from 'lucide-react'
+import { Bot, Plus, Pencil, Trash2, Search, Play, CheckCircle, AlertCircle, X, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Main } from '@/components/layout/main'
@@ -159,7 +159,7 @@ export function DingtalkRobotsPage() {
   const securityType = form.watch('security_type')
 
   // 查询数据
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-dingtalk-robots', page, pageSize, searchValue],
     queryFn: async () => {
       const response = await dingtalkRobotsApi.list({
@@ -507,6 +507,9 @@ export function DingtalkRobotsPage() {
           </div>
           <Button variant="outline" onClick={handleSearch}>
             搜索
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
 

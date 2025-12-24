@@ -25,6 +25,7 @@ import {
   Info,
   Bot,
   Building2,
+  RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -170,7 +171,7 @@ export function WebhookHooksPage() {
   })
 
   // 查询钩子列表
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-webhook-hooks', searchValue, statusFilter],
     queryFn: async () => {
       const params: { search?: string; is_active?: boolean } = {}
@@ -633,6 +634,9 @@ export function WebhookHooksPage() {
           </Select>
           <Button variant="outline" onClick={handleSearch}>
             搜索
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
 
