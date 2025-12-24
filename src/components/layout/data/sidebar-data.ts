@@ -1,7 +1,6 @@
 import {
   Users,
   FileUp,
-  Phone,
   Calendar,
   BarChart3,
   Home,
@@ -48,11 +47,6 @@ export const crmNavGroups: NavGroup[] = [
         title: '批量导入',
         url: '/crm/batch-import',
         icon: FileUp,
-      },
-      {
-        title: '批次回访池',
-        url: '/crm/lead-pools',
-        icon: Phone,
       },
       {
         title: '数据统计',
