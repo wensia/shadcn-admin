@@ -244,20 +244,20 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
-        {/* Mira风格: 紧凑的Dialog Header */}
-        <DialogHeader className="px-4 py-3 border-b shrink-0">
-          <DialogTitle className="text-base">{isEdit ? '编辑线索' : '新建线索'}</DialogTitle>
-          <DialogDescription className="text-xs">
-            {isEdit ? '修改线索信息' : '填写完整信息创建新线索'}
-          </DialogDescription>
-        </DialogHeader>
-
+      <DialogContent className="max-w-2xl p-0" showCloseButton={false}>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-            {/* Mira风格: 紧凑的表单内容区 */}
-            <ScrollArea className="flex-1 min-h-0 px-4">
-              <div className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            {/* Mira风格: 紧凑的Dialog Header */}
+            <DialogHeader className="px-4 py-3 border-b">
+              <DialogTitle className="text-base">{isEdit ? '编辑线索' : '新建线索'}</DialogTitle>
+              <DialogDescription className="text-xs">
+                {isEdit ? '修改线索信息' : '填写完整信息创建新线索'}
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* 可滚动表单区域 - 使用固定最大高度 */}
+            <ScrollArea className="max-h-[calc(85vh-140px)]">
+              <div className="space-y-4 py-4 px-4">
                 {/* 儿童信息 */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold">儿童信息</h3>
@@ -718,7 +718,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
             </ScrollArea>
 
             {/* Mira风格: 紧凑的Dialog Footer */}
-            <DialogFooter className="px-4 py-3 border-t gap-2 shrink-0">
+            <DialogFooter className="px-4 py-3 border-t gap-2">
               <Button
                 type="button"
                 variant="outline"
