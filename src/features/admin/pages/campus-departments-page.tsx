@@ -447,15 +447,16 @@ export function CampusDepartmentsPage() {
 
       {/* 创建对话框 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>添加校区部门配置</DialogTitle>
             <DialogDescription>
               为校区添加部门，建立校区与部门的关联关系
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto px-6 space-y-4">
               <FormField
                 control={form.control}
                 name="campus_id"
@@ -531,7 +532,8 @@ export function CampusDepartmentsPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              </div>
+              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
                 <Button
                   type="button"
                   variant="outline"

@@ -66,7 +66,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { sourceChannelApi } from '../api'
@@ -593,8 +592,8 @@ export function SourceChannelsPage() {
 
       {/* 创建/编辑对话框 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>
               {editingItem ? '编辑来源渠道' : '新建来源渠道'}
             </DialogTitle>
@@ -605,9 +604,9 @@ export function SourceChannelsPage() {
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 overflow-hidden">
-              <ScrollArea className="flex-1 pr-4">
-                <div className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto px-6">
+                <div className="space-y-4 pb-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -871,9 +870,9 @@ export function SourceChannelsPage() {
                 </CollapsibleContent>
               </Collapsible>
                 </div>
-              </ScrollArea>
+              </div>
 
-              <DialogFooter className="mt-4 pt-4 border-t">
+              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
                 <Button
                   type="button"
                   variant="outline"

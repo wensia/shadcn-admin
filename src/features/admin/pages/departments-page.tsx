@@ -445,15 +445,16 @@ export function DepartmentsPage() {
 
       {/* 创建/编辑对话框 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>{editingItem ? '编辑部门' : '新建部门'}</DialogTitle>
             <DialogDescription>
               {editingItem ? '修改部门信息' : '创建一个新的部门'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto px-6 space-y-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -522,7 +523,8 @@ export function DepartmentsPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              </div>
+              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
                 <Button
                   type="button"
                   variant="outline"

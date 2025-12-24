@@ -154,6 +154,94 @@ className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl"
 className="w-full sm:max-w-lg"
 ```
 
+## Dialog 内容滚动规范
+
+**重要：当 Dialog 内容（表单、列表等）可能超出视口高度时，必须正确处理滚动**
+
+### 问题场景
+
+Dialog 内的表单字段较多时，内容可能超出弹窗高度。如果不正确处理，会导致：
+- 内容被截断无法查看
+- 无法滚动到底部的提交按钮
+- 用户体验差
+
+### 正确的 Dialog 滚动模式
+
+```tsx
+<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  {/*
+    关键配置：
+    1. max-h-[90vh] 限制最大高度
+    2. p-0 移除默认内边距（内边距移到各区域内部）
+    3. flex flex-col 使用 flex 列布局
+  */}
+  <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 flex flex-col">
+    {/* DialogHeader 固定在顶部 */}
+    <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+      <DialogTitle>标题</DialogTitle>
+      <DialogDescription>描述文本</DialogDescription>
+    </DialogHeader>
+
+    {/* 表单使用 flex 布局 */}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
+        {/* 可滚动内容区域 */}
+        <div className="flex-1 overflow-y-auto px-6 space-y-4">
+          {/* 表单字段 */}
+          <FormField ... />
+          <FormField ... />
+        </div>
+
+        {/* DialogFooter 固定在底部 */}
+        <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
+          <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+            取消
+          </Button>
+          <Button type="submit">保存</Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  </DialogContent>
+</Dialog>
+```
+
+### 关键 CSS 类说明
+
+| 类名 | 用途 |
+|------|------|
+| `max-h-[90vh]` | 限制 Dialog 最大高度为视口的 90% |
+| `p-0` | 移除 DialogContent 默认内边距 |
+| `flex flex-col` | DialogContent 使用 flex 列布局 |
+| `shrink-0` | Header/Footer 不缩小，保持固定 |
+| `flex-1 min-h-0` | form 占据剩余空间，允许收缩 |
+| `overflow-y-auto` | 内容区域可垂直滚动 |
+| `px-6 pt-6 pb-4` | Header 内边距 |
+| `px-6 pb-6 pt-4` | Footer 内边距 |
+| `border-t` | Footer 顶部分隔线 |
+
+### 错误做法
+
+```tsx
+// 使用 overflow-hidden - 会截断内容无法滚动
+<DialogContent className="overflow-hidden">
+
+// 不使用 p-0 同时又用 flex 布局 - 内边距计算问题
+<DialogContent className="flex flex-col">
+
+// 忘记给 Header/Footer 添加 shrink-0 - 会被压缩
+<DialogHeader>
+
+// 忘记给 form 添加 min-h-0 - 无法正确计算高度
+<form className="flex flex-col flex-1">
+```
+
+### 适用范围
+
+此规范适用于所有包含表单的 Dialog：
+- 创建/编辑表单弹窗
+- 设置配置弹窗
+- 任何内容可能超出视口高度的 Dialog
+
 ## Badge 状态样式
 
 使用全局状态样式配置：
