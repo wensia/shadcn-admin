@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useState, useEffect } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ChevronDown } from 'lucide-react'
 import {
   Collapsible,
   CollapsibleContent,
@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/collapsible'
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -33,27 +32,100 @@ import {
   type NavGroup as NavGroupProps,
 } from './types'
 
+// 用于存储分类折叠状态的 localStorage key
+const COLLAPSED_GROUPS_KEY = 'sidebar_collapsed_groups'
+
+// 获取已折叠的分类
+function getCollapsedGroups(): string[] {
+  try {
+    const stored = localStorage.getItem(COLLAPSED_GROUPS_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+// 保存已折叠的分类
+function saveCollapsedGroups(groups: string[]) {
+  try {
+    localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify(groups))
+  } catch {
+    // ignore
+  }
+}
+
 export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const href = useLocation({ select: (location) => location.href })
+
+  // 检查当前分类下是否有活动的菜单项
+  const hasActiveItem = items.some(item => checkIsActive(href, item, true))
+
+  // 分类折叠状态
+  const [isOpen, setIsOpen] = useState(() => {
+    // 如果有活动项，默认展开
+    if (hasActiveItem) return true
+    // 否则检查 localStorage
+    const collapsed = getCollapsedGroups()
+    return !collapsed.includes(title)
+  })
+
+  // 当活动项变化时（路由切换），自动展开对应分类
+  // 注意：不要将 isOpen 加入依赖，否则会阻止用户手动折叠
+  useEffect(() => {
+    if (hasActiveItem) {
+      setIsOpen(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasActiveItem])
+
+  // 切换折叠状态
+  const handleToggle = (open: boolean) => {
+    setIsOpen(open)
+    const collapsed = getCollapsedGroups()
+    if (open) {
+      // 移除当前分类
+      saveCollapsedGroups(collapsed.filter(g => g !== title))
+    } else {
+      // 添加当前分类
+      if (!collapsed.includes(title)) {
+        saveCollapsedGroups([...collapsed, title])
+      }
+    }
+  }
+
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{title}</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) => {
-          const key = `${item.title}-${item.url}`
+      <Collapsible open={isOpen} onOpenChange={handleToggle}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex h-8 w-full shrink-0 items-center justify-between rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-colors duration-200 hover:bg-sidebar-accent/50 focus-visible:ring-2 select-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0"
+          >
+            <span>{title}</span>
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-sidebar-foreground/50 transition-transform duration-200 ${!isOpen ? '-rotate-90' : ''}`}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenu>
+            {items.map((item) => {
+              const key = `${item.title}-${item.url}`
 
-          if (!item.items)
-            return <SidebarMenuLink key={key} item={item} href={href} />
+              if (!item.items)
+                return <SidebarMenuLink key={key} item={item} href={href} />
 
-          if (state === 'collapsed' && !isMobile)
-            return (
-              <SidebarMenuCollapsedDropdown key={key} item={item} href={href} />
-            )
+              if (state === 'collapsed' && !isMobile)
+                return (
+                  <SidebarMenuCollapsedDropdown key={key} item={item} href={href} />
+                )
 
-          return <SidebarMenuCollapsible key={key} item={item} href={href} />
-        })}
-      </SidebarMenu>
+              return <SidebarMenuCollapsible key={key} item={item} href={href} />
+            })}
+          </SidebarMenu>
+        </CollapsibleContent>
+      </Collapsible>
     </SidebarGroup>
   )
 }

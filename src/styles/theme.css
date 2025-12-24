@@ -267,33 +267,14 @@
   --ring: oklch(0.852 0.199 91.936);
 }
 
-/* Lyra风格：无圆角，技术感强，使用默认字体大小 */
+/* Lyra风格：无圆角，方正锐利，适合等宽字体 */
 :root.style-lyra {
   --radius: 0;
-
-  /* Lyra 使用与 Mira 相同的默认字体大小（覆盖任何继承） */
-  --font-size-xs: 0.75rem;    /* 12px */
-  --font-size-sm: 0.8125rem;  /* 13px */
-  --font-size-base: 0.875rem; /* 14px */
-  --font-size-lg: 1rem;       /* 16px */
-  --font-size-xl: 1.125rem;   /* 18px */
 }
 
-/* Maia风格：柔和圆角，温暖友好，大字号体系 */
+/* Maia风格：大圆角，柔和圆润，间距宽松 */
 :root.style-maia {
   --radius: 0.75rem;  /* 12px - 大圆角 */
-
-  /* Maia专属字体大小 - 温暖友好的大字号 */
-  --font-size-xs: 0.875rem;   /* 14px - 最小字号更易读 */
-  --font-size-sm: 1rem;       /* 16px - 舒适阅读 */
-  --font-size-base: 1.125rem; /* 18px - 正文主字号 */
-  --font-size-lg: 1.25rem;    /* 20px - 标题字号 */
-
-  /* 行高: 1.5倍字体大小(WCAG可读性标准) */
-  --line-height-xs: 1.5;
-  --line-height-sm: 1.5;
-  --line-height-base: 1.5;
-  --line-height-lg: 1.5;
 }
 
 @theme inline {

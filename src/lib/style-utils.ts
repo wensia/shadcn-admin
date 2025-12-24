@@ -40,9 +40,9 @@ export const styleClasses = {
   },
   lyra: {
     text: {
-      xs: 'text-sm',      // 14px (原 12px，增大 2px)
-      sm: 'text-base',    // 16px (原 14px，增大 2px)
-      base: 'text-lg',    // 18px (原 16px，增大 2px)
+      xs: 'text-xs',      // 12px - 标准大小
+      sm: 'text-sm',      // 14px - 标准大小
+      base: 'text-sm',    // 14px - 标准大小
     },
     height: {
       control: 'h-9',
@@ -51,50 +51,49 @@ export const styleClasses = {
     },
     gap: {
       tight: 'gap-2',
-      normal: 'gap-3',
-      buttons: 'gap-1',    // 按钮组间距
+      normal: 'gap-2.5',  // 略宽松
+      buttons: 'gap-1',   // 按钮组间距
     },
-    rounded: 'rounded-none',
+    rounded: 'rounded-none',  // 无圆角 - 方正锐利
     padding: {
       cell: 'py-2 px-3',
-      button: 'px-2.5',    // 按钮内边距
-      ellipsis: 'px-2',    // 省略号内边距
+      button: 'px-2.5',
+      ellipsis: 'px-2',
     },
     size: {
-      icon: 'h-4 w-4',       // 图标尺寸
-      button: 'w-8',         // 按钮尺寸
-      buttonMin: 'min-w-8',  // 按钮最小尺寸
-      divider: 'h-7',        // 分隔线高度
+      icon: 'h-4 w-4',
+      button: 'w-8',
+      buttonMin: 'min-w-8',
+      divider: 'h-7',
     },
   },
   maia: {
     text: {
-      xs: 'text-sm',      // 14px - 友好可读
-      sm: 'text-base',    // 16px - 舒适阅读
-      base: 'text-lg',    // 18px - 温暖友好
-      lg: 'text-xl',      // 20px - 醒目标题
+      xs: 'text-xs',      // 12px - 标准大小
+      sm: 'text-sm',      // 14px - 标准大小
+      base: 'text-base',  // 16px - 标准大小
     },
     height: {
-      control: 'h-8',     // 32px - 与导出按钮一致
-      controlSm: 'h-7',   // 28px - 次级控件
-      badge: 'h-5',       // 20px - 标签高度
+      control: 'h-9',     // 36px - 舒适高度
+      controlSm: 'h-8',   // 32px - 次级控件
+      badge: 'h-6',       // 24px - 标签高度
     },
     gap: {
-      tight: 'gap-3',     // 12px - 紧凑舒适
-      normal: 'gap-4',    // 16px - 适度呼吸感
-      buttons: 'gap-1.5', // 按钮组间距 - 6px
+      tight: 'gap-2',     // 8px - 紧凑
+      normal: 'gap-3',    // 12px - 宽松间距
+      buttons: 'gap-1.5', // 6px - 按钮组间距
     },
-    rounded: 'rounded-lg', // 保持大圆角，保留 maia 友好特征
+    rounded: 'rounded-lg',  // 大圆角 - 柔和圆润
     padding: {
-      cell: 'py-2 px-3',  // 8px/12px - 紧凑的单元格内边距
-      button: 'px-2.5',   // 按钮内边距 - 10px
-      ellipsis: 'px-1.5', // 省略号内边距 - 6px
+      cell: 'py-2 px-3',
+      button: 'px-3',     // 12px - 宽松内边距
+      ellipsis: 'px-2',
     },
     size: {
-      icon: 'h-4 w-4',       // 图标尺寸 - 16px
-      button: 'w-8',         // 按钮尺寸 - 32px
-      buttonMin: 'min-w-8',  // 按钮最小尺寸 - 32px
-      divider: 'h-6',        // 分隔线高度 - 24px
+      icon: 'h-4 w-4',
+      button: 'w-9',      // 36px - 舒适尺寸
+      buttonMin: 'min-w-9',
+      divider: 'h-7',
     },
   },
 } as const
