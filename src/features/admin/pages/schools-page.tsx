@@ -54,7 +54,7 @@ import {
 } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { SimplePagination } from '@/components/simple-pagination'
+import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { adminApi } from '../api'
 import type { SchoolItem } from '../types'
 

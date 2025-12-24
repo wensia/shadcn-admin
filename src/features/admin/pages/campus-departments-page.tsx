@@ -60,7 +60,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SimplePagination } from '@/components/simple-pagination'
+import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { adminApi } from '../api'
 import type { CampusDepartmentItem, CampusDepartmentCreate } from '../types'
 import { StatusBadge } from '../components/status-badge'

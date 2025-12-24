@@ -61,7 +61,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SimplePagination } from '@/components/simple-pagination'
+import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { adminApi } from '../api'
 import type { AreaItem, AreaCreate, AreaUpdate } from '../types'
 import { StatusBadge } from '../components/status-badge'
