@@ -764,25 +764,29 @@ export const leadAccessStatsApi = {
       ? `/lead-access-stats/advisor-statistics?${params.toString()}`
       : '/lead-access-stats/advisor-statistics'
 
-    return apiClient.get<{
+    const response = await apiClient.get<ApiResponse<{
       statistics: AdvisorAccessStatistics[]
       summary: AccessStatisticsSummary
-    }>(url)
+    }>>(url)
+    return response.data
   },
 
   /** 批量更新访问限制 */
   async batchUpdateAccessLimits(updates: BatchUpdateLimit[]): Promise<{ update_count: number }> {
-    return apiClient.put<{ update_count: number }>('/lead-access-stats/access-limits', updates)
+    const response = await apiClient.put<ApiResponse<{ update_count: number }>>('/lead-access-stats/access-limits', updates)
+    return response.data
   },
 
   /** 获取用户访问限制 */
   async getUserAccessLimit(userId: string): Promise<UserAccessLimit> {
-    return apiClient.get<UserAccessLimit>(`/lead-access-stats/user/${userId}/limit`)
+    const response = await apiClient.get<ApiResponse<UserAccessLimit>>(`/lead-access-stats/user/${userId}/limit`)
+    return response.data
   },
 
   /** 设置用户访问限制 */
   async setUserAccessLimit(userId: string, dailyLimit: number): Promise<UserAccessLimit> {
-    return apiClient.put<UserAccessLimit>(`/lead-access-stats/user/${userId}/limit`, dailyLimit)
+    const response = await apiClient.put<ApiResponse<UserAccessLimit>>(`/lead-access-stats/user/${userId}/limit`, dailyLimit)
+    return response.data
   },
 
   /** 获取访问日志 */
@@ -806,12 +810,13 @@ export const leadAccessStatsApi = {
       ? `/lead-access-stats/access-logs?${params.toString()}`
       : '/lead-access-stats/access-logs'
 
-    return apiClient.get<{
+    const response = await apiClient.get<ApiResponse<{
       items: AccessLog[]
       total: number
       page: number
       size: number
-    }>(url)
+    }>>(url)
+    return response.data
   },
 }
 
