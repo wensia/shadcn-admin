@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore } from '@/stores/auth-store'
 import { adminApi } from '../api'
 import type { AdminStats } from '../types'
 
