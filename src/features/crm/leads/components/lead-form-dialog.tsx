@@ -244,9 +244,9 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
         {/* Mira风格: 紧凑的Dialog Header */}
-        <DialogHeader className="px-4 py-3 border-b">
+        <DialogHeader className="px-4 py-3 border-b shrink-0">
           <DialogTitle className="text-base">{isEdit ? '编辑线索' : '新建线索'}</DialogTitle>
           <DialogDescription className="text-xs">
             {isEdit ? '修改线索信息' : '填写完整信息创建新线索'}
@@ -254,9 +254,9 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
             {/* Mira风格: 紧凑的表单内容区 */}
-            <ScrollArea className="flex-1 px-4">
+            <ScrollArea className="flex-1 min-h-0 px-4">
               <div className="space-y-4 py-4">
                 {/* 儿童信息 */}
                 <div className="space-y-3">
@@ -718,7 +718,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
             </ScrollArea>
 
             {/* Mira风格: 紧凑的Dialog Footer */}
-            <DialogFooter className="px-4 py-3 border-t gap-2">
+            <DialogFooter className="px-4 py-3 border-t gap-2 shrink-0">
               <Button
                 type="button"
                 variant="outline"
