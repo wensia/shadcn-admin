@@ -210,16 +210,6 @@ export function LeadAccessStatsPage() {
         },
       },
       {
-        accessorKey: 'username',
-        header: '用户名',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-24" />
-          }
-          return row.original.username
-        },
-      },
-      {
         accessorKey: 'campus_name',
         header: '所属校区',
         cell: ({ row }) => {
@@ -230,16 +220,6 @@ export function LeadAccessStatsPage() {
         },
       },
       {
-        accessorKey: 'area_name',
-        header: '区域',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          return row.original.area_name || '-'
-        },
-      },
-      {
         accessorKey: 'district_name',
         header: '地区',
         cell: ({ row }) => {
@@ -247,16 +227,6 @@ export function LeadAccessStatsPage() {
             return <Skeleton className="h-4 w-20" />
           }
           return row.original.district_name || '-'
-        },
-      },
-      {
-        accessorKey: 'region_name',
-        header: '大区',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          return row.original.region_name || '-'
         },
       },
       {
@@ -426,11 +396,8 @@ export function LeadAccessStatsPage() {
     try {
       const headers = [
         '顾问姓名',
-        '用户名',
         '所属校区',
-        '区域',
         '地区',
-        '大区',
         '查看线索数',
         '总访问次数',
         '每日限制',
@@ -439,11 +406,8 @@ export function LeadAccessStatsPage() {
 
       const rows = filteredData.map((item) => [
         item.user_name,
-        item.username,
         item.campus_name,
-        item.area_name || '-',
         item.district_name || '-',
-        item.region_name || '-',
         item.view_count.toString(),
         item.total_access.toString(),
         item.daily_limit.toString(),
