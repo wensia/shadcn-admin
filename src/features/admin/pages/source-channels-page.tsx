@@ -14,7 +14,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, Share2, Filter, X, ChevronDown, Settings2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Share2, Filter, X, Settings2 } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,9 +64,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { sourceChannelApi } from '../api'
 import type { SourceChannel } from '../types'
@@ -133,9 +132,6 @@ export function SourceChannelsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<SourceChannel | null>(null)
   const [deletingItem, setDeletingItem] = useState<SourceChannel | null>(null)
-
-  // 额外字段配置折叠状态
-  const [extraFieldsOpen, setExtraFieldsOpen] = useState(true)
 
   // 表单
   const form = useForm<FormData>({
@@ -605,272 +601,283 @@ export function SourceChannelsPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6">
-                <div className="space-y-4 pb-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>渠道名称</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入渠道名称" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>渠道分类</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择渠道分类" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {CHANNEL_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>描述</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="请输入描述（可选）"
-                        className="resize-none"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sort_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>排序值</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="请输入排序值"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>启用状态</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        设置该渠道是否启用
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {/* 额外字段配置 */}
-              <Separator className="my-4" />
-              <Collapsible open={extraFieldsOpen} onOpenChange={setExtraFieldsOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-transparent">
-                    <div className="flex items-center gap-2">
-                      <Settings2 className="h-4 w-4" />
-                      <span className="font-medium">额外字段配置</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({extraFields.length} 个字段)
+              <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
+                <TabsList className="mx-6 mt-2 grid w-auto grid-cols-2">
+                  <TabsTrigger value="basic">基本信息</TabsTrigger>
+                  <TabsTrigger value="extra-fields">
+                    额外字段
+                    {extraFields.length > 0 && (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        ({extraFields.length})
                       </span>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* 基本信息 Tab */}
+                <TabsContent value="basic" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>渠道名称</FormLabel>
+                        <FormControl>
+                          <Input placeholder="请输入渠道名称" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>渠道分类</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="请选择渠道分类" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {CHANNEL_CATEGORIES.map((cat) => (
+                              <SelectItem key={cat.value} value={cat.value}>
+                                {cat.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>描述</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="请输入描述（可选）"
+                            className="resize-none"
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sort_order"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>排序值</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="请输入排序值"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>启用状态</FormLabel>
+                          <div className="text-sm text-muted-foreground">
+                            设置该渠道是否启用
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                {/* 额外字段配置 Tab */}
+                <TabsContent value="extra-fields" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Settings2 className="h-4 w-4" />
+                      <span>配置该来源渠道特有的额外字段</span>
                     </div>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${extraFieldsOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 space-y-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-dashed"
-                    onClick={handleAddExtraField}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    添加额外字段
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddExtraField}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      添加字段
+                    </Button>
+                  </div>
 
-                  {extraFields.map((field, index) => {
-                    const fieldType = form.watch(`extra_fields.${index}.field_type`)
-                    const options = form.watch(`extra_fields.${index}.options`) || []
+                  {extraFields.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center border rounded-lg border-dashed">
+                      <Settings2 className="h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">暂无额外字段</p>
+                      <p className="text-xs text-muted-foreground mt-1">点击上方按钮添加字段</p>
+                    </div>
+                  ) : (
+                    extraFields.map((field, index) => {
+                      const fieldType = form.watch(`extra_fields.${index}.field_type`)
+                      const options = form.watch(`extra_fields.${index}.options`) || []
 
-                    return (
-                      <Card key={field.id} className="relative">
-                        <CardHeader className="pb-3 pt-4 px-4">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm font-medium">
-                              字段 {index + 1}
-                            </CardTitle>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => removeExtraField(index)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="px-4 pb-4 space-y-3">
-                          {/* 第一行：字段名和标签 */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">字段名称（英文）</Label>
-                              <Input
-                                placeholder="如: phone, wechat"
-                                {...form.register(`extra_fields.${index}.field_name`)}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">字段标签（中文）</Label>
-                              <Input
-                                placeholder="如: 手机号, 微信号"
-                                {...form.register(`extra_fields.${index}.field_label`)}
-                              />
-                            </div>
-                          </div>
-
-                          {/* 第二行：类型、必填、占位符 */}
-                          <div className="grid grid-cols-3 gap-3">
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">字段类型</Label>
-                              <Select
-                                value={fieldType}
-                                onValueChange={(value) => form.setValue(`extra_fields.${index}.field_type`, value as FormData['extra_fields'][0]['field_type'])}
+                      return (
+                        <Card key={field.id} className="relative">
+                          <CardHeader className="pb-3 pt-4 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-sm font-medium">
+                                字段 {index + 1}
+                              </CardTitle>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => removeExtraField(index)}
                               >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {FIELD_TYPE_OPTIONS.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                <X className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">占位符</Label>
-                              <Input
-                                placeholder="请输入..."
-                                {...form.register(`extra_fields.${index}.placeholder`)}
-                              />
-                            </div>
-                            <div className="flex items-end pb-2">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`required-${index}`}
-                                  checked={form.watch(`extra_fields.${index}.required`)}
-                                  onCheckedChange={(checked) => form.setValue(`extra_fields.${index}.required`, !!checked)}
+                          </CardHeader>
+                          <CardContent className="px-4 pb-4 space-y-3">
+                            {/* 第一行：字段名和标签 */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">字段名称（英文）</Label>
+                                <Input
+                                  placeholder="如: phone, wechat"
+                                  {...form.register(`extra_fields.${index}.field_name`)}
                                 />
-                                <Label htmlFor={`required-${index}`} className="text-xs cursor-pointer">
-                                  必填
-                                </Label>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">字段标签（中文）</Label>
+                                <Input
+                                  placeholder="如: 手机号, 微信号"
+                                  {...form.register(`extra_fields.${index}.field_label`)}
+                                />
                               </div>
                             </div>
-                          </div>
 
-                          {/* 选择框选项配置 */}
-                          {fieldType === 'select' && (
-                            <div className="space-y-2 pt-2 border-t">
-                              <div className="flex items-center justify-between">
-                                <Label className="text-xs">选项配置</Label>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 text-xs"
-                                  onClick={() => handleAddOption(index)}
+                            {/* 第二行：类型、必填、占位符 */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">字段类型</Label>
+                                <Select
+                                  value={fieldType}
+                                  onValueChange={(value) => form.setValue(`extra_fields.${index}.field_type`, value as FormData['extra_fields'][0]['field_type'])}
                                 >
-                                  <Plus className="mr-1 h-3 w-3" />
-                                  添加选项
-                                </Button>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {FIELD_TYPE_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              {options.length === 0 ? (
-                                <p className="text-xs text-muted-foreground text-center py-2">
-                                  暂无选项，请添加
-                                </p>
-                              ) : (
-                                <div className="space-y-2">
-                                  {options.map((_, optIndex) => (
-                                    <div key={optIndex} className="flex items-center gap-2">
-                                      <Input
-                                        placeholder="选项标签"
-                                        className="h-8 text-xs"
-                                        {...form.register(`extra_fields.${index}.options.${optIndex}.label`)}
-                                      />
-                                      <Input
-                                        placeholder="选项值"
-                                        className="h-8 text-xs"
-                                        {...form.register(`extra_fields.${index}.options.${optIndex}.value`)}
-                                      />
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 shrink-0"
-                                        onClick={() => handleRemoveOption(index, optIndex)}
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ))}
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">占位符</Label>
+                                <Input
+                                  placeholder="请输入..."
+                                  {...form.register(`extra_fields.${index}.placeholder`)}
+                                />
+                              </div>
+                              <div className="flex items-end pb-2">
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`required-${index}`}
+                                    checked={form.watch(`extra_fields.${index}.required`)}
+                                    onCheckedChange={(checked) => form.setValue(`extra_fields.${index}.required`, !!checked)}
+                                  />
+                                  <Label htmlFor={`required-${index}`} className="text-xs cursor-pointer">
+                                    必填
+                                  </Label>
                                 </div>
-                              )}
+                              </div>
                             </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </CollapsibleContent>
-              </Collapsible>
-                </div>
-              </div>
+
+                            {/* 选择框选项配置 */}
+                            {fieldType === 'select' && (
+                              <div className="space-y-2 pt-2 border-t">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-xs">选项配置</Label>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-xs"
+                                    onClick={() => handleAddOption(index)}
+                                  >
+                                    <Plus className="mr-1 h-3 w-3" />
+                                    添加选项
+                                  </Button>
+                                </div>
+                                {options.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground text-center py-2">
+                                    暂无选项，请添加
+                                  </p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {options.map((_, optIndex) => (
+                                      <div key={optIndex} className="flex items-center gap-2">
+                                        <Input
+                                          placeholder="选项标签"
+                                          className="h-8 text-xs"
+                                          {...form.register(`extra_fields.${index}.options.${optIndex}.label`)}
+                                        />
+                                        <Input
+                                          placeholder="选项值"
+                                          className="h-8 text-xs"
+                                          {...form.register(`extra_fields.${index}.options.${optIndex}.value`)}
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 shrink-0"
+                                          onClick={() => handleRemoveOption(index, optIndex)}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )
+                    })
+                  )}
+                </TabsContent>
+              </Tabs>
 
               <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
                 <Button
