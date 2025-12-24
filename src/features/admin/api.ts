@@ -538,6 +538,15 @@ import type {
   BatchUpdateLimit,
   YunkeAdminStatus,
   YunkeAdminLoginResponse,
+  YunkeSubAccount,
+  YunkeAvailableEmployee,
+  YunkePasswordResetResponse,
+  YunkeBatchLoginResult,
+  YunkeLoginStatusResult,
+  EmployeeApiKeyInfo,
+  ApiKeyCreate,
+  ApiKeyCreateResponse,
+  ApiKeyScopesUpdate,
 } from './types'
 
 export const sourceChannelApi = {
@@ -812,8 +821,8 @@ export const leadAccessStatsApi = {
 
 export const yunkeAdminApi = {
   /** 云客管理员登录 */
-  async login(): Promise<YunkeAdminLoginResponse> {
-    return apiClient.post<YunkeAdminLoginResponse>('/yunke/admin/login')
+  async login(data?: { phone?: string; password?: string }): Promise<YunkeAdminLoginResponse> {
+    return apiClient.post<YunkeAdminLoginResponse>('/yunke/admin/login', data)
   },
 
   /** 获取云客管理员登录状态 */
@@ -824,5 +833,134 @@ export const yunkeAdminApi = {
   /** 云客管理员登出 */
   async logout(): Promise<{ cookies_cleared: boolean }> {
     return apiClient.post<{ cookies_cleared: boolean }>('/yunke/admin/logout')
+  },
+
+  /** 获取云客子账号列表 */
+  async getSubAccounts(params?: {
+    page?: number
+    page_size?: number
+    real_name?: string
+    auth_status?: string
+  }): Promise<{
+    users: YunkeSubAccount[]
+    total: number
+    page: number
+    page_size: number
+  }> {
+    return apiClient.post<{
+      users: YunkeSubAccount[]
+      total: number
+      page: number
+      page_size: number
+    }>('/yunke/admin/sub-accounts', params)
+  },
+
+  /** 获取可绑定员工列表 */
+  async getAvailableEmployees(): Promise<YunkeAvailableEmployee[]> {
+    return apiClient.get<YunkeAvailableEmployee[]>('/yunke/admin/available-employees')
+  },
+
+  /** 绑定员工 */
+  async bindEmployee(data: {
+    yunke_phone: string
+    yunke_user_id: string
+    employee_id: string
+  }): Promise<{ success: boolean; message?: string }> {
+    return apiClient.post<{ success: boolean; message?: string }>('/yunke/admin/bind-employee', data)
+  },
+
+  /** 解绑员工 */
+  async unbindEmployee(data: { employee_id: string }): Promise<{ success: boolean; message?: string }> {
+    return apiClient.post<{ success: boolean; message?: string }>('/yunke/admin/unbind-employee', data)
+  },
+
+  /** 重置密码 */
+  async resetPassword(data: {
+    yunke_user_id: string
+    phone: string
+  }): Promise<YunkePasswordResetResponse> {
+    return apiClient.post<YunkePasswordResetResponse>('/yunke/auth/reset-password', data)
+  },
+
+  /** 自动同步绑定 */
+  async autoSyncBindings(): Promise<{
+    matched: number
+    total: number
+    details: Array<{
+      yunke_name: string
+      employee_name: string
+      employee_username: string
+    }>
+  }> {
+    return apiClient.post<{
+      matched: number
+      total: number
+      details: Array<{
+        yunke_name: string
+        employee_name: string
+        employee_username: string
+      }>
+    }>('/yunke/admin/auto-sync-bindings')
+  },
+
+  /** 检查所有登录状态 */
+  async checkAllLoginStatus(): Promise<YunkeLoginStatusResult> {
+    return apiClient.get<YunkeLoginStatusResult>('/yunke/admin/check-login-status')
+  },
+
+  /** 批量更新登录 */
+  async batchUpdateLogin(): Promise<YunkeBatchLoginResult> {
+    return apiClient.post<YunkeBatchLoginResult>('/yunke/admin/batch-update-login')
+  },
+}
+
+// ============================================================================
+// API 密钥管理 API
+// ============================================================================
+
+export const apiKeysApi = {
+  /** 获取员工 API 密钥列表 */
+  async list(params?: {
+    page?: number
+    size?: number
+    search?: string
+    has_api_key?: boolean
+  }): Promise<{
+    items: EmployeeApiKeyInfo[]
+    total: number
+    page: number
+    size: number
+  }> {
+    return apiClient.get<{
+      items: EmployeeApiKeyInfo[]
+      total: number
+      page: number
+      size: number
+    }>('/api-keys/employees', { params })
+  },
+
+  /** 获取指定员工的 API 密钥信息 */
+  async get(employeeId: string): Promise<EmployeeApiKeyInfo> {
+    return apiClient.get<EmployeeApiKeyInfo>(`/api-keys/employees/${employeeId}`)
+  },
+
+  /** 为员工创建 API 密钥 */
+  async create(employeeId: string, data: ApiKeyCreate): Promise<ApiKeyCreateResponse> {
+    return apiClient.post<ApiKeyCreateResponse>(`/api-keys/employees/${employeeId}`, data)
+  },
+
+  /** 重新生成员工的 API 密钥 */
+  async regenerate(employeeId: string, name?: string): Promise<ApiKeyCreateResponse> {
+    return apiClient.post<ApiKeyCreateResponse>(`/api-keys/employees/${employeeId}/regenerate`, { name })
+  },
+
+  /** 删除员工的 API 密钥 */
+  async delete(employeeId: string): Promise<void> {
+    return apiClient.delete(`/api-keys/employees/${employeeId}`)
+  },
+
+  /** 更新员工的 API 密钥权限范围 */
+  async updateScopes(employeeId: string, data: ApiKeyScopesUpdate): Promise<EmployeeApiKeyInfo> {
+    return apiClient.put<EmployeeApiKeyInfo>(`/api-keys/employees/${employeeId}/scopes`, data)
   },
 }

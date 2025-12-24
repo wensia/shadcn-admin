@@ -906,3 +906,144 @@ export interface YunkeAdminLoginResponse {
   ttl: number
   message: string
 }
+
+/** 云客子账号 */
+export interface YunkeSubAccount {
+  id: string
+  phone: string
+  username: string
+  real_name: string
+  department_name?: string
+  position?: string
+  status: 'active' | 'paused' | 'inactive'
+  create_time?: string
+  last_login_time?: string
+  bound_employee?: {
+    id: string
+    name: string
+    username: string
+  }
+}
+
+/** 可绑定员工 */
+export interface YunkeAvailableEmployee {
+  id: string
+  name: string
+  username: string
+  campus_name?: string
+  position_name?: string
+  bound_yunke?: {
+    phone: string
+    real_name: string
+  }
+}
+
+/** 密码重置响应 */
+export interface YunkePasswordResetResponse {
+  new_password: string
+  sync_status?: string
+  bound_employee?: {
+    id: string
+    name: string
+    username: string
+  }
+}
+
+/** 批量登录更新结果 */
+export interface YunkeBatchLoginResult {
+  total: number
+  success: number
+  failed: number
+  skipped: number
+  details: Array<{
+    employee_id: string
+    employee_name: string
+    employee_username: string
+    yunke_phone?: string
+    status: 'success' | 'failed' | 'skipped'
+    message: string
+    update_time?: string
+  }>
+}
+
+/** 登录状态检查结果 */
+export interface YunkeLoginStatusResult {
+  total: number
+  logged_in: number
+  details: Array<{
+    employee_id: string
+    is_logged_in: boolean
+    message: string
+  }>
+}
+
+// ============================================================================
+// API 密钥相关类型
+// ============================================================================
+
+/** API 密钥信息 */
+export interface ApiKeyInfo {
+  prefix: string
+  name: string
+  scopes: Record<string, string[]>
+  created_at: string
+  expires_at?: string
+  last_used_at?: string
+  is_expired: boolean
+}
+
+/** 员工 API 密钥信息 */
+export interface EmployeeApiKeyInfo {
+  employee_id: string
+  username: string
+  name: string
+  is_active: boolean
+  has_api_key: boolean
+  api_key?: ApiKeyInfo
+}
+
+/** 创建 API 密钥请求 */
+export interface ApiKeyCreate {
+  name: string
+  scopes?: Record<string, string[]>
+  expires_in_days?: number
+}
+
+/** 创建 API 密钥响应 */
+export interface ApiKeyCreateResponse {
+  employee_id: string
+  username: string
+  name: string
+  api_key: string
+  info: ApiKeyInfo
+  warning: string
+}
+
+/** 更新权限范围请求 */
+export interface ApiKeyScopesUpdate {
+  scopes: Record<string, string[]>
+}
+
+/** 默认权限范围定义 */
+export const DEFAULT_API_SCOPES = {
+  leads: {
+    description: '线索管理',
+    permissions: ['read', 'create', 'update', 'delete'],
+  },
+  customers: {
+    description: '客户管理',
+    permissions: ['read', 'create', 'update'],
+  },
+  statistics: {
+    description: '统计数据',
+    permissions: ['read'],
+  },
+  followups: {
+    description: '跟进记录',
+    permissions: ['read', 'create', 'update'],
+  },
+  exports: {
+    description: '数据导出',
+    permissions: ['read'],
+  },
+}
