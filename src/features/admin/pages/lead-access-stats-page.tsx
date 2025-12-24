@@ -71,22 +71,20 @@ const TIME_RANGE_OPTIONS = [
   { label: '本月', value: 'thismonth' },
 ]
 
-// 骨架屏数据
+// 骨架屏数据 - 在组件外部创建，避免每次渲染都创建新数组
 const SKELETON_PREFIX = '__skeleton__'
-function createSkeletonData(count: number): AdvisorAccessStatistics[] {
-  return Array.from({ length: count }, (_, i) => ({
-    user_id: `${SKELETON_PREFIX}${i}`,
-    user_name: '',
-    username: '',
-    campus_name: '',
-    view_count: 0,
-    total_access: 0,
-    daily_limit: 0,
-    time_range: '',
-    start_date: '',
-    end_date: '',
-  }))
-}
+const SKELETON_DATA: AdvisorAccessStatistics[] = Array.from({ length: 10 }, (_, i) => ({
+  user_id: `${SKELETON_PREFIX}${i}`,
+  user_name: '',
+  username: '',
+  campus_name: '',
+  view_count: 0,
+  total_access: 0,
+  daily_limit: 0,
+  time_range: '',
+  start_date: '',
+  end_date: '',
+}))
 
 export function LeadAccessStatsPage() {
   const queryClient = useQueryClient()
@@ -133,7 +131,7 @@ export function LeadAccessStatsPage() {
   const activeRate = useMemo(() => {
     if (summary.total_users === 0) return 0
     return Math.round((summary.active_users / summary.total_users) * 100)
-  }, [summary])
+  }, [summary.total_users, summary.active_users])
 
   // 过滤后的数据
   const filteredData = useMemo(() => {
@@ -146,10 +144,8 @@ export function LeadAccessStatsPage() {
     )
   }, [statistics, searchValue])
 
-  // 获取选中的行
-  const selectedRows = useMemo(() => {
-    return filteredData.filter((_, index) => rowSelection[index])
-  }, [filteredData, rowSelection])
+  // 表格数据
+  const tableData = isLoading ? SKELETON_DATA : filteredData
 
   // 批量更新访问限制
   const batchUpdateMutation = useMutation({
@@ -167,7 +163,14 @@ export function LeadAccessStatsPage() {
     },
   })
 
-  // 表格列定义
+  // 打开单个编辑弹窗 - 使用 useCallback 缓存
+  const handleEditLimit = useCallback((user: AdvisorAccessStatistics) => {
+    setEditingUser(user)
+    setEditDailyLimit(user.daily_limit)
+    setEditDialogOpen(true)
+  }, [])
+
+  // 表格列定义 - 依赖 handleEditLimit
   const columns: ColumnDef<AdvisorAccessStatistics>[] = useMemo(
     () => [
       {
@@ -348,10 +351,8 @@ export function LeadAccessStatsPage() {
         },
       },
     ],
-    []
+    [handleEditLimit]
   )
-
-  const tableData = isLoading ? createSkeletonData(10) : filteredData
 
   const table = useReactTable({
     data: tableData,
@@ -366,8 +367,11 @@ export function LeadAccessStatsPage() {
     },
     enableRowSelection: (row) =>
       !row.original.user_id?.startsWith(SKELETON_PREFIX),
-    getRowId: (row, index) => row.user_id || index.toString(),
+    getRowId: (row) => row.user_id,
   })
+
+  // 获取选中的行 - 使用 table 的 API
+  const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
 
   // 处理筛选变化
   const handleFilterChange = useCallback((key: keyof AccessStatsFilters, value: string) => {
@@ -375,17 +379,11 @@ export function LeadAccessStatsPage() {
       ...prev,
       [key]: value === 'all' ? undefined : value,
     }))
+    setRowSelection({}) // 清空选择
   }, [])
 
-  // 打开单个编辑弹窗
-  const handleEditLimit = (user: AdvisorAccessStatistics) => {
-    setEditingUser(user)
-    setEditDailyLimit(user.daily_limit)
-    setEditDialogOpen(true)
-  }
-
   // 保存单个限制
-  const handleSaveSingleLimit = () => {
+  const handleSaveSingleLimit = useCallback(() => {
     if (!editingUser) return
     if (editDailyLimit === editingUser.daily_limit) {
       setEditDialogOpen(false)
@@ -394,30 +392,30 @@ export function LeadAccessStatsPage() {
     batchUpdateMutation.mutate([
       { user_id: editingUser.user_id, daily_limit: editDailyLimit },
     ])
-  }
+  }, [editingUser, editDailyLimit, batchUpdateMutation])
 
   // 打开批量编辑弹窗
-  const handleOpenBatchEdit = () => {
+  const handleOpenBatchEdit = useCallback(() => {
     if (selectedRows.length === 0) {
       toast.warning('请先选择要修改的顾问')
       return
     }
     setBatchDailyLimit(500)
     setBatchEditDialogOpen(true)
-  }
+  }, [selectedRows.length])
 
   // 保存批量限制
-  const handleSaveBatchLimit = () => {
+  const handleSaveBatchLimit = useCallback(() => {
     if (selectedRows.length === 0) return
     const updates: BatchUpdateLimit[] = selectedRows.map((row) => ({
       user_id: row.user_id,
       daily_limit: batchDailyLimit,
     }))
     batchUpdateMutation.mutate(updates)
-  }
+  }, [selectedRows, batchDailyLimit, batchUpdateMutation])
 
   // 导出数据
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     if (filteredData.length === 0) {
       toast.warning('暂无数据可导出')
       return
@@ -478,7 +476,7 @@ export function LeadAccessStatsPage() {
     } finally {
       setExportLoading(false)
     }
-  }
+  }, [filteredData])
 
   // 自动刷新
   useEffect(() => {
