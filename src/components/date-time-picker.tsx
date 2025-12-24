@@ -14,13 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { TimePickerWheel } from '@/components/ui/time-picker-wheel'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 
@@ -40,12 +34,6 @@ interface DateTimePickerProps {
   /** 是否显示快捷按钮 */
   showQuickButtons?: boolean
 }
-
-// 生成小时选项（6-22点）
-const hourOptions = Array.from({ length: 17 }, (_, i) => i + 6)
-
-// 生成分钟选项（0, 30）
-const minuteOptions = [0, 30]
 
 export function DateTimePicker({
   value,
@@ -81,28 +69,23 @@ export function DateTimePicker({
     onChange(newDate.toISOString())
   }
 
-  // 处理小时选择
-  const handleHourChange = (hour: string) => {
+  // 处理时间选择（使用滚轮选择器）
+  const handleTimeChange = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    if (isNaN(hours) || isNaN(minutes)) return
+
     if (!selectedDate) {
       // 如果没有选择日期，默认使用今天
-      const today = setMinutes(setHours(new Date(), parseInt(hour)), selectedMinute)
+      const today = setMinutes(setHours(new Date(), hours), minutes)
       onChange(today.toISOString())
     } else {
-      const newDate = setHours(selectedDate, parseInt(hour))
+      const newDate = setMinutes(setHours(selectedDate, hours), minutes)
       onChange(newDate.toISOString())
     }
   }
 
-  // 处理分钟选择
-  const handleMinuteChange = (minute: string) => {
-    if (!selectedDate) {
-      const today = setMinutes(setHours(new Date(), selectedHour), parseInt(minute))
-      onChange(today.toISOString())
-    } else {
-      const newDate = setMinutes(selectedDate, parseInt(minute))
-      onChange(newDate.toISOString())
-    }
-  }
+  // 格式化时间为 HH:mm 格式
+  const timeValue = `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`
 
   // 快捷选项
   const quickOptions = [
@@ -181,35 +164,31 @@ export function DateTimePicker({
             />
             {/* 时间选择 */}
             <div className="flex flex-col border-l p-3 gap-2">
-              <div className="text-xs text-muted-foreground mb-1">时间</div>
-              <div className="flex gap-1">
-                <Select value={String(selectedHour)} onValueChange={handleHourChange}>
-                  <SelectTrigger className="w-16 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {hourOptions.map((hour) => (
-                      <SelectItem key={hour} value={String(hour)}>
-                        {String(hour).padStart(2, '0')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="flex items-center">:</span>
-                <Select value={String(selectedMinute)} onValueChange={handleMinuteChange}>
-                  <SelectTrigger className="w-16 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {minuteOptions.map((minute) => (
-                      <SelectItem key={minute} value={String(minute)}>
-                        {String(minute).padStart(2, '0')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="text-xs text-muted-foreground mb-1 text-center">时间</div>
+              <TimePickerWheel
+                value={timeValue}
+                onChange={handleTimeChange}
+              />
             </div>
+          </div>
+          {/* 底部按钮 */}
+          <div className="flex justify-end gap-2 border-t p-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onChange(undefined)
+                setOpen(false)
+              }}
+            >
+              清除
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setOpen(false)}
+            >
+              确定
+            </Button>
           </div>
         </PopoverContent>
       </Popover>

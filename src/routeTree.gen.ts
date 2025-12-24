@@ -32,6 +32,7 @@ import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
 import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
@@ -42,6 +43,29 @@ import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_auth
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
 import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
+import { Route as AuthenticatedAdminYunkeAccountsRouteImport } from './routes/_authenticated/admin/yunke-accounts'
+import { Route as AuthenticatedAdminWebhookHooksRouteImport } from './routes/_authenticated/admin/webhook-hooks'
+import { Route as AuthenticatedAdminTempDiscRecordsRouteImport } from './routes/_authenticated/admin/temp-disc-records'
+import { Route as AuthenticatedAdminSourceChannelsRouteImport } from './routes/_authenticated/admin/source-channels'
+import { Route as AuthenticatedAdminSchoolsRouteImport } from './routes/_authenticated/admin/schools'
+import { Route as AuthenticatedAdminRegionsRouteImport } from './routes/_authenticated/admin/regions'
+import { Route as AuthenticatedAdminPositionsRouteImport } from './routes/_authenticated/admin/positions'
+import { Route as AuthenticatedAdminOrganizationTreeRouteImport } from './routes/_authenticated/admin/organization-tree'
+import { Route as AuthenticatedAdminLeadAccessStatsRouteImport } from './routes/_authenticated/admin/lead-access-stats'
+import { Route as AuthenticatedAdminIdentitiesRouteImport } from './routes/_authenticated/admin/identities'
+import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
+import { Route as AuthenticatedAdminEmployeeHierarchyRouteImport } from './routes/_authenticated/admin/employee-hierarchy'
+import { Route as AuthenticatedAdminDistrictsRouteImport } from './routes/_authenticated/admin/districts'
+import { Route as AuthenticatedAdminDiscTestRouteImport } from './routes/_authenticated/admin/disc-test'
+import { Route as AuthenticatedAdminDingtalkRobotsRouteImport } from './routes/_authenticated/admin/dingtalk-robots'
+import { Route as AuthenticatedAdminDepartmentsRouteImport } from './routes/_authenticated/admin/departments'
+import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
+import { Route as AuthenticatedAdminCoursesRouteImport } from './routes/_authenticated/admin/courses'
+import { Route as AuthenticatedAdminCampusesRouteImport } from './routes/_authenticated/admin/campuses'
+import { Route as AuthenticatedAdminCampusDepartmentsRouteImport } from './routes/_authenticated/admin/campus-departments'
+import { Route as AuthenticatedAdminCallConfigRouteImport } from './routes/_authenticated/admin/call-config'
+import { Route as AuthenticatedAdminAreasRouteImport } from './routes/_authenticated/admin/areas'
+import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin/api-keys'
 import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
 
@@ -160,6 +184,11 @@ const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexRouteImport.update({
   path: '/apps/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ClerkAuthenticatedUserManagementRoute =
   ClerkAuthenticatedUserManagementRouteImport.update({
     id: '/user-management',
@@ -218,6 +247,143 @@ const AuthenticatedCrmBatchImportRoute =
     path: '/crm/batch-import',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminYunkeAccountsRoute =
+  AuthenticatedAdminYunkeAccountsRouteImport.update({
+    id: '/admin/yunke-accounts',
+    path: '/admin/yunke-accounts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminWebhookHooksRoute =
+  AuthenticatedAdminWebhookHooksRouteImport.update({
+    id: '/admin/webhook-hooks',
+    path: '/admin/webhook-hooks',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminTempDiscRecordsRoute =
+  AuthenticatedAdminTempDiscRecordsRouteImport.update({
+    id: '/admin/temp-disc-records',
+    path: '/admin/temp-disc-records',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminSourceChannelsRoute =
+  AuthenticatedAdminSourceChannelsRouteImport.update({
+    id: '/admin/source-channels',
+    path: '/admin/source-channels',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminSchoolsRoute =
+  AuthenticatedAdminSchoolsRouteImport.update({
+    id: '/admin/schools',
+    path: '/admin/schools',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminRegionsRoute =
+  AuthenticatedAdminRegionsRouteImport.update({
+    id: '/admin/regions',
+    path: '/admin/regions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminPositionsRoute =
+  AuthenticatedAdminPositionsRouteImport.update({
+    id: '/admin/positions',
+    path: '/admin/positions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminOrganizationTreeRoute =
+  AuthenticatedAdminOrganizationTreeRouteImport.update({
+    id: '/admin/organization-tree',
+    path: '/admin/organization-tree',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminLeadAccessStatsRoute =
+  AuthenticatedAdminLeadAccessStatsRouteImport.update({
+    id: '/admin/lead-access-stats',
+    path: '/admin/lead-access-stats',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminIdentitiesRoute =
+  AuthenticatedAdminIdentitiesRouteImport.update({
+    id: '/admin/identities',
+    path: '/admin/identities',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminEmployeesRoute =
+  AuthenticatedAdminEmployeesRouteImport.update({
+    id: '/admin/employees',
+    path: '/admin/employees',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminEmployeeHierarchyRoute =
+  AuthenticatedAdminEmployeeHierarchyRouteImport.update({
+    id: '/admin/employee-hierarchy',
+    path: '/admin/employee-hierarchy',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminDistrictsRoute =
+  AuthenticatedAdminDistrictsRouteImport.update({
+    id: '/admin/districts',
+    path: '/admin/districts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminDiscTestRoute =
+  AuthenticatedAdminDiscTestRouteImport.update({
+    id: '/admin/disc-test',
+    path: '/admin/disc-test',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminDingtalkRobotsRoute =
+  AuthenticatedAdminDingtalkRobotsRouteImport.update({
+    id: '/admin/dingtalk-robots',
+    path: '/admin/dingtalk-robots',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminDepartmentsRoute =
+  AuthenticatedAdminDepartmentsRouteImport.update({
+    id: '/admin/departments',
+    path: '/admin/departments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminDashboardRoute =
+  AuthenticatedAdminDashboardRouteImport.update({
+    id: '/admin/dashboard',
+    path: '/admin/dashboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminCoursesRoute =
+  AuthenticatedAdminCoursesRouteImport.update({
+    id: '/admin/courses',
+    path: '/admin/courses',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminCampusesRoute =
+  AuthenticatedAdminCampusesRouteImport.update({
+    id: '/admin/campuses',
+    path: '/admin/campuses',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminCampusDepartmentsRoute =
+  AuthenticatedAdminCampusDepartmentsRouteImport.update({
+    id: '/admin/campus-departments',
+    path: '/admin/campus-departments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminCallConfigRoute =
+  AuthenticatedAdminCallConfigRouteImport.update({
+    id: '/admin/call-config',
+    path: '/admin/call-config',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminAreasRoute = AuthenticatedAdminAreasRouteImport.update({
+  id: '/admin/areas',
+  path: '/admin/areas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminApiKeysRoute =
+  AuthenticatedAdminApiKeysRouteImport.update({
+    id: '/admin/api-keys',
+    path: '/admin/api-keys',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCrmLeadsIndexRoute =
   AuthenticatedCrmLeadsIndexRouteImport.update({
     id: '/crm/leads/',
@@ -246,6 +412,29 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
+  '/admin/areas': typeof AuthenticatedAdminAreasRoute
+  '/admin/call-config': typeof AuthenticatedAdminCallConfigRoute
+  '/admin/campus-departments': typeof AuthenticatedAdminCampusDepartmentsRoute
+  '/admin/campuses': typeof AuthenticatedAdminCampusesRoute
+  '/admin/courses': typeof AuthenticatedAdminCoursesRoute
+  '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
+  '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
+  '/admin/disc-test': typeof AuthenticatedAdminDiscTestRoute
+  '/admin/districts': typeof AuthenticatedAdminDistrictsRoute
+  '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
+  '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
+  '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
+  '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
+  '/admin/positions': typeof AuthenticatedAdminPositionsRoute
+  '/admin/regions': typeof AuthenticatedAdminRegionsRoute
+  '/admin/schools': typeof AuthenticatedAdminSchoolsRoute
+  '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
+  '/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
+  '/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
+  '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -256,6 +445,7 @@ export interface FileRoutesByFullPath {
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
@@ -279,6 +469,29 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
+  '/admin/areas': typeof AuthenticatedAdminAreasRoute
+  '/admin/call-config': typeof AuthenticatedAdminCallConfigRoute
+  '/admin/campus-departments': typeof AuthenticatedAdminCampusDepartmentsRoute
+  '/admin/campuses': typeof AuthenticatedAdminCampusesRoute
+  '/admin/courses': typeof AuthenticatedAdminCoursesRoute
+  '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
+  '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
+  '/admin/disc-test': typeof AuthenticatedAdminDiscTestRoute
+  '/admin/districts': typeof AuthenticatedAdminDistrictsRoute
+  '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
+  '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
+  '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
+  '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
+  '/admin/positions': typeof AuthenticatedAdminPositionsRoute
+  '/admin/regions': typeof AuthenticatedAdminRegionsRoute
+  '/admin/schools': typeof AuthenticatedAdminSchoolsRoute
+  '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
+  '/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
+  '/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
+  '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -289,6 +502,7 @@ export interface FileRoutesByTo {
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
@@ -317,6 +531,29 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
+  '/_authenticated/admin/areas': typeof AuthenticatedAdminAreasRoute
+  '/_authenticated/admin/call-config': typeof AuthenticatedAdminCallConfigRoute
+  '/_authenticated/admin/campus-departments': typeof AuthenticatedAdminCampusDepartmentsRoute
+  '/_authenticated/admin/campuses': typeof AuthenticatedAdminCampusesRoute
+  '/_authenticated/admin/courses': typeof AuthenticatedAdminCoursesRoute
+  '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/_authenticated/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
+  '/_authenticated/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
+  '/_authenticated/admin/disc-test': typeof AuthenticatedAdminDiscTestRoute
+  '/_authenticated/admin/districts': typeof AuthenticatedAdminDistrictsRoute
+  '/_authenticated/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
+  '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
+  '/_authenticated/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/_authenticated/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
+  '/_authenticated/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
+  '/_authenticated/admin/positions': typeof AuthenticatedAdminPositionsRoute
+  '/_authenticated/admin/regions': typeof AuthenticatedAdminRegionsRoute
+  '/_authenticated/admin/schools': typeof AuthenticatedAdminSchoolsRoute
+  '/_authenticated/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
+  '/_authenticated/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
+  '/_authenticated/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
+  '/_authenticated/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -327,6 +564,7 @@ export interface FileRoutesById {
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
@@ -353,6 +591,29 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/admin/api-keys'
+    | '/admin/areas'
+    | '/admin/call-config'
+    | '/admin/campus-departments'
+    | '/admin/campuses'
+    | '/admin/courses'
+    | '/admin/dashboard'
+    | '/admin/departments'
+    | '/admin/dingtalk-robots'
+    | '/admin/disc-test'
+    | '/admin/districts'
+    | '/admin/employee-hierarchy'
+    | '/admin/employees'
+    | '/admin/identities'
+    | '/admin/lead-access-stats'
+    | '/admin/organization-tree'
+    | '/admin/positions'
+    | '/admin/regions'
+    | '/admin/schools'
+    | '/admin/source-channels'
+    | '/admin/temp-disc-records'
+    | '/admin/webhook-hooks'
+    | '/admin/yunke-accounts'
     | '/crm/batch-import'
     | '/crm/continuous-call'
     | '/errors/$error'
@@ -363,6 +624,7 @@ export interface FileRouteTypes {
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
+    | '/admin'
     | '/apps'
     | '/chats'
     | '/help-center'
@@ -386,6 +648,29 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/admin/api-keys'
+    | '/admin/areas'
+    | '/admin/call-config'
+    | '/admin/campus-departments'
+    | '/admin/campuses'
+    | '/admin/courses'
+    | '/admin/dashboard'
+    | '/admin/departments'
+    | '/admin/dingtalk-robots'
+    | '/admin/disc-test'
+    | '/admin/districts'
+    | '/admin/employee-hierarchy'
+    | '/admin/employees'
+    | '/admin/identities'
+    | '/admin/lead-access-stats'
+    | '/admin/organization-tree'
+    | '/admin/positions'
+    | '/admin/regions'
+    | '/admin/schools'
+    | '/admin/source-channels'
+    | '/admin/temp-disc-records'
+    | '/admin/webhook-hooks'
+    | '/admin/yunke-accounts'
     | '/crm/batch-import'
     | '/crm/continuous-call'
     | '/errors/$error'
@@ -396,6 +681,7 @@ export interface FileRouteTypes {
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
+    | '/admin'
     | '/apps'
     | '/chats'
     | '/help-center'
@@ -423,6 +709,29 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
+    | '/_authenticated/admin/api-keys'
+    | '/_authenticated/admin/areas'
+    | '/_authenticated/admin/call-config'
+    | '/_authenticated/admin/campus-departments'
+    | '/_authenticated/admin/campuses'
+    | '/_authenticated/admin/courses'
+    | '/_authenticated/admin/dashboard'
+    | '/_authenticated/admin/departments'
+    | '/_authenticated/admin/dingtalk-robots'
+    | '/_authenticated/admin/disc-test'
+    | '/_authenticated/admin/districts'
+    | '/_authenticated/admin/employee-hierarchy'
+    | '/_authenticated/admin/employees'
+    | '/_authenticated/admin/identities'
+    | '/_authenticated/admin/lead-access-stats'
+    | '/_authenticated/admin/organization-tree'
+    | '/_authenticated/admin/positions'
+    | '/_authenticated/admin/regions'
+    | '/_authenticated/admin/schools'
+    | '/_authenticated/admin/source-channels'
+    | '/_authenticated/admin/temp-disc-records'
+    | '/_authenticated/admin/webhook-hooks'
+    | '/_authenticated/admin/yunke-accounts'
     | '/_authenticated/crm/batch-import'
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/errors/$error'
@@ -433,6 +742,7 @@ export interface FileRouteTypes {
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
     | '/clerk/_authenticated/user-management'
+    | '/_authenticated/admin/'
     | '/_authenticated/apps/'
     | '/_authenticated/chats/'
     | '/_authenticated/help-center/'
@@ -622,6 +932,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/clerk/_authenticated/user-management': {
       id: '/clerk/_authenticated/user-management'
       path: '/user-management'
@@ -692,6 +1009,167 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmBatchImportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/yunke-accounts': {
+      id: '/_authenticated/admin/yunke-accounts'
+      path: '/admin/yunke-accounts'
+      fullPath: '/admin/yunke-accounts'
+      preLoaderRoute: typeof AuthenticatedAdminYunkeAccountsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/webhook-hooks': {
+      id: '/_authenticated/admin/webhook-hooks'
+      path: '/admin/webhook-hooks'
+      fullPath: '/admin/webhook-hooks'
+      preLoaderRoute: typeof AuthenticatedAdminWebhookHooksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/temp-disc-records': {
+      id: '/_authenticated/admin/temp-disc-records'
+      path: '/admin/temp-disc-records'
+      fullPath: '/admin/temp-disc-records'
+      preLoaderRoute: typeof AuthenticatedAdminTempDiscRecordsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/source-channels': {
+      id: '/_authenticated/admin/source-channels'
+      path: '/admin/source-channels'
+      fullPath: '/admin/source-channels'
+      preLoaderRoute: typeof AuthenticatedAdminSourceChannelsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/schools': {
+      id: '/_authenticated/admin/schools'
+      path: '/admin/schools'
+      fullPath: '/admin/schools'
+      preLoaderRoute: typeof AuthenticatedAdminSchoolsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/regions': {
+      id: '/_authenticated/admin/regions'
+      path: '/admin/regions'
+      fullPath: '/admin/regions'
+      preLoaderRoute: typeof AuthenticatedAdminRegionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/positions': {
+      id: '/_authenticated/admin/positions'
+      path: '/admin/positions'
+      fullPath: '/admin/positions'
+      preLoaderRoute: typeof AuthenticatedAdminPositionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/organization-tree': {
+      id: '/_authenticated/admin/organization-tree'
+      path: '/admin/organization-tree'
+      fullPath: '/admin/organization-tree'
+      preLoaderRoute: typeof AuthenticatedAdminOrganizationTreeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/lead-access-stats': {
+      id: '/_authenticated/admin/lead-access-stats'
+      path: '/admin/lead-access-stats'
+      fullPath: '/admin/lead-access-stats'
+      preLoaderRoute: typeof AuthenticatedAdminLeadAccessStatsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/identities': {
+      id: '/_authenticated/admin/identities'
+      path: '/admin/identities'
+      fullPath: '/admin/identities'
+      preLoaderRoute: typeof AuthenticatedAdminIdentitiesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/employees': {
+      id: '/_authenticated/admin/employees'
+      path: '/admin/employees'
+      fullPath: '/admin/employees'
+      preLoaderRoute: typeof AuthenticatedAdminEmployeesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/employee-hierarchy': {
+      id: '/_authenticated/admin/employee-hierarchy'
+      path: '/admin/employee-hierarchy'
+      fullPath: '/admin/employee-hierarchy'
+      preLoaderRoute: typeof AuthenticatedAdminEmployeeHierarchyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/districts': {
+      id: '/_authenticated/admin/districts'
+      path: '/admin/districts'
+      fullPath: '/admin/districts'
+      preLoaderRoute: typeof AuthenticatedAdminDistrictsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/disc-test': {
+      id: '/_authenticated/admin/disc-test'
+      path: '/admin/disc-test'
+      fullPath: '/admin/disc-test'
+      preLoaderRoute: typeof AuthenticatedAdminDiscTestRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/dingtalk-robots': {
+      id: '/_authenticated/admin/dingtalk-robots'
+      path: '/admin/dingtalk-robots'
+      fullPath: '/admin/dingtalk-robots'
+      preLoaderRoute: typeof AuthenticatedAdminDingtalkRobotsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/departments': {
+      id: '/_authenticated/admin/departments'
+      path: '/admin/departments'
+      fullPath: '/admin/departments'
+      preLoaderRoute: typeof AuthenticatedAdminDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/dashboard': {
+      id: '/_authenticated/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/courses': {
+      id: '/_authenticated/admin/courses'
+      path: '/admin/courses'
+      fullPath: '/admin/courses'
+      preLoaderRoute: typeof AuthenticatedAdminCoursesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/campuses': {
+      id: '/_authenticated/admin/campuses'
+      path: '/admin/campuses'
+      fullPath: '/admin/campuses'
+      preLoaderRoute: typeof AuthenticatedAdminCampusesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/campus-departments': {
+      id: '/_authenticated/admin/campus-departments'
+      path: '/admin/campus-departments'
+      fullPath: '/admin/campus-departments'
+      preLoaderRoute: typeof AuthenticatedAdminCampusDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/call-config': {
+      id: '/_authenticated/admin/call-config'
+      path: '/admin/call-config'
+      fullPath: '/admin/call-config'
+      preLoaderRoute: typeof AuthenticatedAdminCallConfigRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/areas': {
+      id: '/_authenticated/admin/areas'
+      path: '/admin/areas'
+      fullPath: '/admin/areas'
+      preLoaderRoute: typeof AuthenticatedAdminAreasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/api-keys': {
+      id: '/_authenticated/admin/api-keys'
+      path: '/admin/api-keys'
+      fullPath: '/admin/api-keys'
+      preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/crm/leads/': {
       id: '/_authenticated/crm/leads/'
       path: '/crm/leads'
@@ -735,9 +1213,33 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
+  AuthenticatedAdminAreasRoute: typeof AuthenticatedAdminAreasRoute
+  AuthenticatedAdminCallConfigRoute: typeof AuthenticatedAdminCallConfigRoute
+  AuthenticatedAdminCampusDepartmentsRoute: typeof AuthenticatedAdminCampusDepartmentsRoute
+  AuthenticatedAdminCampusesRoute: typeof AuthenticatedAdminCampusesRoute
+  AuthenticatedAdminCoursesRoute: typeof AuthenticatedAdminCoursesRoute
+  AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
+  AuthenticatedAdminDingtalkRobotsRoute: typeof AuthenticatedAdminDingtalkRobotsRoute
+  AuthenticatedAdminDiscTestRoute: typeof AuthenticatedAdminDiscTestRoute
+  AuthenticatedAdminDistrictsRoute: typeof AuthenticatedAdminDistrictsRoute
+  AuthenticatedAdminEmployeeHierarchyRoute: typeof AuthenticatedAdminEmployeeHierarchyRoute
+  AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
+  AuthenticatedAdminIdentitiesRoute: typeof AuthenticatedAdminIdentitiesRoute
+  AuthenticatedAdminLeadAccessStatsRoute: typeof AuthenticatedAdminLeadAccessStatsRoute
+  AuthenticatedAdminOrganizationTreeRoute: typeof AuthenticatedAdminOrganizationTreeRoute
+  AuthenticatedAdminPositionsRoute: typeof AuthenticatedAdminPositionsRoute
+  AuthenticatedAdminRegionsRoute: typeof AuthenticatedAdminRegionsRoute
+  AuthenticatedAdminSchoolsRoute: typeof AuthenticatedAdminSchoolsRoute
+  AuthenticatedAdminSourceChannelsRoute: typeof AuthenticatedAdminSourceChannelsRoute
+  AuthenticatedAdminTempDiscRecordsRoute: typeof AuthenticatedAdminTempDiscRecordsRoute
+  AuthenticatedAdminWebhookHooksRoute: typeof AuthenticatedAdminWebhookHooksRoute
+  AuthenticatedAdminYunkeAccountsRoute: typeof AuthenticatedAdminYunkeAccountsRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
@@ -750,9 +1252,38 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
+  AuthenticatedAdminAreasRoute: AuthenticatedAdminAreasRoute,
+  AuthenticatedAdminCallConfigRoute: AuthenticatedAdminCallConfigRoute,
+  AuthenticatedAdminCampusDepartmentsRoute:
+    AuthenticatedAdminCampusDepartmentsRoute,
+  AuthenticatedAdminCampusesRoute: AuthenticatedAdminCampusesRoute,
+  AuthenticatedAdminCoursesRoute: AuthenticatedAdminCoursesRoute,
+  AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+  AuthenticatedAdminDepartmentsRoute: AuthenticatedAdminDepartmentsRoute,
+  AuthenticatedAdminDingtalkRobotsRoute: AuthenticatedAdminDingtalkRobotsRoute,
+  AuthenticatedAdminDiscTestRoute: AuthenticatedAdminDiscTestRoute,
+  AuthenticatedAdminDistrictsRoute: AuthenticatedAdminDistrictsRoute,
+  AuthenticatedAdminEmployeeHierarchyRoute:
+    AuthenticatedAdminEmployeeHierarchyRoute,
+  AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
+  AuthenticatedAdminIdentitiesRoute: AuthenticatedAdminIdentitiesRoute,
+  AuthenticatedAdminLeadAccessStatsRoute:
+    AuthenticatedAdminLeadAccessStatsRoute,
+  AuthenticatedAdminOrganizationTreeRoute:
+    AuthenticatedAdminOrganizationTreeRoute,
+  AuthenticatedAdminPositionsRoute: AuthenticatedAdminPositionsRoute,
+  AuthenticatedAdminRegionsRoute: AuthenticatedAdminRegionsRoute,
+  AuthenticatedAdminSchoolsRoute: AuthenticatedAdminSchoolsRoute,
+  AuthenticatedAdminSourceChannelsRoute: AuthenticatedAdminSourceChannelsRoute,
+  AuthenticatedAdminTempDiscRecordsRoute:
+    AuthenticatedAdminTempDiscRecordsRoute,
+  AuthenticatedAdminWebhookHooksRoute: AuthenticatedAdminWebhookHooksRoute,
+  AuthenticatedAdminYunkeAccountsRoute: AuthenticatedAdminYunkeAccountsRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,

@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
@@ -402,11 +403,27 @@ export function BatchImportPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 1} className="h-24 text-center">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                    </TableCell>
-                  </TableRow>
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={`skeleton-${i}`}>
+                      {columnVisibility.batch_name && <TableCell><Skeleton className="h-4 w-28" /></TableCell>}
+                      {columnVisibility.import_method && <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>}
+                      {columnVisibility.import_source_file && <TableCell><Skeleton className="h-4 w-32" /></TableCell>}
+                      {columnVisibility.total_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
+                      {columnVisibility.success_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
+                      {columnVisibility.activated_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
+                      {columnVisibility.failed_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
+                      {columnVisibility.success_rate && <TableCell><div className="flex items-center gap-2"><Skeleton className="h-2 w-16" /><Skeleton className="h-4 w-8" /></div></TableCell>}
+                      {columnVisibility.status && <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>}
+                      {columnVisibility.created_by_name && <TableCell><Skeleton className="h-4 w-16" /></TableCell>}
+                      {columnVisibility.started_at && <TableCell><Skeleton className="h-4 w-28" /></TableCell>}
+                      {columnVisibility.processing_duration && <TableCell><Skeleton className="h-4 w-14" /></TableCell>}
+                      <TableCell className="sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+                        <div className="flex items-center gap-1">
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 ) : batchList.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 1} className="h-24 text-center text-muted-foreground">

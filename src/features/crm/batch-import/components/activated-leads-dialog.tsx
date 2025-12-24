@@ -32,12 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
@@ -50,11 +44,6 @@ interface ActivatedLeadsDialogProps {
   batch: BatchImportItem | null
 }
 
-// 电话号码脱敏
-function maskPhone(phone: string): string {
-  if (!phone || phone.length < 7) return phone
-  return phone.slice(0, 3) + '****' + phone.slice(-4)
-}
 
 export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLeadsDialogProps) {
   const s = useStyleClasses()
@@ -156,18 +145,7 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
                     <TableCell>{item.row_number}</TableCell>
                     <TableCell>{item.child_name || '-'}</TableCell>
                     <TableCell>{item.parent_name || '-'}</TableCell>
-                    <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help">{maskPhone(item.parent_phone)}</span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>完整号码已脱敏处理</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
+                    <TableCell>{item.parent_phone || '-'}</TableCell>
                     <TableCell>{item.grade || '-'}</TableCell>
                     <TableCell>{item.intended_course || '-'}</TableCell>
                     <TableCell>{item.advisor_name || '-'}</TableCell>

@@ -5,13 +5,19 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Phone, X, RotateCcw, Loader2, Send } from 'lucide-react'
+import {
+  Phone, X, RotateCcw, Loader2, Send,
+  TrendingUp, CalendarCheck, PhoneOff, UserX,
+  Clock, Ban, PhoneMissed, GraduationCap, ChevronDown, CheckIcon,
+  type LucideIcon
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Header } from '@/components/layout/header'
 import { DateTimePicker } from '@/components/date-time-picker'
 import { Main } from '@/components/layout/main'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -31,6 +37,19 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
 import { useSidebar } from '@/components/ui/sidebar'
+import { cn } from '@/lib/utils'
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 import { continuousCallApi } from './api'
 import { leadsApi, yunkeApi } from '../leads/api'
@@ -46,21 +65,141 @@ import { LeadDetailTabs } from '../leads/components/detail/lead-detail-tabs'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 
 
-// 跟进结果分组
+// 跟进结果分组配置
+type FollowupResultGroup = 'continuing' | 'releaseToPool' | 'statusOnly'
+
+interface FollowupResultGroupConfig {
+  key: FollowupResultGroup
+  title: string
+  description: string
+  colorClass: string
+}
+
+interface FollowupResultOption {
+  value: string
+  label: string
+  icon: LucideIcon
+  colorClass: string
+  group: FollowupResultGroup
+}
+
+const followupResultGroupConfig: FollowupResultGroupConfig[] = [
+  {
+    key: 'continuing',
+    title: '📗 继续跟进',
+    description: '状态改为跟进中',
+    colorClass: 'text-green-600',
+  },
+  {
+    key: 'releaseToPool',
+    title: '📙 释放公海',
+    description: '状态改为已回访并释放',
+    colorClass: 'text-orange-500',
+  },
+  {
+    key: 'statusOnly',
+    title: '📘 仅改状态',
+    description: '状态改为已回访',
+    colorClass: 'text-blue-500',
+  },
+]
+
+const followupResultOptions: FollowupResultOption[] = [
+  // 继续跟进组
+  { value: 'can_continue', label: '可持续跟进', icon: TrendingUp, colorClass: 'text-green-600', group: 'continuing' },
+  { value: 'appointment_scheduled', label: '已预约到访', icon: CalendarCheck, colorClass: 'text-green-600', group: 'continuing' },
+  // 释放公海组
+  { value: 'wrong_number', label: '空错号', icon: PhoneOff, colorClass: 'text-orange-500', group: 'releaseToPool' },
+  { value: 'no_child', label: '没孩子', icon: UserX, colorClass: 'text-orange-500', group: 'releaseToPool' },
+  { value: 'age_mismatch', label: '年龄不符', icon: Clock, colorClass: 'text-orange-500', group: 'releaseToPool' },
+  { value: 'no_need', label: '不需要', icon: Ban, colorClass: 'text-orange-500', group: 'releaseToPool' },
+  { value: 'hung_up', label: '秒挂', icon: PhoneMissed, colorClass: 'text-orange-500', group: 'releaseToPool' },
+  { value: 'student', label: '学员', icon: GraduationCap, colorClass: 'text-orange-500', group: 'releaseToPool' },
+  // 仅改状态组
+  { value: 'not_connected', label: '未接通', icon: PhoneMissed, colorClass: 'text-blue-500', group: 'statusOnly' },
+]
+
+// 保留旧结构兼容 saveAndNext 逻辑
 const followupResultGroups = {
-  continuing: [
-    { label: '可持续跟进', value: 'can_continue' },
-    { label: '已预约到访', value: 'appointment_scheduled' },
-  ],
-  releaseToPool: [
-    { label: '空错号', value: 'wrong_number' },
-    { label: '没孩子', value: 'no_child' },
-    { label: '年龄不符', value: 'age_mismatch' },
-    { label: '不需要', value: 'no_need' },
-    { label: '秒挂', value: 'hung_up' },
-    { label: '学员', value: 'student' },
-  ],
-  statusOnly: [{ label: '未接通', value: 'not_connected' }],
+  continuing: followupResultOptions.filter(o => o.group === 'continuing'),
+  releaseToPool: followupResultOptions.filter(o => o.group === 'releaseToPool'),
+  statusOnly: followupResultOptions.filter(o => o.group === 'statusOnly'),
+}
+
+// 跟进结果选择器组件
+interface FollowupResultSelectProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+function FollowupResultSelect({ value, onChange }: FollowupResultSelectProps) {
+  const [open, setOpen] = useState(false)
+
+  const selectedOption = followupResultOptions.find(o => o.value === value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {selectedOption ? (
+            <span className="flex items-center gap-2">
+              <selectedOption.icon className={cn("h-4 w-4", selectedOption.colorClass)} />
+              <span>{selectedOption.label}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground">选择跟进结果...</span>
+          )}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <CommandList>
+            {followupResultGroupConfig.map((group, groupIndex) => (
+              <div key={group.key}>
+                {groupIndex > 0 && <CommandSeparator />}
+                <CommandGroup
+                  heading={
+                    <span className={cn("flex items-center gap-1", group.colorClass)}>
+                      {group.title}
+                      <span className="text-xs text-muted-foreground font-normal">
+                        ({group.description})
+                      </span>
+                    </span>
+                  }
+                >
+                  {followupResultOptions
+                    .filter(o => o.group === group.key)
+                    .map(option => (
+                      <CommandItem
+                        key={option.value}
+                        value={option.value}
+                        onSelect={() => {
+                          onChange(option.value)
+                          setOpen(false)
+                        }}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <option.icon className={cn("h-4 w-4", option.colorClass)} />
+                        <span>{option.label}</span>
+                        {value === option.value && (
+                          <CheckIcon className="ml-auto h-4 w-4" />
+                        )}
+                      </CommandItem>
+                    ))}
+                </CommandGroup>
+              </div>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 // 意向等级选项
@@ -470,8 +609,61 @@ export function ContinuousCallPage() {
     )
   }
 
+  // 渲染线索详情卡片骨架屏
+  const renderLeadDetailSkeleton = () => {
+    return (
+      <Card className="h-full flex flex-col overflow-hidden">
+        <CardHeader className="pb-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 min-h-0 space-y-4 p-4">
+          {/* 基本信息骨架 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-5 w-28" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-5 w-20" />
+            </div>
+          </div>
+          {/* 分隔线 */}
+          <Skeleton className="h-px w-full" />
+          {/* 跟进记录骨架 */}
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-20" />
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   // 渲染线索详情卡片
   const renderLeadDetail = () => {
+    // 加载中显示骨架屏
+    if (isLoading) {
+      return renderLeadDetailSkeleton()
+    }
+
     if (!currentLead) {
       return (
         <Card className="h-full">
@@ -558,134 +750,78 @@ export function ContinuousCallPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4 p-4">
-          <h4 className="font-medium">记录跟进信息</h4>
-
-          {/* 继续跟进分组 */}
-          <div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              继续跟进（状态改为跟进中）
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {followupResultGroups.continuing.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={
-                    followupResult === option.value ? 'default' : 'outline'
-                  }
-                  size="sm"
-                  onClick={() => setFollowupResult(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* 释放到公海分组 */}
-          <div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              释放到公海（状态改为已回访 + 释放到公海）
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {followupResultGroups.releaseToPool.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={
-                    followupResult === option.value ? 'secondary' : 'outline'
-                  }
-                  size="sm"
-                  onClick={() => setFollowupResult(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* 仅改状态分组 */}
-          <div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              仅改状态（状态改为已回访）
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {followupResultGroups.statusOnly.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={
-                    followupResult === option.value ? 'secondary' : 'outline'
-                  }
-                  size="sm"
-                  onClick={() => setFollowupResult(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* 意向等级 */}
-          <div>
-            <Label className="mb-2 block">意向等级</Label>
-            <RadioGroup
-              value={intentionLevel}
-              onValueChange={(value) =>
-                setIntentionLevel(value as IntentionLevel)
-              }
-              className="flex gap-4"
-            >
-              {intentionLevelOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option.value} id={option.value} />
-                  <Label htmlFor={option.value}>{option.label}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-
-          {/* 下次回访时间 */}
-          <div>
-            <Label className="mb-2 block">下次回访时间</Label>
-            <DateTimePicker
-              value={nextFollowupAt}
-              onChange={(val) => setNextFollowupAt(val || '')}
-              placeholder="选择时间"
-              showQuickButtons={true}
+        <CardContent className="space-y-3 p-4">
+          {/* 区块1: 跟进结果 */}
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <Label className="mb-2 block text-sm font-medium">跟进结果</Label>
+            <FollowupResultSelect
+              value={followupResult}
+              onChange={setFollowupResult}
             />
           </div>
 
-          {/* 复选框区域 */}
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="wechat-added"
-                checked={wechatAdded}
-                onCheckedChange={(checked) => setWechatAdded(checked as boolean)}
-              />
-              <Label htmlFor="wechat-added">已添加微信</Label>
+          {/* 区块2: 意向与回访 */}
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+            <div>
+              <Label className="mb-2 block text-sm font-medium">意向等级</Label>
+              <RadioGroup
+                value={intentionLevel}
+                onValueChange={(value) =>
+                  setIntentionLevel(value as IntentionLevel)
+                }
+                className="flex gap-4"
+              >
+                {intentionLevelOptions.map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option.value} id={option.value} />
+                    <Label htmlFor={option.value} className="text-sm">{option.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="send-dingding"
-                checked={sendToDingding}
-                onCheckedChange={(checked) => setSendToDingding(checked as boolean)}
+            <div>
+              <Label className="mb-2 block text-sm font-medium">下次回访时间</Label>
+              <DateTimePicker
+                value={nextFollowupAt}
+                onChange={(val) => setNextFollowupAt(val || '')}
+                placeholder="选择时间"
+                showQuickButtons={true}
               />
-              <Label htmlFor="send-dingding" className="flex items-center gap-1">
-                <Send className="h-3 w-3" />
-                发送到钉钉群
-              </Label>
             </div>
           </div>
 
-          {/* 跟进内容 */}
-          <div>
-            <Label className="mb-2 block">跟进内容</Label>
-            <Textarea
-              placeholder="输入跟进内容..."
-              value={followupContent}
-              onChange={(e) => setFollowupContent(e.target.value)}
-              rows={2}
-            />
+          {/* 区块3: 跟进内容 */}
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="wechat-added"
+                  checked={wechatAdded}
+                  onCheckedChange={(checked) => setWechatAdded(checked as boolean)}
+                />
+                <Label htmlFor="wechat-added" className="text-sm">已添加微信</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="send-dingding"
+                  checked={sendToDingding}
+                  onCheckedChange={(checked) => setSendToDingding(checked as boolean)}
+                />
+                <Label htmlFor="send-dingding" className="flex items-center gap-1 text-sm">
+                  <Send className="h-3 w-3" />
+                  发送到钉钉群
+                </Label>
+              </div>
+            </div>
+            <div>
+              <Label className="mb-2 block text-sm font-medium">跟进内容</Label>
+              <Textarea
+                placeholder="输入跟进内容..."
+                value={followupContent}
+                onChange={(e) => setFollowupContent(e.target.value)}
+                rows={2}
+              />
+            </div>
           </div>
         </CardContent>
 

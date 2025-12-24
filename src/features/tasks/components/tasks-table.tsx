@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import {
   type SortingState,
@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
 import { priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
@@ -30,15 +31,40 @@ import { tasksColumns as columns } from './tasks-columns'
 
 const route = getRouteApi('/_authenticated/tasks/')
 
-type DataTableProps = {
-  data: Task[]
+// 骨架屏 ID 前缀
+const SKELETON_ID_PREFIX = '__skeleton__'
+
+// 判断是否是骨架屏行
+function isSkeletonRow(id: string): boolean {
+  return id.startsWith(SKELETON_ID_PREFIX)
 }
 
-export function TasksTable({ data }: DataTableProps) {
+// 生成骨架屏占位数据
+function createSkeletonData(count: number): Task[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${SKELETON_ID_PREFIX}${i}`,
+    title: '',
+    status: 'todo' as const,
+    label: 'bug' as const,
+    priority: 'medium' as const,
+  }))
+}
+
+type DataTableProps = {
+  data: Task[]
+  isLoading?: boolean
+}
+
+export function TasksTable({ data, isLoading = false }: DataTableProps) {
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+
+  // 加载时使用骨架屏数据
+  const displayData = useMemo(() => {
+    return isLoading ? createSkeletonData(10) : data
+  }, [isLoading, data])
 
   // Local state management for table (uncomment to use local-only state, not synced with URL)
   // const [globalFilter, onGlobalFilterChange] = useState('')
@@ -67,7 +93,7 @@ export function TasksTable({ data }: DataTableProps) {
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
-    data,
+    data: displayData,
     columns,
     state: {
       sorting,
@@ -156,27 +182,44 @@ export function TasksTable({ data }: DataTableProps) {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        cell.column.columnDef.meta?.className,
-                        cell.column.columnDef.meta?.tdClassName
-                      )}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const isSkeleton = isSkeletonRow(row.original.id)
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={!isSkeleton && row.getIsSelected() && 'selected'}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          cell.column.columnDef.meta?.className,
+                          cell.column.columnDef.meta?.tdClassName
+                        )}
+                      >
+                        {isSkeleton ? (
+                          cell.column.id === 'select' ? null : (
+                            <Skeleton className={cn(
+                              'h-4',
+                              cell.column.id === 'id' && 'w-20',
+                              cell.column.id === 'title' && 'w-[70%]',
+                              cell.column.id === 'status' && 'w-20 rounded-full',
+                              cell.column.id === 'priority' && 'w-16 rounded-full',
+                              cell.column.id === 'actions' && 'w-8',
+                              !['id', 'title', 'status', 'priority', 'actions'].includes(cell.column.id) && 'w-[70%]'
+                            )} />
+                          )
+                        ) : (
+                          flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell

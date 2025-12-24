@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   type SortingState,
   type VisibilityState,
@@ -21,23 +21,54 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
 import { roles } from '../data/data'
 import { type User } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { usersColumns as columns } from './users-columns'
 
+// 骨架屏 ID 前缀
+const SKELETON_ID_PREFIX = '__skeleton__'
+
+// 判断是否是骨架屏行
+function isSkeletonRow(id: string): boolean {
+  return id.startsWith(SKELETON_ID_PREFIX)
+}
+
+// 生成骨架屏占位数据
+function createSkeletonData(count: number): User[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${SKELETON_ID_PREFIX}${i}`,
+    firstName: '',
+    lastName: '',
+    username: '',
+    email: '',
+    phoneNumber: '',
+    status: 'active' as const,
+    role: 'viewer' as const,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }))
+}
+
 type DataTableProps = {
   data: User[]
   search: Record<string, unknown>
   navigate: NavigateFn
+  isLoading?: boolean
 }
 
-export function UsersTable({ data, search, navigate }: DataTableProps) {
+export function UsersTable({ data, search, navigate, isLoading = false }: DataTableProps) {
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [sorting, setSorting] = useState<SortingState>([])
+
+  // 加载时使用骨架屏数据
+  const displayData = useMemo(() => {
+    return isLoading ? createSkeletonData(10) : data
+  }, [isLoading, data])
 
   // Local state management for table (uncomment to use local-only state, not synced with URL)
   // const [columnFilters, onColumnFiltersChange] = useState<ColumnFiltersState>([])
@@ -65,7 +96,7 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
-    data,
+    data: displayData,
     columns,
     state: {
       sorting,
@@ -151,29 +182,48 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className='group/row'
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        'bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted',
-                        cell.column.columnDef.meta?.className,
-                        cell.column.columnDef.meta?.tdClassName
-                      )}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const isSkeleton = isSkeletonRow(row.original.id)
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={!isSkeleton && row.getIsSelected() && 'selected'}
+                    className='group/row'
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          'bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted',
+                          cell.column.columnDef.meta?.className,
+                          cell.column.columnDef.meta?.tdClassName
+                        )}
+                      >
+                        {isSkeleton ? (
+                          cell.column.id === 'select' ? null : (
+                            <Skeleton className={cn(
+                              'h-4',
+                              cell.column.id === 'username' && 'w-24',
+                              cell.column.id === 'status' && 'w-16 rounded-full',
+                              cell.column.id === 'role' && 'w-20 rounded-full',
+                              cell.column.id === 'email' && 'w-40',
+                              cell.column.id === 'phoneNumber' && 'w-28',
+                              cell.column.id === 'createdAt' && 'w-24',
+                              cell.column.id === 'actions' && 'w-8',
+                              !['username', 'status', 'role', 'email', 'phoneNumber', 'createdAt', 'actions'].includes(cell.column.id) && 'w-[70%]'
+                            )} />
+                          )
+                        ) : (
+                          flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell
