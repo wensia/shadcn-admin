@@ -63,7 +63,7 @@ import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { adminApi } from '../api'
+import { sourceChannelApi } from '../api'
 import type { SourceChannel } from '../types'
 import { StatusBadge, SourceChannelCategoryBadge } from '../components/status-badge'
 
@@ -131,14 +131,14 @@ export function SourceChannelsPage() {
       if (categoryFilter !== 'all') {
         params.category = categoryFilter
       }
-      const response = await adminApi.getSourceChannels(params)
-      return response.data
+      const response = await sourceChannelApi.getChannelsPaginated(params)
+      return response
     },
   })
 
   // 创建来源渠道
   const createMutation = useMutation({
-    mutationFn: (data: FormData) => adminApi.createSourceChannel(data),
+    mutationFn: (data: FormData) => sourceChannelApi.createChannel(data),
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
@@ -153,7 +153,7 @@ export function SourceChannelsPage() {
   // 更新来源渠道
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: FormData }) =>
-      adminApi.updateSourceChannel(id, data),
+      sourceChannelApi.updateChannel(id, data),
     onSuccess: () => {
       toast.success('更新成功')
       setDialogOpen(false)
@@ -168,7 +168,7 @@ export function SourceChannelsPage() {
 
   // 删除来源渠道
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => adminApi.deleteSourceChannel(id),
+    mutationFn: (id: string) => sourceChannelApi.deleteChannel(id),
     onSuccess: () => {
       toast.success('删除成功')
       setDeleteDialogOpen(false)
