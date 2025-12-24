@@ -10,11 +10,11 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, Share2, Filter } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Share2, Filter, X, ChevronDown, Settings2 } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -62,6 +62,12 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { sourceChannelApi } from '../api'
 import type { SourceChannel } from '../types'
@@ -76,6 +82,32 @@ const CHANNEL_CATEGORIES = [
   { value: 'OTHER', label: '其他渠道' },
 ] as const
 
+// 额外字段类型选项
+const FIELD_TYPE_OPTIONS = [
+  { value: 'text', label: '文本' },
+  { value: 'number', label: '数字' },
+  { value: 'date', label: '日期' },
+  { value: 'datetime', label: '日期时间' },
+  { value: 'select', label: '选择框' },
+  { value: 'textarea', label: '文本域' },
+] as const
+
+// 额外字段选项的 schema
+const fieldOptionSchema = z.object({
+  label: z.string().min(1, '请输入选项标签'),
+  value: z.string().min(1, '请输入选项值'),
+})
+
+// 额外字段的 schema
+const extraFieldSchema = z.object({
+  field_name: z.string().min(1, '请输入字段名称'),
+  field_label: z.string().min(1, '请输入字段标签'),
+  field_type: z.enum(['text', 'number', 'date', 'datetime', 'select', 'textarea']),
+  required: z.boolean().default(false),
+  placeholder: z.string().optional(),
+  options: z.array(fieldOptionSchema).optional(),
+})
+
 // 表单验证 schema
 const formSchema = z.object({
   name: z.string().min(1, '请输入渠道名称').max(50, '渠道名称不能超过50个字符'),
@@ -83,6 +115,7 @@ const formSchema = z.object({
   description: z.string().max(200, '描述不能超过200个字符').optional(),
   sort_order: z.number().min(0, '排序值不能小于0').default(0),
   is_active: z.boolean().default(true),
+  extra_fields: z.array(extraFieldSchema).default([]),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -102,6 +135,9 @@ export function SourceChannelsPage() {
   const [editingItem, setEditingItem] = useState<SourceChannel | null>(null)
   const [deletingItem, setDeletingItem] = useState<SourceChannel | null>(null)
 
+  // 额外字段配置折叠状态
+  const [extraFieldsOpen, setExtraFieldsOpen] = useState(true)
+
   // 表单
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -111,7 +147,14 @@ export function SourceChannelsPage() {
       description: '',
       sort_order: 0,
       is_active: true,
+      extra_fields: [],
     },
+  })
+
+  // 额外字段数组管理
+  const { fields: extraFields, append: appendExtraField, remove: removeExtraField } = useFieldArray({
+    control: form.control,
+    name: 'extra_fields',
   })
 
   // 获取来源渠道列表
@@ -315,20 +358,46 @@ export function SourceChannelsPage() {
       description: '',
       sort_order: 0,
       is_active: true,
+      extra_fields: [],
     })
+    setExtraFieldsOpen(true)
     setDialogOpen(true)
   }
 
   // 处理编辑
   const handleEdit = (item: SourceChannel) => {
     setEditingItem(item)
+    // 获取额外字段数据，兼容多种格式
+    let extraFieldsData: FormData['extra_fields'] = []
+    if (item.extra_fields && Array.isArray(item.extra_fields)) {
+      extraFieldsData = item.extra_fields.map(field => ({
+        field_name: field.field_name || '',
+        field_label: field.field_label || '',
+        field_type: field.field_type || 'text',
+        required: field.required || false,
+        placeholder: field.placeholder || '',
+        options: field.options || [],
+      }))
+    } else if (item.channel_config?.fields && Array.isArray(item.channel_config.fields)) {
+      extraFieldsData = item.channel_config.fields.map(field => ({
+        field_name: field.field_name || '',
+        field_label: field.field_label || '',
+        field_type: field.field_type || 'text',
+        required: field.required || false,
+        placeholder: field.placeholder || '',
+        options: field.options || [],
+      }))
+    }
+
     form.reset({
       name: item.name,
       category: (item.category?.toUpperCase() || 'ONLINE') as FormData['category'],
       description: item.description || '',
       sort_order: item.sort_order,
       is_active: item.is_active,
+      extra_fields: extraFieldsData,
     })
+    setExtraFieldsOpen(extraFieldsData.length > 0)
     setDialogOpen(true)
   }
 
@@ -347,14 +416,56 @@ export function SourceChannelsPage() {
 
   // 处理表单提交
   const handleSubmit = (data: FormData) => {
+    // 过滤掉无效的额外字段（必须有 field_name 和 field_label）
+    const submitData = {
+      ...data,
+      extra_fields: data.extra_fields.filter(
+        field => field.field_name.trim() && field.field_label.trim()
+      ).map(field => ({
+        ...field,
+        // 如果不是选择框类型，清空 options
+        options: field.field_type === 'select' ? field.options : undefined,
+      })),
+    }
+
     if (editingItem) {
       updateMutation.mutate({
         id: editingItem.id,
-        data,
+        data: submitData,
       })
     } else {
-      createMutation.mutate(data)
+      createMutation.mutate(submitData)
     }
+  }
+
+  // 添加新的额外字段
+  const handleAddExtraField = () => {
+    appendExtraField({
+      field_name: '',
+      field_label: '',
+      field_type: 'text',
+      required: false,
+      placeholder: '',
+      options: [],
+    })
+  }
+
+  // 为选择框添加选项
+  const handleAddOption = (fieldIndex: number) => {
+    const currentOptions = form.getValues(`extra_fields.${fieldIndex}.options`) || []
+    form.setValue(`extra_fields.${fieldIndex}.options`, [
+      ...currentOptions,
+      { label: '', value: '' },
+    ])
+  }
+
+  // 移除选择框选项
+  const handleRemoveOption = (fieldIndex: number, optionIndex: number) => {
+    const currentOptions = form.getValues(`extra_fields.${fieldIndex}.options`) || []
+    form.setValue(
+      `extra_fields.${fieldIndex}.options`,
+      currentOptions.filter((_, i) => i !== optionIndex)
+    )
   }
 
   // 处理搜索
@@ -482,7 +593,7 @@ export function SourceChannelsPage() {
 
       {/* 创建/编辑对话框 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? '编辑来源渠道' : '新建来源渠道'}
@@ -494,7 +605,9 @@ export function SourceChannelsPage() {
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 overflow-hidden">
+              <ScrollArea className="flex-1 pr-4">
+                <div className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -592,7 +705,175 @@ export function SourceChannelsPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+
+              {/* 额外字段配置 */}
+              <Separator className="my-4" />
+              <Collapsible open={extraFieldsOpen} onOpenChange={setExtraFieldsOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-4 w-4" />
+                      <span className="font-medium">额外字段配置</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({extraFields.length} 个字段)
+                      </span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${extraFieldsOpen ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3 space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-dashed"
+                    onClick={handleAddExtraField}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    添加额外字段
+                  </Button>
+
+                  {extraFields.map((field, index) => {
+                    const fieldType = form.watch(`extra_fields.${index}.field_type`)
+                    const options = form.watch(`extra_fields.${index}.options`) || []
+
+                    return (
+                      <Card key={field.id} className="relative">
+                        <CardHeader className="pb-3 pt-4 px-4">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-medium">
+                              字段 {index + 1}
+                            </CardTitle>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => removeExtraField(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-4 space-y-3">
+                          {/* 第一行：字段名和标签 */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">字段名称（英文）</Label>
+                              <Input
+                                placeholder="如: phone, wechat"
+                                {...form.register(`extra_fields.${index}.field_name`)}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">字段标签（中文）</Label>
+                              <Input
+                                placeholder="如: 手机号, 微信号"
+                                {...form.register(`extra_fields.${index}.field_label`)}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 第二行：类型、必填、占位符 */}
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">字段类型</Label>
+                              <Select
+                                value={fieldType}
+                                onValueChange={(value) => form.setValue(`extra_fields.${index}.field_type`, value as FormData['extra_fields'][0]['field_type'])}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {FIELD_TYPE_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">占位符</Label>
+                              <Input
+                                placeholder="请输入..."
+                                {...form.register(`extra_fields.${index}.placeholder`)}
+                              />
+                            </div>
+                            <div className="flex items-end pb-2">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`required-${index}`}
+                                  checked={form.watch(`extra_fields.${index}.required`)}
+                                  onCheckedChange={(checked) => form.setValue(`extra_fields.${index}.required`, !!checked)}
+                                />
+                                <Label htmlFor={`required-${index}`} className="text-xs cursor-pointer">
+                                  必填
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 选择框选项配置 */}
+                          {fieldType === 'select' && (
+                            <div className="space-y-2 pt-2 border-t">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs">选项配置</Label>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs"
+                                  onClick={() => handleAddOption(index)}
+                                >
+                                  <Plus className="mr-1 h-3 w-3" />
+                                  添加选项
+                                </Button>
+                              </div>
+                              {options.length === 0 ? (
+                                <p className="text-xs text-muted-foreground text-center py-2">
+                                  暂无选项，请添加
+                                </p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {options.map((_, optIndex) => (
+                                    <div key={optIndex} className="flex items-center gap-2">
+                                      <Input
+                                        placeholder="选项标签"
+                                        className="h-8 text-xs"
+                                        {...form.register(`extra_fields.${index}.options.${optIndex}.label`)}
+                                      />
+                                      <Input
+                                        placeholder="选项值"
+                                        className="h-8 text-xs"
+                                        {...form.register(`extra_fields.${index}.options.${optIndex}.value`)}
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0"
+                                        onClick={() => handleRemoveOption(index, optIndex)}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
+                </div>
+              </ScrollArea>
+
+              <DialogFooter className="mt-4 pt-4 border-t">
                 <Button
                   type="button"
                   variant="outline"
