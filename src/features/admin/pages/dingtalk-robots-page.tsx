@@ -495,19 +495,21 @@ export function DingtalkRobotsPage() {
 
         {/* 搜索栏 */}
         <div className="flex items-center gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索机器人名称..."
-              className="pl-8"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="搜索机器人名称..."
+                className="pl-8"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+            </div>
+            <Button variant="outline" onClick={handleSearch}>
+              搜索
+            </Button>
           </div>
-          <Button variant="outline" onClick={handleSearch}>
-            搜索
-          </Button>
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
             <RefreshCw className="h-4 w-4" />
           </Button>

@@ -534,39 +534,41 @@ export function LeadAccessStatsPage() {
         </div>
 
         {/* 工具栏 */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={filters.time_range || 'today'}
-            onValueChange={(value) => handleFilterChange('time_range', value)}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="时间范围" />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_RANGE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索顾问姓名..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="pl-8"
-            />
+        <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            <Select
+              value={filters.time_range || 'today'}
+              onValueChange={(value) => handleFilterChange('time_range', value)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="时间范围" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_RANGE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="relative min-w-[200px] max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="搜索顾问姓名..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            {selectedRows.length > 0 && (
+              <Button variant="outline" onClick={handleOpenBatchEdit}>
+                批量修改限制 ({selectedRows.length})
+              </Button>
+            )}
           </div>
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
             <RefreshCw className="h-4 w-4" />
           </Button>
-          {selectedRows.length > 0 && (
-            <Button variant="outline" onClick={handleOpenBatchEdit}>
-              批量修改限制 ({selectedRows.length})
-            </Button>
-          )}
         </div>
 
         {/* 表格 */}

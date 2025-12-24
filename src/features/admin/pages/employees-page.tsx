@@ -514,31 +514,33 @@ export function EmployeesPage() {
         </div>
 
         {/* 工具栏 */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索用户名、姓名、手机号..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-8"
-            />
+        <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="relative min-w-[200px] max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="搜索用户名、姓名、手机号..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="pl-8"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1) }}>
+              <SelectTrigger className="w-[120px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="筛选状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="active">在职</SelectItem>
+                <SelectItem value="inactive">离职</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleSearch}>
+              搜索
+            </Button>
           </div>
-          <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1) }}>
-            <SelectTrigger className="w-[120px]">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="筛选状态" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="active">在职</SelectItem>
-              <SelectItem value="inactive">离职</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={handleSearch}>
-            搜索
-          </Button>
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
             <RefreshCw className="h-4 w-4" />
           </Button>

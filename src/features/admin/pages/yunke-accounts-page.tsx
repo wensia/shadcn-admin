@@ -678,40 +678,41 @@ export function YunkeAccountsPage() {
 
         {/* 搜索栏 */}
         <div className="flex items-center gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="输入姓名搜索..."
-              className="pl-8"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="输入姓名搜索..."
+                className="pl-8"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="状态筛选" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleSearch}>
+              搜索
+            </Button>
+            {selectedCount > 0 && (
+              <Badge variant="secondary">
+                已选择 {selectedCount} 个账号
+              </Badge>
+            )}
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="状态筛选" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={handleSearch}>
-            搜索
-          </Button>
-          <Button variant="ghost" size="icon" onClick={handleRefresh}>
+          <Button variant="ghost" size="icon" onClick={handleRefresh} title="刷新">
             <RefreshCw className="h-4 w-4" />
           </Button>
-
-          {selectedCount > 0 && (
-            <Badge variant="secondary" className="ml-4">
-              已选择 {selectedCount} 个账号
-            </Badge>
-          )}
         </div>
 
         {/* 表格 */}

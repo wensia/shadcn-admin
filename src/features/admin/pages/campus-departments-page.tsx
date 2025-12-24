@@ -344,48 +344,50 @@ export function CampusDepartmentsPage() {
         </div>
 
         {/* 工具栏 */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-8"
-            />
+        <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="relative min-w-[200px] max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="搜索..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="pl-8"
+              />
+            </div>
+            <Select value={campusFilter} onValueChange={(value) => { setCampusFilter(value); setPage(1) }}>
+              <SelectTrigger className="w-[160px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="筛选校区" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部校区</SelectItem>
+                {campuses.map((campus) => (
+                  <SelectItem key={campus.id} value={campus.id}>
+                    {campus.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={departmentFilter} onValueChange={(value) => { setDepartmentFilter(value); setPage(1) }}>
+              <SelectTrigger className="w-[160px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="筛选部门" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部部门</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleSearch}>
+              搜索
+            </Button>
           </div>
-          <Select value={campusFilter} onValueChange={(value) => { setCampusFilter(value); setPage(1) }}>
-            <SelectTrigger className="w-[160px]">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="筛选校区" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部校区</SelectItem>
-              {campuses.map((campus) => (
-                <SelectItem key={campus.id} value={campus.id}>
-                  {campus.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={departmentFilter} onValueChange={(value) => { setDepartmentFilter(value); setPage(1) }}>
-            <SelectTrigger className="w-[160px]">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="筛选部门" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部部门</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept.id} value={dept.id}>
-                  {dept.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={handleSearch}>
-            搜索
-          </Button>
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
             <RefreshCw className="h-4 w-4" />
           </Button>

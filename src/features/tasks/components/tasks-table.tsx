@@ -153,7 +153,7 @@ export function TasksTable({ data, isLoading = false }: DataTableProps) {
           },
         ]}
       />
-      <div className='overflow-hidden rounded-md border'>
+      <div className='overflow-auto rounded-md border max-h-[calc(100vh-300px)]'>
         <Table className='min-w-xl'>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

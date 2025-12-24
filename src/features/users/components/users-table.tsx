@@ -152,7 +152,7 @@ export function UsersTable({ data, search, navigate, isLoading = false }: DataTa
           },
         ]}
       />
-      <div className='overflow-hidden rounded-md border'>
+      <div className='overflow-auto rounded-md border max-h-[calc(100vh-300px)]'>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
