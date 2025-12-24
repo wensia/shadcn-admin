@@ -397,6 +397,10 @@ export interface LeadListParams {
   collector_name?: string  // 地推采单人姓名
   collection_location?: string  // 地推采单地点
   source_extra_filters?: Record<string, string>  // 来源渠道额外字段筛选（其他字段）
+  // 年龄和年级筛选
+  age_min?: number  // 最小年龄
+  age_max?: number  // 最大年龄
+  grade?: Grade[]   // 年级筛选（多选）
 }
 
 // ==================== 来源渠道额外字段配置 ====================

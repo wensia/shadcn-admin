@@ -39,8 +39,8 @@ import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
 import { apiClient } from '@/lib/api/client'
-import type { LeadListParams, LeadStatus, IntentionLevel, SourceChannelExtraField } from '../types'
-import { leadStatusLabels, intentionLevelLabels } from '../types'
+import type { LeadListParams, LeadStatus, IntentionLevel, SourceChannelExtraField, Grade } from '../types'
+import { leadStatusLabels, intentionLevelLabels, gradeLabels } from '../types'
 
 // 来源渠道响应类型
 interface SourceChannelItem {
@@ -453,16 +453,77 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
                 </FilterField>
               </div>
 
-              {/* 归属校区 单独一行 */}
-              <FilterField label="归属校区">
+              {/* 归属校区 + 无活动天数 并排 */}
+              <div className="grid grid-cols-2 gap-3">
+                <FilterField label="归属校区">
+                  <FormFacetedFilter
+                    placeholder="全部校区"
+                    options={filterOptions?.campuses?.map((campus) => ({
+                      value: campus.id,
+                      label: campus.name
+                    })) || []}
+                    value={localFilters.owner_campus_id}
+                    onChange={(value) => updateFilter('owner_campus_id', value)}
+                  />
+                </FilterField>
+
+                <FilterField label="无活动天数">
+                  <Input
+                    type="number"
+                    className={cn(s.height.control, s.text.xs, s.rounded)}
+                    value={localFilters.days_without_activity || ''}
+                    onChange={(e) =>
+                      updateFilter('days_without_activity', e.target.value ? parseInt(e.target.value) : undefined)
+                    }
+                    placeholder="如: 7"
+                  />
+                </FilterField>
+              </div>
+            </FilterGroup>
+
+            {/* ========== 年龄年级 ========== */}
+            <FilterGroup>
+              {/* 年龄范围 */}
+              <div className="grid grid-cols-2 gap-3">
+                <FilterField label="最小年龄">
+                  <Input
+                    type="number"
+                    className={cn(s.height.control, s.text.xs, s.rounded)}
+                    value={localFilters.age_min || ''}
+                    onChange={(e) =>
+                      updateFilter('age_min', e.target.value ? parseInt(e.target.value) : undefined)
+                    }
+                    placeholder="如: 3"
+                    min={0}
+                    max={30}
+                  />
+                </FilterField>
+
+                <FilterField label="最大年龄">
+                  <Input
+                    type="number"
+                    className={cn(s.height.control, s.text.xs, s.rounded)}
+                    value={localFilters.age_max || ''}
+                    onChange={(e) =>
+                      updateFilter('age_max', e.target.value ? parseInt(e.target.value) : undefined)
+                    }
+                    placeholder="如: 12"
+                    min={0}
+                    max={30}
+                  />
+                </FilterField>
+              </div>
+
+              {/* 年级筛选 */}
+              <FilterField label="年级">
                 <FormFacetedFilter
-                  placeholder="全部校区"
-                  options={filterOptions?.campuses?.map((campus) => ({
-                    value: campus.id,
-                    label: campus.name
-                  })) || []}
-                  value={localFilters.owner_campus_id}
-                  onChange={(value) => updateFilter('owner_campus_id', value)}
+                  placeholder="全部年级"
+                  options={Object.entries(gradeLabels).map(([value, label]) => ({
+                    value,
+                    label
+                  }))}
+                  value={localFilters.grade}
+                  onChange={(value) => updateFilter('grade', value as Grade[])}
                 />
               </FilterField>
             </FilterGroup>
@@ -477,21 +538,6 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
                   onEndDateChange={(date) => updateFilter('created_to', date)}
                   startPlaceholder="开始日期"
                   endPlaceholder="结束日期"
-                />
-              </FilterField>
-
-              <FilterField
-                label="无活动天数"
-                description="筛选N天内无跟进/创建/激活记录的线索"
-              >
-                <Input
-                  type="number"
-                  className={cn(s.height.control, s.text.xs, s.rounded)}
-                  value={localFilters.days_without_activity || ''}
-                  onChange={(e) =>
-                    updateFilter('days_without_activity', e.target.value ? parseInt(e.target.value) : undefined)
-                  }
-                  placeholder="如: 7"
                 />
               </FilterField>
             </FilterGroup>
