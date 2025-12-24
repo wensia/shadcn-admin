@@ -180,110 +180,110 @@ export function SourceChannelsPage() {
     },
   })
 
+  // 判断是否为骨架屏数据
+  const isSkeleton = (id?: string) => id?.startsWith('__skeleton__') ?? false
+
   // 表格列定义
-  const columns: ColumnDef<SourceChannel>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'name',
-        header: '渠道名称',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-24" />
-          }
-          return (
-            <div className="flex items-center gap-2">
-              <Share2 className="h-4 w-4 text-indigo-500" />
-              <span className="font-medium">{row.original.name}</span>
-            </div>
-          )
-        },
+  const columns: ColumnDef<SourceChannel>[] = [
+    {
+      accessorKey: 'name',
+      header: '渠道名称',
+      cell: ({ row }) => {
+        if (isSkeleton(row.original.id)) {
+          return <Skeleton className="h-4 w-24" />
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <Share2 className="h-4 w-4 text-indigo-500" />
+            <span className="font-medium">{row.original.name}</span>
+          </div>
+        )
       },
-      {
-        accessorKey: 'category',
-        header: '分类',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-5 w-16" />
-          }
-          return <SourceChannelCategoryBadge category={row.original.category?.toUpperCase() || 'OTHER'} />
-        },
+    },
+    {
+      accessorKey: 'category',
+      header: '分类',
+      cell: ({ row }) => {
+        if (isSkeleton(row.original.id)) {
+          return <Skeleton className="h-5 w-16" />
+        }
+        return <SourceChannelCategoryBadge category={row.original.category?.toUpperCase() || 'OTHER'} />
       },
-      {
-        accessorKey: 'description',
-        header: '描述',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-32" />
-          }
-          return row.original.description || '-'
-        },
+    },
+    {
+      accessorKey: 'description',
+      header: '描述',
+      cell: ({ row }) => {
+        if (isSkeleton(row.original.id)) {
+          return <Skeleton className="h-4 w-32" />
+        }
+        return row.original.description || '-'
       },
-      {
-        accessorKey: 'extra_fields',
-        header: '额外字段',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-8" />
-          }
-          const fields = row.original.extra_fields || row.original.channel_config?.fields || []
-          return fields.length > 0 ? `${fields.length} 个` : '-'
-        },
+    },
+    {
+      accessorKey: 'extra_fields',
+      header: '额外字段',
+      cell: ({ row }) => {
+        if (isSkeleton(row.original.id)) {
+          return <Skeleton className="h-4 w-8" />
+        }
+        const fields = row.original.extra_fields || row.original.channel_config?.fields || []
+        return fields.length > 0 ? `${fields.length} 个` : '-'
       },
-      {
-        accessorKey: 'sort_order',
-        header: '排序',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-8" />
-          }
-          return row.original.sort_order
-        },
+    },
+    {
+      accessorKey: 'sort_order',
+      header: '排序',
+      cell: ({ row }) => {
+        if (isSkeleton(row.original.id)) {
+          return <Skeleton className="h-4 w-8" />
+        }
+        return row.original.sort_order ?? 0
       },
-      {
-        accessorKey: 'is_active',
-        header: '状态',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-5 w-14" />
-          }
-          return <StatusBadge isActive={row.original.is_active} />
-        },
+    },
+    {
+      accessorKey: 'is_active',
+      header: '状态',
+      cell: ({ row }) => {
+        if (isSkeleton(row.original.id)) {
+          return <Skeleton className="h-5 w-14" />
+        }
+        return <StatusBadge isActive={row.original.is_active ?? true} />
       },
-      {
-        id: 'actions',
-        header: '操作',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return (
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
-              </div>
-            )
-          }
+    },
+    {
+      id: 'actions',
+      header: '操作',
+      cell: ({ row }) => {
+        if (isSkeleton(row.original.id)) {
           return (
             <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-8 w-8" />
             </div>
           )
-        },
+        }
+        return (
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleEdit(row.original)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDeleteClick(row.original)}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        )
       },
-    ],
-    []
-  )
+    },
+  ]
 
   // 生成骨架屏数据
   const skeletonData: SourceChannel[] = useMemo(
