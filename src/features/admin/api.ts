@@ -40,6 +40,8 @@ import type {
   CampusDepartmentItem,
   CampusDepartmentCreate,
   CampusDepartmentUpdate,
+  DepartmentManagerItem,
+  DepartmentManagerCreate,
   OrganizationTreeNode,
   AdminStats,
   PaginatedResponse,
@@ -449,6 +451,38 @@ export const adminApi = {
     department_ids: string[]
   }): Promise<ApiResponse<void>> {
     return apiClient.post<ApiResponse<void>>(`${BASE_URL}/campus-departments/batch`, data)
+  },
+
+  // ========================================================================
+  // 校区部门负责人管理
+  // ========================================================================
+
+  /** 获取校区部门负责人列表 */
+  async getCampusDepartmentManagers(campusDepartmentId: string): Promise<ApiResponse<DepartmentManagerItem[]>> {
+    return apiClient.get<ApiResponse<DepartmentManagerItem[]>>(
+      `/organization/campus-departments/${campusDepartmentId}/managers`
+    )
+  },
+
+  /** 添加校区部门负责人 */
+  async addCampusDepartmentManager(
+    campusDepartmentId: string,
+    data: DepartmentManagerCreate
+  ): Promise<ApiResponse<DepartmentManagerItem>> {
+    return apiClient.post<ApiResponse<DepartmentManagerItem>>(
+      `/organization/campus-departments/${campusDepartmentId}/managers`,
+      data
+    )
+  },
+
+  /** 移除校区部门负责人 */
+  async removeCampusDepartmentManager(
+    campusDepartmentId: string,
+    managerId: string
+  ): Promise<ApiResponse<void>> {
+    return apiClient.delete<ApiResponse<void>>(
+      `/organization/campus-departments/${campusDepartmentId}/managers/${managerId}`
+    )
   },
 
   // ========================================================================

@@ -41,7 +41,7 @@ function EmployeeNode({
     <div className="select-none">
       <div
         className={cn(
-          'flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors cursor-pointer',
+          'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors cursor-pointer',
           'hover:bg-muted/50',
           isMatch && 'bg-yellow-100 dark:bg-yellow-900/30'
         )}

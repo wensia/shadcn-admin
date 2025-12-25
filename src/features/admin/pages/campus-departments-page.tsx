@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Trash2, Search, Building2, Network, Filter, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Search, Building2, Network, Filter, RefreshCw, Users } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,6 +64,7 @@ import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { adminApi } from '../api'
 import type { CampusDepartmentItem, CampusDepartmentCreate } from '../types'
 import { StatusBadge } from '../components/status-badge'
+import { ManageManagersDialog } from '../components/manage-managers-dialog'
 
 // 表单验证 schema
 const formSchema = z.object({
@@ -88,6 +89,8 @@ export function CampusDepartmentsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingItem, setDeletingItem] = useState<CampusDepartmentItem | null>(null)
+  const [managerDialogOpen, setManagerDialogOpen] = useState(false)
+  const [selectedDepartment, setSelectedDepartment] = useState<CampusDepartmentItem | null>(null)
 
   // 表单
   const form = useForm<FormData>({
@@ -184,7 +187,7 @@ export function CampusDepartmentsPage() {
           return (
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-teal-500" />
-              <span className="font-medium">{row.original.campus?.name || '-'}</span>
+              <span className="font-medium">{row.original.campus_name || '-'}</span>
             </div>
           )
         },
@@ -199,7 +202,7 @@ export function CampusDepartmentsPage() {
           return (
             <div className="flex items-center gap-2">
               <Network className="h-4 w-4 text-purple-500" />
-              <span>{row.original.department?.name || '-'}</span>
+              <span>{row.original.department_name || '-'}</span>
             </div>
           )
         },
@@ -211,7 +214,8 @@ export function CampusDepartmentsPage() {
           if (row.original.id.startsWith('__skeleton__')) {
             return <Skeleton className="h-4 w-20" />
           }
-          return row.original.campus?.area?.name || '-'
+          // 区域信息需要从嵌套对象获取（如果后端返回）或显示 '-'
+          return (row.original as unknown as { area_name?: string }).area_name || '-'
         },
       },
       {
@@ -221,7 +225,7 @@ export function CampusDepartmentsPage() {
           if (row.original.id.startsWith('__skeleton__')) {
             return <Skeleton className="h-4 w-8" />
           }
-          return row.original.sort_order
+          return row.original.sort_order ?? '-'
         },
       },
       {
@@ -249,16 +253,27 @@ export function CampusDepartmentsPage() {
         header: '操作',
         cell: ({ row }) => {
           if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-8 w-8" />
+            return <Skeleton className="h-8 w-16" />
           }
           return (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDeleteClick(row.original)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleManageManagers(row.original)}
+                title="负责人管理"
+              >
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDeleteClick(row.original)}
+                title="删除"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
           )
         },
       },
@@ -304,6 +319,12 @@ export function CampusDepartmentsPage() {
   const handleDeleteClick = (item: CampusDepartmentItem) => {
     setDeletingItem(item)
     setDeleteDialogOpen(true)
+  }
+
+  // 处理负责人管理点击
+  const handleManageManagers = (item: CampusDepartmentItem) => {
+    setSelectedDepartment(item)
+    setManagerDialogOpen(true)
   }
 
   // 处理删除确认
@@ -564,7 +585,7 @@ export function CampusDepartmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除「{deletingItem?.campus?.name} - {deletingItem?.department?.name}」的配置吗？
+              确定要删除「{deletingItem?.campus_name} - {deletingItem?.department_name}」的配置吗？
               此操作不可撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -579,6 +600,14 @@ export function CampusDepartmentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 负责人管理对话框 */}
+      <ManageManagersDialog
+        open={managerDialogOpen}
+        onOpenChange={setManagerDialogOpen}
+        campusDepartment={selectedDepartment}
+        onSuccess={() => refetch()}
+      />
     </Main>
   )
 }

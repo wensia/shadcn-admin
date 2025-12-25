@@ -106,6 +106,7 @@ export interface CampusDepartmentItem {
   campus_name: string
   department_id: string
   department_name: string
+  sort_order?: number
   manager_id?: string
   manager?: {
     id: string
@@ -122,6 +123,41 @@ export interface CampusDepartmentItem {
   created_at?: string
   updated_at?: string
 }
+
+/** 负责人类型 */
+export type ManagerType = 'manager' | 'deputy' | 'supervisor'
+
+/** 部门负责人 */
+export interface DepartmentManagerItem {
+  id: string
+  campus_department_id: string
+  employee_id: string
+  employee?: {
+    id: string
+    name: string
+    username: string
+    phone?: string
+    email?: string
+  }
+  manager_type: ManagerType
+  is_active: boolean
+  appointed_at?: string
+  created_at?: string
+  updated_at?: string
+}
+
+/** 添加负责人请求 */
+export interface DepartmentManagerCreate {
+  employee_id: string
+  manager_type: ManagerType
+}
+
+/** 负责人类型选项 */
+export const MANAGER_TYPE_OPTIONS = [
+  { label: '经理', value: 'manager' },
+  { label: '副经理', value: 'deputy' },
+  { label: '主管', value: 'supervisor' }
+] as const
 
 /** 职位 */
 export interface PositionItem {
