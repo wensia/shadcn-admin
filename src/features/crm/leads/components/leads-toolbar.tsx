@@ -159,8 +159,8 @@ export function LeadsToolbar({
         )}
 
         {/* 刷新 */}
-        <Button variant="outline" size="sm" onClick={onRefreshClick} className="h-8 w-8 p-0">
-          <RefreshCw className="h-3.5 w-3.5" />
+        <Button variant="outline" size="icon" onClick={onRefreshClick} title="刷新">
+          <RefreshCw className="h-4 w-4" />
         </Button>
 
         {/* 列显示控制 */}

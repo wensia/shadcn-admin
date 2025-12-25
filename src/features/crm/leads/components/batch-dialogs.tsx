@@ -213,12 +213,11 @@ export function BatchAssignDialog({
 
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={handleRefresh}
-              className="h-8 text-xs"
+              title="刷新"
             >
-              <RefreshCw className="h-3.5 w-3.5 mr-1" />
-              刷新
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
 

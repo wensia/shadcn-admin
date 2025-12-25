@@ -374,8 +374,8 @@ export function BatchImportPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0">
-              <RefreshCw className="h-3.5 w-3.5" />
+            <Button variant="outline" size="icon" onClick={() => refetch()} title="刷新">
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
         </div>

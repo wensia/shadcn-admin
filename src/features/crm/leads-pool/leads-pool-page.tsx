@@ -397,9 +397,8 @@ export function LeadsPoolPage() {
             )}
 
             {/* 刷新按钮 */}
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-              刷新
+            <Button variant="outline" size="icon" onClick={handleRefresh} title="刷新">
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
 
