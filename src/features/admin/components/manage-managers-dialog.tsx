@@ -35,6 +35,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
+import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
 import { adminApi } from '../api'
 import type {
   CampusDepartmentItem,
@@ -73,8 +74,11 @@ export function ManageManagersDialog({
   const queryClient = useQueryClient()
 
   // 添加负责人表单状态
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('')
+  const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null)
   const [selectedManagerType, setSelectedManagerType] = useState<ManagerType>('manager')
+
+  // 员工选择器弹窗状态
+  const [employeeSelectorOpen, setEmployeeSelectorOpen] = useState(false)
 
   // 删除确认对话框状态
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -95,23 +99,10 @@ export function ManageManagersDialog({
     enabled: !!campusDepartment?.id && open,
   })
 
-  // 获取员工列表（用于选择负责人）
-  const { data: employeesData, isLoading: isLoadingEmployees } = useQuery({
-    queryKey: ['admin-employees-for-manager'],
-    queryFn: async () => {
-      const response = await adminApi.getEmployees({ size: 500, is_active: true })
-      return response.data
-    },
-    enabled: open,
-  })
-
   const managers = managersData || []
-  const employees = employeesData?.items || []
 
-  // 过滤掉已经是负责人的员工
-  const availableEmployees = employees.filter(
-    (emp) => !managers.some((m) => m.employee_id === emp.id)
-  )
+  // 已经是负责人的员工ID列表
+  const existingManagerIds = managers.map((m) => m.employee_id)
 
   // 添加负责人
   const addMutation = useMutation({
@@ -121,7 +112,7 @@ export function ManageManagersDialog({
     },
     onSuccess: () => {
       toast.success('添加负责人成功')
-      setSelectedEmployeeId('')
+      setSelectedEmployee(null)
       setSelectedManagerType('manager')
       refetchManagers()
       queryClient.invalidateQueries({ queryKey: ['admin-campus-departments'] })
@@ -153,12 +144,12 @@ export function ManageManagersDialog({
 
   // 处理添加负责人
   const handleAddManager = () => {
-    if (!selectedEmployeeId) {
+    if (!selectedEmployee) {
       toast.error('请选择员工')
       return
     }
     addMutation.mutate({
-      employee_id: selectedEmployeeId,
+      employee_id: selectedEmployee.id,
       manager_type: selectedManagerType,
     })
   }
@@ -179,7 +170,7 @@ export function ManageManagersDialog({
   // 关闭对话框时重置状态
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      setSelectedEmployeeId('')
+      setSelectedEmployee(null)
       setSelectedManagerType('manager')
     }
     onOpenChange(newOpen)
@@ -262,59 +253,45 @@ export function ManageManagersDialog({
             <div className="border-t pt-6">
               <h4 className="text-sm font-medium mb-3">添加负责人</h4>
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>选择员工</Label>
-                  <Select
-                    value={selectedEmployeeId}
-                    onValueChange={setSelectedEmployeeId}
-                    disabled={isLoadingEmployees}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingEmployees ? '加载中...' : '请选择员工'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableEmployees.length === 0 ? (
-                        <div className="py-6 text-center text-sm text-muted-foreground">
-                          没有可选的员工
-                        </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 min-w-0">
+                    <Label>选择员工</Label>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start font-normal"
+                      onClick={() => setEmployeeSelectorOpen(true)}
+                    >
+                      {selectedEmployee ? (
+                        <span>{selectedEmployee.name}</span>
                       ) : (
-                        availableEmployees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            <div className="flex items-center gap-2">
-                              <span>{emp.name}</span>
-                              <span className="text-muted-foreground text-xs">
-                                ({emp.username})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
+                        <span className="text-muted-foreground">点击选择员工...</span>
                       )}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    </Button>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>负责人类型</Label>
-                  <Select
-                    value={selectedManagerType}
-                    onValueChange={(value) => setSelectedManagerType(value as ManagerType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MANAGER_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2 min-w-0">
+                    <Label>负责人类型</Label>
+                    <Select
+                      value={selectedManagerType}
+                      onValueChange={(value) => setSelectedManagerType(value as ManagerType)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MANAGER_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <Button
                   onClick={handleAddManager}
-                  disabled={!selectedEmployeeId || addMutation.isPending}
+                  disabled={!selectedEmployee || addMutation.isPending}
                   className="w-full"
                 >
                   {addMutation.isPending ? (
@@ -334,6 +311,19 @@ export function ManageManagersDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 员工选择器弹窗 */}
+      <EmployeeSelectorDialog
+        open={employeeSelectorOpen}
+        onOpenChange={setEmployeeSelectorOpen}
+        onSelect={(employee) => {
+          setSelectedEmployee({ id: employee.id, name: employee.name })
+        }}
+        title="选择员工"
+        description="选择要添加为负责人的员工"
+        confirmText="确定选择"
+        excludeIds={existingManagerIds}
+      />
 
       {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
