@@ -46,6 +46,8 @@ export interface EmployeeSelectorDialogProps {
   confirmText?: string
   /** 要排除的员工ID列表 */
   excludeIds?: string[]
+  /** 是否按顾问职位筛选，默认 true（只显示顾问类职位） */
+  filterByAdvisorPosition?: boolean
 }
 
 export function EmployeeSelectorDialog({
@@ -55,7 +57,8 @@ export function EmployeeSelectorDialog({
   title = '选择员工',
   description = '从列表中选择一名员工',
   confirmText = '确定选择',
-  excludeIds = []
+  excludeIds = [],
+  filterByAdvisorPosition = true
 }: EmployeeSelectorDialogProps) {
   // 状态
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeListItem | null>(null)
@@ -76,15 +79,19 @@ export function EmployeeSelectorDialog({
 
   // 获取员工列表
   const { data: employeeData, isLoading, refetch } = useQuery({
-    queryKey: ['employees-for-selector', page, pageSize, searchText, selectedCampus],
+    queryKey: ['employees-for-selector', page, pageSize, searchText, selectedCampus, filterByAdvisorPosition],
     queryFn: async () => {
-      const response = await employeeApi.getCourseAdvisors({
+      const params = {
         page,
         size: pageSize,
         search: searchText || undefined,
         campus_name: selectedCampus || undefined,
         is_active: true
-      })
+      }
+      // 根据 filterByAdvisorPosition 选择 API
+      const response = filterByAdvisorPosition
+        ? await employeeApi.getCourseAdvisors(params)
+        : await employeeApi.getEmployees(params)
       return response.data
     },
     enabled: open

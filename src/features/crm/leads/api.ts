@@ -607,6 +607,44 @@ export interface Campus {
  */
 export const employeeApi = {
   /**
+   * 获取员工列表（通用）
+   */
+  async getEmployees(params?: {
+    page?: number
+    size?: number
+    search?: string
+    campus_name?: string
+    is_active?: boolean
+  }): Promise<ApiResponse<{
+    items: EmployeeListItem[]
+    total: number
+    page: number
+    size: number
+    pages: number
+  }>> {
+    const queryParams = {
+      ...params,
+      is_active: params?.is_active !== false,
+      include_identities: true,
+      use_cache: false
+    }
+
+    // 过滤掉 undefined 值
+    const filteredParams = Object.fromEntries(
+      Object.entries(queryParams).filter(([_, value]) => value !== undefined)
+    )
+
+    const response = await apiClient.get<ApiResponse<{
+      items: EmployeeListItem[]
+      total: number
+      page: number
+      size: number
+      pages: number
+    }>>('/employees', { params: filteredParams })
+    return response
+  },
+
+  /**
    * 获取课程顾问列表（用于线索分配）
    */
   async getCourseAdvisors(params?: {

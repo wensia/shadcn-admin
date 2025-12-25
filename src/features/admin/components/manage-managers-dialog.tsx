@@ -323,6 +323,7 @@ export function ManageManagersDialog({
         description="选择要添加为负责人的员工"
         confirmText="确定选择"
         excludeIds={existingManagerIds}
+        filterByAdvisorPosition={false}
       />
 
       {/* 删除确认对话框 */}
