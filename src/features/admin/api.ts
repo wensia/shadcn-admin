@@ -46,6 +46,8 @@ import type {
   ListQuery,
   SubordinateInfo,
   ManagementScope,
+  EmployeeSubordinatesResponse,
+  EmployeeHierarchyTreeResponse,
   YunkeLoginStatusResult,
   YunkeBatchLoginResult,
 } from './types'
@@ -357,14 +359,35 @@ export const adminApi = {
     })
   },
 
-  /** 获取员工的所有下属（包括间接） */
-  async getAllSubordinates(employeeId: string, maxDepth = 10): Promise<ApiResponse<SubordinateInfo[]>> {
-    return apiClient.get<ApiResponse<SubordinateInfo[]>>(`${BASE_URL}/employees/${employeeId}/subordinates`, {
-      params: { max_depth: maxDepth }
-    })
+  /** 获取员工的所有下属（包括间接下属）- 完整信息 */
+  async getEmployeeSubordinates(employeeId: string): Promise<ApiResponse<EmployeeSubordinatesResponse>> {
+    return apiClient.get<ApiResponse<EmployeeSubordinatesResponse>>(`/organization/employees/${employeeId}/subordinates`)
   },
 
-  /** 获取员工的管理范围 */
+  /** 获取员工的所有下属ID列表（用于权限查询） */
+  async getEmployeeSubordinateIds(employeeId: string): Promise<ApiResponse<{
+    employee_id: string
+    subordinate_ids: string[]
+    count: number
+  }>> {
+    return apiClient.get<ApiResponse<{
+      employee_id: string
+      subordinate_ids: string[]
+      count: number
+    }>>(`/organization/employees/${employeeId}/subordinate-ids`)
+  },
+
+  /** 获取员工层级架构树（基于 reports_to 关系） */
+  async getEmployeeHierarchyTree(): Promise<ApiResponse<EmployeeHierarchyTreeResponse>> {
+    return apiClient.get<ApiResponse<EmployeeHierarchyTreeResponse>>('/organization/hierarchy/tree')
+  },
+
+  /** 获取当前用户的管理范围 */
+  async getMyManagementScope(): Promise<ApiResponse<ManagementScope>> {
+    return apiClient.get<ApiResponse<ManagementScope>>('/organization/employees/my-management-scope')
+  },
+
+  /** 获取员工的管理范围（旧接口，兼容） */
   async getManagementScope(employeeId: string): Promise<ApiResponse<ManagementScope>> {
     return apiClient.get<ApiResponse<ManagementScope>>(`${BASE_URL}/employees/${employeeId}/management-scope`)
   },

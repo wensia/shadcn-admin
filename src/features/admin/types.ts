@@ -250,6 +250,45 @@ export interface OrganizationTreeNode {
   area_offices?: OrganizationTreeNode[]
 }
 
+/** 员工层级树节点 */
+export interface EmployeeHierarchyNode {
+  id: string
+  name: string
+  phone?: string
+  email?: string
+  is_superuser: boolean
+  reports_to?: string
+  campus?: string
+  department?: string
+  position?: string
+  children: EmployeeHierarchyNode[]
+}
+
+/** 员工下属响应 */
+export interface EmployeeSubordinatesResponse {
+  employee: {
+    id: string
+    name: string
+    is_superuser: boolean
+  }
+  direct_reports: Array<{
+    id: string
+    name: string
+    phone?: string
+    email?: string
+    is_active: boolean
+  }>
+  all_subordinates: SubordinateInfo[]
+  total_count: number
+  max_depth: number
+}
+
+/** 员工层级树响应 */
+export interface EmployeeHierarchyTreeResponse {
+  nodes: EmployeeHierarchyNode[]
+  total_employees: number
+}
+
 // ============================================================================
 // 统计和查询
 // ============================================================================
