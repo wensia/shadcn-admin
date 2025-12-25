@@ -546,6 +546,33 @@ export function ContinuousCallPage() {
     }
   }, [currentLead])
 
+  // 快捷编辑字段更新
+  const updateFieldMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: string }) => {
+      if (!currentLead) throw new Error('线索不存在')
+
+      const updateData: Record<string, unknown> = {}
+      if (field === 'age') {
+        updateData[field] = value ? parseInt(value, 10) : null
+      } else if (field === 'course_interests') {
+        updateData[field] = value ? value.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+      } else {
+        updateData[field] = value || null
+      }
+
+      const response = await leadsApi.updateLead(currentLead.id, updateData)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', currentLead?.id] })
+      queryClient.invalidateQueries({ queryKey: ['continuous-call-leads'] })
+    },
+  })
+
+  const handleFieldUpdate = useCallback(async (field: string, value: string) => {
+    await updateFieldMutation.mutateAsync({ field, value })
+  }, [updateFieldMutation])
+
   // 键盘事件处理 - 空格键外呼
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -712,6 +739,7 @@ export function ContinuousCallPage() {
             leadId={currentLead.id}
             useScrollArea={true}
             height="h-full"
+            onFieldUpdate={handleFieldUpdate}
           />
         </div>
       </Card>

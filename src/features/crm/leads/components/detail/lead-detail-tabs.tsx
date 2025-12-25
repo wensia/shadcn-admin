@@ -52,6 +52,8 @@ interface LeadDetailTabsProps {
   useScrollArea?: boolean
   /** 固定高度（用于 ScrollArea） */
   height?: string
+  /** 字段更新回调 */
+  onFieldUpdate?: (field: string, value: string) => Promise<void>
 }
 
 /**
@@ -66,6 +68,7 @@ export function LeadDetailTabs({
   className,
   useScrollArea = true,
   height = 'h-full',
+  onFieldUpdate,
 }: LeadDetailTabsProps) {
   const s = useStyleClasses()
   const [activeTab, setActiveTab] = useState(defaultTab)
@@ -198,7 +201,7 @@ export function LeadDetailTabs({
                 加载中...
               </div>
             ) : lead ? (
-              <LeadInfoDisplay lead={lead} isOverdue={statistics.isOverdue} />
+              <LeadInfoDisplay lead={lead} isOverdue={statistics.isOverdue} onFieldUpdate={onFieldUpdate} />
             ) : (
               <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
                 暂无数据

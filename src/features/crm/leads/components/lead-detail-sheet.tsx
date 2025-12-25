@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Sheet,
   SheetContent,
@@ -48,6 +48,7 @@ export function LeadDetailSheet({
   onCreateFollowup
 }: LeadDetailSheetProps) {
   const s = useStyleClasses()
+  const queryClient = useQueryClient()
 
   // ==================== 外呼状态 ====================
   const [isInCall, setIsInCall] = useState(false)
@@ -132,6 +133,38 @@ export function LeadDetailSheet({
     },
     enabled: !!leadId && open
   })
+
+  // ==================== 快捷编辑字段 ====================
+  const updateFieldMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: string }) => {
+      if (!leadId) throw new Error('线索ID不存在')
+
+      // 构建更新数据，处理特殊字段类型
+      const updateData: Record<string, unknown> = {}
+
+      if (field === 'age') {
+        updateData[field] = value ? parseInt(value, 10) : null
+      } else if (field === 'course_interests') {
+        // 课程兴趣是数组，用中文逗号或英文逗号分隔
+        updateData[field] = value ? value.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+      } else {
+        updateData[field] = value || null
+      }
+
+      const response = await leadsApi.updateLead(leadId, updateData)
+      return response.data
+    },
+    onSuccess: () => {
+      // 刷新线索数据
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+    },
+  })
+
+  // 字段更新处理函数
+  const handleFieldUpdate = useCallback(async (field: string, value: string) => {
+    await updateFieldMutation.mutateAsync({ field, value })
+  }, [updateFieldMutation])
 
   // ==================== 快捷键监听 ====================
   useEffect(() => {
@@ -256,6 +289,7 @@ export function LeadDetailSheet({
             isLoading={isLoading}
             useScrollArea={true}
             height="h-full"
+            onFieldUpdate={handleFieldUpdate}
           />
         )}
       </SheetContent>

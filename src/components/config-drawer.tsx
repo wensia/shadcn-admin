@@ -11,14 +11,10 @@ import { IconSidebarSidebar } from '@/assets/custom/icon-sidebar-sidebar'
 import { IconThemeDark } from '@/assets/custom/icon-theme-dark'
 import { IconThemeLight } from '@/assets/custom/icon-theme-light'
 import { IconThemeSystem } from '@/assets/custom/icon-theme-system'
-import { IconStyleMira } from '@/assets/custom/icon-style-mira'
-import { IconStyleLyra } from '@/assets/custom/icon-style-lyra'
-import { IconStyleMaia } from '@/assets/custom/icon-style-maia'
 import { cn } from '@/lib/utils'
 import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'
 import { useTheme } from '@/context/theme-provider'
-import { useStyle } from '@/context/style-provider'
 import { useAccentColor, ACCENT_COLORS, type AccentColor } from '@/context/accent-color-provider'
 import { Button } from '@/components/ui/button'
 import {
@@ -43,7 +39,6 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
   const { resetDir } = useDirection()
   const { resetTheme } = useTheme()
   const { resetLayout } = useLayout()
-  const { resetStyle } = useStyle()
   const { resetAccentColor } = useAccentColor()
 
   const handleReset = () => {
@@ -51,7 +46,6 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
     resetDir()
     resetTheme()
     resetLayout()
-    resetStyle()
     resetAccentColor()
   }
 
@@ -80,7 +74,6 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
         <div className='space-y-6 overflow-y-auto px-4'>
           <ThemeConfig />
           <AccentColorConfig />
-          <StyleConfig />
           <SidebarConfig />
           <LayoutConfig />
           <DirConfig />
@@ -272,49 +265,6 @@ function AccentColorConfig() {
             - {ACCENT_COLORS.find(c => c.value === accentColor)?.description}
           </span>
         )}
-      </div>
-    </div>
-  )
-}
-
-function StyleConfig() {
-  const { defaultStyle, style, setStyle } = useStyle()
-  return (
-    <div>
-      <SectionTitle
-        title='UI Style'
-        showReset={style !== defaultStyle}
-        onReset={() => setStyle(defaultStyle)}
-      />
-      <Radio
-        value={style}
-        onValueChange={setStyle}
-        className='grid w-full max-w-md grid-cols-3 gap-4'
-        aria-label='Select UI style preference'
-        aria-describedby='style-description'
-      >
-        {[
-          {
-            value: 'mira',
-            label: 'Mira - Compact',
-            icon: IconStyleMira,
-          },
-          {
-            value: 'lyra',
-            label: 'Lyra - Technical',
-            icon: IconStyleLyra,
-          },
-          {
-            value: 'maia',
-            label: 'Maia - Friendly',
-            icon: IconStyleMaia,
-          },
-        ].map((item) => (
-          <RadioGroupItem key={item.value} item={item} />
-        ))}
-      </Radio>
-      <div id='style-description' className='sr-only'>
-        Choose between Mira (compact, dense), Lyra (technical, sharp), or Maia (friendly, rounded, spacious) UI style
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 :root {
-  /* Mira风格：更小的圆角 (0.375rem vs 0.625rem) */
-  --radius: 0.375rem;
+  /* Lyra风格：无圆角，方正锐利 */
+  --radius: 0;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -267,35 +267,26 @@
   --ring: oklch(0.852 0.199 91.936);
 }
 
-/* Lyra风格：无圆角，方正锐利，适合等宽字体 */
-:root.style-lyra {
-  --radius: 0;
-}
-
-/* Maia风格：大圆角，柔和圆润，间距宽松 */
-:root.style-maia {
-  --radius: 0.75rem;  /* 12px - 大圆角 */
-}
-
 @theme inline {
   --font-inter: 'Inter', 'sans-serif';
   --font-manrope: 'Manrope', 'sans-serif';
 
-  /* Mira风格：更紧凑的字体大小 */
-  --font-size-xs: 0.75rem;    /* 12px - Mira更小 */
-  --font-size-sm: 0.8125rem;  /* 13px - Mira默认 */
+  /* 字体大小 */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px - Lyra标准 */
   --font-size-base: 0.875rem; /* 14px */
   --font-size-lg: 1rem;       /* 16px */
   --font-size-xl: 1.125rem;   /* 18px */
 
-  /* Mira风格：更紧凑的间距 */
+  /* 间距 */
   --spacing-18: 4.5rem;
   --spacing-88: 22rem;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Lyra风格：所有圆角都为0 */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

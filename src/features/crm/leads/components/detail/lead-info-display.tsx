@@ -1,6 +1,7 @@
 /**
  * 线索详情信息展示组件
  * 可复用于 LeadDetailSheet 和 ContinuousCallPage
+ * 支持快捷编辑功能
  */
 
 import type { Lead } from '../../types'
@@ -29,6 +30,24 @@ function formatParentRelation(relation?: string): string | undefined {
   if (!relation) return undefined
   return parentRelationLabels[relation] || relation
 }
+
+/**
+ * 选项数据
+ */
+const genderOptions = [
+  { label: '男', value: 'male' },
+  { label: '女', value: 'female' },
+]
+
+const gradeOptions = Object.entries(gradeLabels).map(([value, label]) => ({
+  label,
+  value,
+}))
+
+const relationOptions = Object.entries(parentRelationLabels).map(([value, label]) => ({
+  label,
+  value,
+}))
 
 /**
  * 解析来源渠道额外信息
@@ -94,6 +113,8 @@ interface LeadInfoDisplayProps {
   showBackupContact?: boolean
   /** 自定义类名 */
   className?: string
+  /** 字段更新回调 */
+  onFieldUpdate?: (field: string, value: string) => Promise<void>
 }
 
 /**
@@ -105,7 +126,18 @@ export function LeadInfoDisplay({
   isOverdue = false,
   showBackupContact = true,
   className,
+  onFieldUpdate,
 }: LeadInfoDisplayProps) {
+  // 创建字段保存函数
+  const createSaveHandler = (field: string) => {
+    if (!onFieldUpdate) return undefined
+    return async (value: string) => {
+      await onFieldUpdate(field, value)
+    }
+  }
+
+  const editable = !!onFieldUpdate
+
   return (
     <div className={className}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -114,24 +146,106 @@ export function LeadInfoDisplay({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 儿童信息 */}
             <InfoGrid cols={1}>
-              <InfoItem label="儿童姓名" value={lead.child_name} />
+              <InfoItem
+                label="儿童姓名"
+                value={lead.child_name}
+                rawValue={lead.child_name || ''}
+                editable={editable}
+                fieldType="text"
+                onSave={createSaveHandler('child_name')}
+              />
               <InfoItem
                 label="性别"
                 value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined}
+                rawValue={lead.child_gender || ''}
+                editable={editable}
+                fieldType="select"
+                options={genderOptions}
+                onSave={createSaveHandler('child_gender')}
               />
-              <InfoItem label="年龄" value={lead.age?.toString()} />
-              <InfoItem label="生日" value={lead.child_birthday} />
-              <InfoItem label="年级" value={lead.grade ? gradeLabels[lead.grade] : undefined} />
-              <InfoItem label="学校" value={lead.school_name} />
-              <InfoItem label="课程兴趣" value={lead.course_interests?.join('、')} />
+              <InfoItem
+                label="年龄"
+                value={lead.age?.toString()}
+                rawValue={lead.age?.toString() || ''}
+                editable={editable}
+                fieldType="number"
+                onSave={createSaveHandler('age')}
+              />
+              <InfoItem
+                label="生日"
+                value={lead.child_birthday}
+                rawValue={lead.child_birthday || ''}
+                editable={editable}
+                fieldType="date"
+                onSave={createSaveHandler('child_birthday')}
+              />
+              <InfoItem
+                label="年级"
+                value={lead.grade ? gradeLabels[lead.grade] : undefined}
+                rawValue={lead.grade || ''}
+                editable={editable}
+                fieldType="select"
+                options={gradeOptions}
+                onSave={createSaveHandler('grade')}
+              />
+              <InfoItem
+                label="学校"
+                value={lead.school_name}
+                rawValue={lead.school_name || ''}
+                editable={editable}
+                fieldType="text"
+                onSave={createSaveHandler('school_name')}
+              />
+              <InfoItem
+                label="课程兴趣"
+                value={lead.course_interests?.join('、')}
+                rawValue={lead.course_interests?.join('、') || ''}
+                editable={editable}
+                fieldType="text"
+                onSave={createSaveHandler('course_interests')}
+              />
             </InfoGrid>
             {/* 家长信息 */}
             <InfoGrid cols={1}>
-              <InfoItem label="家长姓名" value={lead.parent_name} />
-              <InfoItem label="关系" value={formatParentRelation(lead.parent_relation)} />
-              <InfoItem label="手机号" value={lead.parent_phone} copyable />
-              <InfoItem label="微信号" value={lead.parent_wechat} copyable />
-              <InfoItem label="邮箱" value={lead.parent_email} />
+              <InfoItem
+                label="家长姓名"
+                value={lead.parent_name}
+                rawValue={lead.parent_name || ''}
+                editable={editable}
+                fieldType="text"
+                onSave={createSaveHandler('parent_name')}
+              />
+              <InfoItem
+                label="关系"
+                value={formatParentRelation(lead.parent_relation)}
+                rawValue={lead.parent_relation || ''}
+                editable={editable}
+                fieldType="select"
+                options={relationOptions}
+                onSave={createSaveHandler('parent_relation')}
+              />
+              <InfoItem
+                label="手机号"
+                value={lead.parent_phone}
+                copyable
+              />
+              <InfoItem
+                label="微信号"
+                value={lead.parent_wechat}
+                rawValue={lead.parent_wechat || ''}
+                copyable
+                editable={editable}
+                fieldType="text"
+                onSave={createSaveHandler('parent_wechat')}
+              />
+              <InfoItem
+                label="邮箱"
+                value={lead.parent_email}
+                rawValue={lead.parent_email || ''}
+                editable={editable}
+                fieldType="text"
+                onSave={createSaveHandler('parent_email')}
+              />
             </InfoGrid>
           </div>
         </InfoCard>

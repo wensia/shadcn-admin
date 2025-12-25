@@ -51,8 +51,8 @@ interface LeadFormDialogProps {
 // Zod表单验证Schema - Mira风格关注核心必填项
 const formSchema = z.object({
   // 儿童信息
-  child_name: z.string().min(1, '请输入儿童姓名').max(50, '姓名过长'),
-  child_gender: z.enum(['male', 'female']).optional(),
+  child_name: z.string().max(50, '姓名过长').optional(),
+  child_gender: z.string().optional().nullable(),
   child_birthday: z.string().optional(),
   age: z.number().min(0).max(30).optional(),
   grade: z.string().optional(),
@@ -267,9 +267,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                       name="child_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">
-                            儿童姓名 <span className="text-destructive">*</span>
-                          </FormLabel>
+                          <FormLabel className="text-xs">儿童姓名</FormLabel>
                           <FormControl>
                             <Input {...field} className="h-8 text-xs" placeholder="请输入" />
                           </FormControl>
@@ -286,7 +284,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                           <FormLabel className="text-xs">性别</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
+                              <SelectTrigger className="h-8 text-xs w-full">
                                 <SelectValue placeholder="选择性别" />
                               </SelectTrigger>
                             </FormControl>
@@ -347,7 +345,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                           <FormLabel className="text-xs">年级</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
+                              <SelectTrigger className="h-8 text-xs w-full">
                                 <SelectValue placeholder="选择年级" />
                               </SelectTrigger>
                             </FormControl>
@@ -416,34 +414,36 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="parent_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            手机号 <span className="text-destructive">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <div className="space-y-1">
-                              <Input
-                                {...field}
-                                className="h-8 text-xs"
-                                placeholder="请输入11位手机号"
-                                onChange={(e) => {
-                                  field.onChange(e)
-                                  handlePhoneChange(e.target.value)
-                                }}
-                              />
-                              {phoneCheckResult && (
-                                <p className="text-xs text-orange-500">{phoneCheckResult}</p>
-                              )}
-                            </div>
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
+                    {!isEdit && (
+                      <FormField
+                        control={form.control}
+                        name="parent_phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">
+                              手机号 <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <div className="space-y-1">
+                                <Input
+                                  {...field}
+                                  className="h-8 text-xs"
+                                  placeholder="请输入11位手机号"
+                                  onChange={(e) => {
+                                    field.onChange(e)
+                                    handlePhoneChange(e.target.value)
+                                  }}
+                                />
+                                {phoneCheckResult && (
+                                  <p className="text-xs text-orange-500">{phoneCheckResult}</p>
+                                )}
+                              </div>
+                            </FormControl>
+                            <FormMessage className="text-xs" />
+                          </FormItem>
+                        )}
+                      />
+                    )}
 
                     <FormField
                       control={form.control}
@@ -479,9 +479,20 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">与儿童关系</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="如:父亲" />
-                          </FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="选择关系" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="father" className="text-xs">父亲</SelectItem>
+                              <SelectItem value="mother" className="text-xs">母亲</SelectItem>
+                              <SelectItem value="grandfather" className="text-xs">爷爷</SelectItem>
+                              <SelectItem value="grandmother" className="text-xs">奶奶</SelectItem>
+                              <SelectItem value="other" className="text-xs">其他</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage className="text-xs" />
                         </FormItem>
                       )}
@@ -609,26 +620,32 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">
-                            来源渠道 <span className="text-destructive">*</span>
+                            来源渠道 {!isEdit && <span className="text-destructive">*</span>}
                           </FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="选择渠道" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {filterOptions?.source_channels?.map((channel) => (
-                                <SelectItem
-                                  key={channel.id}
-                                  value={channel.id}
-                                  className="text-xs"
-                                >
-                                  {channel.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {isEdit ? (
+                            <p className="text-xs h-8 flex items-center text-muted-foreground">
+                              {lead?.source_channel_name || '-'}
+                            </p>
+                          ) : (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择渠道" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {filterOptions?.source_channels?.map((channel) => (
+                                  <SelectItem
+                                    key={channel.id}
+                                    value={channel.id}
+                                    className="text-xs"
+                                  >
+                                    {channel.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                           <FormMessage className="text-xs" />
                         </FormItem>
                       )}
@@ -654,19 +671,32 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">
-                            归属校区 <span className="text-destructive">*</span>
+                            归属校区 {!isEdit && <span className="text-destructive">*</span>}
                           </FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="选择校区" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {/* TODO: 获取校区列表 */}
-                              <SelectItem value="campus1" className="text-xs">校区1</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          {isEdit ? (
+                            <p className="text-xs h-8 flex items-center text-muted-foreground">
+                              {lead?.owner_campus_name || '-'}
+                            </p>
+                          ) : (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择校区" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {filterOptions?.campuses?.map((campus) => (
+                                  <SelectItem
+                                    key={campus.id}
+                                    value={campus.id}
+                                    className="text-xs"
+                                  >
+                                    {campus.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                           <FormMessage className="text-xs" />
                         </FormItem>
                       )}
@@ -680,7 +710,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                           <FormLabel className="text-xs">意向等级</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
+                              <SelectTrigger className="h-8 text-xs w-full">
                                 <SelectValue placeholder="选择意向" />
                               </SelectTrigger>
                             </FormControl>
