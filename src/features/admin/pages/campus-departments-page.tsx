@@ -62,7 +62,14 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { adminApi } from '../api'
-import type { CampusDepartmentItem, CampusDepartmentCreate } from '../types'
+import type { CampusDepartmentItem, CampusDepartmentCreate, ManagerType } from '../types'
+import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { StatusBadge } from '../components/status-badge'
 import { ManageManagersDialog } from '../components/manage-managers-dialog'
 
@@ -208,14 +215,66 @@ export function CampusDepartmentsPage() {
         },
       },
       {
-        accessorKey: 'area_name',
-        header: '所属区域',
+        accessorKey: 'managers',
+        header: '负责人',
         cell: ({ row }) => {
           if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-20" />
+            return <Skeleton className="h-5 w-32" />
           }
-          // 区域信息需要从嵌套对象获取（如果后端返回）或显示 '-'
-          return (row.original as unknown as { area_name?: string }).area_name || '-'
+          const managers = row.original.managers || []
+          if (managers.length === 0) {
+            return <span className="text-muted-foreground text-sm">未配置</span>
+          }
+
+          // 负责人类型对应的颜色
+          const typeVariants: Record<ManagerType, 'default' | 'secondary' | 'outline'> = {
+            manager: 'default',
+            deputy: 'secondary',
+            supervisor: 'outline',
+          }
+          const typeLabels: Record<ManagerType, string> = {
+            manager: '经理',
+            deputy: '副经理',
+            supervisor: '主管',
+          }
+
+          return (
+            <TooltipProvider>
+              <div className="flex flex-wrap gap-1">
+                {managers.slice(0, 3).map((m) => (
+                  <Tooltip key={m.id}>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant={typeVariants[m.manager_type]}
+                        className="text-xs cursor-default"
+                      >
+                        {m.employee?.name || '未知'}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{typeLabels[m.manager_type]}: {m.employee?.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+                {managers.length > 3 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs cursor-default">
+                        +{managers.length - 3}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        {managers.slice(3).map((m) => (
+                          <p key={m.id}>{typeLabels[m.manager_type]}: {m.employee?.name}</p>
+                        ))}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            </TooltipProvider>
+          )
         },
       },
       {

@@ -103,25 +103,17 @@ export interface DepartmentItem {
 export interface CampusDepartmentItem {
   id: string
   campus_id: string
-  campus_name: string
+  campus_name?: string
   department_id: string
-  department_name: string
+  department_name?: string
   sort_order?: number
-  manager_id?: string
-  manager?: {
-    id: string
-    name: string
-    username: string
-  }
-  deputy_manager_id?: string
-  deputy_manager?: {
-    id: string
-    name: string
-    username: string
-  }
   is_active: boolean
   created_at?: string
   updated_at?: string
+  /** 负责人列表 */
+  managers?: DepartmentManagerItem[]
+  /** 负责人数量 */
+  managers_count?: number
 }
 
 /** 负责人类型 */
