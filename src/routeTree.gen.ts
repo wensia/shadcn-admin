@@ -41,6 +41,7 @@ import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
 import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
 import { Route as AuthenticatedAdminYunkeAccountsRouteImport } from './routes/_authenticated/admin/yunke-accounts'
@@ -233,6 +234,12 @@ const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCrmLeadConversionRoute =
+  AuthenticatedCrmLeadConversionRouteImport.update({
+    id: '/crm/lead-conversion',
+    path: '/crm/lead-conversion',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCrmContinuousCallRoute =
@@ -437,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
+  '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -494,6 +502,7 @@ export interface FileRoutesByTo {
   '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
+  '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -556,6 +565,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
+  '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/admin/yunke-accounts'
     | '/crm/batch-import'
     | '/crm/continuous-call'
+    | '/crm/lead-conversion'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -673,6 +684,7 @@ export interface FileRouteTypes {
     | '/admin/yunke-accounts'
     | '/crm/batch-import'
     | '/crm/continuous-call'
+    | '/crm/lead-conversion'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -734,6 +746,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/yunke-accounts'
     | '/_authenticated/crm/batch-import'
     | '/_authenticated/crm/continuous-call'
+    | '/_authenticated/crm/lead-conversion'
     | '/_authenticated/errors/$error'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
@@ -995,6 +1008,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/crm/lead-conversion': {
+      id: '/_authenticated/crm/lead-conversion'
+      path: '/crm/lead-conversion'
+      fullPath: '/crm/lead-conversion'
+      preLoaderRoute: typeof AuthenticatedCrmLeadConversionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/crm/continuous-call': {
       id: '/_authenticated/crm/continuous-call'
       path: '/crm/continuous-call'
@@ -1238,6 +1258,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminYunkeAccountsRoute: typeof AuthenticatedAdminYunkeAccountsRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
+  AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
@@ -1282,6 +1303,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminYunkeAccountsRoute: AuthenticatedAdminYunkeAccountsRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
+  AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
