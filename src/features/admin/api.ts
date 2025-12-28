@@ -919,7 +919,8 @@ export const yunkeAdminApi = {
 
   /** 获取可绑定员工列表 */
   async getAvailableEmployees(): Promise<YunkeAvailableEmployee[]> {
-    return apiClient.get<YunkeAvailableEmployee[]>('/yunke/admin/available-employees')
+    const response = await apiClient.get<ApiResponse<YunkeAvailableEmployee[]>>('/yunke/admin/available-employees')
+    return response.data || []
   },
 
   /** 绑定员工 */
