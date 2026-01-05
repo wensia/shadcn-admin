@@ -1,6 +1,7 @@
 /**
  * 用户登录表单
  * 连接到RMF CRM后端API
+ * 使用 Anthropic 品牌风格
  */
 
 import { useState } from 'react'
@@ -13,7 +14,6 @@ import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { authApi } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -32,6 +32,17 @@ const formSchema = z.object({
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
+}
+
+// Anthropic 品牌颜色
+const anthropicColors = {
+  dark: '#141413',
+  light: '#faf9f5',
+  midGray: '#b0aea5',
+  lightGray: '#e8e6dc',
+  orange: '#d97757',
+  blue: '#6a9bcc',
+  green: '#788c5d',
 }
 
 export function UserAuthForm({
@@ -96,7 +107,8 @@ export function UserAuthForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-3', className)}
+        className={cn('grid gap-4', className)}
+        style={{ fontFamily: 'Lora, Georgia, serif' }}
         {...props}
       >
         <FormField
@@ -104,9 +116,26 @@ export function UserAuthForm({
           name='username'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>用户名</FormLabel>
+              <FormLabel
+                style={{
+                  fontFamily: 'Poppins, Arial, sans-serif',
+                  color: anthropicColors.dark,
+                  fontWeight: 500,
+                }}
+              >
+                用户名
+              </FormLabel>
               <FormControl>
-                <Input placeholder='请输入用户名' {...field} />
+                <Input
+                  placeholder='请输入用户名'
+                  {...field}
+                  className='h-11 transition-all focus-visible:ring-2'
+                  style={{
+                    borderRadius: '8px',
+                    border: `1px solid ${anthropicColors.lightGray}`,
+                    background: anthropicColors.light,
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -117,24 +146,74 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem className='relative'>
-              <FormLabel>密码</FormLabel>
+              <FormLabel
+                style={{
+                  fontFamily: 'Poppins, Arial, sans-serif',
+                  color: anthropicColors.dark,
+                  fontWeight: 500,
+                }}
+              >
+                密码
+              </FormLabel>
               <FormControl>
-                <PasswordInput placeholder='请输入密码' {...field} />
+                <PasswordInput
+                  placeholder='请输入密码'
+                  {...field}
+                  className='h-11 transition-all focus-visible:ring-2'
+                  style={{
+                    borderRadius: '8px',
+                    border: `1px solid ${anthropicColors.lightGray}`,
+                    background: anthropicColors.light,
+                  }}
+                />
               </FormControl>
               <FormMessage />
               <Link
                 to='/forgot-password'
-                className='absolute end-0 -top-0.5 text-sm font-medium text-muted-foreground hover:opacity-75'
+                className='absolute end-0 -top-0.5 text-sm font-medium transition-colors'
+                style={{
+                  color: anthropicColors.orange,
+                  fontFamily: 'Poppins, Arial, sans-serif',
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.color = anthropicColors.dark)
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.color = anthropicColors.orange)
+                }
               >
                 忘记密码?
               </Link>
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading}>
-          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
+        <button
+          type='submit'
+          disabled={isLoading}
+          className='mt-3 flex h-11 w-full items-center justify-center gap-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50'
+          style={{
+            fontFamily: 'Poppins, Arial, sans-serif',
+            background: anthropicColors.orange,
+            color: anthropicColors.light,
+            borderRadius: '8px',
+            border: 'none',
+          }}
+          onMouseOver={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.background = anthropicColors.dark
+            }
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = anthropicColors.orange
+          }}
+        >
+          {isLoading ? (
+            <Loader2 className='h-4 w-4 animate-spin' />
+          ) : (
+            <LogIn className='h-4 w-4' />
+          )}
           登录
-        </Button>
+        </button>
       </form>
     </Form>
   )

@@ -134,7 +134,7 @@ function FormFacetedFilter({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -191,9 +191,11 @@ function FormFacetedFilter({
                 )
               })}
             </CommandGroup>
-            {selectedValues.size > 0 && (
-              <>
-                <CommandSeparator />
+          </CommandList>
+          {selectedValues.size > 0 && (
+            <>
+              <CommandSeparator />
+              <div className="p-1">
                 <CommandGroup>
                   <CommandItem
                     onSelect={handleClear}
@@ -202,9 +204,9 @@ function FormFacetedFilter({
                     清除选择
                   </CommandItem>
                 </CommandGroup>
-              </>
-            )}
-          </CommandList>
+              </div>
+            </>
+          )}
         </Command>
       </PopoverContent>
     </Popover>

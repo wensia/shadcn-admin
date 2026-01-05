@@ -13,7 +13,7 @@ import {
   useReactTable,
   type ColumnDef
 } from '@tanstack/react-table'
-import { RefreshCw, Search, UserPlus, X } from 'lucide-react'
+import { Download, RefreshCw, Search, UserPlus, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
@@ -42,9 +42,11 @@ import {
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
-import { leadsPoolApi } from './api'
+import { leadsPoolApi, type ExportStatusResult } from './api'
 import type { LeadPoolItem, LeadPoolListParams } from './types'
 import type { IntentionLevel } from '../leads/types'
+import { useIsSuperUser } from '@/stores/auth-store'
+import { Progress } from '@/components/ui/progress'
 
 // 意向等级选项
 const intentionOptions = [
@@ -58,9 +60,16 @@ export function LeadsPoolPage() {
   useDocumentTitle('公海线索')
   const queryClient = useQueryClient()
   const s = useStyleClasses()
+  const isSuperUser = useIsSuperUser()
 
   // 分页状态
   const [pagination, setPagination] = useState({ page: 1, size: 20 })
+
+  // 导出相关状态
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportTaskId, setExportTaskId] = useState<string | null>(null)
+  const [exportStatus, setExportStatus] = useState<ExportStatusResult | null>(null)
 
   // 搜索和筛选
   const [searchValue, setSearchValue] = useState('')
@@ -295,6 +304,95 @@ export function LeadsPoolPage() {
     claimMutation.mutate(selectedRows.map(r => r.id))
   }
 
+  // 导出公海线索
+  const handleExport = async () => {
+    if (isExporting) return
+
+    setIsExporting(true)
+    try {
+      const params = buildParams()
+      // 移除分页参数，导出全部数据
+      delete params.page
+      delete params.size
+
+      const response = await leadsPoolApi.exportPoolLeads(params)
+
+      if (response instanceof Blob) {
+        // 同步导出：直接下载文件
+        downloadBlob(response, `公海线索导出_${new Date().toISOString().slice(0, 10)}.xlsx`)
+        toast.success('导出成功')
+      } else if (response.success && response.data?.task_id) {
+        // 异步导出：显示进度对话框
+        setExportTaskId(response.data.task_id)
+        setExportDialogOpen(true)
+        toast.info(response.data.message || '正在后台导出...')
+        // 开始轮询任务状态
+        pollExportStatus(response.data.task_id)
+      } else {
+        toast.error(response.message || '导出失败')
+      }
+    } catch (error) {
+      toast.error('导出失败，请稍后重试')
+      console.error('Export error:', error)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // 下载 Blob 文件
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  }
+
+  // 轮询导出任务状态
+  const pollExportStatus = async (taskId: string) => {
+    const maxAttempts = 120 // 最多轮询 10 分钟（每 5 秒一次）
+    let attempts = 0
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        toast.error('导出超时，请稍后重试')
+        setExportDialogOpen(false)
+        return
+      }
+
+      try {
+        const response = await leadsPoolApi.getExportStatus(taskId)
+        if (response.success && response.data) {
+          setExportStatus(response.data)
+
+          if (response.data.status === 'SUCCESS' && response.data.success) {
+            // 导出完成，下载文件
+            toast.success(response.data.message || '导出完成')
+            const blob = await leadsPoolApi.downloadExportFile(taskId)
+            downloadBlob(blob, response.data.file_name || '公海线索导出.xlsx')
+            setExportDialogOpen(false)
+          } else if (response.data.status === 'FAILURE') {
+            toast.error(response.data.message || '导出失败')
+            setExportDialogOpen(false)
+          } else {
+            // 继续轮询
+            attempts++
+            setTimeout(poll, 5000) // 5 秒后再次查询
+          }
+        }
+      } catch (error) {
+        console.error('Poll export status error:', error)
+        attempts++
+        setTimeout(poll, 5000)
+      }
+    }
+
+    poll()
+  }
+
   // 计算是否有筛选条件
   const hasFilters = searchValue || intentionFilter !== 'all' || daysMin || daysMax
 
@@ -394,6 +492,23 @@ export function LeadsPoolPage() {
                   批量领取
                 </Button>
               </>
+            )}
+
+            {/* 导出按钮（仅超管可见） */}
+            {isSuperUser && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-1.5 h-4 w-4" />
+                )}
+                导出
+              </Button>
             )}
 
             {/* 刷新按钮 */}
@@ -512,6 +627,45 @@ export function LeadsPoolPage() {
             </Button>
             <Button onClick={confirmClaim} disabled={claimMutation.isPending}>
               {claimMutation.isPending ? '领取中...' : '确认领取'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 导出进度对话框 */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>正在导出公海线索</DialogTitle>
+            <DialogDescription>
+              数据量较大，正在后台处理中，请稍候...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-center justify-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">
+                {exportStatus?.status === 'PENDING' && '等待处理...'}
+                {exportStatus?.status === 'STARTED' && '正在导出...'}
+                {!exportStatus && '正在准备...'}
+              </span>
+            </div>
+            {exportStatus?.total && (
+              <p className="mt-2 text-center text-sm text-muted-foreground">
+                共 {exportStatus.total} 条数据
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setExportDialogOpen(false)
+                setExportTaskId(null)
+                setExportStatus(null)
+              }}
+            >
+              取消
             </Button>
           </DialogFooter>
         </DialogContent>

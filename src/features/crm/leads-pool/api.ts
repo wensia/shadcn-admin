@@ -52,7 +52,66 @@ export const leadsPoolApi = {
   async getLeadPoolInfo(leadId: string): Promise<ApiResponse<LeadPoolItem>> {
     const response = await apiClient.get<ApiResponse<LeadPoolItem>>(`/lead-pool/${leadId}`)
     return response
+  },
+
+  /**
+   * 导出公海线索
+   * 返回可能是文件流（同步导出）或任务信息（异步导出）
+   */
+  async exportPoolLeads(params?: LeadPoolListParams): Promise<ApiResponse<ExportResult> | Blob> {
+    const response = await apiClient.post('/lead-pool/export', null, {
+      params,
+      responseType: 'blob',
+      validateStatus: () => true  // 允许所有状态码
+    })
+
+    // 检查是否是 JSON 响应（异步导出或错误）
+    if (response instanceof Blob && response.type.includes('application/json')) {
+      const text = await response.text()
+      return JSON.parse(text) as ApiResponse<ExportResult>
+    }
+
+    // 是文件流（同步导出成功）
+    return response as Blob
+  },
+
+  /**
+   * 获取导出任务状态
+   */
+  async getExportStatus(taskId: string): Promise<ApiResponse<ExportStatusResult>> {
+    const response = await apiClient.get<ApiResponse<ExportStatusResult>>(
+      `/lead-pool/export/status/${taskId}`
+    )
+    return response
+  },
+
+  /**
+   * 下载导出文件
+   */
+  async downloadExportFile(taskId: string): Promise<Blob> {
+    const response = await apiClient.get(`/lead-pool/export/download/${taskId}`, {
+      responseType: 'blob'
+    })
+    return response as unknown as Blob
   }
+}
+
+// 导出结果类型
+export interface ExportResult {
+  task_id?: string
+  total?: number
+  message?: string
+}
+
+export interface ExportStatusResult {
+  task_id: string
+  status: 'PENDING' | 'STARTED' | 'SUCCESS' | 'FAILURE'
+  ready: boolean
+  success?: boolean
+  message?: string
+  total?: number
+  file_path?: string
+  file_name?: string
 }
 
 export default leadsPoolApi

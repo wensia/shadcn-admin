@@ -36,11 +36,16 @@ const leadsApi = {
    * 获取线索列表
    */
   async getLeads(params?: LeadListParams): Promise<ApiResponse<PaginatedResponse<LeadListItem>>> {
-    // 处理 source_extra_filters: 后端期望 JSON 字符串格式
+    // 处理参数：后端期望特定格式
     const processedParams = params ? {
       ...params,
+      // source_extra_filters: 后端期望 JSON 字符串格式
       source_extra_filters: params.source_extra_filters
         ? JSON.stringify(params.source_extra_filters)
+        : undefined,
+      // grade: 后端期望单个字符串，取数组第一个值
+      grade: params.grade && params.grade.length > 0
+        ? params.grade[0]
         : undefined
     } : undefined
 

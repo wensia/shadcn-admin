@@ -267,6 +267,77 @@
   --ring: oklch(0.852 0.199 91.936);
 }
 
+/* ==================== Anthropic Brand Theme ==================== */
+/*
+ * Anthropic Brand Colors:
+ * - Dark: #141413 - Primary text and dark backgrounds
+ * - Light: #faf9f5 - Light backgrounds
+ * - Mid Gray: #b0aea5 - Secondary elements
+ * - Light Gray: #e8e6dc - Subtle backgrounds
+ * - Orange: #d97757 - Primary accent
+ * - Blue: #6a9bcc - Secondary accent
+ * - Green: #788c5d - Tertiary accent
+ *
+ * Typography:
+ * - Headings: Poppins (fallback: Arial)
+ * - Body: Lora (fallback: Georgia)
+ */
+
+:root.theme-anthropic {
+  /* Anthropic 品牌色 */
+  --anthropic-dark: #141413;
+  --anthropic-light: #faf9f5;
+  --anthropic-mid-gray: #b0aea5;
+  --anthropic-light-gray: #e8e6dc;
+  --anthropic-orange: #d97757;
+  --anthropic-blue: #6a9bcc;
+  --anthropic-green: #788c5d;
+
+  /* 主题变量覆盖 */
+  --background: #faf9f5;
+  --foreground: #141413;
+  --card: #ffffff;
+  --card-foreground: #141413;
+  --popover: #ffffff;
+  --popover-foreground: #141413;
+  --primary: #d97757;
+  --primary-foreground: #faf9f5;
+  --secondary: #e8e6dc;
+  --secondary-foreground: #141413;
+  --muted: #e8e6dc;
+  --muted-foreground: #b0aea5;
+  --accent: #6a9bcc;
+  --accent-foreground: #faf9f5;
+  --destructive: #dc2626;
+  --border: #e8e6dc;
+  --input: #e8e6dc;
+  --ring: #d97757;
+
+  /* 圆角 - Anthropic 风格更柔和 */
+  --radius: 0.5rem;
+}
+
+.dark.theme-anthropic {
+  --background: #141413;
+  --foreground: #faf9f5;
+  --card: #1f1f1e;
+  --card-foreground: #faf9f5;
+  --popover: #1f1f1e;
+  --popover-foreground: #faf9f5;
+  --primary: #d97757;
+  --primary-foreground: #faf9f5;
+  --secondary: #2a2a29;
+  --secondary-foreground: #faf9f5;
+  --muted: #2a2a29;
+  --muted-foreground: #b0aea5;
+  --accent: #6a9bcc;
+  --accent-foreground: #faf9f5;
+  --destructive: #ef4444;
+  --border: #2a2a29;
+  --input: #2a2a29;
+  --ring: #d97757;
+}
+
 @theme inline {
   --font-inter: 'Inter', 'sans-serif';
   --font-manrope: 'Manrope', 'sans-serif';

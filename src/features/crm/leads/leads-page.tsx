@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSearch } from '@tanstack/react-router'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -29,15 +30,18 @@ import {
 } from './components/batch-dialogs'
 import { leadsApi } from './api'
 import { apiClient } from '@/lib/api/client'
-import type { LeadListParams, LeadListItem, Lead, LeadStatus, IntentionLevel } from './types'
+import type { LeadListParams, LeadListItem, Lead, LeadStatus, IntentionLevel, Grade } from './types'
 import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
-import { leadStatusLabels, intentionLevelLabels } from './types'
+import { leadStatusLabels, intentionLevelLabels, gradeLabels } from './types'
 import { useMemo } from 'react'
 
 export function LeadsPage() {
   useDocumentTitle('线索管理')
   const queryClient = useQueryClient()
   const s = useStyleClasses()
+
+  // 获取 URL 搜索参数
+  const searchParams = useSearch({ from: '/_authenticated/crm/leads/' })
 
   // 分页状态
   const [pagination, setPagination] = useState({
@@ -55,6 +59,47 @@ export function LeadsPage() {
 
   // 筛选参数
   const [filters, setFilters] = useState<LeadListParams>({})
+
+  // 同步 URL 搜索参数到 filters 状态（仅在组件初始化时）
+  useEffect(() => {
+    const urlFilters: Partial<LeadListParams> = {}
+
+    // 年级筛选
+    if (searchParams.grade) {
+      urlFilters.grade = [searchParams.grade as Grade]
+    }
+
+    // 状态筛选
+    if (searchParams.status) {
+      setStatusFilter([searchParams.status as LeadStatus])
+    }
+
+    // 意向等级筛选
+    if (searchParams.intention_level) {
+      setIntentionFilter([searchParams.intention_level as IntentionLevel])
+    }
+
+    // 来源渠道筛选
+    if (searchParams.source_channel_id) {
+      urlFilters.source_channel_id = [searchParams.source_channel_id]
+    }
+
+    // 归属校区筛选
+    if (searchParams.campus_id) {
+      urlFilters.owner_campus_id = [searchParams.campus_id]
+    }
+
+    // 搜索关键词
+    if (searchParams.search) {
+      setSearchValue(searchParams.search)
+    }
+
+    // 如果有 URL 参数，更新 filters
+    if (Object.keys(urlFilters).length > 0) {
+      setFilters(prev => ({ ...prev, ...urlFilters }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 仅在组件挂载时执行一次
 
   // 选中的行
   const [selectedRows, setSelectedRows] = useState<LeadListItem[]>([])
@@ -362,6 +407,28 @@ export function LeadsPage() {
                 className="h-3 w-3 cursor-pointer hover:text-destructive"
                 onClick={handleRemoveIntention}
               />
+            </Badge>
+          )}
+
+          {/* 年级筛选标签 */}
+          {filters.grade && filters.grade.length > 0 && (
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              年级: {filters.grade.map(g => gradeLabels[g]).join(', ')}
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const { grade, ...rest } = filters
+                  setFilters(rest)
+                }}
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
             </Badge>
           )}
 
