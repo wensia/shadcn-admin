@@ -91,10 +91,10 @@ export function CalendarView() {
                 months: 'flex flex-col',
                 month: 'w-full',
                 table: 'w-full border-collapse',
-                head_row: 'flex w-full',
+                head_row: 'flex w-full gap-1',
                 head_cell: 'flex-1 text-muted-foreground text-center text-sm font-normal',
-                row: 'flex w-full mt-1',
-                cell: 'flex-1 text-center relative p-0 [&:has([aria-selected])]:bg-accent',
+                row: 'flex w-full mt-1 gap-1',
+                cell: 'flex-1 text-center relative p-0 rounded-md [&:has([aria-selected])]:bg-accent',
                 day: 'w-full h-12 p-0',
               }}
               components={{

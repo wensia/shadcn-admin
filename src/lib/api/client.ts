@@ -15,8 +15,8 @@ import qs from 'qs'
 import { toast } from 'sonner'
 import type { ApiResponse, ApiError } from './types'
 
-// 在开发环境使用代理路径，生产环境使用完整URL
-const API_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'http://127.0.0.1:9876')
+// 在开发环境使用代理路径，生产环境使用相对路径（由 Nginx 代理）
+const API_URL = import.meta.env.VITE_API_URL || ''
 const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1'
 
 /**
