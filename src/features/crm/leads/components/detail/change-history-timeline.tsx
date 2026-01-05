@@ -3,9 +3,8 @@
  * 以表格形式展示信息变更和归属变更记录
  *
  * Anthropic 品牌色:
- * - Orange: #d97757 (主要强调)
- * - Blue: #6a9bcc (次要强调)
- * - Green: #788c5d (第三强调)
+ * - Orange: #d97757 (主要强调色)
+ * - Green: #788c5d (次要强调色)
  * - Mid Gray: #b0aea5 (次要元素)
  */
 
@@ -17,7 +16,6 @@ import { useStyleClasses } from '@/lib/style-utils'
 // Anthropic 品牌色
 const anthropicColors = {
   orange: '#d97757',
-  blue: '#6a9bcc',
   green: '#788c5d',
   midGray: '#b0aea5',
 }
@@ -213,9 +211,9 @@ function InfoChangeTable({
     <div className="space-y-2">
       {showTitle && (
         <div className="flex items-center gap-2">
-          <FileEdit className={cn(s.size.icon)} style={{ color: anthropicColors.blue }} />
+          <FileEdit className={cn(s.size.icon)} style={{ color: anthropicColors.orange }} />
           <h3 className={cn(s.text.sm, 'font-semibold')}>信息变更</h3>
-          <Badge className={cn(s.text.xs, s.height.badge, 'text-white')} style={{ backgroundColor: anthropicColors.blue }}>
+          <Badge className={cn(s.text.xs, s.height.badge, 'text-white')} style={{ backgroundColor: anthropicColors.orange }}>
             {data.length}
           </Badge>
         </div>

@@ -30,7 +30,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         />
         <div
           className='absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full opacity-10'
-          style={{ background: '#6a9bcc' }}
+          style={{ background: '#d97757' }}
         />
         <div
           className='absolute right-1/4 bottom-1/4 h-64 w-64 rounded-full opacity-10'

@@ -41,7 +41,6 @@ const anthropicColors = {
   midGray: '#b0aea5',
   lightGray: '#e8e6dc',
   orange: '#d97757',
-  blue: '#6a9bcc',
   green: '#788c5d',
 }
 

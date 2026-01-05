@@ -5,9 +5,8 @@ import { cn } from '@/lib/utils'
 
 /**
  * Anthropic 品牌色:
- * - Orange: #d97757 (主要强调)
- * - Blue: #6a9bcc (次要强调)
- * - Green: #788c5d (第三强调)
+ * - Orange: #d97757 (主要强调色)
+ * - Green: #788c5d (次要强调色)
  * - Mid Gray: #b0aea5 (次要元素)
  * - Light Gray: #e8e6dc (微妙背景)
  * - Dark: #141413 (主要文本)
@@ -29,8 +28,6 @@ const badgeVariants = cva(
         // Anthropic 品牌色状态样式 - 浅色背景 + 品牌色文字
         'status-orange':
           'border-[#d97757]/30 bg-[#d97757]/10 text-[#d97757]',
-        'status-blue':
-          'border-[#6a9bcc]/30 bg-[#6a9bcc]/10 text-[#6a9bcc]',
         'status-green':
           'border-[#788c5d]/30 bg-[#788c5d]/10 text-[#788c5d]',
         'status-gray':
@@ -40,8 +37,6 @@ const badgeVariants = cva(
         // 深色实心样式
         'status-orange-solid':
           'border-transparent bg-[#d97757] text-white',
-        'status-blue-solid':
-          'border-transparent bg-[#6a9bcc] text-white',
         'status-green-solid':
           'border-transparent bg-[#788c5d] text-white',
         'status-gray-solid':

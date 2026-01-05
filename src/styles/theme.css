@@ -6,9 +6,8 @@
  * - Light: #faf9f5 - Light backgrounds
  * - Mid Gray: #b0aea5 - Secondary elements
  * - Light Gray: #e8e6dc - Subtle backgrounds
- * - Orange: #d97757 - Primary accent
- * - Blue: #6a9bcc - Secondary accent
- * - Green: #788c5d - Tertiary accent
+ * - Orange: #d97757 - Primary accent (主色)
+ * - Green: #788c5d - Secondary accent
  *
  * Typography:
  * - Headings: Poppins (fallback: Arial)
@@ -43,8 +42,8 @@
   --muted: #e8e6dc;
   --muted-foreground: #b0aea5;
 
-  /* 强调色 - Blue */
-  --accent: #6a9bcc;
+  /* 强调色 - 使用主色 Orange */
+  --accent: #d97757;
   --accent-foreground: #faf9f5;
 
   /* 危险色 */
@@ -57,10 +56,10 @@
 
   /* 图表颜色 - 使用 Anthropic 品牌色 */
   --chart-1: #d97757;
-  --chart-2: #6a9bcc;
-  --chart-3: #788c5d;
-  --chart-4: #b0aea5;
-  --chart-5: #e8e6dc;
+  --chart-2: #788c5d;
+  --chart-3: #b0aea5;
+  --chart-4: #e8e6dc;
+  --chart-5: #141413;
 
   /* 侧边栏 */
   --sidebar: var(--background);
