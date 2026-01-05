@@ -91,11 +91,10 @@ export function CalendarView() {
                 months: 'flex flex-col',
                 month: 'w-full',
                 table: 'w-full border-collapse',
-                head_row: 'flex w-full',
-                head_cell: 'flex-1 text-muted-foreground text-center text-sm font-normal py-2',
-                row: 'flex w-full',
-                cell: 'flex-1 text-center relative p-0.5',
-                day: 'w-full h-12 p-0',
+                weekdays: 'flex w-full',
+                weekday: 'flex-1 text-muted-foreground text-center text-sm font-normal py-2',
+                week: 'flex w-full',
+                day: 'flex-1 p-0.5 aspect-square relative text-center select-none group/day',
               }}
               components={{
                 DayButton: (props) => (
