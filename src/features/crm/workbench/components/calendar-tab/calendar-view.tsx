@@ -88,7 +88,7 @@ export function CalendarView() {
               locale={zhCN}
               className="w-full [--cell-size:theme(spacing.10)]"
               classNames={{
-                day: 'p-0.5',
+                day: 'relative w-full h-full p-0.5 text-center group/day aspect-square select-none',
               }}
               components={{
                 DayButton: (props) => (
