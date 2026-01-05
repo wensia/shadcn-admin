@@ -47,7 +47,7 @@ export function FollowupDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        'flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-0.5 leading-none font-normal',
+        'flex w-full h-full flex-col items-center justify-center gap-0.5 leading-none font-normal rounded-md',
         'group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10',
         'group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-ring/50',
         'data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground',

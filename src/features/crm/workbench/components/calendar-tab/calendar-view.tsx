@@ -86,7 +86,10 @@ export function CalendarView() {
               onSelect={setSelectedDate}
               onMonthChange={handleMonthChange}
               locale={zhCN}
-              className="w-full [--cell-size:theme(spacing.12)]"
+              className="w-full [--cell-size:theme(spacing.10)]"
+              classNames={{
+                day: 'p-0.5',
+              }}
               components={{
                 DayButton: (props) => (
                   <FollowupDayButton
