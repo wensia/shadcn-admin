@@ -276,7 +276,11 @@ export function LeadInfoDisplay({
             <InfoItem
               label="下次跟进"
               value={lead.next_followup_at ? formatTime(lead.next_followup_at) : undefined}
+              rawValue={lead.next_followup_at || ''}
               highlight={isOverdue}
+              editable={editable}
+              fieldType="datetime"
+              onSave={createSaveHandler('next_followup_at')}
             />
             <InfoItem
               label="最后跟进"

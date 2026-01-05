@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { FormDatePicker } from '@/components/date-picker'
+import { DateTimePicker } from '@/components/date-time-picker'
 
 interface InfoItemProps {
   label: string
@@ -41,7 +42,7 @@ interface InfoItemProps {
   className?: string
   // 编辑相关 props
   editable?: boolean
-  fieldType?: 'text' | 'number' | 'select' | 'date'
+  fieldType?: 'text' | 'number' | 'select' | 'date' | 'datetime'
   options?: Array<{ label: string; value: string }>
   onSave?: (value: string) => Promise<void>
 }
@@ -142,6 +143,15 @@ export function InfoItem({
             placeholder="选择日期"
           />
         )
+      case 'datetime':
+        return (
+          <DateTimePicker
+            value={editValue}
+            onChange={(val) => setEditValue(val || '')}
+            placeholder="选择日期时间"
+            showQuickButtons={false}
+          />
+        )
       case 'number':
         return (
           <Input
@@ -205,7 +215,10 @@ export function InfoItem({
               {triggerButton}
             </PopoverTrigger>
           )}
-          <PopoverContent className="w-64 p-3" align="start">
+          <PopoverContent
+            className={cn("p-3", fieldType === 'datetime' ? 'w-auto' : 'w-64')}
+            align="start"
+          >
             <div className="space-y-3">
               <div className="text-xs font-medium text-muted-foreground">{label}</div>
               {renderEditControl()}
