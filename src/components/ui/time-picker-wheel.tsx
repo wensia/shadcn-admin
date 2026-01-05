@@ -91,6 +91,7 @@ function WheelColumn({ options, value, onChange, formatValue = (v) => String(v).
           paddingBottom: paddingItems * itemHeight,
         }}
         onScroll={handleScroll}
+        onWheel={(e) => e.stopPropagation()}
       >
         {options.map((option) => (
           <div
