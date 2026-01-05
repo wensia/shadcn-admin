@@ -59,6 +59,11 @@ export const crmNavGroups: NavGroup[] = [
     title: '咨询部',
     items: [
       {
+        title: '咨询工作台',
+        url: '/crm/workbench',
+        icon: LayoutDashboard,
+      },
+      {
         title: '线索管理',
         url: '/crm/leads',
         icon: Users,
