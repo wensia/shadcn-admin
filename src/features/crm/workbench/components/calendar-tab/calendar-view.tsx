@@ -86,16 +86,7 @@ export function CalendarView() {
               onSelect={setSelectedDate}
               onMonthChange={handleMonthChange}
               locale={zhCN}
-              className="w-full"
-              classNames={{
-                months: 'flex flex-col',
-                month: 'w-full',
-                table: 'w-full border-collapse',
-                weekdays: 'flex w-full',
-                weekday: 'flex-1 text-muted-foreground text-center text-sm font-normal py-2',
-                week: 'flex w-full',
-                day: 'flex-1 p-0.5 aspect-square relative text-center select-none group/day',
-              }}
+              className="w-full [--cell-size:theme(spacing.12)]"
               components={{
                 DayButton: (props) => (
                   <FollowupDayButton
