@@ -215,7 +215,7 @@ export function LeadsTable({
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className={cn("h-5 w-16", s.rounded)} />
           }
-          return <LeadStatusBadge status={row.original.status} className={cn(s.text.xs, s.height.badge, s.rounded)} />
+          return <LeadStatusBadge status={row.original.status} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
         },
         size: getColumnSize(100)
       },
@@ -229,7 +229,7 @@ export function LeadsTable({
           }
           const level = row.original.intention_level
           if (!level) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
-          return <IntentionLevelBadge level={level} className={cn(s.text.xs, s.height.badge, s.rounded)} />
+          return <IntentionLevelBadge level={level} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
         },
         size: getColumnSize(100)
       },

@@ -2,8 +2,6 @@
 @import 'tw-animate-css';
 @import './theme.css';
 
-@custom-variant dark (&:is(.dark *));
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -17,11 +15,18 @@
     outline: none !important;
     box-shadow: none !important;
   }
+
   html {
     @apply overflow-x-hidden;
-    /* Lyra风格：等宽字体 */
-    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    /* Anthropic 品牌字体：正文使用 Lora */
+    font-family: 'Lora', 'Georgia', serif;
   }
+
+  /* Anthropic 品牌字体：标题使用 Poppins */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', 'Arial', sans-serif;
+  }
+
   body {
     @apply min-h-svh w-full bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar;
   }

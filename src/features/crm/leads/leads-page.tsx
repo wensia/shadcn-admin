@@ -312,6 +312,12 @@ export function LeadsPage() {
     setPagination((prev) => ({ ...prev, page: 1 }))
   }
 
+  // 清空快捷筛选（供 FilterSheet 调用）
+  const handleClearQuickFilters = () => {
+    setStatusFilter([])
+    setIntentionFilter([])
+  }
+
   // 清除所有筛选
   const handleClearAllFilters = () => {
     setSearchValue('')
@@ -676,6 +682,7 @@ export function LeadsPage() {
         onOpenChange={setFilterSheetOpen}
         filters={filters}
         onApplyFilters={handleApplyFilters}
+        onClearQuickFilters={handleClearQuickFilters}
       />
 
       {/* 批量分配Dialog */}

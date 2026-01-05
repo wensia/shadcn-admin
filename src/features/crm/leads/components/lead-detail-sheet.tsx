@@ -220,10 +220,10 @@ export function LeadDetailSheet({
             {/* 状态标签 */}
             <div className="flex items-center gap-2 flex-wrap">
               {lead && (
-                <LeadStatusBadge status={lead.status} className={cn(s.text.xs, s.height.badge, s.rounded)} />
+                <LeadStatusBadge status={lead.status} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
               )}
               {lead?.intention_level && (
-                <IntentionLevelBadge level={lead.intention_level} className={cn(s.text.xs, s.height.badge, s.rounded)} />
+                <IntentionLevelBadge level={lead.intention_level} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
               )}
               {lead?.is_starred && (
                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />

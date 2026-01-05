@@ -247,7 +247,7 @@ export function LeadDetailTabs({
                         {followup.result ? (
                           <FollowupResultBadge
                             result={followup.result}
-                            className={cn(s.text.xs, s.rounded, s.height.badge)}
+                            className={cn(s.text.xs, s.roundedBadge, s.height.badge)}
                           />
                         ) : (
                           <span className="text-muted-foreground">-</span>

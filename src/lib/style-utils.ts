@@ -23,6 +23,7 @@ export const styleClasses = {
     buttons: 'gap-1',   // 4px - 按钮组间距
   },
   rounded: 'rounded-none',  // 无圆角 - 方正锐利
+  roundedBadge: 'rounded-full',  // 药丸形状 - Anthropic 品牌风格状态标签
   padding: {
     cell: 'py-2 px-3',
     button: 'px-2.5',

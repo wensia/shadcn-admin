@@ -3,8 +3,18 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
+/**
+ * Anthropic 品牌色:
+ * - Orange: #d97757 (主要强调)
+ * - Blue: #6a9bcc (次要强调)
+ * - Green: #788c5d (第三强调)
+ * - Mid Gray: #b0aea5 (次要元素)
+ * - Light Gray: #e8e6dc (微妙背景)
+ * - Dark: #141413 (主要文本)
+ * - Light: #faf9f5 (浅色背景)
+ */
 const badgeVariants = cva(
-  'inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden',
+  'inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden',
   {
     variants: {
       variant: {
@@ -13,37 +23,29 @@ const badgeVariants = cva(
         secondary:
           'border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
         destructive:
-          'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
+          'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20',
         outline:
           'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
-        // 语义化颜色 variant
-        success:
-          'border-transparent bg-green-500 text-white [a&]:hover:bg-green-500/90 dark:bg-green-600',
-        warning:
-          'border-transparent bg-yellow-500 text-white [a&]:hover:bg-yellow-500/90 dark:bg-yellow-600',
-        info:
-          'border-transparent bg-blue-500 text-white [a&]:hover:bg-blue-500/90 dark:bg-blue-600',
-        purple:
-          'border-transparent bg-purple-500 text-white [a&]:hover:bg-purple-500/90 dark:bg-purple-600',
-        // 轻量状态样式 - 浅色背景 + 深色文字（更柔和美观）
+        // Anthropic 品牌色状态样式 - 浅色背景 + 品牌色文字
+        'status-orange':
+          'border-[#d97757]/30 bg-[#d97757]/10 text-[#d97757]',
         'status-blue':
-          'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300',
-        'status-amber':
-          'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300',
-        'status-cyan':
-          'border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-950 dark:text-cyan-300',
-        'status-gray':
-          'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400',
-        'status-purple':
-          'border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-300',
+          'border-[#6a9bcc]/30 bg-[#6a9bcc]/10 text-[#6a9bcc]',
         'status-green':
-          'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300',
-        'status-emerald':
-          'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+          'border-[#788c5d]/30 bg-[#788c5d]/10 text-[#788c5d]',
+        'status-gray':
+          'border-[#b0aea5]/30 bg-[#b0aea5]/10 text-[#b0aea5]',
         'status-red':
-          'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300',
-        'status-slate':
-          'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400',
+          'border-red-300 bg-red-50 text-red-600',
+        // 深色实心样式
+        'status-orange-solid':
+          'border-transparent bg-[#d97757] text-white',
+        'status-blue-solid':
+          'border-transparent bg-[#6a9bcc] text-white',
+        'status-green-solid':
+          'border-transparent bg-[#788c5d] text-white',
+        'status-gray-solid':
+          'border-transparent bg-[#b0aea5] text-white',
       },
     },
     defaultVariants: {

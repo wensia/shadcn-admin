@@ -1,276 +1,8 @@
-:root {
-  /* Lyra风格：无圆角，方正锐利 */
-  --radius: 0;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-
-  --sidebar: var(--background);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
-}
-
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.14 0.04 259.21);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-}
-
-/* ==================== Accent Color Themes ==================== */
-
-/* Amber */
-:root.accent-amber {
-  --primary: oklch(0.769 0.188 70.08);
-  --primary-foreground: oklch(0.208 0.042 40);
-  --ring: oklch(0.769 0.188 70.08);
-}
-.dark.accent-amber {
-  --primary: oklch(0.828 0.189 84.429);
-  --primary-foreground: oklch(0.208 0.042 40);
-  --ring: oklch(0.828 0.189 84.429);
-}
-
-/* Blue */
-:root.accent-blue {
-  --primary: oklch(0.546 0.245 262.881);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --ring: oklch(0.546 0.245 262.881);
-}
-.dark.accent-blue {
-  --primary: oklch(0.623 0.214 259.815);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --ring: oklch(0.623 0.214 259.815);
-}
-
-/* Cyan */
-:root.accent-cyan {
-  --primary: oklch(0.715 0.143 215.221);
-  --primary-foreground: oklch(0.208 0.042 220);
-  --ring: oklch(0.715 0.143 215.221);
-}
-.dark.accent-cyan {
-  --primary: oklch(0.789 0.154 211.53);
-  --primary-foreground: oklch(0.208 0.042 220);
-  --ring: oklch(0.789 0.154 211.53);
-}
-
-/* Emerald */
-:root.accent-emerald {
-  --primary: oklch(0.696 0.17 162.48);
-  --primary-foreground: oklch(0.984 0.003 160);
-  --ring: oklch(0.696 0.17 162.48);
-}
-.dark.accent-emerald {
-  --primary: oklch(0.765 0.177 163.223);
-  --primary-foreground: oklch(0.208 0.042 160);
-  --ring: oklch(0.765 0.177 163.223);
-}
-
-/* Fuchsia */
-:root.accent-fuchsia {
-  --primary: oklch(0.667 0.295 322.15);
-  --primary-foreground: oklch(0.984 0.003 320);
-  --ring: oklch(0.667 0.295 322.15);
-}
-.dark.accent-fuchsia {
-  --primary: oklch(0.74 0.238 322.16);
-  --primary-foreground: oklch(0.208 0.042 320);
-  --ring: oklch(0.74 0.238 322.16);
-}
-
-/* Green */
-:root.accent-green {
-  --primary: oklch(0.723 0.219 142.495);
-  --primary-foreground: oklch(0.984 0.003 140);
-  --ring: oklch(0.723 0.219 142.495);
-}
-.dark.accent-green {
-  --primary: oklch(0.792 0.209 141.14);
-  --primary-foreground: oklch(0.208 0.042 140);
-  --ring: oklch(0.792 0.209 141.14);
-}
-
-/* Indigo */
-:root.accent-indigo {
-  --primary: oklch(0.511 0.262 276.966);
-  --primary-foreground: oklch(0.984 0.003 275);
-  --ring: oklch(0.511 0.262 276.966);
-}
-.dark.accent-indigo {
-  --primary: oklch(0.585 0.233 277.117);
-  --primary-foreground: oklch(0.208 0.042 275);
-  --ring: oklch(0.585 0.233 277.117);
-}
-
-/* Lime */
-:root.accent-lime {
-  --primary: oklch(0.768 0.233 130.85);
-  --primary-foreground: oklch(0.208 0.042 130);
-  --ring: oklch(0.768 0.233 130.85);
-}
-.dark.accent-lime {
-  --primary: oklch(0.841 0.238 128.85);
-  --primary-foreground: oklch(0.208 0.042 130);
-  --ring: oklch(0.841 0.238 128.85);
-}
-
-/* Orange */
-:root.accent-orange {
-  --primary: oklch(0.702 0.224 41.116);
-  --primary-foreground: oklch(0.984 0.003 40);
-  --ring: oklch(0.702 0.224 41.116);
-}
-.dark.accent-orange {
-  --primary: oklch(0.792 0.201 41.109);
-  --primary-foreground: oklch(0.208 0.042 40);
-  --ring: oklch(0.792 0.201 41.109);
-}
-
-/* Pink */
-:root.accent-pink {
-  --primary: oklch(0.656 0.241 354.308);
-  --primary-foreground: oklch(0.984 0.003 350);
-  --ring: oklch(0.656 0.241 354.308);
-}
-.dark.accent-pink {
-  --primary: oklch(0.718 0.202 349.761);
-  --primary-foreground: oklch(0.208 0.042 350);
-  --ring: oklch(0.718 0.202 349.761);
-}
-
-/* Purple */
-:root.accent-purple {
-  --primary: oklch(0.553 0.283 293.756);
-  --primary-foreground: oklch(0.984 0.003 290);
-  --ring: oklch(0.553 0.283 293.756);
-}
-.dark.accent-purple {
-  --primary: oklch(0.627 0.265 303.9);
-  --primary-foreground: oklch(0.208 0.042 290);
-  --ring: oklch(0.627 0.265 303.9);
-}
-
-/* Red */
-:root.accent-red {
-  --primary: oklch(0.577 0.245 27.325);
-  --primary-foreground: oklch(0.984 0.003 25);
-  --ring: oklch(0.577 0.245 27.325);
-}
-.dark.accent-red {
-  --primary: oklch(0.645 0.246 16.439);
-  --primary-foreground: oklch(0.208 0.042 25);
-  --ring: oklch(0.645 0.246 16.439);
-}
-
-/* Rose */
-:root.accent-rose {
-  --primary: oklch(0.645 0.246 16.439);
-  --primary-foreground: oklch(0.984 0.003 15);
-  --ring: oklch(0.645 0.246 16.439);
-}
-.dark.accent-rose {
-  --primary: oklch(0.712 0.214 13.428);
-  --primary-foreground: oklch(0.208 0.042 15);
-  --ring: oklch(0.712 0.214 13.428);
-}
-
-/* Sky */
-:root.accent-sky {
-  --primary: oklch(0.685 0.169 237.323);
-  --primary-foreground: oklch(0.984 0.003 235);
-  --ring: oklch(0.685 0.169 237.323);
-}
-.dark.accent-sky {
-  --primary: oklch(0.751 0.141 232.661);
-  --primary-foreground: oklch(0.208 0.042 235);
-  --ring: oklch(0.751 0.141 232.661);
-}
-
-/* Teal */
-:root.accent-teal {
-  --primary: oklch(0.704 0.14 182.503);
-  --primary-foreground: oklch(0.984 0.003 180);
-  --ring: oklch(0.704 0.14 182.503);
-}
-.dark.accent-teal {
-  --primary: oklch(0.777 0.152 181.912);
-  --primary-foreground: oklch(0.208 0.042 180);
-  --ring: oklch(0.777 0.152 181.912);
-}
-
-/* Violet */
-:root.accent-violet {
-  --primary: oklch(0.541 0.281 293.009);
-  --primary-foreground: oklch(0.984 0.003 290);
-  --ring: oklch(0.541 0.281 293.009);
-}
-.dark.accent-violet {
-  --primary: oklch(0.617 0.265 293.541);
-  --primary-foreground: oklch(0.208 0.042 290);
-  --ring: oklch(0.617 0.265 293.541);
-}
-
-/* Yellow */
-:root.accent-yellow {
-  --primary: oklch(0.795 0.184 86.047);
-  --primary-foreground: oklch(0.208 0.042 85);
-  --ring: oklch(0.795 0.184 86.047);
-}
-.dark.accent-yellow {
-  --primary: oklch(0.852 0.199 91.936);
-  --primary-foreground: oklch(0.208 0.042 85);
-  --ring: oklch(0.852 0.199 91.936);
-}
-
-/* ==================== Anthropic Brand Theme ==================== */
 /*
- * Anthropic Brand Colors:
- * - Dark: #141413 - Primary text and dark backgrounds
+ * Anthropic Brand Theme
+ *
+ * Colors:
+ * - Dark: #141413 - Primary text
  * - Light: #faf9f5 - Light backgrounds
  * - Mid Gray: #b0aea5 - Secondary elements
  * - Light Gray: #e8e6dc - Subtle backgrounds
@@ -283,81 +15,195 @@
  * - Body: Lora (fallback: Georgia)
  */
 
-:root.theme-anthropic {
-  /* Anthropic 品牌色 */
-  --anthropic-dark: #141413;
-  --anthropic-light: #faf9f5;
-  --anthropic-mid-gray: #b0aea5;
-  --anthropic-light-gray: #e8e6dc;
-  --anthropic-orange: #d97757;
-  --anthropic-blue: #6a9bcc;
-  --anthropic-green: #788c5d;
+:root {
+  /* Anthropic 品牌圆角 */
+  --radius: 0.5rem;
 
-  /* 主题变量覆盖 */
+  /* 基础颜色 */
   --background: #faf9f5;
   --foreground: #141413;
+
+  /* 卡片 */
   --card: #ffffff;
   --card-foreground: #141413;
+
+  /* 弹出层 */
   --popover: #ffffff;
   --popover-foreground: #141413;
+
+  /* 主要强调色 - Orange */
   --primary: #d97757;
   --primary-foreground: #faf9f5;
+
+  /* 次要颜色 - Light Gray */
   --secondary: #e8e6dc;
   --secondary-foreground: #141413;
+
+  /* 静音色 - Light Gray */
   --muted: #e8e6dc;
   --muted-foreground: #b0aea5;
+
+  /* 强调色 - Blue */
   --accent: #6a9bcc;
   --accent-foreground: #faf9f5;
+
+  /* 危险色 */
   --destructive: #dc2626;
+
+  /* 边框和输入框 */
   --border: #e8e6dc;
   --input: #e8e6dc;
   --ring: #d97757;
 
-  /* 圆角 - Anthropic 风格更柔和 */
-  --radius: 0.5rem;
+  /* 图表颜色 - 使用 Anthropic 品牌色 */
+  --chart-1: #d97757;
+  --chart-2: #6a9bcc;
+  --chart-3: #788c5d;
+  --chart-4: #b0aea5;
+  --chart-5: #e8e6dc;
+
+  /* 侧边栏 */
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
-.dark.theme-anthropic {
-  --background: #141413;
-  --foreground: #faf9f5;
-  --card: #1f1f1e;
-  --card-foreground: #faf9f5;
-  --popover: #1f1f1e;
-  --popover-foreground: #faf9f5;
+/* ==================== Accent Color Themes ==================== */
+/* 这些主题允许用户自定义主要强调色 */
+
+/* Amber */
+:root.accent-amber {
+  --primary: #f59e0b;
+  --primary-foreground: #faf9f5;
+  --ring: #f59e0b;
+}
+
+/* Blue */
+:root.accent-blue {
+  --primary: #3b82f6;
+  --primary-foreground: #faf9f5;
+  --ring: #3b82f6;
+}
+
+/* Cyan */
+:root.accent-cyan {
+  --primary: #06b6d4;
+  --primary-foreground: #141413;
+  --ring: #06b6d4;
+}
+
+/* Emerald */
+:root.accent-emerald {
+  --primary: #10b981;
+  --primary-foreground: #faf9f5;
+  --ring: #10b981;
+}
+
+/* Green */
+:root.accent-green {
+  --primary: #788c5d;
+  --primary-foreground: #faf9f5;
+  --ring: #788c5d;
+}
+
+/* Indigo */
+:root.accent-indigo {
+  --primary: #6366f1;
+  --primary-foreground: #faf9f5;
+  --ring: #6366f1;
+}
+
+/* Orange - Anthropic Primary (Default) */
+:root.accent-orange {
   --primary: #d97757;
   --primary-foreground: #faf9f5;
-  --secondary: #2a2a29;
-  --secondary-foreground: #faf9f5;
-  --muted: #2a2a29;
-  --muted-foreground: #b0aea5;
-  --accent: #6a9bcc;
-  --accent-foreground: #faf9f5;
-  --destructive: #ef4444;
-  --border: #2a2a29;
-  --input: #2a2a29;
   --ring: #d97757;
 }
 
+/* Pink */
+:root.accent-pink {
+  --primary: #ec4899;
+  --primary-foreground: #faf9f5;
+  --ring: #ec4899;
+}
+
+/* Purple */
+:root.accent-purple {
+  --primary: #a855f7;
+  --primary-foreground: #faf9f5;
+  --ring: #a855f7;
+}
+
+/* Red */
+:root.accent-red {
+  --primary: #ef4444;
+  --primary-foreground: #faf9f5;
+  --ring: #ef4444;
+}
+
+/* Rose */
+:root.accent-rose {
+  --primary: #f43f5e;
+  --primary-foreground: #faf9f5;
+  --ring: #f43f5e;
+}
+
+/* Sky */
+:root.accent-sky {
+  --primary: #0ea5e9;
+  --primary-foreground: #faf9f5;
+  --ring: #0ea5e9;
+}
+
+/* Teal */
+:root.accent-teal {
+  --primary: #14b8a6;
+  --primary-foreground: #141413;
+  --ring: #14b8a6;
+}
+
+/* Violet */
+:root.accent-violet {
+  --primary: #8b5cf6;
+  --primary-foreground: #faf9f5;
+  --ring: #8b5cf6;
+}
+
+/* Yellow */
+:root.accent-yellow {
+  --primary: #eab308;
+  --primary-foreground: #141413;
+  --ring: #eab308;
+}
+
 @theme inline {
-  --font-inter: 'Inter', 'sans-serif';
-  --font-manrope: 'Manrope', 'sans-serif';
+  /* Anthropic 字体 */
+  --font-poppins: 'Poppins', 'Arial', sans-serif;
+  --font-lora: 'Lora', 'Georgia', serif;
 
   /* 字体大小 */
   --font-size-xs: 0.75rem;    /* 12px */
-  --font-size-sm: 0.875rem;   /* 14px - Lyra标准 */
-  --font-size-base: 0.875rem; /* 14px */
-  --font-size-lg: 1rem;       /* 16px */
-  --font-size-xl: 1.125rem;   /* 18px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
 
   /* 间距 */
   --spacing-18: 4.5rem;
   --spacing-88: 22rem;
 
-  /* Lyra风格：所有圆角都为0 */
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --radius-xl: 0;
+  /* Anthropic 风格：柔和圆角 */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* 颜色映射 */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

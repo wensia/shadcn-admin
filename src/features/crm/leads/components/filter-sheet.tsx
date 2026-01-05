@@ -219,11 +219,20 @@ interface FilterSheetProps {
   onOpenChange: (open: boolean) => void
   filters: LeadListParams
   onApplyFilters: (filters: LeadListParams) => void
+  /** 清空快捷筛选的回调（状态和意向等级） */
+  onClearQuickFilters?: () => void
 }
 
-export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: FilterSheetProps) {
+export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onClearQuickFilters }: FilterSheetProps) {
   const [localFilters, setLocalFilters] = useState<LeadListParams>(filters)
   const s = useStyleClasses()
+
+  // 当 Sheet 打开时，同步父组件的 filters 到 localFilters
+  useEffect(() => {
+    if (open) {
+      setLocalFilters(filters)
+    }
+  }, [open, filters])
 
   // 获取来源渠道（使用专门的 API，包含 extra_fields）
   const { data: sourceChannels } = useQuery({
@@ -293,6 +302,12 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
         ? otherExtraFilters
         : undefined
     }
+
+    // 如果高级筛选设置了状态或意向等级，清空快捷筛选以避免冲突
+    if (filtersToApply.status?.length || filtersToApply.intention_level?.length) {
+      onClearQuickFilters?.()
+    }
+
     onApplyFilters(filtersToApply)
     onOpenChange(false)
   }
@@ -302,6 +317,8 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters }: Fil
     const emptyFilters: LeadListParams = {}
     setLocalFilters(emptyFilters)
     setSourceExtraFilters({})
+    // 同时清空快捷筛选
+    onClearQuickFilters?.()
     onApplyFilters(emptyFilters)
   }
 

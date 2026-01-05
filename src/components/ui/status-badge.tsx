@@ -1,38 +1,36 @@
 /**
  * StatusBadge 组件
- * 带圆点指示器的状态标签，用于显示线索状态、跟进结果等
+ * 带圆点指示器的状态标签，使用 Anthropic 品牌色
+ *
+ * Anthropic 品牌色:
+ * - Orange: #d97757 (主要强调)
+ * - Blue: #6a9bcc (次要强调)
+ * - Green: #788c5d (第三强调)
+ * - Mid Gray: #b0aea5 (次要元素)
  */
 
 import { Badge } from './badge'
 import { cn } from '@/lib/utils'
 
-// 状态颜色类型
-export type StatusColor = 'blue' | 'amber' | 'cyan' | 'gray' | 'purple' | 'green' | 'emerald' | 'red' | 'slate'
+// Anthropic 品牌色状态颜色类型
+export type StatusColor = 'orange' | 'blue' | 'green' | 'gray' | 'red'
 
-// 圆点颜色映射
-const dotColors: Record<StatusColor, string> = {
-  blue: 'bg-blue-500',
-  amber: 'bg-amber-500',
-  cyan: 'bg-cyan-500',
-  gray: 'bg-gray-400',
-  purple: 'bg-purple-500',
-  green: 'bg-green-500',
-  emerald: 'bg-emerald-500',
-  red: 'bg-red-500',
-  slate: 'bg-slate-500',
+// Anthropic 品牌色 HEX 值
+const anthropicColors: Record<StatusColor, string> = {
+  orange: '#d97757',
+  blue: '#6a9bcc',
+  green: '#788c5d',
+  gray: '#b0aea5',
+  red: '#dc2626',
 }
 
 // Badge variant 映射
 const variantMap: Record<StatusColor, `status-${StatusColor}`> = {
+  orange: 'status-orange',
   blue: 'status-blue',
-  amber: 'status-amber',
-  cyan: 'status-cyan',
-  gray: 'status-gray',
-  purple: 'status-purple',
   green: 'status-green',
-  emerald: 'status-emerald',
+  gray: 'status-gray',
   red: 'status-red',
-  slate: 'status-slate',
 }
 
 interface StatusBadgeProps {
@@ -48,7 +46,7 @@ interface StatusBadgeProps {
 
 /**
  * 状态标签组件
- * 采用轻量色背景 + 深色文字 + 圆点指示器的现代风格
+ * 采用 Anthropic 品牌色：浅色背景 + 深色文字 + 圆点指示器
  */
 export function StatusBadge({
   label,
@@ -59,7 +57,10 @@ export function StatusBadge({
   return (
     <Badge variant={variantMap[color]} className={cn('gap-1.5', className)}>
       {showDot && (
-        <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', dotColors[color])} />
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: anthropicColors[color] }}
+        />
       )}
       {label}
     </Badge>

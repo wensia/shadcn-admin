@@ -1,12 +1,26 @@
 /**
  * ChangeHistoryTimeline 变更历史组件
  * 以表格形式展示信息变更和归属变更记录
+ *
+ * Anthropic 品牌色:
+ * - Orange: #d97757 (主要强调)
+ * - Blue: #6a9bcc (次要强调)
+ * - Green: #788c5d (第三强调)
+ * - Mid Gray: #b0aea5 (次要元素)
  */
 
 import * as React from 'react'
 import { FileEdit, UserCog, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
+
+// Anthropic 品牌色
+const anthropicColors = {
+  orange: '#d97757',
+  blue: '#6a9bcc',
+  green: '#788c5d',
+  midGray: '#b0aea5',
+}
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -199,9 +213,9 @@ function InfoChangeTable({
     <div className="space-y-2">
       {showTitle && (
         <div className="flex items-center gap-2">
-          <FileEdit className={cn(s.size.icon, 'text-blue-500')} />
+          <FileEdit className={cn(s.size.icon)} style={{ color: anthropicColors.blue }} />
           <h3 className={cn(s.text.sm, 'font-semibold')}>信息变更</h3>
-          <Badge variant="info" className={cn(s.text.xs, s.height.badge)}>
+          <Badge className={cn(s.text.xs, s.height.badge, 'text-white')} style={{ backgroundColor: anthropicColors.blue }}>
             {data.length}
           </Badge>
         </div>
@@ -244,7 +258,7 @@ function InfoChangeTable({
                   {row.field_name}
                 </TableCell>
                 <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                  <span className="text-red-500/80 line-through">
+                  <span className="line-through" style={{ color: anthropicColors.midGray }}>
                     {row.old_value || '-'}
                   </span>
                 </TableCell>
@@ -252,7 +266,7 @@ function InfoChangeTable({
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 </TableCell>
                 <TableCell className={cn(s.text.xs)}>
-                  <span className="text-green-600">
+                  <span style={{ color: anthropicColors.green }}>
                     {row.new_value || '-'}
                   </span>
                 </TableCell>
@@ -289,9 +303,9 @@ function OwnershipChangeTable({
     <div className="space-y-2">
       {showTitle && (
         <div className="flex items-center gap-2">
-          <UserCog className={cn(s.size.icon, 'text-yellow-500')} />
+          <UserCog className={cn(s.size.icon)} style={{ color: anthropicColors.orange }} />
           <h3 className={cn(s.text.sm, 'font-semibold')}>归属变更</h3>
-          <Badge variant="warning" className={cn(s.text.xs, s.height.badge)}>
+          <Badge className={cn(s.text.xs, s.height.badge, 'text-white')} style={{ backgroundColor: anthropicColors.orange }}>
             {data.length}
           </Badge>
         </div>
@@ -325,11 +339,11 @@ function OwnershipChangeTable({
                   <TableCell className={cn(s.text.xs)}>
                     {hasAdvisorChange ? (
                       <div className="flex items-center gap-1">
-                        <span className="text-red-500/80 line-through">
+                        <span className="line-through" style={{ color: anthropicColors.midGray }}>
                           {log.previous_advisor_name || '无'}
                         </span>
                         <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="text-green-600">
+                        <span style={{ color: anthropicColors.green }}>
                           {log.current_advisor_name || '无'}
                         </span>
                       </div>
@@ -340,11 +354,11 @@ function OwnershipChangeTable({
                   <TableCell className={cn(s.text.xs)}>
                     {hasCampusChange ? (
                       <div className="flex items-center gap-1">
-                        <span className="text-red-500/80 line-through">
+                        <span className="line-through" style={{ color: anthropicColors.midGray }}>
                           {log.previous_campus_name || '无'}
                         </span>
                         <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="text-green-600">
+                        <span style={{ color: anthropicColors.green }}>
                           {log.current_campus_name || '无'}
                         </span>
                       </div>
