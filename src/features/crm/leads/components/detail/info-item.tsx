@@ -14,6 +14,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -167,21 +172,39 @@ export function InfoItem({
     const displayValue = value || <span className="text-muted-foreground">-</span>
 
     if (editable && onSave) {
+      const triggerButton = (
+        <button
+          type="button"
+          className={cn(
+            'group flex items-center gap-1.5 text-left',
+            'rounded px-1 -mx-1 py-0.5 -my-0.5',
+            'hover:bg-muted/50 transition-colors cursor-pointer'
+          )}
+        >
+          <span className="break-words">{displayValue}</span>
+          <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+        </button>
+      )
+
       return (
         <Popover open={isEditing} onOpenChange={setIsEditing}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                'group flex items-center gap-1.5 text-left',
-                'rounded px-1 -mx-1 py-0.5 -my-0.5',
-                'hover:bg-muted/50 transition-colors cursor-pointer'
-              )}
-            >
-              <span className="break-words">{displayValue}</span>
-              <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-            </button>
-          </PopoverTrigger>
+          {/* 编辑弹窗关闭时显示提示 */}
+          {!isEditing ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  {triggerButton}
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                点击编辑
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <PopoverTrigger asChild>
+              {triggerButton}
+            </PopoverTrigger>
+          )}
           <PopoverContent className="w-64 p-3" align="start">
             <div className="space-y-3">
               <div className="text-xs font-medium text-muted-foreground">{label}</div>
