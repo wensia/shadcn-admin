@@ -606,36 +606,6 @@ export function ContinuousCallPage() {
     }
   }, [])
 
-  // 渲染渠道选择器
-  const renderChannelSelector = () => {
-    if (!statsData) return null
-
-    return (
-      <div className="flex items-center gap-2">
-        <Select
-          value={selectedChannelId || 'all'}
-          onValueChange={(value) =>
-            setSelectedChannelId(value === 'all' ? null : value)
-          }
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="选择渠道" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              全部渠道 ({statsData.total_leads})
-            </SelectItem>
-            {statsData.channels.map((channel) => (
-              <SelectItem key={channel.channel_id} value={channel.channel_id}>
-                {channel.channel_name} ({channel.lead_count})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    )
-  }
-
   // 渲染线索详情卡片骨架屏
   const renderLeadDetailSkeleton = () => {
     return (
@@ -706,31 +676,63 @@ export function ContinuousCallPage() {
 
     return (
       <Card className="h-full flex flex-col overflow-hidden">
-        <CardHeader className="pb-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg">
-                {currentLead.child_name || '未填写'}
-              </CardTitle>
-              {currentLead.intention_level && (
-                <IntentionLevelBadge
-                  level={currentLead.intention_level as IntentionLevel}
-                />
-              )}
-            </div>
-            {/* 外呼按钮 - 放在标题栏 */}
-            {!callDrawerVisible && (
-              <Button
-                onClick={startCall}
-                disabled={!currentLead.parent_phone || dialing}
-              >
-                {dialing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Phone className="mr-2 h-4 w-4" />
+        <CardHeader className="pb-3 shrink-0 space-y-3">
+          {/* 外呼操作区：渠道选择 + 外呼按钮 */}
+          {!callDrawerVisible && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">外呼操作</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* 渠道选择器 */}
+                {statsData && (
+                  <Select
+                    value={selectedChannelId || 'all'}
+                    onValueChange={(value) =>
+                      setSelectedChannelId(value === 'all' ? null : value)
+                    }
+                  >
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue placeholder="选择渠道" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        全部渠道 ({statsData.total_leads})
+                      </SelectItem>
+                      {statsData.channels.map((channel) => (
+                        <SelectItem key={channel.channel_id} value={channel.channel_id}>
+                          {channel.channel_name} ({channel.lead_count})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
-                {dialing ? '正在呼叫...' : '按空格键外呼'}
-              </Button>
+                {/* 外呼按钮 */}
+                <Button
+                  onClick={startCall}
+                  disabled={!currentLead.parent_phone || dialing}
+                  className="h-9"
+                >
+                  {dialing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Phone className="mr-2 h-4 w-4" />
+                  )}
+                  {dialing ? '正在呼叫...' : '按空格键外呼'}
+                </Button>
+              </div>
+            </div>
+          )}
+          {/* 线索标题 */}
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg">
+              {currentLead.child_name || '未填写'}
+            </CardTitle>
+            {currentLead.intention_level && (
+              <IntentionLevelBadge
+                level={currentLead.intention_level as IntentionLevel}
+              />
             )}
           </div>
         </CardHeader>
@@ -880,10 +882,7 @@ export function ContinuousCallPage() {
   return (
     <>
       <Header fixed>
-        <div className="flex w-full items-center justify-between">
-          <h1 className="text-lg font-semibold">快捷外呼</h1>
-          {renderChannelSelector()}
-        </div>
+        <h1 className="text-lg font-semibold">快捷外呼</h1>
       </Header>
 
       <Main fixed className="min-h-0">
