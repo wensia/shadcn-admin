@@ -42,6 +42,7 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authenticated/crm/workbench'
+import { Route as AuthenticatedCrmOrdersRouteImport } from './routes/_authenticated/crm/orders'
 import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
 import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
@@ -243,6 +244,11 @@ const AuthenticatedCrmWorkbenchRoute =
     path: '/crm/workbench',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCrmOrdersRoute = AuthenticatedCrmOrdersRouteImport.update({
+  id: '/crm/orders',
+  path: '/crm/orders',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCrmLeadConversionRoute =
   AuthenticatedCrmLeadConversionRouteImport.update({
     id: '/crm/lead-conversion',
@@ -452,6 +458,7 @@ export interface FileRoutesByFullPath {
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
+  '/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -511,6 +518,7 @@ export interface FileRoutesByTo {
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
+  '/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -575,6 +583,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
+  '/_authenticated/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/_authenticated/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -637,6 +646,7 @@ export interface FileRouteTypes {
     | '/crm/batch-import'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
+    | '/crm/orders'
     | '/crm/workbench'
     | '/errors/$error'
     | '/settings/account'
@@ -696,6 +706,7 @@ export interface FileRouteTypes {
     | '/crm/batch-import'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
+    | '/crm/orders'
     | '/crm/workbench'
     | '/errors/$error'
     | '/settings/account'
@@ -759,6 +770,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/batch-import'
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/crm/lead-conversion'
+    | '/_authenticated/crm/orders'
     | '/_authenticated/crm/workbench'
     | '/_authenticated/errors/$error'
     | '/_authenticated/settings/account'
@@ -1028,6 +1040,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmWorkbenchRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/crm/orders': {
+      id: '/_authenticated/crm/orders'
+      path: '/crm/orders'
+      fullPath: '/crm/orders'
+      preLoaderRoute: typeof AuthenticatedCrmOrdersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/crm/lead-conversion': {
       id: '/_authenticated/crm/lead-conversion'
       path: '/crm/lead-conversion'
@@ -1279,6 +1298,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
+  AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
   AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -1325,6 +1345,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
+  AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
   AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,

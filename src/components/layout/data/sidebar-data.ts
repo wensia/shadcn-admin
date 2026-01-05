@@ -35,6 +35,7 @@ import {
   Settings,
   ArrowLeft,
   Shield,
+  ShoppingCart,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -112,6 +113,11 @@ export const crmNavGroups: NavGroup[] = [
         title: '人事管理',
         url: '/crm/hr',
         icon: UserCog,
+      },
+      {
+        title: '订单管理',
+        url: '/crm/orders',
+        icon: ShoppingCart,
       },
       {
         title: '财务管理',
