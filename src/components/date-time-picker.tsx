@@ -152,7 +152,7 @@ export function DateTimePicker({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className={cn('w-auto p-0', s.rounded)} align="start">
+        <PopoverContent className={cn('w-auto p-0', s.rounded)} align="start" modal={true}>
           <div className="flex">
             {/* 日历 */}
             <Calendar

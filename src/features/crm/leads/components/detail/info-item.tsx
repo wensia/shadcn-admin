@@ -218,6 +218,27 @@ export function InfoItem({
           <PopoverContent
             className={cn("p-3", fieldType === 'datetime' ? 'w-auto' : 'w-64')}
             align="start"
+            // 使用 modal 模式防止页面重新渲染时焦点丢失导致 Popover 关闭
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => {
+              // 阻止点击 DateTimePicker 弹窗时关闭外层 Popover
+              const target = e.target as HTMLElement
+              if (target?.closest('[data-radix-popper-content-wrapper]')) {
+                e.preventDefault()
+              }
+            }}
+            onInteractOutside={(e) => {
+              // 阻止点击 DateTimePicker 弹窗时关闭外层 Popover
+              const target = e.target as HTMLElement
+              if (target?.closest('[data-radix-popper-content-wrapper]')) {
+                e.preventDefault()
+              }
+            }}
+            onFocusOutside={(e) => {
+              // 防止焦点移出时关闭 Popover（计时器更新导致的焦点问题）
+              e.preventDefault()
+            }}
           >
             <div className="space-y-3">
               <div className="text-xs font-medium text-muted-foreground">{label}</div>

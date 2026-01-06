@@ -2,7 +2,7 @@
  * 快捷外呼页面
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
@@ -63,6 +63,7 @@ import type { ContinuousCallLead, ContinuousCallStats } from './types'
 import type { LeadFollowupCreate } from '../leads/types'
 import { LeadDetailTabs } from '../leads/components/detail/lead-detail-tabs'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
+import { CallTimer } from './components/call-timer'
 
 
 // 跟进结果分组配置
@@ -229,7 +230,6 @@ const resultMapping: Record<string, FollowupResult> = {
 export function ContinuousCallPage() {
   useDocumentTitle('连续外呼')
   const queryClient = useQueryClient()
-  const callTimerRef = useRef<NodeJS.Timeout | null>(null)
   const { setOpen: setSidebarOpen } = useSidebar()
 
   // 状态
@@ -237,7 +237,6 @@ export function ContinuousCallPage() {
   const [currentLead, setCurrentLead] = useState<ContinuousCallLead | null>(null)
   const [callDrawerVisible, setCallDrawerVisible] = useState(false)
   const [currentCallId, setCurrentCallId] = useState('')
-  const [callDuration, setCallDuration] = useState('00:00')
   const [callStartTime, setCallStartTime] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [hangingUp, setHangingUp] = useState(false)
@@ -311,34 +310,6 @@ export function ContinuousCallPage() {
     )
   }, [])
 
-  // 开始通话计时
-  const startCallTimer = useCallback(() => {
-    if (callTimerRef.current) {
-      clearInterval(callTimerRef.current)
-    }
-    callTimerRef.current = setInterval(() => {
-      if (callStartTime) {
-        const elapsed = Math.floor((Date.now() - callStartTime) / 1000)
-        const minutes = Math.floor(elapsed / 60)
-        const seconds = elapsed % 60
-        setCallDuration(
-          `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-        )
-      }
-    }, 1000)
-  }, [callStartTime])
-
-  // 启动通话计时器
-  useEffect(() => {
-    if (callStartTime) {
-      startCallTimer()
-    }
-    return () => {
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current)
-      }
-    }
-  }, [callStartTime, startCallTimer])
 
   // 发起外呼
   const startCall = useCallback(async () => {
@@ -355,7 +326,6 @@ export function ContinuousCallPage() {
         setCurrentCallId(res.data.call_id)
         setCallStartTime(Date.now())
         setCallDrawerVisible(true)
-        setCallDuration('00:00')
         toast.success('外呼发起成功')
       } else {
         toast.error(res.message || '外呼失败')
@@ -395,11 +365,6 @@ export function ContinuousCallPage() {
     setCallDrawerVisible(false)
     setCurrentCallId('')
     setCallStartTime(null)
-    setCallDuration('00:00')
-    if (callTimerRef.current) {
-      clearInterval(callTimerRef.current)
-      callTimerRef.current = null
-    }
   }, [])
 
   // 判断跟进结果属于哪个分组
@@ -597,15 +562,6 @@ export function ContinuousCallPage() {
     }
   }, [currentLead, callDrawerVisible, startCall, dialing])
 
-  // 清理定时器
-  useEffect(() => {
-    return () => {
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current)
-      }
-    }
-  }, [])
-
   // 渲染线索详情卡片骨架屏
   const renderLeadDetailSkeleton = () => {
     return (
@@ -766,7 +722,7 @@ export function ContinuousCallPage() {
             <div className="flex items-center gap-4">
               <div>
                 <p className="text-xs text-muted-foreground">通话时长</p>
-                <p className="text-lg font-bold">{callDuration}</p>
+                <CallTimer startTime={callStartTime} className="text-lg font-bold" />
               </div>
               <Button
                 variant="destructive"
