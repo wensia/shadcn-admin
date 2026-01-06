@@ -297,7 +297,7 @@ function CourseEditDialog({
           <div className="space-y-2">
             <label className="text-sm font-medium">小计金额</label>
             <div className="h-10 px-3 py-2 rounded-md border bg-muted/50 flex items-center">
-              <span className="font-semibold text-emerald-600">¥{formData.amount.toFixed(2)}</span>
+              <span className="font-semibold text-emerald-600">¥{Number(formData.amount || 0).toFixed(2)}</span>
               <span className="ml-2 text-xs text-muted-foreground">（自动计算）</span>
             </div>
           </div>
@@ -715,10 +715,10 @@ export function OrderDialog({
                                     {watchItems[index]?.course_hours || 0}
                                   </TableCell>
                                   <TableCell className="text-right text-sm">
-                                    ¥{(watchItems[index]?.unit_price || 0).toFixed(2)}
+                                    ¥{Number(watchItems[index]?.unit_price || 0).toFixed(2)}
                                   </TableCell>
                                   <TableCell className="text-right font-semibold text-sm text-emerald-600">
-                                    ¥{(watchItems[index]?.amount || 0).toFixed(2)}
+                                    ¥{Number(watchItems[index]?.amount || 0).toFixed(2)}
                                   </TableCell>
                                   <TableCell className="text-center">
                                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -760,7 +760,7 @@ export function OrderDialog({
                         <div className="flex items-center justify-end gap-6 text-sm">
                           <div className="flex items-center gap-1.5">
                             <span className="text-muted-foreground">订单总额</span>
-                            <span className="font-semibold text-base">¥{totalAmount.toFixed(2)}</span>
+                            <span className="font-semibold text-base">¥{Number(totalAmount || 0).toFixed(2)}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Tag className="h-3.5 w-3.5 text-orange-500" />
@@ -770,7 +770,7 @@ export function OrderDialog({
                           <div className="flex items-center gap-1.5 pl-4 border-l">
                             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                             <span className="text-muted-foreground">实付</span>
-                            <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">¥{actualAmount.toFixed(2)}</span>
+                            <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">¥{Number(actualAmount || 0).toFixed(2)}</span>
                           </div>
                         </div>
                       </div>

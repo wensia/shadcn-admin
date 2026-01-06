@@ -10,7 +10,7 @@ import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -163,52 +163,64 @@ export function OrdersPage() {
           </Button>
         </div>
 
-        {/* 统计卡片 - 固定高度 */}
+        {/* 统计卡片 - 紧凑布局 */}
         {statsData && (
-          <div className="grid flex-shrink-0 grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">总订单数</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsData.total_count}</div>
-                <p className="text-xs text-muted-foreground">
-                  总金额 ¥{statsData.total_amount?.toLocaleString()}
-                </p>
-              </CardContent>
+          <div className="grid flex-shrink-0 grid-cols-4 gap-3">
+            <Card className="py-3 px-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <ShoppingCart className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">总订单</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold">{statsData.total_count}</span>
+                    <span className="text-xs text-muted-foreground">¥{statsData.total_amount?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">已支付</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{statsData.paid_count}</div>
-                <p className="text-xs text-muted-foreground">
-                  金额 ¥{statsData.paid_amount?.toLocaleString()}
-                </p>
-              </CardContent>
+            <Card className="py-3 px-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">已支付</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold text-green-600">{statsData.paid_count}</span>
+                    <span className="text-xs text-muted-foreground">¥{statsData.paid_amount?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">今日订单</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsData.today_count}</div>
-                <p className="text-xs text-muted-foreground">
-                  金额 ¥{statsData.today_amount?.toLocaleString()}
-                </p>
-              </CardContent>
+            <Card className="py-3 px-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                  <CalendarDays className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">今日</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold">{statsData.today_count}</span>
+                    <span className="text-xs text-muted-foreground">¥{statsData.today_amount?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">本月订单</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsData.month_count}</div>
-                <p className="text-xs text-muted-foreground">
-                  金额 ¥{statsData.month_amount?.toLocaleString()}
-                </p>
-              </CardContent>
+            <Card className="py-3 px-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">本月</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold">{statsData.month_count}</span>
+                    <span className="text-xs text-muted-foreground">¥{statsData.month_amount?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
         )}
