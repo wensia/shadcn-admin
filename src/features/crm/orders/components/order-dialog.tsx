@@ -797,7 +797,7 @@ export function OrderDialog({
                                 </FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
-                                    <SelectTrigger className="h-9">
+                                    <SelectTrigger className="h-9 w-full">
                                       <SelectValue placeholder="选择" />
                                     </SelectTrigger>
                                   </FormControl>
@@ -824,7 +824,7 @@ export function OrderDialog({
                                 </FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
-                                    <SelectTrigger className="h-9">
+                                    <SelectTrigger className="h-9 w-full">
                                       <SelectValue placeholder="选择" />
                                     </SelectTrigger>
                                   </FormControl>
@@ -874,7 +874,7 @@ export function OrderDialog({
                                   value={field.value || 'none'}
                                 >
                                   <FormControl>
-                                    <SelectTrigger className="h-9">
+                                    <SelectTrigger className="h-9 w-full">
                                       <SelectValue placeholder="选择" />
                                     </SelectTrigger>
                                   </FormControl>
