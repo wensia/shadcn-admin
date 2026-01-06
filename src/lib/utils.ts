@@ -10,6 +10,42 @@ export function sleep(ms: number = 1000) {
 }
 
 /**
+ * 格式化日期时间
+ * @param date - 日期字符串或 Date 对象
+ * @param options - 格式化选项
+ * @returns 格式化后的日期字符串
+ */
+export function formatDate(
+  date: string | Date | null | undefined,
+  options: {
+    showTime?: boolean
+    format?: 'short' | 'long'
+  } = {}
+): string {
+  if (!date) return '-'
+
+  const { showTime = true, format = 'short' } = options
+  const d = typeof date === 'string' ? new Date(date) : date
+
+  if (isNaN(d.getTime())) return '-'
+
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+
+  if (!showTime) {
+    return format === 'long' ? `${year}年${month}月${day}日` : `${year}-${month}-${day}`
+  }
+
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+
+  return format === 'long'
+    ? `${year}年${month}月${day}日 ${hours}:${minutes}`
+    : `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+/**
  * Generates page numbers for pagination with ellipsis
  * @param currentPage - Current page number (1-based)
  * @param totalPages - Total number of pages

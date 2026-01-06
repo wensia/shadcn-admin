@@ -751,52 +751,82 @@ export const webhookHooksApi = {
 export const coursesApi = {
   /** 获取课程列表 */
   async getCourses(): Promise<Course[]> {
-    return apiClient.get<Course[]>('/courses')
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<Course>>>('/courses')
+    return response.data?.items || []
   },
 
   /** 获取单个课程详情 */
-  async getCourse(id: string): Promise<Course> {
-    return apiClient.get<Course>(`/courses/${id}`)
+  async getCourse(id: string): Promise<Course | undefined> {
+    const response = await apiClient.get<ApiResponse<Course>>(`/courses/${id}`)
+    return response.data
   },
 
   /** 创建课程 */
-  async createCourse(data: CourseFormData): Promise<Course> {
-    return apiClient.post<Course>('/courses', data)
+  async createCourse(data: CourseFormData): Promise<Course | undefined> {
+    const response = await apiClient.post<ApiResponse<Course>>('/courses', data)
+    if (!response.success) {
+      throw new Error(response.message || '创建失败')
+    }
+    return response.data
   },
 
   /** 更新课程 */
-  async updateCourse(id: string, data: CourseFormData): Promise<Course> {
-    return apiClient.put<Course>(`/courses/${id}`, data)
+  async updateCourse(id: string, data: CourseFormData): Promise<Course | undefined> {
+    const response = await apiClient.put<ApiResponse<Course>>(`/courses/${id}`, data)
+    if (!response.success) {
+      throw new Error(response.message || '更新失败')
+    }
+    return response.data
   },
 
   /** 删除课程 */
   async deleteCourse(id: string): Promise<void> {
-    return apiClient.delete<void>(`/courses/${id}`)
+    const response = await apiClient.delete<ApiResponse<void>>(`/courses/${id}`)
+    if (!response.success) {
+      throw new Error(response.message || '删除失败')
+    }
   },
 
   /** 批量启用课程 */
   async batchActivateCourses(ids: string[]): Promise<void> {
-    return apiClient.post<void>('/courses/batch-activate', { ids })
+    const response = await apiClient.post<ApiResponse<void>>('/courses/batch-activate', { ids })
+    if (!response.success) {
+      throw new Error(response.message || '批量启用失败')
+    }
   },
 
   /** 批量停用课程 */
   async batchDeactivateCourses(ids: string[]): Promise<void> {
-    return apiClient.post<void>('/courses/batch-deactivate', { ids })
+    const response = await apiClient.post<ApiResponse<void>>('/courses/batch-deactivate', { ids })
+    if (!response.success) {
+      throw new Error(response.message || '批量停用失败')
+    }
   },
 
   /** 批量删除课程 */
   async batchDeleteCourses(ids: string[]): Promise<void> {
-    return apiClient.post<void>('/courses/batch-delete', { ids })
+    const response = await apiClient.post<ApiResponse<void>>('/courses/batch-delete', { ids })
+    if (!response.success) {
+      throw new Error(response.message || '批量删除失败')
+    }
   },
 
   /** 复制课程 */
-  async copyCourse(id: string): Promise<Course> {
-    return apiClient.post<Course>(`/courses/${id}/copy`)
+  async copyCourse(id: string): Promise<Course | undefined> {
+    const response = await apiClient.post<ApiResponse<Course>>(`/courses/${id}/copy`)
+    if (!response.success) {
+      throw new Error(response.message || '复制失败')
+    }
+    return response.data
   },
 
   /** 初始化预设课程 */
   async initializePresetCourses(): Promise<Course[]> {
-    return apiClient.post<Course[]>('/courses/initialize-presets')
+    const response = await apiClient.post<ApiResponse<Course[]>>('/courses/initialize-presets')
+    if (!response.success) {
+      throw new Error(response.message || '初始化预设失败')
+    }
+    return response.data || []
   },
 }
 
