@@ -336,7 +336,7 @@ export function LeadDetailTabs({
                         {order.order_no}
                       </TableCell>
                       <TableCell className={cn(s.text.xs, 'text-right font-medium text-orange-600')}>
-                        ¥{order.actual_amount.toFixed(2)}
+                        ¥{Number(order.actual_amount).toFixed(2)}
                       </TableCell>
                       <TableCell className={s.text.xs}>
                         <Badge
