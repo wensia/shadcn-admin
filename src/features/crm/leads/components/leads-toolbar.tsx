@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { StandaloneFacetedFilter } from '@/components/data-table/standalone-faceted-filter'
 import { DataTableViewOptions } from '@/components/data-table/view-options'
-import { Plus, RefreshCw, Filter, MoreHorizontal } from 'lucide-react'
+import { Plus, RefreshCw, Filter, MoreHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import {
@@ -81,12 +81,24 @@ export function LeadsToolbar({
     <div className="flex items-center justify-between pb-4">
       <div className="flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2">
         {/* 搜索框 */}
-        <Input
-          placeholder="搜索姓名/手机号..."
-          value={searchValue}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          className="h-8 w-[150px] lg:w-[250px]"
-        />
+        <div className="relative">
+          <Input
+            placeholder="搜索姓名/手机号..."
+            value={searchValue}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            className={cn("h-8 w-[150px] lg:w-[250px]", searchValue && "pr-8")}
+          />
+          {searchValue && (
+            <button
+              type="button"
+              onClick={() => onSearchChange?.('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              title="清空搜索"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
         {/* FacetedFilter 筛选按钮组 */}
         <div className="flex gap-x-2">
