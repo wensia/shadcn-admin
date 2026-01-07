@@ -216,6 +216,7 @@ export interface LeadListItem {
   import_batch_id?: string
   batch_remark?: string | null
   batch_name?: string | null
+  notes?: string
 
   // 样式配置（可选，由include_styles参数控制）
   status_style?: EnumStyleConfig

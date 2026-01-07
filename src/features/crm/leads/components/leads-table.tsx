@@ -275,6 +275,29 @@ export function LeadsTable({
         },
         size: getColumnSize(100)
       },
+      // 备注
+      {
+        accessorKey: 'notes',
+        header: '备注',
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-24" />
+          }
+          const notes = row.original.notes
+          return notes ? (
+            <div
+              className={cn(s.text.xs, 'text-muted-foreground truncate max-w-[150px]')}
+              title={notes}
+            >
+              {notes}
+            </div>
+          ) : (
+            <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
+          )
+        },
+        size: getColumnSize(150),
+        enableSorting: false
+      },
       // 创建时间
       {
         accessorKey: 'created_at',
