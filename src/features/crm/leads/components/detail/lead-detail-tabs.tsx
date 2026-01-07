@@ -1,7 +1,7 @@
 /**
  * 线索详情 Tabs 组件
  * 可复用于 LeadDetailSheet 和 ContinuousCallPage
- * 包含：概览、跟进记录、统计图表、变更历史 四个 Tab
+ * 包含：概览、跟进记录、订单记录、统计图表、变更历史 五个 Tab
  */
 
 import { useState } from 'react'
@@ -21,12 +21,17 @@ import {
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { formatTime } from '@/lib/utils/time'
+import { Receipt } from 'lucide-react'
 
 import { leadsApi } from '../../api'
 import type { Lead, LeadFollowup } from '../../types'
 import { followupMethodLabels } from '../../types'
 import { useLeadStatistics } from '../../hooks/use-lead-statistics'
 import { FollowupResultBadge } from '../status-badges'
+
+// 订单相关
+import { orderApi } from '@/features/crm/orders/api'
+import type { Order } from '@/features/crm/orders/types'
 
 // 详情组件
 import { LeadInfoDisplay } from './lead-info-display'
@@ -45,7 +50,7 @@ interface LeadDetailTabsProps {
   /** 是否正在加载线索数据 */
   isLoading?: boolean
   /** 默认激活的 Tab */
-  defaultTab?: 'overview' | 'followups' | 'statistics' | 'history'
+  defaultTab?: 'overview' | 'followups' | 'orders' | 'statistics' | 'history'
   /** 自定义类名 */
   className?: string
   /** 是否使用 ScrollArea（在 Sheet 中需要，在 Card 中可能不需要） */
@@ -116,6 +121,16 @@ export function LeadDetailTabs({
     enabled: !!leadId && activeTab === 'history',
   })
 
+  // 获取订单记录
+  const { data: ordersResponse, isLoading: isOrdersLoading } = useQuery({
+    queryKey: ['lead-orders', leadId],
+    queryFn: async () => {
+      const response = await orderApi.getLeadOrders(leadId)
+      return response
+    },
+    enabled: !!leadId && activeTab === 'orders',
+  })
+
   // 计算统计数据
   const statistics = useLeadStatistics(lead || null, followupsResponse?.data)
 
@@ -163,6 +178,24 @@ export function LeadDetailTabs({
           <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
             {lead?.followup_count || 0}
           </Badge>
+        </TabsTrigger>
+        <TabsTrigger
+          value="orders"
+          className={cn(
+            s.text.xs,
+            'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
+            'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+            'data-[state=active]:text-foreground data-[state=active]:font-semibold',
+            'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
+            'after:bg-transparent data-[state=active]:after:bg-primary'
+          )}
+        >
+          订单记录
+          {ordersResponse?.data && ordersResponse.data.length > 0 && (
+            <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+              {ordersResponse.data.length}
+            </Badge>
+          )}
         </TabsTrigger>
         <TabsTrigger
           value="statistics"
@@ -261,6 +294,66 @@ export function LeadDetailTabs({
                       </TableCell>
                       <TableCell className={s.text.xs}>
                         {followup.followup_by_name || '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </ContentWrapper>
+      </TabsContent>
+
+      {/* ==================== 订单记录 Tab ==================== */}
+      <TabsContent value="orders" className="flex-1 m-0 overflow-hidden">
+        <ContentWrapper>
+          <div className="p-4">
+            {isOrdersLoading ? (
+              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
+                加载中...
+              </div>
+            ) : !ordersResponse?.data?.length ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Receipt className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                <p className={cn(s.text.sm, 'text-muted-foreground')}>暂无订单记录</p>
+                <p className={cn(s.text.xs, 'text-muted-foreground/60 mt-1')}>该线索还没有关联的缴费订单</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className={cn(s.text.xs, 'w-[120px]')}>订单编号</TableHead>
+                    <TableHead className={cn(s.text.xs, 'w-[80px] text-right')}>实付金额</TableHead>
+                    <TableHead className={cn(s.text.xs, 'w-[80px]')}>支付状态</TableHead>
+                    <TableHead className={cn(s.text.xs, 'w-[140px]')}>支付时间</TableHead>
+                    <TableHead className={cn(s.text.xs, 'w-[140px]')}>创建时间</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ordersResponse.data.map((order: Order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className={cn(s.text.xs, 'font-medium')}>
+                        {order.order_no}
+                      </TableCell>
+                      <TableCell className={cn(s.text.xs, 'text-right font-medium text-orange-600')}>
+                        ¥{order.actual_amount.toFixed(2)}
+                      </TableCell>
+                      <TableCell className={s.text.xs}>
+                        <Badge
+                          variant={order.payment_status === 'paid' ? 'default' : 'secondary'}
+                          className={cn(
+                            s.text.xs, s.roundedBadge, s.height.badge,
+                            order.payment_status === 'paid' && 'bg-green-500 hover:bg-green-500/80'
+                          )}
+                        >
+                          {order.payment_status_display}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
+                        {order.payment_at ? formatTime(order.payment_at) : '-'}
+                      </TableCell>
+                      <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
+                        {formatTime(order.created_at)}
                       </TableCell>
                     </TableRow>
                   ))}
