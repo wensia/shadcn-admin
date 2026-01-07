@@ -4,6 +4,18 @@
  * 支持快捷编辑功能
  */
 
+import { useState } from 'react'
+import { Pencil, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+import { useStyleClasses } from '@/lib/style-utils'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import type { Lead } from '../../types'
 import { gradeLabels } from '../../types'
 import { formatTime } from '@/lib/utils/time'
@@ -103,6 +115,99 @@ function formatFieldValue(value: unknown): string {
     return JSON.stringify(value)
   }
   return String(value)
+}
+
+/**
+ * 备注卡片组件
+ */
+interface NotesCardProps {
+  notes?: string
+  editable?: boolean
+  onSave?: (value: string) => Promise<void>
+}
+
+function NotesCard({ notes, editable, onSave }: NotesCardProps) {
+  const s = useStyleClasses()
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(notes || '')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!onSave) return
+    setIsSaving(true)
+    try {
+      await onSave(editValue)
+      setIsEditing(false)
+      toast.success('备注已更新')
+    } catch (error: any) {
+      toast.error(error?.message || '保存失败')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className={cn('border bg-card p-4 lg:col-span-2', s.rounded)}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className={cn(s.text.sm, 'font-semibold')}>备注</h3>
+        {editable && onSave && (
+          <Popover open={isEditing} onOpenChange={(open) => {
+            setIsEditing(open)
+            if (open) setEditValue(notes || '')
+          }}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-muted"
+                title="编辑备注"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-80 p-3"
+              align="end"
+              onFocusOutside={(e) => e.preventDefault()}
+            >
+              <div className="space-y-3">
+                <div className="text-xs font-medium text-muted-foreground">编辑备注</div>
+                <Textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  placeholder="请输入备注信息"
+                  className="min-h-[80px] text-xs resize-none"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsEditing(false)}
+                    className="h-7 text-xs"
+                    disabled={isSaving}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    className="h-7 text-xs"
+                    disabled={isSaving}
+                  >
+                    {isSaving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                    保存
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+      <p className={cn(s.text.xs, 'text-muted-foreground whitespace-pre-wrap')}>
+        {notes || '暂无备注'}
+      </p>
+    </div>
+  )
 }
 
 interface LeadInfoDisplayProps {
@@ -291,11 +396,15 @@ export function LeadInfoDisplay({
               value={[lead.province, lead.city, lead.district].filter(Boolean).join(' ') || undefined}
             />
             <InfoItem label="详细地址" value={lead.address_detail} />
-            {lead.notes && (
-              <InfoItem label="备注" value={lead.notes} span={2} />
-            )}
           </InfoGrid>
         </InfoCard>
+
+        {/* 备注 */}
+        <NotesCard
+          notes={lead.notes}
+          editable={editable}
+          onSave={createSaveHandler('notes')}
+        />
 
         {/* 备用联系人 */}
         {showBackupContact && (lead.backup_contact_name || lead.backup_contact_phone) && (
