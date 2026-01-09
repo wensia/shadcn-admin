@@ -249,6 +249,7 @@ export function ContinuousCallPage() {
   const [followupContent, setFollowupContent] = useState('')
   const [nextFollowupAt, setNextFollowupAt] = useState<string>('')
   const [sendToDingding, setSendToDingding] = useState(false)
+  const [releaseToPool, setReleaseToPool] = useState(false)
 
   // 获取统计数据
   const { data: statsData } = useQuery({
@@ -427,32 +428,24 @@ export function ContinuousCallPage() {
       const res = await leadsApi.addLeadFollowup(currentLeadId, data)
 
       if (res.success) {
-        // 根据分组执行不同操作
-        if (resultGroup === 'continuing') {
-          toast.success('跟进记录已保存，线索状态已更新为跟进中')
-        } else if (resultGroup === 'releaseToPool') {
-          // 特殊处理：如果是"学员"，先更新状态
-          if (followupResult === 'student') {
-            try {
-              await leadsApi.updateLead(currentLeadId, {
-                status: LeadStatus.PAID,
-              })
-            } catch (error) {
-              console.error('更新线索状态失败：', error)
-            }
+        // 特殊处理：如果是"学员"，先更新状态为已支付
+        if (followupResult === 'student') {
+          try {
+            await leadsApi.updateLead(currentLeadId, {
+              status: LeadStatus.PAID,
+            })
+          } catch (error) {
+            console.error('更新线索状态失败：', error)
           }
+        }
 
-          // 释放到公海
-          const releaseReason =
-            followupResult === 'student' ? 'MANUAL_RELEASE' : 'INVALID_LEAD'
-          const releaseRemark =
-            followupResult === 'student'
-              ? '已转为学员，防止重复触达'
-              : `跟进结果：${
-                  followupResultGroups.releaseToPool.find(
-                    (o) => o.value === followupResult
-                  )?.label
-                }`
+        // 如果勾选了释放到公海
+        if (releaseToPool) {
+          const releaseReason = followupResult === 'student' ? 'MANUAL_RELEASE' : 'INVALID_LEAD'
+          const selectedOption = followupResultOptions.find(o => o.value === followupResult)
+          const releaseRemark = followupResult === 'student'
+            ? '已转为学员，防止重复触达'
+            : `跟进结果：${selectedOption?.label || followupResult}`
 
           try {
             await leadsApi.batchReleaseLeads({
@@ -460,18 +453,19 @@ export function ContinuousCallPage() {
               reason: releaseReason,
               remark: releaseRemark,
             })
-            const successMsg =
-              followupResult === 'student'
-                ? '跟进记录已保存，线索已标记为学员并释放到公海'
-                : '跟进记录已保存，线索已释放到公海'
-            toast.success(successMsg)
+            toast.success('跟进记录已保存，线索已释放到公海')
           } catch (error) {
             toast.warning('跟进记录已保存，但释放到公海失败')
           }
-        } else if (resultGroup === 'statusOnly') {
-          toast.success('跟进记录已保存，线索状态已更新为已回访')
         } else {
-          toast.success('跟进记录保存成功')
+          // 根据分组显示不同的提示
+          if (resultGroup === 'continuing') {
+            toast.success('跟进记录已保存，线索状态已更新为跟进中')
+          } else if (resultGroup === 'statusOnly') {
+            toast.success('跟进记录已保存，线索状态已更新为已回访')
+          } else {
+            toast.success('跟进记录保存成功')
+          }
         }
 
         // 刷新列表并选择下一个
@@ -493,6 +487,7 @@ export function ContinuousCallPage() {
     currentCallId,
     callDrawerVisible,
     followupContent,
+    releaseToPool,
     closeCallDrawer,
     refetchLeads,
   ])
@@ -504,6 +499,7 @@ export function ContinuousCallPage() {
     setWechatAdded(false)
     setNextFollowupAt('')
     setSendToDingding(false)
+    setReleaseToPool(false)
     if (currentLead) {
       setIntentionLevel(
         (currentLead.intention_level as IntentionLevel) || IntentionLevel.MEDIUM
@@ -776,7 +772,26 @@ export function ContinuousCallPage() {
             </div>
           </div>
 
-          {/* 区块3: 跟进内容 */}
+          {/* 区块3: 释放公海选项 */}
+          <div className="rounded-lg border border-orange-200 bg-orange-50/50 dark:border-orange-900/50 dark:bg-orange-950/20 p-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="release-to-pool"
+                checked={releaseToPool}
+                onCheckedChange={(checked) => setReleaseToPool(checked as boolean)}
+              />
+              <Label htmlFor="release-to-pool" className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                释放该线索到公海
+              </Label>
+            </div>
+            {releaseToPool && (
+              <p className="mt-1.5 text-xs text-orange-600/80 dark:text-orange-500/80 ml-6">
+                保存后线索将被释放到公海池，其他顾问可领取
+              </p>
+            )}
+          </div>
+
+          {/* 区块4: 跟进内容 */}
           <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center space-x-2">

@@ -57,6 +57,26 @@ const failureTypeVariants: Record<FailureType, 'default' | 'secondary' | 'destru
   unknown: 'outline',
 }
 
+// 格式化日期时间
+function formatDateTime(dateStr?: string): string {
+  if (!dateStr) return '-'
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return '-'
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).replace(/\//g, '/')
+  } catch {
+    return '-'
+  }
+}
+
 export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProps) {
   const s = useStyleClasses()
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 })
@@ -104,7 +124,7 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[1200px] max-h-[80vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center justify-between pr-8">
             <span>失败记录 - {batch.batch_name}</span>
@@ -136,23 +156,27 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                <TableHead className="w-[80px]">行号</TableHead>
-                <TableHead className="w-[120px]">孩子姓名</TableHead>
-                <TableHead className="w-[140px]">家长电话</TableHead>
-                <TableHead className="w-[100px]">失败类型</TableHead>
-                <TableHead>失败原因</TableHead>
+                <TableHead className="w-[60px]">行号</TableHead>
+                <TableHead className="w-[100px]">孩子姓名</TableHead>
+                <TableHead className="w-[120px]">家长电话</TableHead>
+                <TableHead className="w-[90px]">失败类型</TableHead>
+                <TableHead className="min-w-[200px]">失败原因</TableHead>
+                <TableHead className="w-[150px]">线索创建时间</TableHead>
+                <TableHead className="w-[150px]">上次导入时间</TableHead>
+                <TableHead className="w-[150px]">上次激活时间</TableHead>
+                <TableHead className="w-[150px]">上次回访时间</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loadingFailures ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : failureList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                     暂无失败记录
                   </TableCell>
                 </TableRow>
@@ -175,13 +199,12 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
                             (文件内重复 {item.duplicate_count_in_batch} 次)
                           </span>
                         )}
-                        {item.failure_type === 'duplicate' && item.existing_lead_created_at && (
-                          <span className="ml-2 text-blue-500">
-                            (已存在于系统，创建于 {item.existing_lead_created_at})
-                          </span>
-                        )}
                       </span>
                     </TableCell>
+                    <TableCell className="text-sm">{formatDateTime(item.existing_lead_created_at)}</TableCell>
+                    <TableCell className="text-sm">{formatDateTime(item.existing_lead_last_import_time)}</TableCell>
+                    <TableCell className="text-sm">{formatDateTime(item.existing_lead_activated_at)}</TableCell>
+                    <TableCell className="text-sm">{formatDateTime(item.existing_lead_last_followup_at)}</TableCell>
                   </TableRow>
                 ))
               )}

@@ -517,40 +517,42 @@ export function BatchImportPage() {
                         )}
                         <TableCell className="sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
                           <div className="flex items-center gap-1">
-                            {batch.failed_count > 0 && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => handleViewFailures(batch)}
-                                    >
-                                      <AlertCircle className="h-4 w-4 text-red-500" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>查看失败记录</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {batch.activated_count > 0 && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => handleViewActivated(batch)}
-                                    >
-                                      <Eye className="h-4 w-4 text-yellow-500" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>查看激活线索</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    disabled={batch.failed_count === 0}
+                                    onClick={() => handleViewFailures(batch)}
+                                  >
+                                    <AlertCircle className={`h-4 w-4 ${batch.failed_count > 0 ? 'text-red-500' : 'text-muted-foreground/40'}`} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {batch.failed_count > 0 ? '查看失败记录' : '无失败记录'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    disabled={batch.activated_count === 0}
+                                    onClick={() => handleViewActivated(batch)}
+                                  >
+                                    <Eye className={`h-4 w-4 ${batch.activated_count > 0 ? 'text-yellow-500' : 'text-muted-foreground/40'}`} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {batch.activated_count > 0 ? '查看激活线索' : '无激活线索'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>

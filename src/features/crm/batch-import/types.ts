@@ -46,9 +46,12 @@ export interface ImportFailureItem {
   parent_phone?: string
   failure_type: FailureType
   failure_reason: string
+  // 重复线索的额外信息
   duplicate_count_in_batch?: number
   existing_lead_created_at?: string
   existing_lead_last_import_time?: string
+  existing_lead_activated_at?: string
+  existing_lead_last_followup_at?: string
 }
 
 // 激活线索
