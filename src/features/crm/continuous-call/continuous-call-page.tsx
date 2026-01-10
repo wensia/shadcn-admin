@@ -261,6 +261,8 @@ export function ContinuousCallPage() {
   // 预约到访时间（仅当选择已预约到访时使用）
   const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined)
   const [appointmentTime, setAppointmentTime] = useState<string>('10:00')
+  // 诺到理由（仅当选择已预约到访时使用）
+  const [appointmentReason, setAppointmentReason] = useState<string>('')
 
   // 获取统计数据
   const { data: statsData } = useQuery({
@@ -404,10 +406,16 @@ export function ContinuousCallPage() {
       return
     }
 
-    // 如果选择了预约到访，必须选择预约时间
-    if (followupResult === 'appointment_scheduled' && !appointmentDate) {
-      toast.warning('请选择预约到访时间')
-      return
+    // 如果选择了预约到访，必须选择预约时间和诺到理由
+    if (followupResult === 'appointment_scheduled') {
+      if (!appointmentDate) {
+        toast.warning('请选择预约到访时间')
+        return
+      }
+      if (!appointmentReason.trim()) {
+        toast.warning('请填写诺到理由')
+        return
+      }
     }
 
     if (!currentLead) {
@@ -445,9 +453,10 @@ export function ContinuousCallPage() {
         const [aHours, aMinutes] = appointmentTime.split(':').map(Number)
         const appointmentDateTime = setMinutes(setHours(appointmentDate, aHours), aMinutes)
         const appointmentStr = format(appointmentDateTime, 'yyyy-MM-dd HH:mm', { locale: zhCN })
+        const appointmentInfo = `预约到访时间：${appointmentStr}\n诺到理由：${appointmentReason.trim()}`
         finalFollowupContent = finalFollowupContent
-          ? `${finalFollowupContent}\n预约到访时间：${appointmentStr}`
-          : `预约到访时间：${appointmentStr}`
+          ? `${finalFollowupContent}\n${appointmentInfo}`
+          : appointmentInfo
       }
 
       // 准备跟进记录数据
@@ -539,6 +548,7 @@ export function ContinuousCallPage() {
     releaseToPool,
     appointmentDate,
     appointmentTime,
+    appointmentReason,
     closeCallDrawer,
     refetchLeads,
   ])
@@ -554,6 +564,7 @@ export function ContinuousCallPage() {
     setReleaseToPool(false)
     setAppointmentDate(undefined)
     setAppointmentTime('10:00')
+    setAppointmentReason('')
     if (currentLead) {
       setIntentionLevel(
         (currentLead.intention_level as IntentionLevel) || IntentionLevel.MEDIUM
@@ -945,6 +956,29 @@ export function ContinuousCallPage() {
                       />
                     </PopoverContent>
                   </Popover>
+                </div>
+              </div>
+              {/* 诺到理由 */}
+              <div className="flex items-center mt-3">
+                <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0">
+                  诺到理由
+                </Label>
+                <div className="flex-1">
+                  <Select
+                    value={appointmentReason}
+                    onValueChange={setAppointmentReason}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="请选择诺到理由" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="体验课试听">体验课试听</SelectItem>
+                      <SelectItem value="校区参观">校区参观</SelectItem>
+                      <SelectItem value="活动体验">活动体验</SelectItem>
+                      <SelectItem value="续费咨询">续费咨询</SelectItem>
+                      <SelectItem value="其他">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </>
