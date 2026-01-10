@@ -12,8 +12,11 @@ import {
   type LucideIcon
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { format, addDays, setHours, setMinutes } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
 
-import { DateTimePicker } from '@/components/date-time-picker'
+import { Calendar } from '@/components/ui/calendar'
+import { TimePickerWheel } from '@/components/ui/time-picker-wheel'
 import { Main } from '@/components/layout/main'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -246,7 +249,8 @@ export function ContinuousCallPage() {
   const [intentionLevel, setIntentionLevel] = useState<IntentionLevel>(IntentionLevel.MEDIUM)
   const [wechatAdded, setWechatAdded] = useState(false)
   const [followupContent, setFollowupContent] = useState('')
-  const [nextFollowupAt, setNextFollowupAt] = useState<string>('')
+  const [nextFollowupDate, setNextFollowupDate] = useState<Date | undefined>(undefined)
+  const [nextFollowupTime, setNextFollowupTime] = useState<string>('10:00')
   const [sendToDingding, setSendToDingding] = useState(false)
   const [releaseToPool, setReleaseToPool] = useState(false)
 
@@ -413,6 +417,14 @@ export function ContinuousCallPage() {
       const resultGroup = getResultGroup(followupResult)
       const currentLeadId = currentLead.id
 
+      // 组合下次回访日期时间
+      let nextFollowupAtIso: string | undefined = undefined
+      if (nextFollowupDate) {
+        const [hours, minutes] = nextFollowupTime.split(':').map(Number)
+        const combinedDate = setMinutes(setHours(nextFollowupDate, hours), minutes)
+        nextFollowupAtIso = combinedDate.toISOString()
+      }
+
       // 准备跟进记录数据
       const data: LeadFollowupCreate = {
         followup_at: new Date().toISOString(),
@@ -420,7 +432,7 @@ export function ContinuousCallPage() {
         result: resultMapping[followupResult] || FollowupResult.OTHER,
         content: followupContent || undefined,
         result_remark: followupContent || undefined,
-        next_followup_at: nextFollowupAt || undefined,
+        next_followup_at: nextFollowupAtIso,
       }
 
       // 保存跟进记录
@@ -486,6 +498,8 @@ export function ContinuousCallPage() {
     currentCallId,
     callDrawerVisible,
     followupContent,
+    nextFollowupDate,
+    nextFollowupTime,
     releaseToPool,
     closeCallDrawer,
     refetchLeads,
@@ -496,7 +510,8 @@ export function ContinuousCallPage() {
     setFollowupResult('')
     setFollowupContent('')
     setWechatAdded(false)
-    setNextFollowupAt('')
+    setNextFollowupDate(undefined)
+    setNextFollowupTime('10:00')
     setSendToDingding(false)
     setReleaseToPool(false)
     if (currentLead) {
@@ -704,154 +719,208 @@ export function ContinuousCallPage() {
     if (!callDrawerVisible) return null
 
     return (
-      <Card className="h-full flex flex-col overflow-hidden">
+      <Card className="h-full flex flex-col overflow-hidden py-0">
         {/* 固定顶部：通话状态栏 */}
-        <CardHeader className="border-b pb-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Phone className="h-5 w-5" />
-                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              </div>
-              <span className="font-medium">通话中</span>
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Phone className="h-4 w-4" />
+              <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">通话时长</p>
-                <CallTimer startTime={callStartTime} className="text-lg font-bold tabular-nums" />
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={hangUpCall}
-                disabled={hangingUp}
-              >
-                挂断
-              </Button>
-            </div>
+            <span className="text-sm font-medium">通话中</span>
+            <span className="text-muted-foreground">·</span>
+            <CallTimer startTime={callStartTime} className="text-sm font-semibold tabular-nums" />
           </div>
-        </CardHeader>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-7 px-6 text-xs"
+            onClick={hangUpCall}
+            disabled={hangingUp}
+          >
+            挂断
+          </Button>
+        </div>
 
         {/* 可滚动中间区域：表单内容 */}
-        <CardContent className="flex-1 overflow-auto min-h-0 space-y-3 p-4">
-          {/* 区块1: 跟进结果 */}
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <Label className="mb-2 block text-sm font-medium">跟进结果</Label>
-            <FollowupResultSelect
-              value={followupResult}
-              onChange={setFollowupResult}
-            />
-          </div>
-
-          {/* 区块2: 意向与回访 */}
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-            <div>
-              <Label className="mb-2 block text-sm font-medium">意向等级</Label>
-              <RadioGroup
-                value={intentionLevel}
-                onValueChange={(value) =>
-                  setIntentionLevel(value as IntentionLevel)
-                }
-                className="flex gap-4"
-              >
-                {intentionLevelOptions.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={option.value} />
-                    <Label htmlFor={option.value} className="text-sm">{option.label}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-            <div>
-              <Label className="mb-2 block text-sm font-medium">下次回访时间</Label>
-              <DateTimePicker
-                value={nextFollowupAt}
-                onChange={(val) => setNextFollowupAt(val || '')}
-                placeholder="选择时间"
-                showQuickButtons={true}
+        <div className="flex-1 overflow-auto min-h-0 px-6 py-3">
+          {/* 跟进结果 */}
+          <div className="flex items-center">
+            <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap w-16 shrink-0">跟进结果</Label>
+            <div className="flex-1">
+              <FollowupResultSelect
+                value={followupResult}
+                onChange={setFollowupResult}
               />
             </div>
           </div>
 
-          {/* 区块3: 释放公海选项 */}
-          <div className="rounded-lg border border-orange-200 bg-orange-50/50 dark:border-orange-900/50 dark:bg-orange-950/20 p-3">
-            <div className="flex items-center space-x-2">
+          <div className="border-t my-3" />
+
+          {/* 意向等级 */}
+          <div className="flex items-center">
+            <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap w-16 shrink-0">意向等级</Label>
+            <RadioGroup
+              value={intentionLevel}
+              onValueChange={(value) => setIntentionLevel(value as IntentionLevel)}
+              className="flex-1 flex justify-between"
+            >
+              {intentionLevelOptions.map((option) => (
+                <div key={option.value} className="flex items-center space-x-1.5">
+                  <RadioGroupItem value={option.value} id={option.value} className="h-3.5 w-3.5" />
+                  <Label htmlFor={option.value} className="text-sm cursor-pointer">{option.label}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div className="border-t my-3" />
+
+          {/* 下次回访时间 */}
+          <div className="flex items-center">
+            <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap w-16 shrink-0">下次回访</Label>
+            <div className="flex-1 flex items-center gap-2">
+              {/* 日期选择器 */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-7 px-2 text-xs justify-start font-normal min-w-[90px]",
+                      !nextFollowupDate && "text-muted-foreground"
+                    )}
+                  >
+                    {nextFollowupDate ? format(nextFollowupDate, 'MM/dd', { locale: zhCN }) : '选择日期'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={nextFollowupDate}
+                    onSelect={setNextFollowupDate}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    locale={zhCN}
+                  />
+                </PopoverContent>
+              </Popover>
+              {/* 时间选择器 */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-7 px-2 text-xs font-normal min-w-[60px]"
+                  >
+                    {nextFollowupTime}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="start">
+                  <TimePickerWheel
+                    value={nextFollowupTime}
+                    onChange={setNextFollowupTime}
+                  />
+                </PopoverContent>
+              </Popover>
+              {/* 快捷按钮：今天、明天 */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  setNextFollowupDate(new Date())
+                  setNextFollowupTime('18:00')
+                }}
+              >
+                今天
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  setNextFollowupDate(addDays(new Date(), 1))
+                  setNextFollowupTime('10:00')
+                }}
+              >
+                明天
+              </Button>
+            </div>
+          </div>
+
+          <div className="border-t my-3" />
+
+          {/* 释放公海 + 微信/钉钉 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
               <Checkbox
                 id="release-to-pool"
                 checked={releaseToPool}
                 onCheckedChange={(checked) => setReleaseToPool(checked as boolean)}
+                className="h-3.5 w-3.5 border-orange-400 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
               />
-              <Label htmlFor="release-to-pool" className="text-sm font-medium text-orange-700 dark:text-orange-400">
-                释放该线索到公海
+              <Label htmlFor="release-to-pool" className="text-sm cursor-pointer text-orange-600 dark:text-orange-400">
+                释放到公海
               </Label>
             </div>
-            {releaseToPool && (
-              <p className="mt-1.5 text-xs text-orange-600/80 dark:text-orange-500/80 ml-6">
-                保存后线索将被释放到公海池，其他顾问可领取
-              </p>
-            )}
+            <div className="flex items-center space-x-1.5">
+              <Checkbox
+                id="wechat-added"
+                checked={wechatAdded}
+                onCheckedChange={(checked) => setWechatAdded(checked as boolean)}
+                className="h-3.5 w-3.5"
+              />
+              <Label htmlFor="wechat-added" className="text-sm cursor-pointer">已加微信</Label>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <Checkbox
+                id="send-dingding"
+                checked={sendToDingding}
+                onCheckedChange={(checked) => setSendToDingding(checked as boolean)}
+                className="h-3.5 w-3.5"
+              />
+              <Label htmlFor="send-dingding" className="text-sm cursor-pointer flex items-center gap-1">
+                <Send className="h-3 w-3" />
+                发钉钉
+              </Label>
+            </div>
           </div>
 
-          {/* 区块4: 跟进内容 */}
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="wechat-added"
-                  checked={wechatAdded}
-                  onCheckedChange={(checked) => setWechatAdded(checked as boolean)}
-                />
-                <Label htmlFor="wechat-added" className="text-sm">已添加微信</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="send-dingding"
-                  checked={sendToDingding}
-                  onCheckedChange={(checked) => setSendToDingding(checked as boolean)}
-                />
-                <Label htmlFor="send-dingding" className="flex items-center gap-1 text-sm">
-                  <Send className="h-3 w-3" />
-                  发送到钉钉群
-                </Label>
-              </div>
-            </div>
-            <div>
-              <Label className="mb-2 block text-sm font-medium">跟进内容</Label>
-              <Textarea
-                placeholder="输入跟进内容..."
-                value={followupContent}
-                onChange={(e) => setFollowupContent(e.target.value)}
-                rows={2}
-              />
-            </div>
+          <div className="border-t my-3" />
+
+          {/* 跟进内容 */}
+          <div className="flex items-start">
+            <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap w-16 shrink-0 pt-2">跟进内容</Label>
+            <Textarea
+              placeholder="输入跟进内容..."
+              value={followupContent}
+              onChange={(e) => setFollowupContent(e.target.value)}
+              rows={2}
+              className="flex-1 resize-none"
+            />
           </div>
-        </CardContent>
+        </div>
 
         {/* 固定底部：操作按钮 */}
-        <CardFooter className="border-t pt-3 pb-3 shrink-0 bg-background">
-          <div className="flex w-full justify-between">
-            <Button variant="outline" size="sm" onClick={closeCallDrawer}>
-              <X className="mr-1.5 h-4 w-4" />
-              关闭
+        <div className="flex items-center justify-between px-6 py-2 border-t shrink-0">
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={closeCallDrawer}>
+            <X className="mr-1 h-3.5 w-3.5" />
+            关闭
+          </Button>
+          <div className="flex gap-1.5">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={resetForm}>
+              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+              重置
             </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={resetForm}>
-                <RotateCcw className="mr-1.5 h-4 w-4" />
-                重置
-              </Button>
-              <Button
-                size="sm"
-                onClick={saveAndNext}
-                disabled={!followupResult || saving}
-              >
-                {saving ? (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                ) : null}
-                保存并下一个
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              className="h-7 px-3 text-xs"
+              onClick={saveAndNext}
+              disabled={!followupResult || saving}
+            >
+              {saving && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+              保存并下一个
+            </Button>
           </div>
-        </CardFooter>
+        </div>
       </Card>
     )
   }
