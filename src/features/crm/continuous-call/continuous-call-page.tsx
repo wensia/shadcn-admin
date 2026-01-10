@@ -746,14 +746,13 @@ export function ContinuousCallPage() {
     )
   }
 
-  // 渲染外呼控制面板
-  const renderCallPanel = () => {
+  // 渲染通话状态卡片
+  const renderCallStatusCard = () => {
     if (!callDrawerVisible) return null
 
     return (
-      <Card className="h-full flex flex-col overflow-hidden py-0">
-        {/* 固定顶部：通话状态栏 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+      <Card className="shrink-0">
+        <CardContent className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="relative">
               <Phone className="h-4 w-4" />
@@ -772,10 +771,23 @@ export function ContinuousCallPage() {
           >
             挂断
           </Button>
-        </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // 渲染跟进结果标记卡片
+  const renderFollowupFormCard = () => {
+    if (!callDrawerVisible) return null
+
+    return (
+      <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <CardHeader className="px-4 py-3 shrink-0">
+          <CardTitle className="text-sm font-medium">跟进结果标记</CardTitle>
+        </CardHeader>
 
         {/* 可滚动中间区域：表单内容 */}
-        <div className="flex-1 overflow-auto min-h-0 px-6 py-3">
+        <CardContent className="flex-1 overflow-auto min-h-0 px-4 py-0">
           {/* 跟进结果 */}
           <div className="flex items-center">
             <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0">跟进结果</Label>
@@ -1003,10 +1015,10 @@ export function ContinuousCallPage() {
               className="flex-1 resize-none"
             />
           </div>
-        </div>
+        </CardContent>
 
         {/* 固定底部：操作按钮 */}
-        <div className="flex items-center justify-between px-6 py-2 border-t shrink-0">
+        <CardFooter className="flex items-center justify-between px-4 py-2 border-t shrink-0">
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={closeCallDrawer}>
             <X className="mr-1 h-3.5 w-3.5" />
             关闭
@@ -1026,8 +1038,20 @@ export function ContinuousCallPage() {
               保存并下一个
             </Button>
           </div>
-        </div>
+        </CardFooter>
       </Card>
+    )
+  }
+
+  // 渲染外呼控制面板（包含两个卡片）
+  const renderCallPanel = () => {
+    if (!callDrawerVisible) return null
+
+    return (
+      <div className="h-full flex flex-col gap-2">
+        {renderCallStatusCard()}
+        {renderFollowupFormCard()}
+      </div>
     )
   }
 
