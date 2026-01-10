@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Header } from '@/components/layout/header'
 import { DateTimePicker } from '@/components/date-time-picker'
 import { Main } from '@/components/layout/main'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -859,10 +858,6 @@ export function ContinuousCallPage() {
 
   return (
     <>
-      <Header fixed>
-        <h1 className="text-lg font-semibold">快捷外呼</h1>
-      </Header>
-
       <Main fixed className="min-h-0">
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {callDrawerVisible ? (
