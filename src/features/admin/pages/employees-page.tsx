@@ -979,8 +979,8 @@ export function EmployeesPage() {
                     <FormItem>
                       <FormLabel>上级</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
+                        onValueChange={(value) => field.onChange(value === '__none__' ? '' : value)}
+                        value={field.value || '__none__'}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -988,7 +988,7 @@ export function EmployeesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">无</SelectItem>
+                          <SelectItem value="__none__">无</SelectItem>
                           {managers
                             .filter((m) => m.id !== editingItem?.id)
                             .map((manager) => (
