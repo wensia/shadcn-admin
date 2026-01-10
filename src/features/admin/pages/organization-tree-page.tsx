@@ -1,6 +1,6 @@
 /**
  * 组织架构树页面
- * 展示员工的上下级层级关系（基于 reports_to 字段）
+ * 展示员工的层级关系
  */
 
 import { useState } from 'react'

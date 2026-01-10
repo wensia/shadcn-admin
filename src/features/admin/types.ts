@@ -192,13 +192,6 @@ export interface EmployeeItem {
   is_active: boolean
   is_superuser: boolean
   joined_at?: string
-  reports_to?: string
-  manager?: {
-    id: string
-    name: string
-    username: string
-  }
-  direct_reports_count?: number
   created_at?: string
   updated_at?: string
 }
@@ -285,7 +278,6 @@ export interface EmployeeHierarchyNode {
   phone?: string
   email?: string
   is_superuser: boolean
-  reports_to?: string
   campus?: string
   department?: string
   position?: string
@@ -503,7 +495,6 @@ export interface EmployeeCreate {
   is_active?: boolean
   is_superuser?: boolean
   joined_at?: string
-  reports_to?: string
 }
 
 /** 更新员工 */
@@ -515,7 +506,6 @@ export interface EmployeeUpdate {
   is_active?: boolean
   is_superuser?: boolean
   joined_at?: string
-  reports_to?: string
 }
 
 /** 更新员工云客信息 */

@@ -379,7 +379,7 @@ export const adminApi = {
     }>>(`/organization/employees/${employeeId}/subordinate-ids`)
   },
 
-  /** 获取员工层级架构树（基于 reports_to 关系） */
+  /** 获取员工层级架构树 */
   async getEmployeeHierarchyTree(): Promise<ApiResponse<EmployeeHierarchyTreeResponse>> {
     return apiClient.get<ApiResponse<EmployeeHierarchyTreeResponse>>('/organization/hierarchy/tree')
   },

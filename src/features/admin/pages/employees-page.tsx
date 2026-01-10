@@ -81,7 +81,6 @@ const formSchema = z.object({
   is_active: z.boolean().default(true),
   is_superuser: z.boolean().default(false),
   joined_at: z.string().optional(),
-  reports_to: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -148,7 +147,6 @@ export function EmployeesPage() {
       is_active: true,
       is_superuser: false,
       joined_at: '',
-      reports_to: '',
     },
   })
 
@@ -180,17 +178,6 @@ export function EmployeesPage() {
       return response.data
     },
   })
-
-  // 获取员工列表用于上级选择
-  const { data: managersData } = useQuery({
-    queryKey: ['admin-employees-managers'],
-    queryFn: async () => {
-      const response = await adminApi.getEmployees({ size: 100, is_active: true })
-      return response.data
-    },
-  })
-
-  const managers = managersData?.items || []
 
   // 获取校区列表
   const { data: campusesData } = useQuery({
@@ -617,7 +604,6 @@ export function EmployeesPage() {
       is_active: true,
       is_superuser: false,
       joined_at: '',
-      reports_to: '',
     })
     // 初始化一个空身份
     setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
@@ -645,7 +631,6 @@ export function EmployeesPage() {
       is_active: item.is_active,
       is_superuser: item.is_superuser,
       joined_at: item.joined_at || '',
-      reports_to: item.reports_to || '',
     })
 
     // 加载员工身份信息
@@ -719,7 +704,6 @@ export function EmployeesPage() {
       email: data.email || undefined,
       phone: data.phone || undefined,
       joined_at: data.joined_at || undefined,
-      reports_to: data.reports_to || undefined,
     }
 
     // 验证身份信息（编辑时需要至少一个完整身份）
@@ -984,51 +968,19 @@ export function EmployeesPage() {
                   )}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="joined_at"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>入职日期</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="reports_to"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>上级</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(value === '__none__' ? '' : value)}
-                        value={field.value || '__none__'}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="选择上级（可选）" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="__none__">无</SelectItem>
-                          {managers
-                            .filter((m) => m.id !== editingItem?.id)
-                            .map((manager) => (
-                              <SelectItem key={manager.id} value={manager.id}>
-                                {manager.name} ({manager.username})
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="joined_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>入职日期</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
