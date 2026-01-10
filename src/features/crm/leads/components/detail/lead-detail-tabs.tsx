@@ -226,7 +226,7 @@ export function LeadDetailTabs({
       </TabsList>
 
       {/* ==================== 概览 Tab ==================== */}
-      <TabsContent value="overview" className="flex-1 m-0 overflow-hidden">
+      <TabsContent value="overview" className="flex-1 m-0 min-h-0 overflow-hidden">
         <ContentWrapper>
           <div className="p-4">
             {isLoading ? (
@@ -245,7 +245,7 @@ export function LeadDetailTabs({
       </TabsContent>
 
       {/* ==================== 跟进记录 Tab ==================== */}
-      <TabsContent value="followups" className="flex-1 m-0 overflow-hidden">
+      <TabsContent value="followups" className="flex-1 m-0 min-h-0 overflow-hidden">
         <ContentWrapper>
           <div className="p-4">
             {isFollowupsLoading ? (
@@ -305,7 +305,7 @@ export function LeadDetailTabs({
       </TabsContent>
 
       {/* ==================== 订单记录 Tab ==================== */}
-      <TabsContent value="orders" className="flex-1 m-0 overflow-hidden">
+      <TabsContent value="orders" className="flex-1 m-0 min-h-0 overflow-hidden">
         <ContentWrapper>
           <div className="p-4">
             {isOrdersLoading ? (
@@ -365,7 +365,7 @@ export function LeadDetailTabs({
       </TabsContent>
 
       {/* ==================== 统计图表 Tab ==================== */}
-      <TabsContent value="statistics" className="flex-1 m-0 overflow-hidden">
+      <TabsContent value="statistics" className="flex-1 m-0 min-h-0 overflow-hidden">
         <ContentWrapper>
           <div className="p-4 space-y-4">
             {/* 跟进频率趋势 */}
@@ -404,7 +404,7 @@ export function LeadDetailTabs({
       </TabsContent>
 
       {/* ==================== 变更历史 Tab ==================== */}
-      <TabsContent value="history" className="flex-1 m-0 overflow-hidden">
+      <TabsContent value="history" className="flex-1 m-0 min-h-0 overflow-hidden">
         <ContentWrapper>
           <div className="p-4">
             <ChangeHistoryTimeline

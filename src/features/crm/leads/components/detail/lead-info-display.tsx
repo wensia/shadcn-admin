@@ -22,6 +22,7 @@ import { formatTime } from '@/lib/utils/time'
 import { InfoCard } from './info-card'
 import { InfoGrid } from './info-grid'
 import { InfoItem } from './info-item'
+import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
 
 /**
  * 家长关系映射
@@ -245,6 +246,13 @@ export function LeadInfoDisplay({
 
   return (
     <div className={className}>
+      {/* 状态标签展示 */}
+      {(lead.status || lead.intention_level) && (
+        <div className="flex items-center gap-2 mb-4">
+          {lead.status && <LeadStatusBadge status={lead.status} />}
+          {lead.intention_level && <IntentionLevelBadge level={lead.intention_level} />}
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 客户信息（儿童+家长） */}
         <InfoCard hideTitle className="lg:col-span-2">

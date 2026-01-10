@@ -45,6 +45,8 @@ export interface ContinuousCallLead {
   last_followup_time?: string
   next_followup_time?: string
   intention_level?: IntentionLevel
+  status?: string  // 线索状态
+  advisor_id?: string  // 顾问ID
   created_at: string
 }
 

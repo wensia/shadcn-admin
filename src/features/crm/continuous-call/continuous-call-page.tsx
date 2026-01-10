@@ -55,6 +55,7 @@ import {
 
 import { continuousCallApi } from './api'
 import { leadsApi, yunkeApi } from '../leads/api'
+import { visitScheduleApi } from '../visit-schedule/api'
 import {
   IntentionLevel,
   FollowupMethod,
@@ -64,7 +65,7 @@ import {
 import type { ContinuousCallLead, ContinuousCallStats } from './types'
 import type { LeadFollowupCreate } from '../leads/types'
 import { LeadDetailTabs } from '../leads/components/detail/lead-detail-tabs'
-import { IntentionLevelBadge } from '../leads/components/status-badges'
+import { IntentionLevelBadge, LeadStatusBadge } from '../leads/components/status-badges'
 import { CallTimer } from './components/call-timer'
 
 
@@ -257,6 +258,9 @@ export function ContinuousCallPage() {
   const [nextFollowupTime, setNextFollowupTime] = useState<string>('10:00')
   const [sendToDingding, setSendToDingding] = useState(false)
   const [releaseToPool, setReleaseToPool] = useState(false)
+  // 预约到访时间（仅当选择已预约到访时使用）
+  const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined)
+  const [appointmentTime, setAppointmentTime] = useState<string>('10:00')
 
   // 获取统计数据
   const { data: statsData } = useQuery({
@@ -400,6 +404,12 @@ export function ContinuousCallPage() {
       return
     }
 
+    // 如果选择了预约到访，必须选择预约时间
+    if (followupResult === 'appointment_scheduled' && !appointmentDate) {
+      toast.warning('请选择预约到访时间')
+      return
+    }
+
     if (!currentLead) {
       toast.warning('未选中线索')
       return
@@ -429,13 +439,24 @@ export function ContinuousCallPage() {
         nextFollowupAtIso = combinedDate.toISOString()
       }
 
+      // 组合预约到访时间内容
+      let finalFollowupContent = followupContent || ''
+      if (followupResult === 'appointment_scheduled' && appointmentDate) {
+        const [aHours, aMinutes] = appointmentTime.split(':').map(Number)
+        const appointmentDateTime = setMinutes(setHours(appointmentDate, aHours), aMinutes)
+        const appointmentStr = format(appointmentDateTime, 'yyyy-MM-dd HH:mm', { locale: zhCN })
+        finalFollowupContent = finalFollowupContent
+          ? `${finalFollowupContent}\n预约到访时间：${appointmentStr}`
+          : `预约到访时间：${appointmentStr}`
+      }
+
       // 准备跟进记录数据
       const data: LeadFollowupCreate = {
         followup_at: new Date().toISOString(),
         method: FollowupMethod.PHONE,
         result: resultMapping[followupResult] || FollowupResult.OTHER,
-        content: followupContent || undefined,
-        result_remark: followupContent || undefined,
+        content: finalFollowupContent || undefined,
+        result_remark: finalFollowupContent || undefined,
         next_followup_at: nextFollowupAtIso,
       }
 
@@ -443,6 +464,28 @@ export function ContinuousCallPage() {
       const res = await leadsApi.addLeadFollowup(currentLeadId, data)
 
       if (res.success) {
+        // 如果是预约到访，创建 VisitSchedule 记录
+        if (followupResult === 'appointment_scheduled' && appointmentDate) {
+          try {
+            const [aHours, aMinutes] = appointmentTime.split(':').map(Number)
+            const visitDate = format(appointmentDate, 'yyyy-MM-dd')
+            const visitTime = `${String(aHours).padStart(2, '0')}:${String(aMinutes).padStart(2, '0')}:00`
+
+            await visitScheduleApi.createVisitSchedule({
+              lead_id: currentLeadId,
+              visit_date: visitDate,
+              visit_time: visitTime,
+              advisor_id: currentLead.advisor_id || null,
+              course_ids: [],
+              status: 'scheduled',
+              remark: finalFollowupContent || undefined,
+            })
+          } catch (error) {
+            console.error('创建预约到访记录失败:', error)
+            toast.warning('跟进记录已保存，但创建预约到访记录失败')
+          }
+        }
+
         // 如果勾选了释放到公海
         if (releaseToPool) {
           const releaseReason = followupResult === 'student' ? 'MANUAL_RELEASE' : 'INVALID_LEAD'
@@ -494,6 +537,8 @@ export function ContinuousCallPage() {
     nextFollowupDate,
     nextFollowupTime,
     releaseToPool,
+    appointmentDate,
+    appointmentTime,
     closeCallDrawer,
     refetchLeads,
   ])
@@ -507,6 +552,8 @@ export function ContinuousCallPage() {
     setNextFollowupTime('10:00')
     setSendToDingding(false)
     setReleaseToPool(false)
+    setAppointmentDate(undefined)
+    setAppointmentTime('10:00')
     if (currentLead) {
       setIntentionLevel(
         (currentLead.intention_level as IntentionLevel) || IntentionLevel.MEDIUM
@@ -635,67 +682,59 @@ export function ContinuousCallPage() {
 
     return (
       <Card className="h-full flex flex-col overflow-hidden">
-        <CardHeader className="pb-3 shrink-0 space-y-3">
-          {/* 外呼操作区：渠道选择 + 外呼按钮 */}
-          {!callDrawerVisible && (
-            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">外呼操作</span>
-              </div>
-              <div className="flex items-center gap-3">
-                {/* 渠道选择器 */}
-                {statsData && (
-                  <Select
-                    value={selectedChannelId || 'all'}
-                    onValueChange={(value) =>
-                      setSelectedChannelId(value === 'all' ? null : value)
-                    }
-                  >
-                    <SelectTrigger className="w-[180px] h-9">
-                      <SelectValue placeholder="选择渠道" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">
-                        全部渠道 ({statsData.total_leads})
-                      </SelectItem>
-                      {statsData.channels.map((channel) => (
-                        <SelectItem key={channel.channel_id} value={channel.channel_id}>
-                          {channel.channel_name} ({channel.lead_count})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {/* 外呼按钮 */}
-                <Button
-                  onClick={startCall}
-                  disabled={!currentLead.parent_phone || dialing}
-                  className="h-9"
-                >
-                  {dialing ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Phone className="mr-2 h-4 w-4" />
-                  )}
-                  {dialing ? '正在呼叫...' : '按空格键外呼'}
-                </Button>
-              </div>
+        {/* 外呼操作区：线索名称 + 状态 + 渠道选择 + 外呼按钮 */}
+        {!callDrawerVisible && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3 mx-4 mt-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{currentLead.child_name || '未填写'}</span>
+              {currentLead.status && (
+                <LeadStatusBadge status={currentLead.status as LeadStatus} />
+              )}
+              {currentLead.intention_level && (
+                <IntentionLevelBadge level={currentLead.intention_level as IntentionLevel} />
+              )}
             </div>
-          )}
-          {/* 线索标题 */}
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">
-              {currentLead.child_name || '未填写'}
-            </CardTitle>
-            {currentLead.intention_level && (
-              <IntentionLevelBadge
-                level={currentLead.intention_level as IntentionLevel}
-              />
-            )}
+            <div className="flex items-center gap-3">
+              {/* 渠道选择器 */}
+              {statsData && (
+                <Select
+                  value={selectedChannelId || 'all'}
+                  onValueChange={(value) =>
+                    setSelectedChannelId(value === 'all' ? null : value)
+                  }
+                >
+                  <SelectTrigger className="w-[180px] h-9">
+                    <SelectValue placeholder="选择渠道" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      全部渠道 ({statsData.total_leads})
+                    </SelectItem>
+                    {statsData.channels.map((channel) => (
+                      <SelectItem key={channel.channel_id} value={channel.channel_id}>
+                        {channel.channel_name} ({channel.lead_count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {/* 外呼按钮 */}
+              <Button
+                onClick={startCall}
+                disabled={!currentLead.parent_phone || dialing}
+                className="h-9"
+              >
+                {dialing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Phone className="mr-2 h-4 w-4" />
+                )}
+                {dialing ? '正在呼叫...' : '按空格键外呼'}
+              </Button>
+            </div>
           </div>
-        </CardHeader>
-        <div className="flex-1 min-h-0">
+        )}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <LeadDetailTabs
             leadId={currentLead.id}
             useScrollArea={true}
@@ -739,7 +778,7 @@ export function ContinuousCallPage() {
         <div className="flex-1 overflow-auto min-h-0 px-6 py-3">
           {/* 跟进结果 */}
           <div className="flex items-center">
-            <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap w-16 shrink-0">跟进结果</Label>
+            <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0">跟进结果</Label>
             <div className="flex-1">
               <FollowupResultSelect
                 value={followupResult}
@@ -801,9 +840,12 @@ export function ContinuousCallPage() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-7 px-2 text-xs font-normal min-w-[60px]"
+                    className={cn(
+                      "h-7 px-2 text-xs font-normal min-w-[70px]",
+                      !nextFollowupDate && "text-muted-foreground"
+                    )}
                   >
-                    {nextFollowupTime}
+                    {nextFollowupDate ? nextFollowupTime : '选择时间'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-3" align="start">
@@ -838,6 +880,63 @@ export function ContinuousCallPage() {
               </Button>
             </div>
           </div>
+
+          {/* 预约到访时间（仅当选择已预约到访时显示） */}
+          {followupResult === 'appointment_scheduled' && (
+            <>
+              <div className="border-t my-3" />
+              <div className="flex items-center">
+                <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0">
+                  预约时间
+                </Label>
+                <div className="flex-1 flex items-center gap-2">
+                  {/* 预约日期选择器 */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-7 px-2 text-xs justify-center font-normal min-w-[90px]",
+                          !appointmentDate && "text-muted-foreground"
+                        )}
+                      >
+                        {appointmentDate ? format(appointmentDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={appointmentDate}
+                        onSelect={setAppointmentDate}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        locale={zhCN}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {/* 预约时间选择器 */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-7 px-2 text-xs font-normal min-w-[70px]",
+                          !appointmentDate && "text-muted-foreground"
+                        )}
+                      >
+                        {appointmentDate ? appointmentTime : '选择时间'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-3" align="start">
+                      <TimePickerWheel
+                        value={appointmentTime}
+                        onChange={setAppointmentTime}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="border-t my-3" />
 
