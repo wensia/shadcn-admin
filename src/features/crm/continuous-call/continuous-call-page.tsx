@@ -959,27 +959,23 @@ export function ContinuousCallPage() {
                 </div>
               </div>
               {/* 诺到理由 */}
-              <div className="flex items-center mt-3">
-                <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0">
+              <div className="flex items-start mt-3">
+                <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0 pt-2">
                   诺到理由
                 </Label>
-                <div className="flex-1">
-                  <Select
-                    value={appointmentReason}
-                    onValueChange={setAppointmentReason}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="请选择诺到理由" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="体验课试听">体验课试听</SelectItem>
-                      <SelectItem value="校区参观">校区参观</SelectItem>
-                      <SelectItem value="活动体验">活动体验</SelectItem>
-                      <SelectItem value="续费咨询">续费咨询</SelectItem>
-                      <SelectItem value="其他">其他</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Textarea
+                  placeholder="请输入诺到理由..."
+                  value={appointmentReason}
+                  onChange={(e) => {
+                    setAppointmentReason(e.target.value)
+                    // 自动调整高度
+                    e.target.style.height = 'auto'
+                    e.target.style.height = `${e.target.scrollHeight}px`
+                  }}
+                  rows={1}
+                  className="flex-1 resize-none min-h-[32px] py-1.5 text-sm"
+                  style={{ overflow: 'hidden' }}
+                />
               </div>
             </>
           )}
