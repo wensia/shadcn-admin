@@ -288,6 +288,7 @@ export interface LeadUpdate {
   intention_level?: IntentionLevel
   next_followup_at?: string
   source_extra_info?: Record<string, any>  // 渠道额外信息（更新时可修改）
+  status?: LeadStatus  // 线索状态
 }
 
 // ==================== 跟进记录接口 ====================

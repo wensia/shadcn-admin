@@ -464,6 +464,15 @@ export function ContinuousCallPage() {
       const res = await leadsApi.addLeadFollowup(currentLeadId, data)
 
       if (res.success) {
+        // 如果当前线索状态是"待回访"，则更新为"已回访"
+        if (currentLead.status === LeadStatus.PENDING_FOLLOWUP) {
+          try {
+            await leadsApi.updateLead(currentLeadId, { status: LeadStatus.FOLLOWED_UP })
+          } catch (error) {
+            console.warn('更新线索状态失败:', error)
+          }
+        }
+
         // 如果是预约到访，创建 VisitSchedule 记录
         if (followupResult === 'appointment_scheduled' && appointmentDate) {
           try {
