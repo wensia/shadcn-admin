@@ -705,20 +705,21 @@ export function ContinuousCallPage() {
     if (!callDrawerVisible) return null
 
     return (
-      <Card className="h-full overflow-auto">
-        <CardHeader className="border-b pb-3">
+      <Card className="h-full flex flex-col overflow-hidden">
+        {/* 固定顶部：通话状态栏 */}
+        <CardHeader className="border-b pb-3 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Phone className="h-5 w-5" />
-                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-green-500" />
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
               </div>
-              <span>通话中</span>
+              <span className="font-medium">通话中</span>
             </div>
             <div className="flex items-center gap-4">
-              <div>
+              <div className="text-right">
                 <p className="text-xs text-muted-foreground">通话时长</p>
-                <CallTimer startTime={callStartTime} className="text-lg font-bold" />
+                <CallTimer startTime={callStartTime} className="text-lg font-bold tabular-nums" />
               </div>
               <Button
                 variant="destructive"
@@ -732,7 +733,8 @@ export function ContinuousCallPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3 p-4">
+        {/* 可滚动中间区域：表单内容 */}
+        <CardContent className="flex-1 overflow-auto min-h-0 space-y-3 p-4">
           {/* 区块1: 跟进结果 */}
           <div className="rounded-lg border bg-muted/30 p-3">
             <Label className="mb-2 block text-sm font-medium">跟进结果</Label>
@@ -826,21 +828,26 @@ export function ContinuousCallPage() {
           </div>
         </CardContent>
 
-        <CardFooter className="border-t pt-3">
+        {/* 固定底部：操作按钮 */}
+        <CardFooter className="border-t pt-3 pb-3 shrink-0 bg-background">
           <div className="flex w-full justify-between">
-            <Button variant="outline" onClick={closeCallDrawer}>
-              <X className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={closeCallDrawer}>
+              <X className="mr-1.5 h-4 w-4" />
               关闭
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={resetForm}>
-                <RotateCcw className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={resetForm}>
+                <RotateCcw className="mr-1.5 h-4 w-4" />
                 重置
               </Button>
               <Button
+                size="sm"
                 onClick={saveAndNext}
                 disabled={!followupResult || saving}
               >
+                {saving ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : null}
                 保存并下一个
               </Button>
             </div>
@@ -865,7 +872,7 @@ export function ContinuousCallPage() {
               </ResizablePanel>
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={40} minSize={20}>
-                <div className="h-full overflow-auto p-2">{renderCallPanel()}</div>
+                <div className="h-full overflow-hidden p-2">{renderCallPanel()}</div>
               </ResizablePanel>
             </ResizablePanelGroup>
           ) : (
