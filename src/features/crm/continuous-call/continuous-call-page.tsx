@@ -68,65 +68,58 @@ import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { CallTimer } from './components/call-timer'
 
 
-// 跟进结果分组配置
+// 跟进结果分组配置 - 使用 Anthropic 品牌色
 type FollowupResultGroup = 'continuing' | 'releaseToPool' | 'statusOnly'
+
+// Anthropic 品牌色
+const BRAND_COLORS = {
+  green: '#788c5d',   // 继续跟进
+  orange: '#d97757',  // 释放公海
+  blue: '#6a9bcc',    // 仅改状态
+} as const
 
 interface FollowupResultGroupConfig {
   key: FollowupResultGroup
   title: string
   description: string
-  colorClass: string
+  color: string
 }
 
 interface FollowupResultOption {
   value: string
   label: string
   icon: LucideIcon
-  colorClass: string
+  color: string
   group: FollowupResultGroup
 }
 
 const followupResultGroupConfig: FollowupResultGroupConfig[] = [
   {
-    key: 'continuing',
-    title: '📗 继续跟进',
-    description: '状态改为跟进中',
-    colorClass: 'text-green-600',
-  },
-  {
-    key: 'releaseToPool',
-    title: '📙 释放公海',
-    description: '状态改为已回访并释放',
-    colorClass: 'text-orange-500',
-  },
-  {
     key: 'statusOnly',
-    title: '📘 仅改状态',
-    description: '状态改为已回访',
-    colorClass: 'text-blue-500',
+    title: '跟进结果',
+    description: '选择本次跟进结果',
+    color: BRAND_COLORS.blue,
   },
 ]
 
 const followupResultOptions: FollowupResultOption[] = [
-  // 继续跟进组
-  { value: 'can_continue', label: '可持续跟进', icon: TrendingUp, colorClass: 'text-green-600', group: 'continuing' },
-  { value: 'appointment_scheduled', label: '已预约到访', icon: CalendarCheck, colorClass: 'text-green-600', group: 'continuing' },
-  // 释放公海组
-  { value: 'wrong_number', label: '空错号', icon: PhoneOff, colorClass: 'text-orange-500', group: 'releaseToPool' },
-  { value: 'no_child', label: '没孩子', icon: UserX, colorClass: 'text-orange-500', group: 'releaseToPool' },
-  { value: 'age_mismatch', label: '年龄不符', icon: Clock, colorClass: 'text-orange-500', group: 'releaseToPool' },
-  { value: 'no_need', label: '不需要', icon: Ban, colorClass: 'text-orange-500', group: 'releaseToPool' },
-  { value: 'hung_up', label: '秒挂', icon: PhoneMissed, colorClass: 'text-orange-500', group: 'releaseToPool' },
-  { value: 'student', label: '学员', icon: GraduationCap, colorClass: 'text-orange-500', group: 'releaseToPool' },
-  // 仅改状态组
-  { value: 'not_connected', label: '未接通', icon: PhoneMissed, colorClass: 'text-blue-500', group: 'statusOnly' },
+  // 所有跟进结果选项（不再分组）
+  { value: 'can_continue', label: '可持续跟进', icon: TrendingUp, color: BRAND_COLORS.green, group: 'statusOnly' },
+  { value: 'appointment_scheduled', label: '已预约到访', icon: CalendarCheck, color: BRAND_COLORS.green, group: 'statusOnly' },
+  { value: 'not_connected', label: '未接通', icon: PhoneMissed, color: BRAND_COLORS.blue, group: 'statusOnly' },
+  { value: 'wrong_number', label: '空错号', icon: PhoneOff, color: BRAND_COLORS.orange, group: 'statusOnly' },
+  { value: 'no_child', label: '没孩子', icon: UserX, color: BRAND_COLORS.orange, group: 'statusOnly' },
+  { value: 'age_mismatch', label: '年龄不符', icon: Clock, color: BRAND_COLORS.orange, group: 'statusOnly' },
+  { value: 'no_need', label: '不需要', icon: Ban, color: BRAND_COLORS.orange, group: 'statusOnly' },
+  { value: 'hung_up', label: '秒挂', icon: PhoneMissed, color: BRAND_COLORS.orange, group: 'statusOnly' },
+  { value: 'student', label: '学员', icon: GraduationCap, color: BRAND_COLORS.orange, group: 'statusOnly' },
 ]
 
-// 保留旧结构兼容 saveAndNext 逻辑
+// 保留旧结构兼容 saveAndNext 逻辑（根据选项值判断类型）
 const followupResultGroups = {
-  continuing: followupResultOptions.filter(o => o.group === 'continuing'),
-  releaseToPool: followupResultOptions.filter(o => o.group === 'releaseToPool'),
-  statusOnly: followupResultOptions.filter(o => o.group === 'statusOnly'),
+  continuing: followupResultOptions.filter(o => ['can_continue', 'appointment_scheduled'].includes(o.value)),
+  releaseToPool: followupResultOptions.filter(o => ['wrong_number', 'no_child', 'age_mismatch', 'no_need', 'hung_up', 'student'].includes(o.value)),
+  statusOnly: followupResultOptions.filter(o => ['not_connected'].includes(o.value)),
 }
 
 // 跟进结果选择器组件
@@ -147,59 +140,70 @@ function FollowupResultSelect({ value, onChange }: FollowupResultSelectProps) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className={cn(
+            "w-full justify-center relative transition-all duration-200",
+            selectedOption && "border-2 font-medium shadow-sm"
+          )}
+          style={selectedOption ? {
+            borderColor: selectedOption.color,
+            backgroundColor: selectedOption.color + '15',
+          } : undefined}
         >
           {selectedOption ? (
             <span className="flex items-center gap-2">
-              <selectedOption.icon className={cn("h-4 w-4", selectedOption.colorClass)} />
-              <span>{selectedOption.label}</span>
+              <selectedOption.icon className="h-4 w-4" style={{ color: selectedOption.color }} />
+              <span style={{ color: selectedOption.color }}>{selectedOption.label}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">选择跟进结果...</span>
           )}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronDown
+            className="absolute right-3 h-4 w-4 shrink-0 opacity-50"
+            style={selectedOption ? { color: selectedOption.color } : undefined}
+          />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <Command>
-          <CommandList>
-            {followupResultGroupConfig.map((group, groupIndex) => (
-              <div key={group.key}>
-                {groupIndex > 0 && <CommandSeparator />}
-                <CommandGroup
-                  heading={
-                    <span className={cn("flex items-center gap-1", group.colorClass)}>
-                      {group.title}
-                      <span className="text-xs text-muted-foreground font-normal">
-                        ({group.description})
-                      </span>
-                    </span>
+      <PopoverContent className="w-auto p-3" align="start">
+        <div className="grid grid-cols-2 gap-2">
+          {followupResultOptions.map(option => {
+            const isSelected = value === option.value
+            return (
+              <Button
+                key={option.value}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 justify-start gap-2 text-xs transition-all duration-200",
+                  "hover:scale-105 hover:shadow-md",
+                  isSelected && "ring-2 ring-offset-1"
+                )}
+                style={{
+                  color: isSelected ? 'white' : option.color,
+                  backgroundColor: isSelected ? option.color : 'transparent',
+                  borderColor: option.color,
+                  ['--tw-ring-color' as string]: option.color,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = option.color + '20'
                   }
-                >
-                  {followupResultOptions
-                    .filter(o => o.group === group.key)
-                    .map(option => (
-                      <CommandItem
-                        key={option.value}
-                        value={option.value}
-                        onSelect={() => {
-                          onChange(option.value)
-                          setOpen(false)
-                        }}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <option.icon className={cn("h-4 w-4", option.colorClass)} />
-                        <span>{option.label}</span>
-                        {value === option.value && (
-                          <CheckIcon className="ml-auto h-4 w-4" />
-                        )}
-                      </CommandItem>
-                    ))}
-                </CommandGroup>
-              </div>
-            ))}
-          </CommandList>
-        </Command>
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }
+                }}
+                onClick={() => {
+                  onChange(option.value)
+                  setOpen(false)
+                }}
+              >
+                <option.icon className="h-3.5 w-3.5" />
+                {option.label}
+              </Button>
+            )
+          })}
+        </div>
       </PopoverContent>
     </Popover>
   )
@@ -439,17 +443,6 @@ export function ContinuousCallPage() {
       const res = await leadsApi.addLeadFollowup(currentLeadId, data)
 
       if (res.success) {
-        // 特殊处理：如果是"学员"，先更新状态为已支付
-        if (followupResult === 'student') {
-          try {
-            await leadsApi.updateLead(currentLeadId, {
-              status: LeadStatus.PAID,
-            })
-          } catch (error) {
-            console.error('更新线索状态失败：', error)
-          }
-        }
-
         // 如果勾选了释放到公海
         if (releaseToPool) {
           const releaseReason = followupResult === 'student' ? 'MANUAL_RELEASE' : 'INVALID_LEAD'
@@ -786,11 +779,11 @@ export function ContinuousCallPage() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "h-7 px-2 text-xs justify-start font-normal min-w-[90px]",
+                      "h-7 px-2 text-xs justify-center font-normal min-w-[90px]",
                       !nextFollowupDate && "text-muted-foreground"
                     )}
                   >
-                    {nextFollowupDate ? format(nextFollowupDate, 'MM/dd', { locale: zhCN }) : '选择日期'}
+                    {nextFollowupDate ? format(nextFollowupDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -848,16 +841,20 @@ export function ContinuousCallPage() {
 
           <div className="border-t my-3" />
 
-          {/* 释放公海 + 微信/钉钉 */}
+          {/* 释放公海 + 微信/钉钉 - 使用 Anthropic 品牌色 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1.5">
               <Checkbox
                 id="release-to-pool"
                 checked={releaseToPool}
                 onCheckedChange={(checked) => setReleaseToPool(checked as boolean)}
-                className="h-3.5 w-3.5 border-orange-400 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                className="h-4 w-4 rounded-sm border-2 data-[state=checked]:text-white"
+                style={{
+                  borderColor: '#d97757',
+                  backgroundColor: releaseToPool ? '#d97757' : 'transparent'
+                }}
               />
-              <Label htmlFor="release-to-pool" className="text-sm cursor-pointer text-orange-600 dark:text-orange-400">
+              <Label htmlFor="release-to-pool" className="text-sm cursor-pointer" style={{ color: '#d97757' }}>
                 释放到公海
               </Label>
             </div>
@@ -866,18 +863,28 @@ export function ContinuousCallPage() {
                 id="wechat-added"
                 checked={wechatAdded}
                 onCheckedChange={(checked) => setWechatAdded(checked as boolean)}
-                className="h-3.5 w-3.5"
+                className="h-4 w-4 rounded-sm border-2 data-[state=checked]:text-white"
+                style={{
+                  borderColor: '#6a9bcc',
+                  backgroundColor: wechatAdded ? '#6a9bcc' : 'transparent'
+                }}
               />
-              <Label htmlFor="wechat-added" className="text-sm cursor-pointer">已加微信</Label>
+              <Label htmlFor="wechat-added" className="text-sm cursor-pointer" style={{ color: '#6a9bcc' }}>
+                已加微信
+              </Label>
             </div>
             <div className="flex items-center space-x-1.5">
               <Checkbox
                 id="send-dingding"
                 checked={sendToDingding}
                 onCheckedChange={(checked) => setSendToDingding(checked as boolean)}
-                className="h-3.5 w-3.5"
+                className="h-4 w-4 rounded-sm border-2 data-[state=checked]:text-white"
+                style={{
+                  borderColor: '#788c5d',
+                  backgroundColor: sendToDingding ? '#788c5d' : 'transparent'
+                }}
               />
-              <Label htmlFor="send-dingding" className="text-sm cursor-pointer flex items-center gap-1">
+              <Label htmlFor="send-dingding" className="text-sm cursor-pointer flex items-center gap-1" style={{ color: '#788c5d' }}>
                 <Send className="h-3 w-3" />
                 发钉钉
               </Label>

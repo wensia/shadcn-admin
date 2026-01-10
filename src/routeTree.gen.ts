@@ -26,6 +26,7 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
@@ -155,6 +156,11 @@ const AuthenticatedSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
@@ -188,9 +194,9 @@ const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexRouteImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
 const ClerkAuthenticatedUserManagementRoute =
   ClerkAuthenticatedUserManagementRouteImport.update({
@@ -269,140 +275,140 @@ const AuthenticatedCrmBatchImportRoute =
   } as any)
 const AuthenticatedAdminYunkeAccountsRoute =
   AuthenticatedAdminYunkeAccountsRouteImport.update({
-    id: '/admin/yunke-accounts',
-    path: '/admin/yunke-accounts',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/yunke-accounts',
+    path: '/yunke-accounts',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminWebhookHooksRoute =
   AuthenticatedAdminWebhookHooksRouteImport.update({
-    id: '/admin/webhook-hooks',
-    path: '/admin/webhook-hooks',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/webhook-hooks',
+    path: '/webhook-hooks',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminTempDiscRecordsRoute =
   AuthenticatedAdminTempDiscRecordsRouteImport.update({
-    id: '/admin/temp-disc-records',
-    path: '/admin/temp-disc-records',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/temp-disc-records',
+    path: '/temp-disc-records',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminSourceChannelsRoute =
   AuthenticatedAdminSourceChannelsRouteImport.update({
-    id: '/admin/source-channels',
-    path: '/admin/source-channels',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/source-channels',
+    path: '/source-channels',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminSchoolsRoute =
   AuthenticatedAdminSchoolsRouteImport.update({
-    id: '/admin/schools',
-    path: '/admin/schools',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/schools',
+    path: '/schools',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminRegionsRoute =
   AuthenticatedAdminRegionsRouteImport.update({
-    id: '/admin/regions',
-    path: '/admin/regions',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/regions',
+    path: '/regions',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminPositionsRoute =
   AuthenticatedAdminPositionsRouteImport.update({
-    id: '/admin/positions',
-    path: '/admin/positions',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/positions',
+    path: '/positions',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminOrganizationTreeRoute =
   AuthenticatedAdminOrganizationTreeRouteImport.update({
-    id: '/admin/organization-tree',
-    path: '/admin/organization-tree',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/organization-tree',
+    path: '/organization-tree',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminLeadAccessStatsRoute =
   AuthenticatedAdminLeadAccessStatsRouteImport.update({
-    id: '/admin/lead-access-stats',
-    path: '/admin/lead-access-stats',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/lead-access-stats',
+    path: '/lead-access-stats',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminIdentitiesRoute =
   AuthenticatedAdminIdentitiesRouteImport.update({
-    id: '/admin/identities',
-    path: '/admin/identities',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/identities',
+    path: '/identities',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminEmployeesRoute =
   AuthenticatedAdminEmployeesRouteImport.update({
-    id: '/admin/employees',
-    path: '/admin/employees',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/employees',
+    path: '/employees',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminEmployeeHierarchyRoute =
   AuthenticatedAdminEmployeeHierarchyRouteImport.update({
-    id: '/admin/employee-hierarchy',
-    path: '/admin/employee-hierarchy',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/employee-hierarchy',
+    path: '/employee-hierarchy',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminDistrictsRoute =
   AuthenticatedAdminDistrictsRouteImport.update({
-    id: '/admin/districts',
-    path: '/admin/districts',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/districts',
+    path: '/districts',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminDiscTestRoute =
   AuthenticatedAdminDiscTestRouteImport.update({
-    id: '/admin/disc-test',
-    path: '/admin/disc-test',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/disc-test',
+    path: '/disc-test',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminDingtalkRobotsRoute =
   AuthenticatedAdminDingtalkRobotsRouteImport.update({
-    id: '/admin/dingtalk-robots',
-    path: '/admin/dingtalk-robots',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/dingtalk-robots',
+    path: '/dingtalk-robots',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminDepartmentsRoute =
   AuthenticatedAdminDepartmentsRouteImport.update({
-    id: '/admin/departments',
-    path: '/admin/departments',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/departments',
+    path: '/departments',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminDashboardRoute =
   AuthenticatedAdminDashboardRouteImport.update({
-    id: '/admin/dashboard',
-    path: '/admin/dashboard',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCoursesRoute =
   AuthenticatedAdminCoursesRouteImport.update({
-    id: '/admin/courses',
-    path: '/admin/courses',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/courses',
+    path: '/courses',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCampusesRoute =
   AuthenticatedAdminCampusesRouteImport.update({
-    id: '/admin/campuses',
-    path: '/admin/campuses',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/campuses',
+    path: '/campuses',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCampusDepartmentsRoute =
   AuthenticatedAdminCampusDepartmentsRouteImport.update({
-    id: '/admin/campus-departments',
-    path: '/admin/campus-departments',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/campus-departments',
+    path: '/campus-departments',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCallConfigRoute =
   AuthenticatedAdminCallConfigRouteImport.update({
-    id: '/admin/call-config',
-    path: '/admin/call-config',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/call-config',
+    path: '/call-config',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminAreasRoute = AuthenticatedAdminAreasRouteImport.update({
-  id: '/admin/areas',
-  path: '/admin/areas',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/areas',
+  path: '/areas',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
 const AuthenticatedAdminApiKeysRoute =
   AuthenticatedAdminApiKeysRouteImport.update({
-    id: '/admin/api-keys',
-    path: '/admin/api-keys',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedCrmLeadsIndexRoute =
   AuthenticatedCrmLeadsIndexRouteImport.update({
@@ -420,6 +426,7 @@ const AuthenticatedCrmLeadsPoolRoute =
 export interface FileRoutesByFullPath {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
@@ -468,7 +475,7 @@ export interface FileRoutesByFullPath {
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
-  '/admin': typeof AuthenticatedAdminIndexRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
@@ -543,6 +550,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/clerk': typeof ClerkRouteRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
   '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -608,6 +616,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/clerk'
     | '/login'
+    | '/admin'
     | '/settings'
     | '/forgot-password'
     | '/otp'
@@ -656,7 +665,7 @@ export interface FileRouteTypes {
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
-    | '/admin'
+    | '/admin/'
     | '/apps'
     | '/chats'
     | '/help-center'
@@ -730,6 +739,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/clerk'
     | '/login'
+    | '/_authenticated/admin'
     | '/_authenticated/settings'
     | '/clerk/(auth)'
     | '/clerk/_authenticated'
@@ -928,6 +938,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
       path: '/users'
@@ -972,10 +989,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
-      path: '/admin'
-      fullPath: '/admin'
+      path: '/'
+      fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/clerk/_authenticated/user-management': {
       id: '/clerk/_authenticated/user-management'
@@ -1070,164 +1087,164 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/admin/yunke-accounts': {
       id: '/_authenticated/admin/yunke-accounts'
-      path: '/admin/yunke-accounts'
+      path: '/yunke-accounts'
       fullPath: '/admin/yunke-accounts'
       preLoaderRoute: typeof AuthenticatedAdminYunkeAccountsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/webhook-hooks': {
       id: '/_authenticated/admin/webhook-hooks'
-      path: '/admin/webhook-hooks'
+      path: '/webhook-hooks'
       fullPath: '/admin/webhook-hooks'
       preLoaderRoute: typeof AuthenticatedAdminWebhookHooksRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/temp-disc-records': {
       id: '/_authenticated/admin/temp-disc-records'
-      path: '/admin/temp-disc-records'
+      path: '/temp-disc-records'
       fullPath: '/admin/temp-disc-records'
       preLoaderRoute: typeof AuthenticatedAdminTempDiscRecordsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/source-channels': {
       id: '/_authenticated/admin/source-channels'
-      path: '/admin/source-channels'
+      path: '/source-channels'
       fullPath: '/admin/source-channels'
       preLoaderRoute: typeof AuthenticatedAdminSourceChannelsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/schools': {
       id: '/_authenticated/admin/schools'
-      path: '/admin/schools'
+      path: '/schools'
       fullPath: '/admin/schools'
       preLoaderRoute: typeof AuthenticatedAdminSchoolsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/regions': {
       id: '/_authenticated/admin/regions'
-      path: '/admin/regions'
+      path: '/regions'
       fullPath: '/admin/regions'
       preLoaderRoute: typeof AuthenticatedAdminRegionsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/positions': {
       id: '/_authenticated/admin/positions'
-      path: '/admin/positions'
+      path: '/positions'
       fullPath: '/admin/positions'
       preLoaderRoute: typeof AuthenticatedAdminPositionsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/organization-tree': {
       id: '/_authenticated/admin/organization-tree'
-      path: '/admin/organization-tree'
+      path: '/organization-tree'
       fullPath: '/admin/organization-tree'
       preLoaderRoute: typeof AuthenticatedAdminOrganizationTreeRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/lead-access-stats': {
       id: '/_authenticated/admin/lead-access-stats'
-      path: '/admin/lead-access-stats'
+      path: '/lead-access-stats'
       fullPath: '/admin/lead-access-stats'
       preLoaderRoute: typeof AuthenticatedAdminLeadAccessStatsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/identities': {
       id: '/_authenticated/admin/identities'
-      path: '/admin/identities'
+      path: '/identities'
       fullPath: '/admin/identities'
       preLoaderRoute: typeof AuthenticatedAdminIdentitiesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/employees': {
       id: '/_authenticated/admin/employees'
-      path: '/admin/employees'
+      path: '/employees'
       fullPath: '/admin/employees'
       preLoaderRoute: typeof AuthenticatedAdminEmployeesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/employee-hierarchy': {
       id: '/_authenticated/admin/employee-hierarchy'
-      path: '/admin/employee-hierarchy'
+      path: '/employee-hierarchy'
       fullPath: '/admin/employee-hierarchy'
       preLoaderRoute: typeof AuthenticatedAdminEmployeeHierarchyRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/districts': {
       id: '/_authenticated/admin/districts'
-      path: '/admin/districts'
+      path: '/districts'
       fullPath: '/admin/districts'
       preLoaderRoute: typeof AuthenticatedAdminDistrictsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/disc-test': {
       id: '/_authenticated/admin/disc-test'
-      path: '/admin/disc-test'
+      path: '/disc-test'
       fullPath: '/admin/disc-test'
       preLoaderRoute: typeof AuthenticatedAdminDiscTestRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/dingtalk-robots': {
       id: '/_authenticated/admin/dingtalk-robots'
-      path: '/admin/dingtalk-robots'
+      path: '/dingtalk-robots'
       fullPath: '/admin/dingtalk-robots'
       preLoaderRoute: typeof AuthenticatedAdminDingtalkRobotsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/departments': {
       id: '/_authenticated/admin/departments'
-      path: '/admin/departments'
+      path: '/departments'
       fullPath: '/admin/departments'
       preLoaderRoute: typeof AuthenticatedAdminDepartmentsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/dashboard': {
       id: '/_authenticated/admin/dashboard'
-      path: '/admin/dashboard'
+      path: '/dashboard'
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/courses': {
       id: '/_authenticated/admin/courses'
-      path: '/admin/courses'
+      path: '/courses'
       fullPath: '/admin/courses'
       preLoaderRoute: typeof AuthenticatedAdminCoursesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/campuses': {
       id: '/_authenticated/admin/campuses'
-      path: '/admin/campuses'
+      path: '/campuses'
       fullPath: '/admin/campuses'
       preLoaderRoute: typeof AuthenticatedAdminCampusesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/campus-departments': {
       id: '/_authenticated/admin/campus-departments'
-      path: '/admin/campus-departments'
+      path: '/campus-departments'
       fullPath: '/admin/campus-departments'
       preLoaderRoute: typeof AuthenticatedAdminCampusDepartmentsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/call-config': {
       id: '/_authenticated/admin/call-config'
-      path: '/admin/call-config'
+      path: '/call-config'
       fullPath: '/admin/call-config'
       preLoaderRoute: typeof AuthenticatedAdminCallConfigRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/areas': {
       id: '/_authenticated/admin/areas'
-      path: '/admin/areas'
+      path: '/areas'
       fullPath: '/admin/areas'
       preLoaderRoute: typeof AuthenticatedAdminAreasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/api-keys': {
       id: '/_authenticated/admin/api-keys'
-      path: '/admin/api-keys'
+      path: '/api-keys'
       fullPath: '/admin/api-keys'
       preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/crm/leads/': {
       id: '/_authenticated/crm/leads/'
@@ -1245,6 +1262,73 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
+  AuthenticatedAdminAreasRoute: typeof AuthenticatedAdminAreasRoute
+  AuthenticatedAdminCallConfigRoute: typeof AuthenticatedAdminCallConfigRoute
+  AuthenticatedAdminCampusDepartmentsRoute: typeof AuthenticatedAdminCampusDepartmentsRoute
+  AuthenticatedAdminCampusesRoute: typeof AuthenticatedAdminCampusesRoute
+  AuthenticatedAdminCoursesRoute: typeof AuthenticatedAdminCoursesRoute
+  AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
+  AuthenticatedAdminDingtalkRobotsRoute: typeof AuthenticatedAdminDingtalkRobotsRoute
+  AuthenticatedAdminDiscTestRoute: typeof AuthenticatedAdminDiscTestRoute
+  AuthenticatedAdminDistrictsRoute: typeof AuthenticatedAdminDistrictsRoute
+  AuthenticatedAdminEmployeeHierarchyRoute: typeof AuthenticatedAdminEmployeeHierarchyRoute
+  AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
+  AuthenticatedAdminIdentitiesRoute: typeof AuthenticatedAdminIdentitiesRoute
+  AuthenticatedAdminLeadAccessStatsRoute: typeof AuthenticatedAdminLeadAccessStatsRoute
+  AuthenticatedAdminOrganizationTreeRoute: typeof AuthenticatedAdminOrganizationTreeRoute
+  AuthenticatedAdminPositionsRoute: typeof AuthenticatedAdminPositionsRoute
+  AuthenticatedAdminRegionsRoute: typeof AuthenticatedAdminRegionsRoute
+  AuthenticatedAdminSchoolsRoute: typeof AuthenticatedAdminSchoolsRoute
+  AuthenticatedAdminSourceChannelsRoute: typeof AuthenticatedAdminSourceChannelsRoute
+  AuthenticatedAdminTempDiscRecordsRoute: typeof AuthenticatedAdminTempDiscRecordsRoute
+  AuthenticatedAdminWebhookHooksRoute: typeof AuthenticatedAdminWebhookHooksRoute
+  AuthenticatedAdminYunkeAccountsRoute: typeof AuthenticatedAdminYunkeAccountsRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
+  {
+    AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
+    AuthenticatedAdminAreasRoute: AuthenticatedAdminAreasRoute,
+    AuthenticatedAdminCallConfigRoute: AuthenticatedAdminCallConfigRoute,
+    AuthenticatedAdminCampusDepartmentsRoute:
+      AuthenticatedAdminCampusDepartmentsRoute,
+    AuthenticatedAdminCampusesRoute: AuthenticatedAdminCampusesRoute,
+    AuthenticatedAdminCoursesRoute: AuthenticatedAdminCoursesRoute,
+    AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+    AuthenticatedAdminDepartmentsRoute: AuthenticatedAdminDepartmentsRoute,
+    AuthenticatedAdminDingtalkRobotsRoute:
+      AuthenticatedAdminDingtalkRobotsRoute,
+    AuthenticatedAdminDiscTestRoute: AuthenticatedAdminDiscTestRoute,
+    AuthenticatedAdminDistrictsRoute: AuthenticatedAdminDistrictsRoute,
+    AuthenticatedAdminEmployeeHierarchyRoute:
+      AuthenticatedAdminEmployeeHierarchyRoute,
+    AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
+    AuthenticatedAdminIdentitiesRoute: AuthenticatedAdminIdentitiesRoute,
+    AuthenticatedAdminLeadAccessStatsRoute:
+      AuthenticatedAdminLeadAccessStatsRoute,
+    AuthenticatedAdminOrganizationTreeRoute:
+      AuthenticatedAdminOrganizationTreeRoute,
+    AuthenticatedAdminPositionsRoute: AuthenticatedAdminPositionsRoute,
+    AuthenticatedAdminRegionsRoute: AuthenticatedAdminRegionsRoute,
+    AuthenticatedAdminSchoolsRoute: AuthenticatedAdminSchoolsRoute,
+    AuthenticatedAdminSourceChannelsRoute:
+      AuthenticatedAdminSourceChannelsRoute,
+    AuthenticatedAdminTempDiscRecordsRoute:
+      AuthenticatedAdminTempDiscRecordsRoute,
+    AuthenticatedAdminWebhookHooksRoute: AuthenticatedAdminWebhookHooksRoute,
+    AuthenticatedAdminYunkeAccountsRoute: AuthenticatedAdminYunkeAccountsRoute,
+    AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  }
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(
+    AuthenticatedAdminRouteRouteChildren,
+  )
 
 interface AuthenticatedSettingsRouteRouteChildren {
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
@@ -1270,38 +1354,15 @@ const AuthenticatedSettingsRouteRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
-  AuthenticatedAdminAreasRoute: typeof AuthenticatedAdminAreasRoute
-  AuthenticatedAdminCallConfigRoute: typeof AuthenticatedAdminCallConfigRoute
-  AuthenticatedAdminCampusDepartmentsRoute: typeof AuthenticatedAdminCampusDepartmentsRoute
-  AuthenticatedAdminCampusesRoute: typeof AuthenticatedAdminCampusesRoute
-  AuthenticatedAdminCoursesRoute: typeof AuthenticatedAdminCoursesRoute
-  AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
-  AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
-  AuthenticatedAdminDingtalkRobotsRoute: typeof AuthenticatedAdminDingtalkRobotsRoute
-  AuthenticatedAdminDiscTestRoute: typeof AuthenticatedAdminDiscTestRoute
-  AuthenticatedAdminDistrictsRoute: typeof AuthenticatedAdminDistrictsRoute
-  AuthenticatedAdminEmployeeHierarchyRoute: typeof AuthenticatedAdminEmployeeHierarchyRoute
-  AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
-  AuthenticatedAdminIdentitiesRoute: typeof AuthenticatedAdminIdentitiesRoute
-  AuthenticatedAdminLeadAccessStatsRoute: typeof AuthenticatedAdminLeadAccessStatsRoute
-  AuthenticatedAdminOrganizationTreeRoute: typeof AuthenticatedAdminOrganizationTreeRoute
-  AuthenticatedAdminPositionsRoute: typeof AuthenticatedAdminPositionsRoute
-  AuthenticatedAdminRegionsRoute: typeof AuthenticatedAdminRegionsRoute
-  AuthenticatedAdminSchoolsRoute: typeof AuthenticatedAdminSchoolsRoute
-  AuthenticatedAdminSourceChannelsRoute: typeof AuthenticatedAdminSourceChannelsRoute
-  AuthenticatedAdminTempDiscRecordsRoute: typeof AuthenticatedAdminTempDiscRecordsRoute
-  AuthenticatedAdminWebhookHooksRoute: typeof AuthenticatedAdminWebhookHooksRoute
-  AuthenticatedAdminYunkeAccountsRoute: typeof AuthenticatedAdminYunkeAccountsRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
   AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
   AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
-  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
@@ -1312,43 +1373,15 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
-  AuthenticatedAdminAreasRoute: AuthenticatedAdminAreasRoute,
-  AuthenticatedAdminCallConfigRoute: AuthenticatedAdminCallConfigRoute,
-  AuthenticatedAdminCampusDepartmentsRoute:
-    AuthenticatedAdminCampusDepartmentsRoute,
-  AuthenticatedAdminCampusesRoute: AuthenticatedAdminCampusesRoute,
-  AuthenticatedAdminCoursesRoute: AuthenticatedAdminCoursesRoute,
-  AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
-  AuthenticatedAdminDepartmentsRoute: AuthenticatedAdminDepartmentsRoute,
-  AuthenticatedAdminDingtalkRobotsRoute: AuthenticatedAdminDingtalkRobotsRoute,
-  AuthenticatedAdminDiscTestRoute: AuthenticatedAdminDiscTestRoute,
-  AuthenticatedAdminDistrictsRoute: AuthenticatedAdminDistrictsRoute,
-  AuthenticatedAdminEmployeeHierarchyRoute:
-    AuthenticatedAdminEmployeeHierarchyRoute,
-  AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
-  AuthenticatedAdminIdentitiesRoute: AuthenticatedAdminIdentitiesRoute,
-  AuthenticatedAdminLeadAccessStatsRoute:
-    AuthenticatedAdminLeadAccessStatsRoute,
-  AuthenticatedAdminOrganizationTreeRoute:
-    AuthenticatedAdminOrganizationTreeRoute,
-  AuthenticatedAdminPositionsRoute: AuthenticatedAdminPositionsRoute,
-  AuthenticatedAdminRegionsRoute: AuthenticatedAdminRegionsRoute,
-  AuthenticatedAdminSchoolsRoute: AuthenticatedAdminSchoolsRoute,
-  AuthenticatedAdminSourceChannelsRoute: AuthenticatedAdminSourceChannelsRoute,
-  AuthenticatedAdminTempDiscRecordsRoute:
-    AuthenticatedAdminTempDiscRecordsRoute,
-  AuthenticatedAdminWebhookHooksRoute: AuthenticatedAdminWebhookHooksRoute,
-  AuthenticatedAdminYunkeAccountsRoute: AuthenticatedAdminYunkeAccountsRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
   AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
   AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
-  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,

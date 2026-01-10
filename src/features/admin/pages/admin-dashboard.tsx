@@ -107,203 +107,138 @@ export function AdminDashboardPage() {
   // 计算员工统计
   const employeeStats = stats
     ? {
-        total: stats.employees,
-        active: stats.active_employees,
-        inactive: stats.employees - stats.active_employees,
-        superusers: stats.superusers,
-        activeRate: stats.employees > 0
-          ? ((stats.active_employees / stats.employees) * 100).toFixed(1)
-          : '0',
-      }
+      total: stats.employees,
+      active: stats.active_employees,
+      inactive: stats.employees - stats.active_employees,
+      superusers: stats.superusers,
+      activeRate: stats.employees > 0
+        ? ((stats.active_employees / stats.employees) * 100).toFixed(1)
+        : '0',
+    }
     : null
 
   return (
-    <div className="space-y-6">
-      {/* 欢迎卡片 */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold mb-2">
-                欢迎回来，{user?.name || '超级管理员'}！
-              </h2>
-              <p className="text-muted-foreground mb-4">
-                这里是RMF CRM管理后台，您可以管理整个系统的组织架构和人员信息。
-              </p>
-              <div className="flex gap-2">
-                <Badge variant="destructive">
-                  <ShieldCheck className="w-3 h-3 mr-1" />
-                  超级管理员
-                </Badge>
-                <Badge variant="secondary">
-                  上次登录：{new Date().toLocaleString('zh-CN')}
-                </Badge>
-              </div>
-            </div>
-            <Button size="lg" onClick={() => navigate({ to: '/admin/employees' })}>
-              <Plus className="w-4 h-4 mr-2" />
-              创建员工
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-8 p-2">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-border/40 pb-6">
+        <div>
+          <h1 className="text-3xl font-serif font-medium text-foreground mb-2">
+            Good afternoon, {user?.name || 'Super Admin'}
+          </h1>
+          <p className="text-muted-foreground font-sans">
+            Overview of your organization and personnel.
+          </p>
+        </div>
+        <Button
+          size="lg"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-full px-6"
+          onClick={() => navigate({ to: '/admin/employees' })}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Create Employee
+        </Button>
+      </div>
 
-      {/* 统计数据卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {/* Stats Grid - Minimalist */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
         {statConfigs.map((config) => {
-          const Icon = config.icon
           const value = stats ? (stats as Record<string, number>)[config.key] : 0
-
           return (
-            <Card key={config.key} className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-lg ${config.bgColor} flex items-center justify-center`}>
-                    {isLoading ? (
-                      <Skeleton className="w-6 h-6 rounded" />
-                    ) : (
-                      <Icon className={`w-6 h-6 ${config.color}`} />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{config.label}</p>
-                    {isLoading ? (
-                      <Skeleton className="h-7 w-12 mt-1" />
-                    ) : (
-                      <p className="text-2xl font-semibold">{value.toLocaleString()}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={config.key} className="flex flex-col gap-1 group cursor-pointer" onClick={() => navigate({ to: `/admin/${config.key}` })}>
+              <span className="text-sm text-muted-foreground font-medium flex items-center gap-1 group-hover:text-primary transition-colors">
+                {config.label}
+              </span>
+              {isLoading ? (
+                <Skeleton className="h-8 w-12" />
+              ) : (
+                <span className="text-3xl font-serif text-foreground font-normal">
+                  {value.toLocaleString()}
+                </span>
+              )}
+            </div>
           )
         })}
       </div>
 
-      {/* 快捷操作和员工统计 */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* 快捷操作 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>快捷操作</CardTitle>
-            <CardDescription>常用功能入口</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+      <div className="grid md:grid-cols-3 gap-8 pt-4">
+        {/* Quick Actions */}
+        <div className="md:col-span-2 space-y-4">
+          <h3 className="text-lg font-serif font-medium mb-4">Quick Actions</h3>
+          <div className="grid sm:grid-cols-2 gap-3">
             {quickActions.map((action) => {
               const Icon = action.icon
               return (
                 <div
                   key={action.key}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => navigate({ to: action.path })}
+                  className="flex flex-col p-4 rounded-xl border border-border/50 bg-card hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-5 h-5 ${action.color}`} />
-                    <div>
-                      <p className="font-medium">{action.title}</p>
-                      <p className="text-sm text-muted-foreground">{action.description}</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-md bg-secondary text-foreground group-hover:text-primary transition-colors">
+                      <Icon className="w-4 h-4" />
                     </div>
+                    <span className="font-medium group-hover:text-primary transition-colors">{action.title}</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground line-clamp-1">
+                    {action.description}
+                  </p>
                 </div>
               )
             })}
-          </CardContent>
-        </Card>
-
-        {/* 员工统计 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>员工统计</CardTitle>
-            <CardDescription>员工在职情况概览</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : employeeStats ? (
-              <div className="space-y-6">
-                {/* 概览数据 */}
-                <div className="flex justify-around text-center">
-                  <div>
-                    <p className="text-3xl font-bold">{employeeStats.total}</p>
-                    <p className="text-sm text-muted-foreground">员工总数</p>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-bold text-green-500">{employeeStats.activeRate}%</p>
-                    <p className="text-sm text-muted-foreground">在职率</p>
-                  </div>
-                </div>
-
-                {/* 进度条 */}
-                <Progress value={parseFloat(employeeStats.activeRate)} className="h-2" />
-
-                {/* 详细数据 */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="success" className="h-5">在职</Badge>
-                    </div>
-                    <span className="font-medium">{employeeStats.active}人</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="warning" className="h-5">离职</Badge>
-                    </div>
-                    <span className="font-medium">{employeeStats.inactive}人</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="destructive" className="h-5">管理员</Badge>
-                    </div>
-                    <span className="font-medium">{employeeStats.superusers}人</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">暂无数据</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 系统信息 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>系统信息</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">系统版本</p>
-              <p className="font-medium">RMF CRM v1.0.0</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">数据库</p>
-              <p className="font-medium">PostgreSQL</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">后端框架</p>
-              <p className="font-medium">FastAPI + SQLAlchemy 2.0</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">前端框架</p>
-              <p className="font-medium">React + shadcn/ui</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">部署环境</p>
-              <p className="font-medium">Docker</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">最后更新</p>
-              <p className="font-medium">{new Date().toLocaleDateString('zh-CN')}</p>
-            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Employee Stats - Simplified */}
+        <div className="bg-secondary/30 rounded-2xl p-6">
+          <h3 className="text-lg font-serif font-medium mb-6">Personnel Status</h3>
+
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          ) : employeeStats ? (
+            <div className="space-y-8">
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <div className="text-4xl font-serif text-foreground">{employeeStats.activeRate}%</div>
+                  <div className="text-sm text-muted-foreground mt-1">Active Employment Rate</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-serif text-foreground">{employeeStats.total}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Total Staff</div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/70"></span>
+                    Active
+                  </span>
+                  <span className="font-medium">{employeeStats.active}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500/70"></span>
+                    Inactive
+                  </span>
+                  <span className="font-medium">{employeeStats.inactive}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary/70"></span>
+                    Admin
+                  </span>
+                  <span className="font-medium">{employeeStats.superusers}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">No data available.</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

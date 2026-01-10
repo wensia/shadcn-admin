@@ -19,10 +19,10 @@
   --radius: 0.5rem;
 
   /* 基础颜色 */
-  --background: #faf9f5;
-  --foreground: #141413;
+  --background: #faf9f5; /* Warm Beige */
+  --foreground: #141413; /* Soft Black */
 
-  /* 卡片 */
+  /* 卡片 - Blend with background or slight lift */
   --card: #ffffff;
   --card-foreground: #141413;
 
@@ -30,36 +30,36 @@
   --popover: #ffffff;
   --popover-foreground: #141413;
 
-  /* 主要强调色 - Orange */
+  /* 主要强调色 - Burnt Orange / Terracotta */
   --primary: #d97757;
   --primary-foreground: #faf9f5;
 
-  /* 次要颜色 - Light Gray */
-  --secondary: #e8e6dc;
+  /* 次要颜色 - Warm Gray */
+  --secondary: #f0efe9;
   --secondary-foreground: #141413;
 
-  /* 静音色 - Light Gray */
-  --muted: #e8e6dc;
-  --muted-foreground: #b0aea5;
+  /* 静音色 - Light Warm Gray */
+  --muted: #f0efe9;
+  --muted-foreground: #8a8880;
 
-  /* 强调色 - 使用主色 Orange */
-  --accent: #d97757;
-  --accent-foreground: #faf9f5;
+  /* 强调色 */
+  --accent: #f0efe9;
+  --accent-foreground: #141413;
 
-  /* 危险色 */
-  --destructive: #dc2626;
+  /* 危险色 - Soft Red */
+  --destructive: #cb4b4b;
 
-  /* 边框和输入框 */
-  --border: #e8e6dc;
-  --input: #e8e6dc;
+  /* 边框和输入框 - Soft Warm Beige */
+  --border: #e6e4dc;
+  --input: #e6e4dc;
   --ring: #d97757;
 
-  /* 图表颜色 - 使用 Anthropic 品牌色 */
-  --chart-1: #d97757;
-  --chart-2: #788c5d;
-  --chart-3: #b0aea5;
-  --chart-4: #e8e6dc;
-  --chart-5: #141413;
+  /* 图表颜色 - Earthy Tones */
+  --chart-1: #d97757; /* Terracotta */
+  --chart-2: #8a8880; /* Warm Gray */
+  --chart-3: #5c5a53; /* Dark Gray */
+  --chart-4: #e6e4dc; /* Beige */
+  --chart-5: #141413; /* Black */
 
   /* 侧边栏 */
   --sidebar: var(--background);
