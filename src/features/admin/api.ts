@@ -956,17 +956,26 @@ export const leadAccessStatsApi = {
 export const yunkeAdminApi = {
   /** 云客管理员登录 */
   async login(data?: { phone?: string; password?: string }): Promise<YunkeAdminLoginResponse> {
-    return apiClient.post<YunkeAdminLoginResponse>('/yunke/admin/login', data)
+    const response = await apiClient.post<ApiResponse<YunkeAdminLoginResponse>>('/yunke/admin/login', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '登录失败')
+    }
+    return response.data
   },
 
   /** 获取云客管理员登录状态 */
   async getStatus(): Promise<YunkeAdminStatus> {
-    return apiClient.get<YunkeAdminStatus>('/yunke/admin/status')
+    const response = await apiClient.get<ApiResponse<YunkeAdminStatus>>('/yunke/admin/status')
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取状态失败')
+    }
+    return response.data
   },
 
   /** 云客管理员登出 */
   async logout(): Promise<{ cookies_cleared: boolean }> {
-    return apiClient.post<{ cookies_cleared: boolean }>('/yunke/admin/logout')
+    const response = await apiClient.post<ApiResponse<{ cookies_cleared: boolean }>>('/yunke/admin/logout')
+    return response.data || { cookies_cleared: false }
   },
 
   /** 获取云客子账号列表 */
@@ -981,12 +990,13 @@ export const yunkeAdminApi = {
     page: number
     page_size: number
   }> {
-    return apiClient.post<{
+    const response = await apiClient.post<ApiResponse<{
       users: YunkeSubAccount[]
       total: number
       page: number
       page_size: number
-    }>('/yunke/admin/sub-accounts', params)
+    }>>('/yunke/admin/sub-accounts', params)
+    return response.data || { users: [], total: 0, page: 1, page_size: 20 }
   },
 
   /** 获取可绑定员工列表 */
@@ -1001,12 +1011,20 @@ export const yunkeAdminApi = {
     yunke_user_id: string
     employee_id: string
   }): Promise<{ success: boolean; message?: string }> {
-    return apiClient.post<{ success: boolean; message?: string }>('/yunke/admin/bind-employee', data)
+    const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>('/yunke/admin/bind-employee', data)
+    if (!response.success) {
+      throw new Error(response.message || '绑定失败')
+    }
+    return response.data || { success: true }
   },
 
   /** 解绑员工 */
   async unbindEmployee(data: { employee_id: string }): Promise<{ success: boolean; message?: string }> {
-    return apiClient.post<{ success: boolean; message?: string }>('/yunke/admin/unbind-employee', data)
+    const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>('/yunke/admin/unbind-employee', data)
+    if (!response.success) {
+      throw new Error(response.message || '解绑失败')
+    }
+    return response.data || { success: true }
   },
 
   /** 重置密码 */
@@ -1014,7 +1032,11 @@ export const yunkeAdminApi = {
     yunke_user_id: string
     phone: string
   }): Promise<YunkePasswordResetResponse> {
-    return apiClient.post<YunkePasswordResetResponse>('/yunke/auth/reset-password', data)
+    const response = await apiClient.post<ApiResponse<YunkePasswordResetResponse>>('/yunke/auth/reset-password', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '重置密码失败')
+    }
+    return response.data
   },
 
   /** 自动同步绑定 */
@@ -1027,7 +1049,7 @@ export const yunkeAdminApi = {
       employee_username: string
     }>
   }> {
-    return apiClient.post<{
+    const response = await apiClient.post<ApiResponse<{
       matched: number
       total: number
       details: Array<{
@@ -1035,17 +1057,29 @@ export const yunkeAdminApi = {
         employee_name: string
         employee_username: string
       }>
-    }>('/yunke/admin/auto-sync-bindings')
+    }>>('/yunke/admin/auto-sync-bindings')
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '同步失败')
+    }
+    return response.data
   },
 
   /** 检查所有登录状态 */
   async checkAllLoginStatus(): Promise<YunkeLoginStatusResult> {
-    return apiClient.get<YunkeLoginStatusResult>('/yunke/admin/check-login-status')
+    const response = await apiClient.get<ApiResponse<YunkeLoginStatusResult>>('/yunke/admin/check-login-status')
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '检查状态失败')
+    }
+    return response.data
   },
 
   /** 批量更新登录 */
   async batchUpdateLogin(): Promise<YunkeBatchLoginResult> {
-    return apiClient.post<YunkeBatchLoginResult>('/yunke/admin/batch-update-login')
+    const response = await apiClient.post<ApiResponse<YunkeBatchLoginResult>>('/yunke/admin/batch-update-login')
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '批量更新失败')
+    }
+    return response.data
   },
 }
 
@@ -1066,36 +1100,56 @@ export const apiKeysApi = {
     page: number
     size: number
   }> {
-    return apiClient.get<{
+    const response = await apiClient.get<ApiResponse<{
       items: EmployeeApiKeyInfo[]
       total: number
       page: number
       size: number
-    }>('/api-keys/employees', { params })
+    }>>('/api-keys/employees', { params })
+    return response.data || { items: [], total: 0, page: 1, size: 20 }
   },
 
   /** 获取指定员工的 API 密钥信息 */
   async get(employeeId: string): Promise<EmployeeApiKeyInfo> {
-    return apiClient.get<EmployeeApiKeyInfo>(`/api-keys/employees/${employeeId}`)
+    const response = await apiClient.get<ApiResponse<EmployeeApiKeyInfo>>(`/api-keys/employees/${employeeId}`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取详情失败')
+    }
+    return response.data
   },
 
   /** 为员工创建 API 密钥 */
   async create(employeeId: string, data: ApiKeyCreate): Promise<ApiKeyCreateResponse> {
-    return apiClient.post<ApiKeyCreateResponse>(`/api-keys/employees/${employeeId}`, data)
+    const response = await apiClient.post<ApiResponse<ApiKeyCreateResponse>>(`/api-keys/employees/${employeeId}`, data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '创建失败')
+    }
+    return response.data
   },
 
   /** 重新生成员工的 API 密钥 */
   async regenerate(employeeId: string, name?: string): Promise<ApiKeyCreateResponse> {
-    return apiClient.post<ApiKeyCreateResponse>(`/api-keys/employees/${employeeId}/regenerate`, { name })
+    const response = await apiClient.post<ApiResponse<ApiKeyCreateResponse>>(`/api-keys/employees/${employeeId}/regenerate`, { name })
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '重新生成失败')
+    }
+    return response.data
   },
 
   /** 删除员工的 API 密钥 */
   async delete(employeeId: string): Promise<void> {
-    return apiClient.delete(`/api-keys/employees/${employeeId}`)
+    const response = await apiClient.delete<ApiResponse<void>>(`/api-keys/employees/${employeeId}`)
+    if (!response.success) {
+      throw new Error(response.message || '删除失败')
+    }
   },
 
   /** 更新员工的 API 密钥权限范围 */
   async updateScopes(employeeId: string, data: ApiKeyScopesUpdate): Promise<EmployeeApiKeyInfo> {
-    return apiClient.put<EmployeeApiKeyInfo>(`/api-keys/employees/${employeeId}/scopes`, data)
+    const response = await apiClient.put<ApiResponse<EmployeeApiKeyInfo>>(`/api-keys/employees/${employeeId}/scopes`, data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '更新失败')
+    }
+    return response.data
   },
 }
