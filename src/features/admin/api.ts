@@ -671,37 +671,59 @@ export const dingtalkRobotsApi = {
     order_by?: 'name' | 'created_at' | 'updated_at' | 'sort_order'
     order_desc?: boolean
   } = {}): Promise<{ items: DingtalkRobot[]; total: number; page: number; size: number }> {
-    return apiClient.get<{ items: DingtalkRobot[]; total: number; page: number; size: number }>('/dingtalk-robots', { params })
+    const response = await apiClient.get<ApiResponse<{ items: DingtalkRobot[]; total: number; page: number; size: number }>>('/dingtalk-robots', { params })
+    return response.data || { items: [], total: 0, page: 1, size: 20 }
   },
 
   /** 获取所有启用的机器人 */
   async getActive(): Promise<DingtalkRobot[]> {
-    return apiClient.get<DingtalkRobot[]>('/dingtalk-robots/active')
+    const response = await apiClient.get<ApiResponse<DingtalkRobot[]>>('/dingtalk-robots/active')
+    return response.data || []
   },
 
   /** 创建钉钉机器人 */
   async create(data: DingtalkRobotCreate): Promise<DingtalkRobot> {
-    return apiClient.post<DingtalkRobot>('/dingtalk-robots', data)
+    const response = await apiClient.post<ApiResponse<DingtalkRobot>>('/dingtalk-robots', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '创建失败')
+    }
+    return response.data
   },
 
   /** 获取钉钉机器人详情 */
   async get(id: string): Promise<DingtalkRobot> {
-    return apiClient.get<DingtalkRobot>(`/dingtalk-robots/${id}`)
+    const response = await apiClient.get<ApiResponse<DingtalkRobot>>(`/dingtalk-robots/${id}`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取详情失败')
+    }
+    return response.data
   },
 
   /** 更新钉钉机器人 */
   async update(id: string, data: DingtalkRobotUpdate): Promise<DingtalkRobot> {
-    return apiClient.put<DingtalkRobot>(`/dingtalk-robots/${id}`, data)
+    const response = await apiClient.put<ApiResponse<DingtalkRobot>>(`/dingtalk-robots/${id}`, data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '更新失败')
+    }
+    return response.data
   },
 
   /** 删除钉钉机器人 */
   async delete(id: string): Promise<boolean> {
-    return apiClient.delete<boolean>(`/dingtalk-robots/${id}`)
+    const response = await apiClient.delete<ApiResponse<boolean>>(`/dingtalk-robots/${id}`)
+    if (!response.success) {
+      throw new Error(response.message || '删除失败')
+    }
+    return true
   },
 
   /** 测试钉钉机器人 */
   async test(data: DingtalkRobotTest): Promise<boolean> {
-    return apiClient.post<boolean>('/dingtalk-robots/test', data)
+    const response = await apiClient.post<ApiResponse<boolean>>('/dingtalk-robots/test', data)
+    if (!response.success) {
+      throw new Error(response.message || '测试失败')
+    }
+    return true
   },
 }
 
@@ -712,35 +734,55 @@ export const dingtalkRobotsApi = {
 export const webhookHooksApi = {
   /** 创建钩子 */
   async create(data: WebhookHookCreate): Promise<WebhookHook> {
-    return apiClient.post<WebhookHook>('/webhook-hooks', data)
+    const response = await apiClient.post<ApiResponse<WebhookHook>>('/webhook-hooks', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '创建失败')
+    }
+    return response.data
   },
 
   /** 更新钩子 */
   async update(id: string, data: WebhookHookUpdate): Promise<WebhookHook> {
-    return apiClient.put<WebhookHook>(`/webhook-hooks/${id}`, data)
+    const response = await apiClient.put<ApiResponse<WebhookHook>>(`/webhook-hooks/${id}`, data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '更新失败')
+    }
+    return response.data
   },
 
   /** 获取钩子详情 */
   async get(id: string): Promise<WebhookHook> {
-    return apiClient.get<WebhookHook>(`/webhook-hooks/${id}`)
+    const response = await apiClient.get<ApiResponse<WebhookHook>>(`/webhook-hooks/${id}`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取详情失败')
+    }
+    return response.data
   },
 
   /** 获取钩子列表 */
   async list(params?: { is_active?: boolean; search?: string }): Promise<{ items: WebhookHook[]; total: number }> {
-    return apiClient.get<{ items: WebhookHook[]; total: number }>('/webhook-hooks', { params })
+    const response = await apiClient.get<ApiResponse<{ items: WebhookHook[]; total: number }>>('/webhook-hooks', { params })
+    return response.data || { items: [], total: 0 }
   },
 
   /** 删除钩子 */
   async delete(id: string): Promise<void> {
-    return apiClient.delete<void>(`/webhook-hooks/${id}`)
+    const response = await apiClient.delete<ApiResponse<void>>(`/webhook-hooks/${id}`)
+    if (!response.success) {
+      throw new Error(response.message || '删除失败')
+    }
   },
 
   /** 测试钩子 */
   async test(id: string, data?: { test_data?: Record<string, unknown> }): Promise<WebhookTriggerResponse> {
-    return apiClient.post<WebhookTriggerResponse>(
+    const response = await apiClient.post<ApiResponse<WebhookTriggerResponse>>(
       `/webhook-hooks/${id}/test`,
       data || { test_data: {} }
     )
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '测试失败')
+    }
+    return response.data
   },
 }
 

@@ -184,10 +184,16 @@ export function BatchImportPage() {
     import_method: methodFilter.length > 0 ? methodFilter[0] : undefined,
   }), [pagination, searchValue, statusFilter, methodFilter])
 
-  // 获取批量导入列表
+  // 获取批量导入列表（有处理中的批次时自动轮询）
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['batch-imports', queryParams],
     queryFn: () => batchImportApi.getList(queryParams),
+    // 关键：有处理中批次时自动轮询
+    refetchInterval: (query) => {
+      const items = query.state.data?.data?.items || []
+      const hasProcessing = items.some((item: BatchImportItem) => item.status === 'processing')
+      return hasProcessing ? 5000 : false  // 5秒轮询一次
+    },
   })
 
   const batchList = data?.data?.items || []
@@ -348,6 +354,16 @@ export function BatchImportPage() {
             <Trash2 className="ml-1 h-4 w-4" />
           </Button>
         </div>
+
+        {/* 处理中提示条 */}
+        {hasProcessingBatches && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            <span className="text-sm text-blue-700">
+              有 {processingBatches.length} 个批次正在处理中，页面将每5秒自动刷新...
+            </span>
+          </div>
+        )}
 
         {/* 筛选栏 */}
         <div className="flex items-center justify-between">

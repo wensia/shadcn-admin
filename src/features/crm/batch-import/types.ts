@@ -97,6 +97,7 @@ export interface UploadOptions {
   batchDescription?: string
   startRow?: number
   importCount?: number
+  campusId?: string  // 校区ID（可选，如果不传则使用当前用户的校区）
   onProgress?: (percent: number) => void
 }
 
@@ -126,4 +127,37 @@ export const importMethodLabels: Record<ImportMethod, string> = {
   csv: 'CSV',
   manual: '手动',
   api: 'API',
+}
+
+// 上传响应类型（区分同步/异步模式）
+export interface UploadResponse {
+  batch_id: string
+  mode: 'sync' | 'async'
+  total_count: number
+  success_count?: number
+  failed_count?: number
+  activated_count?: number
+  batch_name: string
+  status: BatchStatus
+}
+
+// 进度查询响应类型
+export interface BatchProgress {
+  batch_id: string
+  batch_name: string
+  status: BatchStatus
+  total_count: number
+  success_count: number
+  failed_count: number
+  started_at: string | null
+  completed_at: string | null
+  error_message: string | null
+  progress: {
+    status?: string
+    message?: string
+    success_count?: number
+    failed_count?: number
+    total_count?: number
+    updated_at?: string
+  }
 }

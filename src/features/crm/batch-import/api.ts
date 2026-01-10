@@ -11,6 +11,8 @@ import type {
   BatchImportQueryParams,
   UploadOptions,
   FailureListResponse,
+  UploadResponse,
+  BatchProgress,
 } from './types'
 
 /**
@@ -80,14 +82,18 @@ export const batchImportApi = {
   },
 
   /**
-   * 上传文件
+   * 上传文件（使用智能处理接口）
+   * - ≤100条：同步处理，直接返回结果
+   * - >100条：异步处理，需要轮询进度
    */
   async uploadFile(
     file: File,
+    campusId: string,
     options: UploadOptions = {}
-  ): Promise<ApiResponse<BatchImportItem>> {
+  ): Promise<ApiResponse<UploadResponse>> {
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('campus_id', campusId)
 
     if (options.batchDescription) {
       formData.append('batch_description', options.batchDescription)
@@ -99,17 +105,27 @@ export const batchImportApi = {
       formData.append('import_count', String(options.importCount))
     }
 
-    return apiClient.post<ApiResponse<BatchImportItem>>(
-      '/lead-batch-import/upload',
+    return apiClient.post<ApiResponse<UploadResponse>>(
+      '/lead-batch-import/upload-async',  // 使用智能处理接口
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000, // 同步模式可能需要较长时间，设置3分钟超时
         onUploadProgress: (e) => {
           if (options.onProgress && e.total) {
             options.onProgress(Math.round((e.loaded * 100) / e.total))
           }
         },
       }
+    )
+  },
+
+  /**
+   * 查询批量导入进度
+   */
+  async getProgress(batchId: string): Promise<ApiResponse<BatchProgress>> {
+    return apiClient.get<ApiResponse<BatchProgress>>(
+      `/lead-batch-import/progress/${batchId}`
     )
   },
 
