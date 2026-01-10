@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
@@ -164,6 +165,9 @@ export function BatchImportPage() {
   // 列可见性状态
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(defaultColumnVisibility)
 
+  // 多选状态
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
   // 弹窗状态
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [failuresDialogOpen, setFailuresDialogOpen] = useState(false)
@@ -195,6 +199,42 @@ export function BatchImportPage() {
     [batchList]
   )
 
+  // 处理中的批次列表
+  const processingBatches = useMemo(
+    () => batchList.filter((item) => item.status === 'processing'),
+    [batchList]
+  )
+
+  // 选中的处理中批次数量
+  const selectedProcessingCount = useMemo(
+    () => processingBatches.filter((item) => selectedIds.has(item.id)).length,
+    [processingBatches, selectedIds]
+  )
+
+  // 全选/取消全选处理中的批次
+  const handleSelectAllProcessing = useCallback((checked: boolean) => {
+    if (checked) {
+      const newSelected = new Set(selectedIds)
+      processingBatches.forEach((item) => newSelected.add(item.id))
+      setSelectedIds(newSelected)
+    } else {
+      const newSelected = new Set(selectedIds)
+      processingBatches.forEach((item) => newSelected.delete(item.id))
+      setSelectedIds(newSelected)
+    }
+  }, [processingBatches, selectedIds])
+
+  // 切换单个选中状态
+  const handleToggleSelect = useCallback((id: string, checked: boolean) => {
+    const newSelected = new Set(selectedIds)
+    if (checked) {
+      newSelected.add(id)
+    } else {
+      newSelected.delete(id)
+    }
+    setSelectedIds(newSelected)
+  }, [selectedIds])
+
   // 删除批次
   const deleteMutation = useMutation({
     mutationFn: batchImportApi.deleteBatch,
@@ -223,25 +263,27 @@ export function BatchImportPage() {
     }
   }, [])
 
-  // 删除处理中的批次
-  const handleDeleteProcessingBatches = useCallback(async () => {
-    const processingIds = batchList
-      .filter((item) => item.status === 'processing')
-      .map((item) => item.id)
+  // 删除选中的批次
+  const handleDeleteSelectedBatches = useCallback(async () => {
+    // 如果有选中的项目，删除选中的；否则删除所有处理中的
+    const idsToDelete = selectedIds.size > 0
+      ? Array.from(selectedIds)
+      : processingBatches.map((item) => item.id)
 
-    if (processingIds.length === 0) {
-      toast.warning('没有处理中的批次')
+    if (idsToDelete.length === 0) {
+      toast.warning('请先选择要删除的批次')
       return
     }
 
     try {
-      await batchImportApi.deleteProcessingBatches(processingIds)
-      toast.success(`已删除 ${processingIds.length} 个处理中的批次`)
+      await batchImportApi.deleteProcessingBatches(idsToDelete)
+      toast.success(`已删除 ${idsToDelete.length} 个批次`)
+      setSelectedIds(new Set())
       queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
     } catch (error: unknown) {
       toast.error((error as Error).message || '删除失败')
     }
-  }, [batchList, queryClient])
+  }, [selectedIds, processingBatches, queryClient])
 
   // 重置筛选
   const handleReset = useCallback(() => {
@@ -299,10 +341,10 @@ export function BatchImportPage() {
             variant="destructive"
             size="sm"
             className="h-8"
-            onClick={handleDeleteProcessingBatches}
-            disabled={!hasProcessingBatches}
+            onClick={handleDeleteSelectedBatches}
+            disabled={selectedIds.size === 0 && !hasProcessingBatches}
           >
-            删除处理中批次
+            {selectedIds.size > 0 ? `删除选中 (${selectedIds.size})` : '删除处理中批次'}
             <Trash2 className="ml-1 h-4 w-4" />
           </Button>
         </div>
@@ -386,6 +428,14 @@ export function BatchImportPage() {
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={processingBatches.length > 0 && selectedProcessingCount === processingBatches.length}
+                      onCheckedChange={handleSelectAllProcessing}
+                      aria-label="全选处理中的批次"
+                      disabled={processingBatches.length === 0}
+                    />
+                  </TableHead>
                   {columnVisibility.batch_name && <TableHead className="w-[160px]">批次名称</TableHead>}
                   {columnVisibility.import_method && <TableHead className="w-[120px]">导入方式</TableHead>}
                   {columnVisibility.import_source_file && <TableHead className="w-[160px]">文件名</TableHead>}
@@ -405,6 +455,7 @@ export function BatchImportPage() {
                 {isLoading ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <TableRow key={`skeleton-${i}`}>
+                      <TableCell><Skeleton className="h-4 w-4" /></TableCell>
                       {columnVisibility.batch_name && <TableCell><Skeleton className="h-4 w-28" /></TableCell>}
                       {columnVisibility.import_method && <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>}
                       {columnVisibility.import_source_file && <TableCell><Skeleton className="h-4 w-32" /></TableCell>}
@@ -426,7 +477,7 @@ export function BatchImportPage() {
                   ))
                 ) : batchList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 1} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 2} className="h-24 text-center text-muted-foreground">
                       暂无数据
                     </TableCell>
                   </TableRow>
@@ -435,8 +486,17 @@ export function BatchImportPage() {
                     const successRate = batch.total_count > 0
                       ? Math.round((batch.success_count / batch.total_count) * 100)
                       : 0
+                    const isProcessing = batch.status === 'processing'
                     return (
                       <TableRow key={batch.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(batch.id)}
+                            onCheckedChange={(checked) => handleToggleSelect(batch.id, !!checked)}
+                            aria-label={`选择批次 ${batch.batch_name}`}
+                            disabled={!isProcessing}
+                          />
+                        </TableCell>
                         {columnVisibility.batch_name && (
                           <TableCell>
                             <TooltipProvider>
