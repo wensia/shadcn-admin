@@ -305,9 +305,16 @@ export function EmployeesPage() {
 
   // ========== 身份管理相关函数 ==========
 
-  // 加载校区的部门列表
-  const loadDepartmentsForCampus = async (campusId: string) => {
-    if (departmentOptionsMap[campusId]) return // 已缓存
+  // 加载校区的部门列表，返回映射数据
+  const loadDepartmentsForCampus = async (campusId: string): Promise<Record<string, string>> => {
+    // 如果已缓存，返回现有映射
+    if (departmentOptionsMap[campusId]) {
+      const existingMap: Record<string, string> = {}
+      departmentOptionsMap[campusId].forEach(d => {
+        existingMap[d.id] = d.campus_department_id
+      })
+      return existingMap
+    }
     try {
       const response = await adminApi.getCampusDepartmentsSimple(campusId)
       if (response.data) {
@@ -319,16 +326,21 @@ export function EmployeesPage() {
           newMap[d.id] = d.campus_department_id
         })
         setDeptToCampusDeptMap(prev => ({ ...prev, ...newMap }))
+        return newMap
       }
     } catch (error) {
       console.error('加载部门失败:', error)
     }
+    return {}
   }
 
-  // 加载部门的职位列表
-  const loadPositionsForDepartment = async (departmentId: string) => {
-    const campusDeptId = deptToCampusDeptMap[departmentId]
-    if (!campusDeptId) return
+  // 加载部门的职位列表，接受可选的 campusDeptId 参数
+  const loadPositionsForDepartment = async (departmentId: string, campusDeptIdOverride?: string) => {
+    const campusDeptId = campusDeptIdOverride || deptToCampusDeptMap[departmentId]
+    if (!campusDeptId) {
+      console.warn('无法加载职位：找不到 campus_department_id，departmentId:', departmentId)
+      return
+    }
     if (positionOptionsMap[departmentId]) return // 已缓存
     try {
       const response = await adminApi.getCampusDepartmentPositionsSimple(campusDeptId)
@@ -369,13 +381,18 @@ export function EmployeesPage() {
       return newIdentities
     })
     if (departmentId) {
-      // 如果映射尚未建立，需要等待
       const campusId = identities[index]?.campus_id
-      if (campusId && !deptToCampusDeptMap[departmentId]) {
-        // 重新加载部门以获取映射
-        await loadDepartmentsForCampus(campusId)
+      let campusDeptId = deptToCampusDeptMap[departmentId]
+
+      // 如果映射尚未建立，需要重新加载并获取
+      if (!campusDeptId && campusId) {
+        const deptMap = await loadDepartmentsForCampus(campusId)
+        campusDeptId = deptMap[departmentId]
       }
-      loadPositionsForDepartment(departmentId)
+
+      if (campusDeptId) {
+        loadPositionsForDepartment(departmentId, campusDeptId)
+      }
     }
   }
 
@@ -647,13 +664,22 @@ export function EmployeesPage() {
 
         // 预加载所有需要的部门和职位选项
         const uniqueCampusIds = [...new Set(items.map(i => i.campus_id).filter(Boolean))]
+
+        // 并行加载所有校区的部门，并收集映射数据
+        const deptMaps = await Promise.all(uniqueCampusIds.map(id => loadDepartmentsForCampus(id)))
+
+        // 合并所有映射
+        const combinedDeptMap: Record<string, string> = {}
+        deptMaps.forEach(map => {
+          Object.assign(combinedDeptMap, map)
+        })
+
+        // 使用收集到的映射加载职位
         const uniqueDeptIds = [...new Set(items.map(i => i.department_id).filter(Boolean))]
-
-        // 并行加载所有校区的部门
-        await Promise.all(uniqueCampusIds.map(id => loadDepartmentsForCampus(id)))
-
-        // 并行加载所有部门的职位（需要等待部门加载完成以获取映射）
-        await Promise.all(uniqueDeptIds.map(id => loadPositionsForDepartment(id)))
+        await Promise.all(uniqueDeptIds.map(deptId => {
+          const campusDeptId = combinedDeptMap[deptId]
+          return loadPositionsForDepartment(deptId, campusDeptId)
+        }))
       } else {
         // 没有身份，添加一个空的
         setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
