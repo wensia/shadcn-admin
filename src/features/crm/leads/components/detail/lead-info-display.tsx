@@ -246,16 +246,16 @@ export function LeadInfoDisplay({
 
   return (
     <div className={className}>
-      {/* 状态标签展示 */}
-      {(lead.status || lead.intention_level) && (
-        <div className="flex items-center gap-2 mb-4">
-          {lead.status && <LeadStatusBadge status={lead.status} />}
-          {lead.intention_level && <IntentionLevelBadge level={lead.intention_level} />}
-        </div>
-      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* 客户信息（儿童+家长） */}
         <InfoCard hideTitle className="lg:col-span-2">
+          {/* 状态标签 - 紧凑显示 */}
+          {(lead.status || lead.intention_level) && (
+            <div className="flex items-center gap-1.5 mb-3">
+              {lead.status && <LeadStatusBadge status={lead.status} />}
+              {lead.intention_level && <IntentionLevelBadge level={lead.intention_level} />}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 儿童信息 */}
             <InfoGrid cols={1}>
