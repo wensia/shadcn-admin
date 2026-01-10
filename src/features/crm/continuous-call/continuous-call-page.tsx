@@ -794,12 +794,8 @@ export function ContinuousCallPage() {
 
     return (
       <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
-        <CardHeader className="px-4 py-3 shrink-0">
-          <CardTitle className="text-sm font-medium">跟进结果标记</CardTitle>
-        </CardHeader>
-
         {/* 可滚动中间区域：表单内容 */}
-        <CardContent className="flex-1 overflow-auto min-h-0 px-4 py-0">
+        <CardContent className="flex-1 overflow-auto min-h-0 px-4 pt-4 pb-0">
           {/* 跟进结果 */}
           <div className="flex items-center">
             <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0">跟进结果</Label>
@@ -1049,23 +1045,23 @@ export function ContinuousCallPage() {
         </CardContent>
 
         {/* 固定底部：操作按钮 */}
-        <CardFooter className="flex items-center justify-between px-4 py-2 border-t shrink-0">
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={closeCallDrawer}>
-            <X className="mr-1 h-3.5 w-3.5" />
+        <CardFooter className="flex items-center justify-between px-4 py-1.5 border-t shrink-0">
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={closeCallDrawer}>
+            <X className="mr-1 h-3 w-3" />
             关闭
           </Button>
-          <div className="flex gap-1.5">
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={resetForm}>
-              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={resetForm}>
+              <RotateCcw className="mr-1 h-3 w-3" />
               重置
             </Button>
             <Button
               size="sm"
-              className="h-7 px-3 text-xs"
+              className="h-6 px-3 text-xs"
               onClick={saveAndNext}
               disabled={!followupResult || saving}
             >
-              {saving && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+              {saving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
               保存并下一个
             </Button>
           </div>
