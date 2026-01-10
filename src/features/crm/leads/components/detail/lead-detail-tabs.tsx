@@ -59,6 +59,8 @@ interface LeadDetailTabsProps {
   height?: string
   /** 字段更新回调 */
   onFieldUpdate?: (field: string, value: string) => Promise<void>
+  /** 是否精简模式（隐藏邮箱、微信号、课程兴趣等不常用字段） */
+  compact?: boolean
 }
 
 /**
@@ -74,6 +76,7 @@ export function LeadDetailTabs({
   useScrollArea = true,
   height = 'h-full',
   onFieldUpdate,
+  compact = false,
 }: LeadDetailTabsProps) {
   const s = useStyleClasses()
   const [activeTab, setActiveTab] = useState(defaultTab)
@@ -234,7 +237,7 @@ export function LeadDetailTabs({
                 加载中...
               </div>
             ) : lead ? (
-              <LeadInfoDisplay lead={lead} isOverdue={statistics.isOverdue} onFieldUpdate={onFieldUpdate} />
+              <LeadInfoDisplay lead={lead} isOverdue={statistics.isOverdue} onFieldUpdate={onFieldUpdate} compact={compact} />
             ) : (
               <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
                 暂无数据

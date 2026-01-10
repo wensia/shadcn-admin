@@ -751,6 +751,7 @@ export function ContinuousCallPage() {
             useScrollArea={true}
             height="h-full"
             onFieldUpdate={handleFieldUpdate}
+            compact={true}
           />
         </div>
       </Card>

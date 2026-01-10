@@ -217,6 +217,8 @@ interface LeadInfoDisplayProps {
   isOverdue?: boolean
   /** 是否显示备用联系人 */
   showBackupContact?: boolean
+  /** 是否精简模式（隐藏邮箱、微信号、课程兴趣等不常用字段） */
+  compact?: boolean
   /** 自定义类名 */
   className?: string
   /** 字段更新回调 */
@@ -231,6 +233,7 @@ export function LeadInfoDisplay({
   lead,
   isOverdue = false,
   showBackupContact = true,
+  compact = false,
   className,
   onFieldUpdate,
 }: LeadInfoDisplayProps) {
@@ -302,14 +305,16 @@ export function LeadInfoDisplay({
                 fieldType="text"
                 onSave={createSaveHandler('school_name')}
               />
-              <InfoItem
-                label="课程兴趣"
-                value={lead.course_interests?.join('、')}
-                rawValue={lead.course_interests?.join('、') || ''}
-                editable={editable}
-                fieldType="text"
-                onSave={createSaveHandler('course_interests')}
-              />
+              {!compact && (
+                <InfoItem
+                  label="课程兴趣"
+                  value={lead.course_interests?.join('、')}
+                  rawValue={lead.course_interests?.join('、') || ''}
+                  editable={editable}
+                  fieldType="text"
+                  onSave={createSaveHandler('course_interests')}
+                />
+              )}
             </InfoGrid>
             {/* 家长信息 */}
             <InfoGrid cols={1}>
@@ -335,23 +340,27 @@ export function LeadInfoDisplay({
                 value={lead.parent_phone}
                 copyable
               />
-              <InfoItem
-                label="微信号"
-                value={lead.parent_wechat}
-                rawValue={lead.parent_wechat || ''}
-                copyable
-                editable={editable}
-                fieldType="text"
-                onSave={createSaveHandler('parent_wechat')}
-              />
-              <InfoItem
-                label="邮箱"
-                value={lead.parent_email}
-                rawValue={lead.parent_email || ''}
-                editable={editable}
-                fieldType="text"
-                onSave={createSaveHandler('parent_email')}
-              />
+              {!compact && (
+                <InfoItem
+                  label="微信号"
+                  value={lead.parent_wechat}
+                  rawValue={lead.parent_wechat || ''}
+                  copyable
+                  editable={editable}
+                  fieldType="text"
+                  onSave={createSaveHandler('parent_wechat')}
+                />
+              )}
+              {!compact && (
+                <InfoItem
+                  label="邮箱"
+                  value={lead.parent_email}
+                  rawValue={lead.parent_email || ''}
+                  editable={editable}
+                  fieldType="text"
+                  onSave={createSaveHandler('parent_email')}
+                />
+              )}
             </InfoGrid>
           </div>
         </InfoCard>
@@ -375,8 +384,8 @@ export function LeadInfoDisplay({
         </InfoCard>
 
         {/* 跟进信息 */}
-        <InfoCard hideTitle>
-          <InfoGrid>
+        <InfoCard hideTitle className="lg:col-span-2">
+          <InfoGrid cols={4}>
             <InfoItem
               label="线索状态"
               value={lead.status ? <LeadStatusBadge status={lead.status} /> : undefined}
