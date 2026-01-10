@@ -1,5 +1,5 @@
 import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu'
-import { MixerHorizontalIcon } from '@radix-ui/react-icons'
+import { Settings2 } from 'lucide-react'
 import { type Table } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,6 +9,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+
+// 列名中文映射
+const columnLabels: Record<string, string> = {
+  username: '用户名',
+  name: '姓名',
+  phone: '手机号',
+  email: '邮箱',
+  position: '职位',
+  is_superuser: '权限',
+  is_active: '状态',
+  joined_at: '入职日期',
+  actions: '操作',
+}
 
 type DataTableViewOptionsProps<TData> = {
   table: Table<TData>
@@ -23,14 +36,14 @@ export function DataTableViewOptions<TData>({
         <Button
           variant='outline'
           size='sm'
-          className='ms-auto hidden h-8 lg:flex'
+          className='h-8 lg:flex'
         >
-          <MixerHorizontalIcon className='size-4' />
-          View
+          <Settings2 className='size-4' />
+          列显示
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end' className='w-[150px]'>
-        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+        <DropdownMenuLabel>切换列显示</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {table
           .getAllColumns()
@@ -42,11 +55,10 @@ export function DataTableViewOptions<TData>({
             return (
               <DropdownMenuCheckboxItem
                 key={column.id}
-                className='capitalize'
                 checked={column.getIsVisible()}
                 onCheckedChange={(value) => column.toggleVisibility(!!value)}
               >
-                {column.id}
+                {columnLabels[column.id] || column.id}
               </DropdownMenuCheckboxItem>
             )
           })}

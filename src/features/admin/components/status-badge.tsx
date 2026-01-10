@@ -127,3 +127,67 @@ export function SuperuserBadge({
     </Badge>
   )
 }
+
+// ============================================================================
+// 职位名称标签 - 使用 Anthropic 品牌色，与状态tag风格一致
+// Anthropic Brand Colors:
+// - Dark: #141413, Light: #faf9f5
+// - Mid Gray: #b0aea5, Light Gray: #e8e6dc
+// - Orange: #d97757, Blue: #6a9bcc, Green: #788c5d
+// ============================================================================
+
+type PositionVariant = 'position-staff' | 'position-supervisor' | 'position-manager' | 'position-director' | 'position-executive'
+
+/**
+ * 职位关键词到 Badge variant 的映射
+ * 按优先级排序（高级别优先匹配）
+ */
+const positionKeywordVariants: Array<{ keywords: string[]; variant: PositionVariant }> = [
+  // Level 5-6 - 高管级
+  { keywords: ['总裁', '副总裁', '总经理', 'CEO', 'COO', 'CFO'], variant: 'position-executive' },
+  // Level 4 - 总监级
+  { keywords: ['总监', '副总监'], variant: 'position-director' },
+  // Level 3 - 经理级
+  { keywords: ['经理', '副经理'], variant: 'position-manager' },
+  // Level 2 - 主管级
+  { keywords: ['主管', '组长'], variant: 'position-supervisor' },
+  // Level 1 - 专员级
+  { keywords: ['专员', '助理', '顾问'], variant: 'position-staff' },
+]
+
+/**
+ * 根据职位名称获取 Badge variant
+ * 支持模糊匹配
+ */
+function getPositionVariant(positionName: string): PositionVariant {
+  for (const { keywords, variant } of positionKeywordVariants) {
+    for (const keyword of keywords) {
+      if (positionName.includes(keyword)) {
+        return variant
+      }
+    }
+  }
+  // 默认使用专员级样式
+  return 'position-staff'
+}
+
+interface PositionNameBadgeProps {
+  positionName: string
+  className?: string
+}
+
+/**
+ * 职位名称标签组件 - 使用 Badge 组件，与状态tag风格一致
+ */
+export function PositionNameBadge({ positionName, className }: PositionNameBadgeProps) {
+  const variant = getPositionVariant(positionName)
+
+  return (
+    <Badge
+      variant={variant}
+      className={cn('px-2.5 py-1 text-xs font-medium', className)}
+    >
+      {positionName}
+    </Badge>
+  )
+}

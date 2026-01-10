@@ -101,7 +101,13 @@
 }
 
 /* Fix: CommandItem 悬浮/选中状态下 checkbox 边框可见性 */
-/* 当 CommandItem 处于 selected 状态（橙色背景）时，将其内部的 primary 边框改为白色 */
-[data-slot="command-item"][data-selected="true"] .border-primary {
-  border-color: var(--primary-foreground);
+/* 当 CommandItem 处于 selected 状态时，增强 checkbox 的可见性 */
+[data-slot="command-item"][data-selected="true"] [data-slot="checkbox"] {
+  border-color: var(--foreground);
+  background-color: var(--background);
+}
+
+[data-slot="command-item"][data-selected="true"] [data-slot="checkbox"][data-state="checked"] {
+  border-color: var(--primary);
+  background-color: var(--primary);
 }

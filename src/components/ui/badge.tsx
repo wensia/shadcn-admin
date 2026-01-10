@@ -41,6 +41,22 @@ const badgeVariants = cva(
           'border-transparent bg-[#788c5d] text-white',
         'status-gray-solid':
           'border-transparent bg-[#b0aea5] text-white',
+        // 职位级别样式 - 使用 Anthropic 品牌色，与状态tag风格一致
+        // Level 1 - 专员级 - Light Gray
+        'position-staff':
+          'border-[#b0aea5]/30 bg-[#e8e6dc]/50 text-[#141413]',
+        // Level 2 - 主管级 - Green
+        'position-supervisor':
+          'border-[#788c5d]/30 bg-[#788c5d]/10 text-[#788c5d]',
+        // Level 3 - 经理级 - Blue
+        'position-manager':
+          'border-[#6a9bcc]/30 bg-[#6a9bcc]/10 text-[#6a9bcc]',
+        // Level 4 - 总监级 - Orange
+        'position-director':
+          'border-[#d97757]/30 bg-[#d97757]/10 text-[#d97757]',
+        // Level 5-6 - 高管级 - Dark
+        'position-executive':
+          'border-[#141413]/30 bg-[#141413]/10 text-[#141413]',
       },
     },
     defaultVariants: {

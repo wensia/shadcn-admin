@@ -346,12 +346,8 @@ export function LeadsPage() {
       {/* 主内容区 - fixed 使其填充剩余高度 */}
       <Main fixed className="min-h-0">
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-          {/* 页面标题 - flex-shrink-0 防止收缩 */}
-          <div className="flex flex-shrink-0 flex-wrap items-end justify-between gap-2">
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">线索管理</h1>
-              <p className={cn(s.text.xs, 'text-muted-foreground')}>管理和跟进销售线索</p>
-            </div>
+          {/* 新建按钮 - flex-shrink-0 防止收缩 */}
+          <div className="flex flex-shrink-0 justify-end">
             <Button onClick={handleCreate} size="sm" className="h-8">
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               新建线索

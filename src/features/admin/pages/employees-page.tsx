@@ -9,12 +9,13 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
+  VisibilityState,
 } from '@tanstack/react-table'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, User, Filter, KeyRound, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, User, Filter, KeyRound, RefreshCw, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,10 +62,15 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { DataTableViewOptions } from '@/components/data-table/view-options'
 import { adminApi } from '../api'
-import type { EmployeeItem, EmployeeCreate, EmployeeUpdate } from '../types'
-import { StatusBadge, EmployeeStatusBadge, SuperuserBadge } from '../components/status-badge'
+import type { EmployeeItem, EmployeeCreate, EmployeeUpdate, EmployeeIdentityItem } from '../types'
+import { StatusBadge, EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
 
 // 表单验证 schema
 const formSchema = z.object({
@@ -89,6 +95,15 @@ const quickCreateSchema = z.object({
 
 type QuickCreateFormData = z.infer<typeof quickCreateSchema>
 
+// 员工身份数据类型
+interface IdentityFormData {
+  id?: string
+  campus_id: string
+  department_id: string
+  position_id: string
+  is_active: boolean
+}
+
 const pageSize = 20
 
 export function EmployeesPage() {
@@ -106,6 +121,21 @@ export function EmployeesPage() {
   const [deletingItem, setDeletingItem] = useState<EmployeeItem | null>(null)
   const [resetPasswordItem, setResetPasswordItem] = useState<EmployeeItem | null>(null)
   const [newPassword, setNewPassword] = useState('')
+  // 列可见性状态 - 默认隐藏邮箱列
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    email: false,
+  })
+
+  // 员工身份管理状态
+  const [identities, setIdentities] = useState<IdentityFormData[]>([])
+  // 部门选项映射（按校区）
+  const [departmentOptionsMap, setDepartmentOptionsMap] = useState<Record<string, Array<{ id: string; name: string; campus_department_id: string }>>>({})
+  // 职位选项映射（按部门）
+  const [positionOptionsMap, setPositionOptionsMap] = useState<Record<string, Array<{ id: string; name: string; level: number; level_display: string }>>>({})
+  // 部门到 campus_department_id 的映射
+  const [deptToCampusDeptMap, setDeptToCampusDeptMap] = useState<Record<string, string>>({})
+  // 保存中状态
+  const [isSavingIdentities, setIsSavingIdentities] = useState(false)
 
   // 表单
   const form = useForm<FormData>({
@@ -161,6 +191,43 @@ export function EmployeesPage() {
   })
 
   const managers = managersData?.items || []
+
+  // 获取校区列表
+  const { data: campusesData } = useQuery({
+    queryKey: ['admin-campuses-simple'],
+    queryFn: async () => {
+      const response = await adminApi.getCampusesSimple()
+      return response.data || []
+    },
+  })
+
+  const campuses = campusesData || []
+
+  // 获取员工身份信息（包含职位）
+  const employeeIds = data?.items?.map(e => e.id) || []
+  const { data: identitiesData } = useQuery({
+    queryKey: ['admin-employee-identities', employeeIds],
+    queryFn: async () => {
+      if (employeeIds.length === 0) return { items: [] }
+      const response = await adminApi.getEmployeeIdentities({ size: 1000 })
+      return response.data
+    },
+    enabled: employeeIds.length > 0,
+  })
+
+  // 构建员工ID到身份信息的映射
+  const employeeIdentitiesMap = useMemo(() => {
+    const map: Record<string, EmployeeIdentityItem[]> = {}
+    if (identitiesData?.items) {
+      identitiesData.items.forEach((identity) => {
+        if (!map[identity.employee_id]) {
+          map[identity.employee_id] = []
+        }
+        map[identity.employee_id].push(identity)
+      })
+    }
+    return map
+  }, [identitiesData])
 
   // 创建员工
   const createMutation = useMutation({
@@ -236,6 +303,123 @@ export function EmployeesPage() {
     },
   })
 
+  // ========== 身份管理相关函数 ==========
+
+  // 加载校区的部门列表
+  const loadDepartmentsForCampus = async (campusId: string) => {
+    if (departmentOptionsMap[campusId]) return // 已缓存
+    try {
+      const response = await adminApi.getCampusDepartmentsSimple(campusId)
+      if (response.data) {
+        const depts = response.data
+        setDepartmentOptionsMap(prev => ({ ...prev, [campusId]: depts }))
+        // 更新映射
+        const newMap: Record<string, string> = {}
+        depts.forEach(d => {
+          newMap[d.id] = d.campus_department_id
+        })
+        setDeptToCampusDeptMap(prev => ({ ...prev, ...newMap }))
+      }
+    } catch (error) {
+      console.error('加载部门失败:', error)
+    }
+  }
+
+  // 加载部门的职位列表
+  const loadPositionsForDepartment = async (departmentId: string) => {
+    const campusDeptId = deptToCampusDeptMap[departmentId]
+    if (!campusDeptId) return
+    if (positionOptionsMap[departmentId]) return // 已缓存
+    try {
+      const response = await adminApi.getCampusDepartmentPositionsSimple(campusDeptId)
+      if (response.data) {
+        setPositionOptionsMap(prev => ({ ...prev, [departmentId]: response.data! }))
+      }
+    } catch (error) {
+      console.error('加载职位失败:', error)
+    }
+  }
+
+  // 处理校区变更
+  const handleIdentityCampusChange = (index: number, campusId: string) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        campus_id: campusId,
+        department_id: '',
+        position_id: '',
+      }
+      return newIdentities
+    })
+    if (campusId) {
+      loadDepartmentsForCampus(campusId)
+    }
+  }
+
+  // 处理部门变更
+  const handleIdentityDepartmentChange = async (index: number, departmentId: string) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        department_id: departmentId,
+        position_id: '',
+      }
+      return newIdentities
+    })
+    if (departmentId) {
+      // 如果映射尚未建立，需要等待
+      const campusId = identities[index]?.campus_id
+      if (campusId && !deptToCampusDeptMap[departmentId]) {
+        // 重新加载部门以获取映射
+        await loadDepartmentsForCampus(campusId)
+      }
+      loadPositionsForDepartment(departmentId)
+    }
+  }
+
+  // 处理职位变更
+  const handleIdentityPositionChange = (index: number, positionId: string) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        position_id: positionId,
+      }
+      return newIdentities
+    })
+  }
+
+  // 处理身份激活状态变更
+  const handleIdentityActiveChange = (index: number, isActive: boolean) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        is_active: isActive,
+      }
+      return newIdentities
+    })
+  }
+
+  // 添加新身份
+  const addIdentity = () => {
+    setIdentities(prev => [
+      ...prev,
+      { campus_id: '', department_id: '', position_id: '', is_active: true },
+    ])
+  }
+
+  // 删除身份
+  const removeIdentity = (index: number) => {
+    if (identities.length <= 1) {
+      toast.warning('至少需要保留一个身份')
+      return
+    }
+    setIdentities(prev => prev.filter((_, i) => i !== index))
+  }
+
   // 表格列定义
   const columns: ColumnDef<EmployeeItem>[] = useMemo(
     () => [
@@ -282,6 +466,21 @@ export function EmployeesPage() {
             return <Skeleton className="h-4 w-32" />
           }
           return row.original.email || '-'
+        },
+      },
+      {
+        id: 'position',
+        header: '职位',
+        cell: ({ row }) => {
+          if (row.original.id.startsWith('__skeleton__')) {
+            return <Skeleton className="h-6 w-20" />
+          }
+          const identities = employeeIdentitiesMap[row.original.id] || []
+          const activeIdentity = identities.find(i => i.is_active) || identities[0]
+          if (!activeIdentity || !activeIdentity.position_name) {
+            return <span className="text-muted-foreground">-</span>
+          }
+          return <PositionNameBadge positionName={activeIdentity.position_name} />
         },
       },
       {
@@ -360,7 +559,7 @@ export function EmployeesPage() {
         },
       },
     ],
-    []
+    [employeeIdentitiesMap]
   )
 
   // 生成骨架屏数据
@@ -384,6 +583,10 @@ export function EmployeesPage() {
     data: tableData,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    state: {
+      columnVisibility,
+    },
+    onColumnVisibilityChange: setColumnVisibility,
   })
 
   // 处理创建
@@ -399,6 +602,8 @@ export function EmployeesPage() {
       joined_at: '',
       reports_to: '',
     })
+    // 初始化一个空身份
+    setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
     setDialogOpen(true)
   }
 
@@ -413,7 +618,7 @@ export function EmployeesPage() {
   }
 
   // 处理编辑
-  const handleEdit = (item: EmployeeItem) => {
+  const handleEdit = async (item: EmployeeItem) => {
     setEditingItem(item)
     form.reset({
       username: item.username,
@@ -425,6 +630,39 @@ export function EmployeesPage() {
       joined_at: item.joined_at || '',
       reports_to: item.reports_to || '',
     })
+
+    // 加载员工身份信息
+    try {
+      const response = await adminApi.getEmployeeIdentities({ employee_id: item.id, size: 100 })
+      const items = response.data?.items || []
+      if (items.length > 0) {
+        const identityData: IdentityFormData[] = items.map((identity) => ({
+          id: identity.id,
+          campus_id: identity.campus_id,
+          department_id: identity.department_id,
+          position_id: identity.position_id,
+          is_active: identity.is_active,
+        }))
+        setIdentities(identityData)
+
+        // 预加载所有需要的部门和职位选项
+        const uniqueCampusIds = [...new Set(items.map(i => i.campus_id).filter(Boolean))]
+        const uniqueDeptIds = [...new Set(items.map(i => i.department_id).filter(Boolean))]
+
+        // 并行加载所有校区的部门
+        await Promise.all(uniqueCampusIds.map(id => loadDepartmentsForCampus(id)))
+
+        // 并行加载所有部门的职位（需要等待部门加载完成以获取映射）
+        await Promise.all(uniqueDeptIds.map(id => loadPositionsForDepartment(id)))
+      } else {
+        // 没有身份，添加一个空的
+        setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
+      }
+    } catch (error) {
+      console.error('加载身份信息失败:', error)
+      setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
+    }
+
     setDialogOpen(true)
   }
 
@@ -449,7 +687,7 @@ export function EmployeesPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (data: FormData) => {
+  const handleSubmit = async (data: FormData) => {
     const submitData = {
       ...data,
       email: data.email || undefined,
@@ -457,11 +695,38 @@ export function EmployeesPage() {
       joined_at: data.joined_at || undefined,
       reports_to: data.reports_to || undefined,
     }
+
+    // 验证身份信息（编辑时需要至少一个完整身份）
     if (editingItem) {
-      updateMutation.mutate({
-        id: editingItem.id,
-        data: submitData as EmployeeUpdate,
-      })
+      const validIdentities = identities.filter(i => i.campus_id && i.department_id && i.position_id)
+      if (validIdentities.length === 0) {
+        toast.warning('请至少配置一个完整的校区-部门-职位身份')
+        return
+      }
+    }
+
+    if (editingItem) {
+      setIsSavingIdentities(true)
+      try {
+        // 先更新员工基本信息
+        await adminApi.updateEmployee(editingItem.id, submitData as EmployeeUpdate)
+
+        // 再更新身份信息
+        const validIdentities = identities.filter(i => i.campus_id && i.department_id && i.position_id)
+        await adminApi.updateEmployeeIdentities(editingItem.id, validIdentities)
+
+        toast.success('更新成功')
+        setDialogOpen(false)
+        setEditingItem(null)
+        form.reset()
+        queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+        queryClient.invalidateQueries({ queryKey: ['admin-employee-identities'] })
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : '未知错误'
+        toast.error(`更新失败: ${errorMessage}`)
+      } finally {
+        setIsSavingIdentities(false)
+      }
     } else {
       createMutation.mutate(submitData as EmployeeCreate)
     }
@@ -527,9 +792,8 @@ export function EmployeesPage() {
               />
             </div>
             <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[120px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="筛选状态" />
+              <SelectTrigger className="w-[140px] justify-center">
+                <SelectValue placeholder="全部状态" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部状态</SelectItem>
@@ -541,6 +805,7 @@ export function EmployeesPage() {
               搜索
             </Button>
           </div>
+          <DataTableViewOptions table={table} />
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -553,7 +818,14 @@ export function EmployeesPage() {
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className={
+                        header.column.id === 'actions'
+                          ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                          : undefined
+                      }
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -570,7 +842,14 @@ export function EmployeesPage() {
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        className={
+                          cell.column.id === 'actions'
+                            ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                            : undefined
+                        }
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -605,7 +884,7 @@ export function EmployeesPage() {
 
       {/* 创建/编辑对话框 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>
               {editingItem ? '编辑员工' : '新建员工'}
@@ -760,6 +1039,134 @@ export function EmployeesPage() {
                   )}
                 />
               </div>
+
+              {/* 身份管理区域 - 仅编辑时显示 */}
+              {editingItem && (
+                <>
+                  <Separator className="my-4" />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">校区身份配置</h4>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addIdentity}
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        添加身份
+                      </Button>
+                    </div>
+
+                    <Alert className="py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        员工需要至少一个有效的校区身份配置才能正常使用系统功能。
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="space-y-3">
+                      {identities.map((identity, index) => (
+                        <Card key={index} className="relative">
+                          <CardHeader className="p-3 pb-0">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">身份 {index + 1}</span>
+                                {identity.campus_id && identity.department_id && identity.position_id ? (
+                                  <Badge variant="outline" className="gap-1 text-xs">
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                    完整
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="gap-1 text-xs text-orange-500">
+                                    <AlertCircle className="h-3 w-3" />
+                                    未完成
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-muted-foreground">启用</span>
+                                  <Switch
+                                    checked={identity.is_active}
+                                    onCheckedChange={(checked) => handleIdentityActiveChange(index, checked)}
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => removeIdentity(index)}
+                                  disabled={identities.length <= 1}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-3 pt-2">
+                            <div className="grid grid-cols-3 gap-2">
+                              {/* 校区选择 */}
+                              <Select
+                                value={identity.campus_id}
+                                onValueChange={(value) => handleIdentityCampusChange(index, value)}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择校区" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {campuses.map((campus) => (
+                                    <SelectItem key={campus.id} value={campus.id}>
+                                      {campus.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              {/* 部门选择 */}
+                              <Select
+                                value={identity.department_id}
+                                onValueChange={(value) => handleIdentityDepartmentChange(index, value)}
+                                disabled={!identity.campus_id}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择部门" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(departmentOptionsMap[identity.campus_id] || []).map((dept) => (
+                                    <SelectItem key={dept.id} value={dept.id}>
+                                      {dept.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              {/* 职位选择 */}
+                              <Select
+                                value={identity.position_id}
+                                onValueChange={(value) => handleIdentityPositionChange(index, value)}
+                                disabled={!identity.department_id}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择职位" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(positionOptionsMap[identity.department_id] || []).map((pos) => (
+                                    <SelectItem key={pos.id} value={pos.id}>
+                                      {pos.name} ({pos.level_display})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
               </div>
               <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
                 <Button
@@ -771,9 +1178,9 @@ export function EmployeesPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={createMutation.isPending || updateMutation.isPending || isSavingIdentities}
                 >
-                  {createMutation.isPending || updateMutation.isPending
+                  {createMutation.isPending || updateMutation.isPending || isSavingIdentities
                     ? '保存中...'
                     : '保存'}
                 </Button>
