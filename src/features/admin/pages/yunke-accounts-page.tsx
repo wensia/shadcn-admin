@@ -596,16 +596,26 @@ export function YunkeAccountsPage() {
     })
   }
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success(`${label}已复制到剪贴板`)
+  const handleCopyToClipboard = async (text: string, label: string) => {
+    const { copyToClipboard } = await import('@/lib/utils')
+    const success = await copyToClipboard(text)
+    if (success) {
+      toast.success(`${label}已复制到剪贴板`)
+    } else {
+      toast.error('复制失败')
+    }
   }
 
-  const copyAllInfo = () => {
+  const copyAllInfo = async () => {
     if (!passwordResult || !selectedAccount) return
     const allInfo = `姓名：${selectedAccount.real_name}\n账号：${selectedAccount.username}\n密码：${passwordResult.new_password}`
-    navigator.clipboard.writeText(allInfo)
-    toast.success('已复制所有信息到剪贴板')
+    const { copyToClipboard } = await import('@/lib/utils')
+    const success = await copyToClipboard(allInfo)
+    if (success) {
+      toast.success('已复制所有信息到剪贴板')
+    } else {
+      toast.error('复制失败')
+    }
   }
 
   const getConfirmMessage = () => {
@@ -879,7 +889,7 @@ export function YunkeAccountsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => copyToClipboard(selectedAccount?.real_name || '', '姓名')}
+                  onClick={() => handleCopyToClipboard(selectedAccount?.real_name || '', '姓名')}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
@@ -893,7 +903,7 @@ export function YunkeAccountsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => copyToClipboard(selectedAccount?.username || '', '账号')}
+                  onClick={() => handleCopyToClipboard(selectedAccount?.username || '', '账号')}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
@@ -907,7 +917,7 @@ export function YunkeAccountsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => copyToClipboard(passwordResult?.new_password || '', '密码')}
+                  onClick={() => handleCopyToClipboard(passwordResult?.new_password || '', '密码')}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>

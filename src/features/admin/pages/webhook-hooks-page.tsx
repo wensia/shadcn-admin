@@ -411,6 +411,7 @@ export function WebhookHooksPage() {
         id: 'actions',
         header: '操作',
         size: 150,
+        meta: { sticky: 'right' },
         cell: ({ row }) => {
           if (row.original.id?.startsWith(SKELETON_PREFIX)) {
             return <Skeleton className="h-8 w-28" />
@@ -549,9 +550,14 @@ export function WebhookHooksPage() {
   }
 
   // 复制钩子标识
-  const handleCopyHookKey = (hookKey: string) => {
-    navigator.clipboard.writeText(hookKey)
-    toast.success('钩子标识已复制到剪贴板')
+  const handleCopyHookKey = async (hookKey: string) => {
+    const { copyToClipboard } = await import('@/lib/utils')
+    const success = await copyToClipboard(hookKey)
+    if (success) {
+      toast.success('钩子标识已复制到剪贴板')
+    } else {
+      toast.error('复制失败')
+    }
   }
 
   // 提交表单
@@ -648,16 +654,23 @@ export function WebhookHooksPage() {
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const isSticky = (header.column.columnDef.meta as { sticky?: string })?.sticky === 'right'
+                    return (
+                      <TableHead
+                        key={header.id}
+                        style={{ width: header.getSize() }}
+                        className={isSticky ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]' : ''}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
               ))}
             </TableHeader>
@@ -665,14 +678,20 @@ export function WebhookHooksPage() {
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const isSticky = (cell.column.columnDef.meta as { sticky?: string })?.sticky === 'right'
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className={isSticky ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]' : ''}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      )
+                    })}
                   </TableRow>
                 ))
               ) : (

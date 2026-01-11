@@ -5,3 +5,6 @@
 export { ContinuousCallPage } from './continuous-call-page'
 export { continuousCallApi } from './api'
 export * from './types'
+
+// 可复用组件
+export { FollowupForm, FollowupResultSelect, followupResultOptions } from './components/followup-form'

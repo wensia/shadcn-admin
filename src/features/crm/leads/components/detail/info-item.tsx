@@ -6,7 +6,7 @@
 
 import * as React from 'react'
 import { Copy, Check, Pencil, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, copyToClipboard } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { toast } from 'sonner'
 import {
@@ -79,12 +79,12 @@ export function InfoItem({
 
     if (!value || typeof value !== 'string') return
 
-    try {
-      await navigator.clipboard.writeText(value)
+    const success = await copyToClipboard(value)
+    if (success) {
       setCopied(true)
       toast.success('已复制到剪贴板')
       setTimeout(() => setCopied(false), 2000)
-    } catch {
+    } else {
       toast.error('复制失败')
     }
   }

@@ -6,9 +6,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
-  Phone, X, RotateCcw, Loader2, Send,
+  Phone, RotateCcw, Loader2, Send,
   TrendingUp, CalendarCheck, PhoneOff, UserX,
-  Clock, Ban, PhoneMissed, GraduationCap, ChevronDown, CheckIcon,
+  Clock, Ban, PhoneMissed, GraduationCap, ChevronDown,
   type LucideIcon
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,10 +18,9 @@ import { zhCN } from 'date-fns/locale'
 import { Calendar } from '@/components/ui/calendar'
 import { TimePickerWheel } from '@/components/ui/time-picker-wheel'
 import { Main } from '@/components/layout/main'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -60,17 +59,13 @@ import {
   IntentionLevel,
   FollowupMethod,
   FollowupResult,
-  LeadStatus,
 } from '../leads/types'
 import type { ContinuousCallLead, ContinuousCallStats } from './types'
 import type { LeadFollowupCreate } from '../leads/types'
 import { LeadDetailTabs } from '../leads/components/detail/lead-detail-tabs'
-import { IntentionLevelBadge, LeadStatusBadge } from '../leads/components/status-badges'
+import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { CallTimer } from './components/call-timer'
 
-
-// 跟进结果分组配置 - 使用 Anthropic 品牌色
-type FollowupResultGroup = 'continuing' | 'releaseToPool' | 'statusOnly'
 
 // Anthropic 品牌色
 const BRAND_COLORS = {
@@ -79,49 +74,25 @@ const BRAND_COLORS = {
   blue: '#6a9bcc',    // 仅改状态
 } as const
 
-interface FollowupResultGroupConfig {
-  key: FollowupResultGroup
-  title: string
-  description: string
-  color: string
-}
-
 interface FollowupResultOption {
   value: string
   label: string
   icon: LucideIcon
   color: string
-  group: FollowupResultGroup
 }
-
-const followupResultGroupConfig: FollowupResultGroupConfig[] = [
-  {
-    key: 'statusOnly',
-    title: '跟进结果',
-    description: '选择本次跟进结果',
-    color: BRAND_COLORS.blue,
-  },
-]
 
 const followupResultOptions: FollowupResultOption[] = [
-  // 所有跟进结果选项（不再分组）
-  { value: 'can_continue', label: '可持续跟进', icon: TrendingUp, color: BRAND_COLORS.green, group: 'statusOnly' },
-  { value: 'appointment_scheduled', label: '已预约到访', icon: CalendarCheck, color: BRAND_COLORS.green, group: 'statusOnly' },
-  { value: 'not_connected', label: '未接通', icon: PhoneMissed, color: BRAND_COLORS.blue, group: 'statusOnly' },
-  { value: 'wrong_number', label: '空错号', icon: PhoneOff, color: BRAND_COLORS.orange, group: 'statusOnly' },
-  { value: 'no_child', label: '没孩子', icon: UserX, color: BRAND_COLORS.orange, group: 'statusOnly' },
-  { value: 'age_mismatch', label: '年龄不符', icon: Clock, color: BRAND_COLORS.orange, group: 'statusOnly' },
-  { value: 'no_need', label: '不需要', icon: Ban, color: BRAND_COLORS.orange, group: 'statusOnly' },
-  { value: 'hung_up', label: '秒挂', icon: PhoneMissed, color: BRAND_COLORS.orange, group: 'statusOnly' },
-  { value: 'student', label: '学员', icon: GraduationCap, color: BRAND_COLORS.orange, group: 'statusOnly' },
+  { value: 'can_continue', label: '可持续跟进', icon: TrendingUp, color: BRAND_COLORS.green },
+  { value: 'appointment_scheduled', label: '已预约到访', icon: CalendarCheck, color: BRAND_COLORS.green },
+  { value: 'not_connected', label: '未接通', icon: PhoneMissed, color: BRAND_COLORS.blue },
+  { value: 'temporarily_unavailable', label: '暂时不便', icon: Clock, color: BRAND_COLORS.blue },
+  { value: 'wrong_number', label: '空错号', icon: PhoneOff, color: BRAND_COLORS.orange },
+  { value: 'no_child', label: '没孩子', icon: UserX, color: BRAND_COLORS.orange },
+  { value: 'age_mismatch', label: '年龄不符', icon: Clock, color: BRAND_COLORS.orange },
+  { value: 'no_need', label: '不需要', icon: Ban, color: BRAND_COLORS.orange },
+  { value: 'hung_up', label: '秒挂', icon: PhoneMissed, color: BRAND_COLORS.orange },
+  { value: 'student', label: '学员', icon: GraduationCap, color: BRAND_COLORS.orange },
 ]
-
-// 保留旧结构兼容 saveAndNext 逻辑（根据选项值判断类型）
-const followupResultGroups = {
-  continuing: followupResultOptions.filter(o => ['can_continue', 'appointment_scheduled'].includes(o.value)),
-  releaseToPool: followupResultOptions.filter(o => ['wrong_number', 'no_child', 'age_mismatch', 'no_need', 'hung_up', 'student'].includes(o.value)),
-  statusOnly: followupResultOptions.filter(o => ['not_connected'].includes(o.value)),
-}
 
 // 跟进结果选择器组件
 interface FollowupResultSelectProps {
@@ -221,6 +192,7 @@ const intentionLevelOptions = [
 const resultMapping: Record<string, FollowupResult> = {
   can_continue: FollowupResult.CAN_CONTINUE,
   not_connected: FollowupResult.NOT_CONNECTED,
+  temporarily_unavailable: FollowupResult.TEMPORARILY_UNAVAILABLE,
   busy: FollowupResult.TEMPORARILY_UNAVAILABLE,
   rejected: FollowupResult.HUNG_UP,
   wechat_added: FollowupResult.WECHAT_ADDED,
@@ -381,24 +353,6 @@ export function ContinuousCallPage() {
     setCallStartTime(null)
   }, [])
 
-  // 判断跟进结果属于哪个分组
-  const getResultGroup = (result: string) => {
-    if (
-      followupResultGroups.continuing.find((item) => item.value === result)
-    ) {
-      return 'continuing'
-    }
-    if (
-      followupResultGroups.releaseToPool.find((item) => item.value === result)
-    ) {
-      return 'releaseToPool'
-    }
-    if (followupResultGroups.statusOnly.find((item) => item.value === result)) {
-      return 'statusOnly'
-    }
-    return null
-  }
-
   // 保存并下一个
   const saveAndNext = useCallback(async () => {
     if (!followupResult) {
@@ -436,7 +390,6 @@ export function ContinuousCallPage() {
         }
       }
 
-      const resultGroup = getResultGroup(followupResult)
       const currentLeadId = currentLead.id
 
       // 组合下次回访日期时间
@@ -467,6 +420,7 @@ export function ContinuousCallPage() {
         content: finalFollowupContent || undefined,
         result_remark: finalFollowupContent || undefined,
         next_followup_at: nextFollowupAtIso,
+        send_dingtalk: sendToDingding,
       }
 
       // 保存跟进记录
@@ -497,35 +451,26 @@ export function ContinuousCallPage() {
 
         // 如果勾选了释放到公海
         if (releaseToPool) {
-          const releaseReason = followupResult === 'student' ? 'MANUAL_RELEASE' : 'INVALID_LEAD'
           const selectedOption = followupResultOptions.find(o => o.value === followupResult)
-          const releaseRemark = followupResult === 'student'
-            ? '已转为学员，防止重复触达'
-            : `跟进结果：${selectedOption?.label || followupResult}`
-
           try {
             await leadsApi.batchReleaseLeads({
               lead_ids: [currentLeadId],
-              reason: releaseReason,
-              remark: releaseRemark,
+              reason: 'MANUAL_RELEASE',
+              remark: `跟进结果：${selectedOption?.label || followupResult}`,
             })
             toast.success('跟进记录已保存，线索已释放到公海')
           } catch (error) {
             toast.warning('跟进记录已保存，但释放到公海失败')
           }
         } else {
-          // 根据分组显示不同的提示
-          if (resultGroup === 'continuing') {
-            toast.success('跟进记录已保存，线索状态已更新为跟进中')
-          } else if (resultGroup === 'statusOnly') {
-            toast.success('跟进记录已保存，线索状态已更新为已回访')
-          } else {
-            toast.success('跟进记录保存成功')
-          }
+          toast.success('跟进记录保存成功')
         }
 
-        // 刷新列表并选择下一个
+        // 刷新列表
         await refetchLeads()
+
+        // 清除当前线索，触发自动选择下一条
+        setCurrentLead(null)
 
         // 重置表单
         resetForm()
@@ -693,58 +638,38 @@ export function ContinuousCallPage() {
 
     return (
       <Card className="h-full flex flex-col overflow-hidden">
-        {/* 外呼操作区：线索名称 + 状态 + 渠道选择 + 外呼按钮 */}
-        {!callDrawerVisible && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3 mx-4 mt-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{currentLead.child_name || '未填写'}</span>
-              {currentLead.status && (
-                <LeadStatusBadge status={currentLead.status as LeadStatus} />
-              )}
-              {currentLead.intention_level && (
-                <IntentionLevelBadge level={currentLead.intention_level as IntentionLevel} />
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              {/* 渠道选择器 */}
-              {statsData && (
-                <Select
-                  value={selectedChannelId || 'all'}
-                  onValueChange={(value) =>
-                    setSelectedChannelId(value === 'all' ? null : value)
-                  }
-                >
-                  <SelectTrigger className="w-[180px] h-9">
-                    <SelectValue placeholder="选择渠道" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      全部渠道 ({statsData.total_leads})
-                    </SelectItem>
-                    {statsData.channels.map((channel) => (
-                      <SelectItem key={channel.channel_id} value={channel.channel_id}>
-                        {channel.channel_name} ({channel.lead_count})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {/* 外呼按钮 */}
-              <Button
-                onClick={startCall}
-                disabled={!currentLead.parent_phone || dialing}
-                className="h-9"
-              >
-                {dialing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Phone className="mr-2 h-4 w-4" />
-                )}
-                {dialing ? '正在呼叫...' : '按空格键外呼'}
-              </Button>
-            </div>
+        {/* 线索信息区：线索名称 + 意向等级 + 渠道选择 */}
+        <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3 mx-4 mt-4 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{currentLead.child_name || '未填写'}</span>
+            {currentLead.intention_level && (
+              <IntentionLevelBadge level={currentLead.intention_level as IntentionLevel} />
+            )}
           </div>
-        )}
+          {/* 渠道选择器 */}
+          {statsData && (
+            <Select
+              value={selectedChannelId || 'all'}
+              onValueChange={(value) =>
+                setSelectedChannelId(value === 'all' ? null : value)
+              }
+            >
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="选择渠道" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  全部渠道 ({statsData.total_leads})
+                </SelectItem>
+                {statsData.channels.map((channel) => (
+                  <SelectItem key={channel.channel_id} value={channel.channel_id}>
+                    {channel.channel_name} ({channel.lead_count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <LeadDetailTabs
             leadId={currentLead.id}
@@ -760,29 +685,53 @@ export function ContinuousCallPage() {
 
   // 渲染通话状态卡片
   const renderCallStatusCard = () => {
-    if (!callDrawerVisible) return null
+    const phone = currentLead?.parent_phone || currentLead?.phone
 
     return (
       <Card className="shrink-0">
         <CardContent className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Phone className="h-4 w-4" />
-              <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-            </div>
-            <span className="text-sm font-medium">通话中</span>
-            <span className="text-muted-foreground">·</span>
-            <CallTimer startTime={callStartTime} className="text-sm font-semibold tabular-nums" />
-          </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-7 px-6 text-xs"
-            onClick={hangUpCall}
-            disabled={hangingUp}
-          >
-            挂断
-          </Button>
+          {callDrawerVisible ? (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Phone className="h-4 w-4" />
+                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                </div>
+                <span className="text-sm font-medium">通话中</span>
+                <span className="text-muted-foreground">·</span>
+                <CallTimer startTime={callStartTime} className="text-sm font-semibold tabular-nums" />
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={hangUpCall}
+                disabled={hangingUp}
+              >
+                挂断
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {currentLead ? (phone ? '按空格键外呼' : '无手机号') : '请选择线索'}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                onClick={startCall}
+                disabled={!phone || dialing}
+              >
+                {dialing ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Phone className="mr-1.5 h-4 w-4" />
+                )}
+                {dialing ? '呼叫中...' : '外呼'}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     )
@@ -790,8 +739,6 @@ export function ContinuousCallPage() {
 
   // 渲染跟进结果标记卡片
   const renderFollowupFormCard = () => {
-    if (!callDrawerVisible) return null
-
     return (
       <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
         {/* 可滚动中间区域：表单内容 */}
@@ -802,7 +749,13 @@ export function ContinuousCallPage() {
             <div className="flex-1">
               <FollowupResultSelect
                 value={followupResult}
-                onChange={setFollowupResult}
+                onChange={(value) => {
+                  setFollowupResult(value)
+                  // 选择"可持续跟进"或"已预约到访"时自动勾选发钉钉
+                  if (value === 'can_continue' || value === 'appointment_scheduled') {
+                    setSendToDingding(true)
+                  }
+                }}
               />
             </div>
           </div>
@@ -1045,23 +998,18 @@ export function ContinuousCallPage() {
         </CardContent>
 
         {/* 固定底部：操作按钮 */}
-        <CardFooter className="flex items-center justify-between px-4 py-1.5 border-t shrink-0">
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={closeCallDrawer}>
-            <X className="mr-1 h-3 w-3" />
-            关闭
-          </Button>
-          <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={resetForm}>
-              <RotateCcw className="mr-1 h-3 w-3" />
+        <CardFooter className="flex items-center justify-end px-4 py-2.5 border-t shrink-0">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={resetForm}>
+              <RotateCcw className="mr-1.5 h-4 w-4" />
               重置
             </Button>
             <Button
               size="sm"
-              className="h-6 px-3 text-xs"
               onClick={saveAndNext}
               disabled={!followupResult || saving}
             >
-              {saving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               保存并下一个
             </Button>
           </div>
@@ -1072,8 +1020,6 @@ export function ContinuousCallPage() {
 
   // 渲染外呼控制面板（包含两个卡片）
   const renderCallPanel = () => {
-    if (!callDrawerVisible) return null
-
     return (
       <div className="h-full flex flex-col gap-2">
         {renderCallStatusCard()}
@@ -1086,19 +1032,15 @@ export function ContinuousCallPage() {
     <>
       <Main fixed className="min-h-0">
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          {callDrawerVisible ? (
-            <ResizablePanelGroup orientation="horizontal" className="min-h-0 h-full">
-              <ResizablePanel defaultSize={60} minSize={30}>
-                <div className="h-full overflow-hidden p-2">{renderLeadDetail()}</div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={40} minSize={20}>
-                <div className="h-full overflow-hidden p-2">{renderCallPanel()}</div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            <div className="h-full w-full overflow-hidden p-2">{renderLeadDetail()}</div>
-          )}
+          <ResizablePanelGroup orientation="horizontal" className="min-h-0 h-full">
+            <ResizablePanel defaultSize={60} minSize={30}>
+              <div className="h-full overflow-hidden p-2">{renderLeadDetail()}</div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={40} minSize={20}>
+              <div className="h-full overflow-hidden p-2">{renderCallPanel()}</div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </Main>
     </>

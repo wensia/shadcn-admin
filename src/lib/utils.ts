@@ -57,6 +57,41 @@ export function formatDate(
  * - In middle: [1, '...', 4, 5, 6, '...', 10]
  * - Near end: [1, '...', 7, 8, 9, 10]
  */
+/**
+ * 复制文本到剪贴板（兼容HTTP环境）
+ * 优先使用 navigator.clipboard API，不可用时降级到 execCommand
+ * @param text - 要复制的文本
+ * @returns Promise<boolean> - 是否复制成功
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  // 优先尝试使用现代 Clipboard API
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      // Clipboard API 失败，降级到 execCommand
+    }
+  }
+
+  // 降级方案：使用 execCommand (兼容HTTP环境)
+  try {
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    // 避免滚动到底部
+    textArea.style.cssText = 'position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:none;outline:none;box-shadow:none;background:transparent;'
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+
+    const successful = document.execCommand('copy')
+    document.body.removeChild(textArea)
+    return successful
+  } catch {
+    return false
+  }
+}
+
 export function getPageNumbers(currentPage: number, totalPages: number) {
   const maxVisiblePages = 5 // Maximum number of page buttons to show
   const rangeWithDots = []

@@ -17,12 +17,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import type { Lead } from '../../types'
-import { gradeLabels } from '../../types'
+import { gradeLabels, LeadStatus } from '../../types'
 import { formatTime } from '@/lib/utils/time'
 import { InfoCard } from './info-card'
 import { InfoGrid } from './info-grid'
 import { InfoItem } from './info-item'
 import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
+import { leadStatusStyles } from '@/lib/status-styles'
+import { ChevronDown, Check } from 'lucide-react'
 
 /**
  * 家长关系映射
@@ -116,6 +118,119 @@ function formatFieldValue(value: unknown): string {
     return JSON.stringify(value)
   }
   return String(value)
+}
+
+/**
+ * 线索状态选项
+ */
+const leadStatusOptions = Object.entries(leadStatusStyles).map(([value, config]) => ({
+  value: value as LeadStatus,
+  label: config.label,
+  color: config.color,
+}))
+
+const statusColorMap: Record<string, string> = {
+  green: '#788c5d',
+  orange: '#d97757',
+  red: '#dc2626',
+  gray: '#6b7280',
+}
+
+/**
+ * 可编辑的线索状态选择器
+ */
+interface EditableLeadStatusProps {
+  status: LeadStatus
+  editable?: boolean
+  onSave?: (value: string) => Promise<void>
+}
+
+function EditableLeadStatus({ status, editable, onSave }: EditableLeadStatusProps) {
+  const s = useStyleClasses()
+  const [open, setOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const selectedOption = leadStatusOptions.find(o => o.value === status)
+  const selectedColor = selectedOption ? statusColorMap[selectedOption.color] || statusColorMap.gray : statusColorMap.gray
+
+  const handleSelect = async (newStatus: LeadStatus) => {
+    if (!onSave || newStatus === status) {
+      setOpen(false)
+      return
+    }
+    setIsSaving(true)
+    try {
+      await onSave(newStatus)
+      setOpen(false)
+      toast.success('线索状态已更新')
+    } catch (error: any) {
+      toast.error(error?.message || '更新失败')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (!editable) {
+    return <LeadStatusBadge status={status} />
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            s.text.xs,
+            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border cursor-pointer',
+            'hover:opacity-80 transition-opacity'
+          )}
+          style={{
+            color: selectedColor,
+            borderColor: selectedColor,
+            backgroundColor: selectedColor + '15',
+          }}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              {selectedOption?.label || status}
+              <ChevronDown className="h-3 w-3" />
+            </>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-2" align="start">
+        <div className="grid grid-cols-2 gap-1">
+          {leadStatusOptions.map(option => {
+            const isSelected = status === option.value
+            const color = statusColorMap[option.color] || statusColorMap.gray
+            return (
+              <Button
+                key={option.value}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-7 justify-start text-xs px-2',
+                  isSelected && 'font-medium'
+                )}
+                style={{
+                  color: color,
+                  backgroundColor: isSelected ? color + '20' : 'transparent',
+                }}
+                onClick={() => handleSelect(option.value)}
+                disabled={isSaving}
+              >
+                {isSelected && <Check className="mr-1 h-3 w-3" />}
+                {option.label}
+              </Button>
+            )
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 /**
@@ -388,7 +503,13 @@ export function LeadInfoDisplay({
           <InfoGrid cols={4}>
             <InfoItem
               label="线索状态"
-              value={lead.status ? <LeadStatusBadge status={lead.status} /> : undefined}
+              value={lead.status ? (
+                <EditableLeadStatus
+                  status={lead.status}
+                  editable={editable}
+                  onSave={createSaveHandler('status')}
+                />
+              ) : undefined}
             />
             <InfoItem
               label="意向等级"

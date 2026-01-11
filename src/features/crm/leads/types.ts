@@ -320,6 +320,7 @@ export interface LeadFollowupCreate {
   result_remark?: string
   next_action?: string
   next_followup_at?: string
+  send_dingtalk?: boolean
 }
 
 // ==================== 变更记录接口 ====================

@@ -119,7 +119,7 @@ export function EmployeesPage() {
   const [editingItem, setEditingItem] = useState<EmployeeItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<EmployeeItem | null>(null)
   const [resetPasswordItem, setResetPasswordItem] = useState<EmployeeItem | null>(null)
-  const [newPassword, setNewPassword] = useState('')
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null) // 后端生成的新密码
   // 列可见性状态 - 默认隐藏邮箱列
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     email: false,
@@ -277,13 +277,11 @@ export function EmployeesPage() {
 
   // 重置密码
   const resetPasswordMutation = useMutation({
-    mutationFn: ({ id, password }: { id: string; password: string }) =>
-      adminApi.resetEmployeePassword(id, password),
-    onSuccess: () => {
+    mutationFn: (id: string) => adminApi.resetEmployeePassword(id),
+    onSuccess: (response) => {
       toast.success('密码重置成功')
-      setResetPasswordDialogOpen(false)
-      setResetPasswordItem(null)
-      setNewPassword('')
+      // 保存后端生成的新密码，显示给用户
+      setGeneratedPassword(response.data?.new_password || null)
     },
     onError: (error: Error) => {
       toast.error(`密码重置失败: ${error.message}`)
@@ -680,7 +678,7 @@ export function EmployeesPage() {
   // 处理重置密码
   const handleResetPassword = (item: EmployeeItem) => {
     setResetPasswordItem(item)
-    setNewPassword('')
+    setGeneratedPassword(null) // 清空之前生成的密码
     setResetPasswordDialogOpen(true)
   }
 
@@ -749,11 +747,17 @@ export function EmployeesPage() {
 
   // 处理重置密码确认
   const handleResetPasswordConfirm = () => {
-    if (resetPasswordItem && newPassword) {
-      resetPasswordMutation.mutate({
-        id: resetPasswordItem.id,
-        password: newPassword,
-      })
+    if (resetPasswordItem) {
+      resetPasswordMutation.mutate(resetPasswordItem.id)
+    }
+  }
+
+  // 关闭重置密码对话框
+  const handleResetPasswordClose = (open: boolean) => {
+    if (!open) {
+      setResetPasswordDialogOpen(false)
+      setResetPasswordItem(null)
+      setGeneratedPassword(null)
     }
   }
 
@@ -1241,38 +1245,89 @@ export function EmployeesPage() {
       </Dialog>
 
       {/* 重置密码对话框 */}
-      <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+      <Dialog open={resetPasswordDialogOpen} onOpenChange={handleResetPasswordClose}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>重置密码</DialogTitle>
+            <DialogTitle>
+              {generatedPassword ? '密码已重置' : '重置密码'}
+            </DialogTitle>
             <DialogDescription>
-              为员工「{resetPasswordItem?.name}」设置新密码
+              {generatedPassword
+                ? `员工「${resetPasswordItem?.name}」的密码已重置成功`
+                : `确定要重置员工「${resetPasswordItem?.name}」的密码吗？系统将自动生成新密码。`
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">新密码</label>
-              <Input
-                type="password"
-                placeholder="请输入新密码"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
+            {generatedPassword ? (
+              // 显示生成的密码
+              <div className="space-y-3">
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    请将新密码告知员工，此密码只显示一次。
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">新密码</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={generatedPassword}
+                      className="font-mono text-lg tracking-wider"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const { copyToClipboard } = await import('@/lib/utils')
+                        const success = await copyToClipboard(generatedPassword)
+                        if (success) {
+                          toast.success('密码已复制到剪贴板')
+                        } else {
+                          toast.error('复制失败')
+                        }
+                      }}
+                    >
+                      复制
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // 确认提示
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  重置后原密码将失效，员工需要使用新密码登录。
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-            <Button
-              variant="outline"
-              onClick={() => setResetPasswordDialogOpen(false)}
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleResetPasswordConfirm}
-              disabled={!newPassword || resetPasswordMutation.isPending}
-            >
-              {resetPasswordMutation.isPending ? '重置中...' : '确认重置'}
-            </Button>
+            {generatedPassword ? (
+              // 重置成功后只显示关闭按钮
+              <Button onClick={() => handleResetPasswordClose(false)}>
+                关闭
+              </Button>
+            ) : (
+              // 确认重置前显示取消和确认按钮
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => handleResetPasswordClose(false)}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleResetPasswordConfirm}
+                  disabled={resetPasswordMutation.isPending}
+                >
+                  {resetPasswordMutation.isPending ? '重置中...' : '确认重置'}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -518,9 +518,14 @@ export function ApiKeysPage() {
     })
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success('API密钥已复制到剪贴板')
+  const handleCopyToClipboard = async (text: string) => {
+    const { copyToClipboard } = await import('@/lib/utils')
+    const success = await copyToClipboard(text)
+    if (success) {
+      toast.success('API密钥已复制到剪贴板')
+    } else {
+      toast.error('复制失败')
+    }
   }
 
   return (
@@ -776,7 +781,7 @@ export function ApiKeysPage() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => copyToClipboard(createdKey?.api_key || '')}
+                    onClick={() => handleCopyToClipboard(createdKey?.api_key || '')}
                   >
                     <Copy className="mr-2 h-4 w-4" />
                     复制API密钥

@@ -12,6 +12,13 @@ import {
   SheetHeader,
   SheetTitle
 } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
@@ -24,13 +31,15 @@ import {
   Loader2,
 } from 'lucide-react'
 import { leadsApi, yunkeApi } from '../api'
-import type { Lead } from '../types'
+import type { Lead, IntentionLevel } from '../types'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { LeadStatusBadge, IntentionLevelBadge } from './status-badges'
 
 // 详情 Tabs 组件
 import { LeadDetailTabs } from './detail/lead-detail-tabs'
+// 跟进表单组件
+import { FollowupForm } from '../../continuous-call/components/followup-form'
 
 interface LeadDetailSheetProps {
   leadId: string | null
@@ -49,6 +58,9 @@ export function LeadDetailSheet({
 }: LeadDetailSheetProps) {
   const s = useStyleClasses()
   const queryClient = useQueryClient()
+
+  // ==================== 跟进表单对话框状态 ====================
+  const [followupDialogOpen, setFollowupDialogOpen] = useState(false)
 
   // ==================== 外呼状态 ====================
   const [isInCall, setIsInCall] = useState(false)
@@ -261,7 +273,7 @@ export function LeadDetailSheet({
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => onCreateFollowup?.(lead.id)}
+                    onClick={() => setFollowupDialogOpen(true)}
                     className={cn(s.height.controlSm, s.text.xs)}
                   >
                     <Plus className="mr-1 h-3 w-3" />
@@ -293,6 +305,36 @@ export function LeadDetailSheet({
           />
         )}
       </SheetContent>
+
+      {/* ==================== 新建跟进对话框 ==================== */}
+      <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>新建跟进记录</DialogTitle>
+            <DialogDescription>
+              {lead?.child_name || lead?.parent_phone || '线索'}
+            </DialogDescription>
+          </DialogHeader>
+          {leadId && (
+            <FollowupForm
+              leadId={leadId}
+              advisorId={lead?.advisor_id}
+              initialIntentionLevel={lead?.intention_level as IntentionLevel}
+              asCard={false}
+              showReleaseToPool={true}
+              submitText="保存跟进"
+              onSuccess={() => {
+                setFollowupDialogOpen(false)
+                // 刷新线索数据和跟进记录
+                queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
+                queryClient.invalidateQueries({ queryKey: ['lead-followups', leadId] })
+                queryClient.invalidateQueries({ queryKey: ['leads'] })
+              }}
+              onCancel={() => setFollowupDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }
