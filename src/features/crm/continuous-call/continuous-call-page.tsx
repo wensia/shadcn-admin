@@ -427,6 +427,14 @@ export function ContinuousCallPage() {
       const res = await leadsApi.addLeadFollowup(currentLeadId, data)
 
       if (res.success) {
+        // 更新意向等级（如果有变化）
+        if (intentionLevel && intentionLevel !== currentLead.intention_level) {
+          try {
+            await leadsApi.updateLead(currentLeadId, { intention_level: intentionLevel })
+          } catch (error) {
+            console.warn('更新意向等级失败:', error)
+          }
+        }
         // 如果是预约到访，创建 VisitSchedule 记录
         if (followupResult === 'appointment_scheduled' && appointmentDate) {
           try {
@@ -496,6 +504,7 @@ export function ContinuousCallPage() {
     appointmentReason,
     closeCallDrawer,
     refetchLeads,
+    intentionLevel,
   ])
 
   // 重置表单
