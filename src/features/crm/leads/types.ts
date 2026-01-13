@@ -178,6 +178,11 @@ export interface Lead {
   updated_by_id?: string
   updated_by_name?: string
 
+  // 激活信息
+  activated_at?: string
+  activated_by_id?: string
+  activated_by_name?: string
+
   // 关联记录数量
   followup_count: number
   last_followup_at?: string

@@ -487,6 +487,8 @@ export function LeadInfoDisplay({
             <InfoItem label="来源详情" value={lead.source_detail} />
             <InfoItem label="创建人" value={lead.created_by_name} />
             <InfoItem label="创建时间" value={formatTime(lead.created_at)} />
+            <InfoItem label="激活人" value={lead.activated_by_name} />
+            <InfoItem label="激活时间" value={lead.activated_at ? formatTime(lead.activated_at) : undefined} />
             {/* 渠道额外字段 */}
             {lead.source_extra_info && parseSourceExtraInfo(lead.source_extra_info).map((item, index) => (
               <InfoItem
