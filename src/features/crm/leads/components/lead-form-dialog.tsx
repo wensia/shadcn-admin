@@ -38,6 +38,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import { leadsApi } from '../api'
+import { apiClient } from '@/lib/api/client'
 import type { Lead, LeadCreate, LeadUpdate, Gender, Grade, IntentionLevel } from '../types'
 import { gradeLabels } from '../types'
 
@@ -123,12 +124,25 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     }
   })
 
-  // 获取筛选选项(来源渠道、校区等)
+  // 获取筛选选项(校区等)
   const { data: filterOptions } = useQuery({
     queryKey: ['filter-options'],
     queryFn: async () => {
       const response = await leadsApi.getFilterOptions()
       return response.data
+    },
+    enabled: open
+  })
+
+  // 获取来源渠道列表（与 leads-page 使用相同的查询）
+  const { data: sourceChannels } = useQuery({
+    queryKey: ['source-channels-active'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ code: number; data: { items: Array<{ id: string; name: string; category: string }> } }>(
+        '/source-channels',
+        { params: { page: 1, size: 100, is_active: true } }
+      )
+      return response.data?.items || []
     },
     enabled: open
   })
@@ -634,7 +648,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {filterOptions?.source_channels?.map((channel) => (
+                                {sourceChannels?.map((channel) => (
                                   <SelectItem
                                     key={channel.id}
                                     value={channel.id}
