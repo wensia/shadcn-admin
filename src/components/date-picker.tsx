@@ -235,10 +235,8 @@ export function DateRangePickerSingle({
       from: formatDateString(range?.from),
       to: formatDateString(range?.to),
     })
-    // 当选择完整范围后关闭弹窗
-    if (range?.from && range?.to) {
-      setOpen(false)
-    }
+    // 不自动关闭弹窗，让用户可以继续调整日期范围
+    // 用户点击外部或按 ESC 键关闭
   }
 
   // 格式化日期
