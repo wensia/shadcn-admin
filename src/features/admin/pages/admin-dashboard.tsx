@@ -1,10 +1,12 @@
 /**
  * Admin Dashboard 页面
- * 管理后台首页，显示系统统计和快捷操作
+ * 管理后台首页 - 重构设计版本
+ * 风格：深色主题 + 几何感 + 大胆数字排版
  */
 
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { motion } from 'motion/react'
 import {
   MapPin,
   Building2,
@@ -15,13 +17,12 @@ import {
   ShieldCheck,
   Plus,
   GitBranch,
-  ChevronRight,
+  ArrowUpRight,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthStore } from '@/stores/auth-store'
 import { adminApi } from '../api'
@@ -29,68 +30,157 @@ import type { AdminStats } from '../types'
 
 // 统计项配置
 const statConfigs = [
-  { key: 'regions', label: '大区', icon: MapPin, color: 'text-green-500', bgColor: 'bg-green-50' },
-  { key: 'districts', label: '地区', icon: MapPin, color: 'text-blue-500', bgColor: 'bg-blue-50' },
-  { key: 'areas', label: '区域', icon: MapPin, color: 'text-amber-500', bgColor: 'bg-amber-50' },
-  { key: 'campuses', label: '校区', icon: Building2, color: 'text-rose-500', bgColor: 'bg-rose-50' },
-  { key: 'departments', label: '部门', icon: Network, color: 'text-purple-500', bgColor: 'bg-purple-50' },
-  { key: 'positions', label: '职位', icon: Briefcase, color: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-  { key: 'employees', label: '员工总数', icon: Users, color: 'text-pink-500', bgColor: 'bg-pink-50' },
-  { key: 'active_employees', label: '在职员工', icon: UserCheck, color: 'text-teal-500', bgColor: 'bg-teal-50' },
-  { key: 'superusers', label: '管理员', icon: ShieldCheck, color: 'text-red-500', bgColor: 'bg-red-50' },
+  { key: 'regions', label: '大区', icon: MapPin, gradient: 'from-emerald-400 to-teal-500' },
+  { key: 'districts', label: '地区', icon: MapPin, gradient: 'from-sky-400 to-blue-500' },
+  { key: 'areas', label: '区域', icon: MapPin, gradient: 'from-violet-400 to-purple-500' },
+  { key: 'campuses', label: '校区', icon: Building2, gradient: 'from-rose-400 to-pink-500' },
+  { key: 'departments', label: '部门', icon: Network, gradient: 'from-amber-400 to-orange-500' },
+  { key: 'positions', label: '职位', icon: Briefcase, gradient: 'from-lime-400 to-green-500' },
 ] as const
 
 // 快捷操作配置
 const quickActions = [
-  {
-    key: 'create-region',
-    title: '创建大区',
-    description: '新建一个大区',
-    icon: MapPin,
-    color: 'text-green-500',
-    path: '/admin/regions',
-  },
-  {
-    key: 'create-campus',
-    title: '创建校区',
-    description: '新建一个校区',
-    icon: Building2,
-    color: 'text-blue-500',
-    path: '/admin/campuses',
-  },
-  {
-    key: 'create-employee',
-    title: '创建员工',
-    description: '新建一个员工账户',
-    icon: Plus,
-    color: 'text-amber-500',
-    path: '/admin/employees',
-  },
-  {
-    key: 'view-tree',
-    title: '组织架构树',
-    description: '查看完整的组织架构',
-    icon: GitBranch,
-    color: 'text-purple-500',
-    path: '/admin/organization-tree',
-  },
-  {
-    key: 'manage-departments',
-    title: '部门管理',
-    description: '管理系统部门',
-    icon: Network,
-    color: 'text-red-500',
-    path: '/admin/departments',
-  },
-  {
-    key: 'manage-positions',
-    title: '职位管理',
-    description: '管理职位信息',
-    icon: Briefcase,
-    color: 'text-emerald-500',
-    path: '/admin/positions',
-  },
+  { key: 'create-region', title: '创建大区', icon: MapPin, path: '/admin/regions' },
+  { key: 'create-campus', title: '创建校区', icon: Building2, path: '/admin/campuses' },
+  { key: 'create-employee', title: '创建员工', icon: Plus, path: '/admin/employees' },
+  { key: 'view-tree', title: '组织架构', icon: GitBranch, path: '/admin/organization-tree' },
+  { key: 'manage-departments', title: '部门管理', icon: Network, path: '/admin/departments' },
+  { key: 'manage-positions', title: '职位管理', icon: Briefcase, path: '/admin/positions' },
 ]
+
+// 圆形进度组件
+function CircularProgress({
+  value,
+  size = 120,
+  strokeWidth = 8,
+  color = '#10b981'
+}: {
+  value: number
+  size?: number
+  strokeWidth?: number
+  color?: string
+}) {
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+  const offset = circumference - (value / 100) * circumference
+
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        className="text-white/5"
+      />
+      <motion.circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        initial={{ strokeDashoffset: circumference }}
+        animate={{ strokeDashoffset: offset }}
+        transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
+      />
+    </svg>
+  )
+}
+
+// 统计卡片组件
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  gradient,
+  index,
+  isLoading,
+  onClick
+}: {
+  label: string
+  value: number
+  icon: React.ElementType
+  gradient: string
+  index: number
+  isLoading: boolean
+  onClick: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.08 }}
+      onClick={onClick}
+      className="group relative cursor-pointer"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl -z-10"
+        style={{ background: `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))` }}
+      />
+      <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.05] p-5 backdrop-blur-sm hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300">
+        {/* 装饰性渐变角 */}
+        <div className={`absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br ${gradient} opacity-20 rounded-full blur-2xl group-hover:opacity-40 transition-opacity`} />
+
+        <div className="flex items-start justify-between mb-4">
+          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} bg-opacity-10`}>
+            <Icon className="w-4 h-4 text-white/80" />
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+        </div>
+
+        {isLoading ? (
+          <Skeleton className="h-10 w-16 bg-white/10" />
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: index * 0.08 + 0.2 }}
+            className="text-4xl font-light tracking-tight text-white mb-1"
+            style={{ fontFamily: "'Sora', sans-serif" }}
+          >
+            {value.toLocaleString()}
+          </motion.div>
+        )}
+        <div className="text-sm text-white/40 font-medium">{label}</div>
+      </div>
+    </motion.div>
+  )
+}
+
+// 快捷操作按钮
+function QuickActionButton({
+  title,
+  icon: Icon,
+  onClick,
+  index
+}: {
+  title: string
+  icon: React.ElementType
+  onClick: () => void
+  index: number
+}) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.4, delay: 0.5 + index * 0.05 }}
+      onClick={onClick}
+      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200 group text-left"
+    >
+      <div className="p-2 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] transition-colors">
+        <Icon className="w-4 h-4 text-white/60 group-hover:text-white/90 transition-colors" />
+      </div>
+      <span className="text-sm text-white/60 group-hover:text-white/90 transition-colors font-medium">
+        {title}
+      </span>
+      <ArrowUpRight className="w-3.5 h-3.5 text-white/20 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+    </motion.button>
+  )
+}
 
 export function AdminDashboardPage() {
   const navigate = useNavigate()
@@ -112,132 +202,267 @@ export function AdminDashboardPage() {
       inactive: stats.employees - stats.active_employees,
       superusers: stats.superusers,
       activeRate: stats.employees > 0
-        ? ((stats.active_employees / stats.employees) * 100).toFixed(1)
-        : '0',
+        ? Math.round((stats.active_employees / stats.employees) * 100)
+        : 0,
     }
     : null
 
+  // 获取当前时间段的问候语
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return '早上好'
+    if (hour < 18) return '下午好'
+    return '晚上好'
+  }
+
   return (
-    <div className="space-y-8 p-2">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-border/40 pb-6">
-        <div>
-          <h1 className="text-3xl font-serif font-medium text-foreground mb-2">
-            Good afternoon, {user?.name || 'Super Admin'}
-          </h1>
-          <p className="text-muted-foreground font-sans">
-            Overview of your organization and personnel.
-          </p>
-        </div>
-        <Button
-          size="lg"
-          className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-full px-6"
-          onClick={() => navigate({ to: '/admin/employees' })}
+    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-auto">
+      {/* 背景装饰 */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-emerald-500/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-violet-500/[0.03] rounded-full blur-[120px]" />
+        {/* 网格背景 */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                             linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px'
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-10"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Employee
-        </Button>
-      </div>
-
-      {/* Stats Grid - Minimalist */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {statConfigs.map((config) => {
-          const value = stats ? (stats as Record<string, number>)[config.key] : 0
-          return (
-            <div key={config.key} className="flex flex-col gap-1 group cursor-pointer" onClick={() => navigate({ to: `/admin/${config.key}` })}>
-              <span className="text-sm text-muted-foreground font-medium flex items-center gap-1 group-hover:text-primary transition-colors">
-                {config.label}
-              </span>
-              {isLoading ? (
-                <Skeleton className="h-8 w-12" />
-              ) : (
-                <span className="text-3xl font-serif text-foreground font-normal">
-                  {value.toLocaleString()}
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs text-emerald-400/80 font-medium tracking-wider uppercase">
+                  系统概览
                 </span>
-              )}
+              </div>
+              <h1
+                className="text-3xl lg:text-4xl font-light text-white mb-2"
+                style={{ fontFamily: "'Sora', sans-serif" }}
+              >
+                {getGreeting()}，
+                <span className="bg-gradient-to-r from-emerald-300 to-teal-400 bg-clip-text text-transparent">
+                  {user?.name || '管理员'}
+                </span>
+              </h1>
+              <p className="text-white/40 text-sm">
+                组织架构与人员管理一览
+              </p>
             </div>
-          )
-        })}
-      </div>
 
-      <div className="grid md:grid-cols-3 gap-8 pt-4">
-        {/* Quick Actions */}
-        <div className="md:col-span-2 space-y-4">
-          <h3 className="text-lg font-serif font-medium mb-4">Quick Actions</h3>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {quickActions.map((action) => {
-              const Icon = action.icon
-              return (
-                <div
-                  key={action.key}
-                  onClick={() => navigate({ to: action.path })}
-                  className="flex flex-col p-4 rounded-xl border border-border/50 bg-card hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-md bg-secondary text-foreground group-hover:text-primary transition-colors">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <span className="font-medium group-hover:text-primary transition-colors">{action.title}</span>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Button
+                onClick={() => navigate({ to: '/admin/employees' })}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white border-0 rounded-full px-6 h-11 font-medium shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                创建员工
+              </Button>
+            </motion.div>
+          </div>
+        </motion.header>
+
+        {/* 主要统计 - 员工概览 */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-10"
+        >
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* 员工活跃率 - 大卡片 */}
+            <div className="lg:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.05] p-8">
+              {/* 装饰性背景 */}
+              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+              <div className="relative flex flex-col lg:flex-row lg:items-center gap-8">
+                {/* 圆形进度 */}
+                <div className="relative flex-shrink-0">
+                  <CircularProgress
+                    value={employeeStats?.activeRate || 0}
+                    size={160}
+                    strokeWidth={12}
+                    color="url(#progressGradient)"
+                  />
+                  <svg width="0" height="0">
+                    <defs>
+                      <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#34d399" />
+                        <stop offset="100%" stopColor="#14b8a6" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    {isLoading ? (
+                      <Skeleton className="h-10 w-16 bg-white/10" />
+                    ) : (
+                      <>
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.8 }}
+                          className="text-4xl font-light text-white"
+                          style={{ fontFamily: "'Sora', sans-serif" }}
+                        >
+                          {employeeStats?.activeRate || 0}%
+                        </motion.span>
+                        <span className="text-xs text-white/40 mt-1">在职率</span>
+                      </>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-1">
-                    {action.description}
-                  </p>
                 </div>
+
+                {/* 详细数据 */}
+                <div className="flex-1 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-white/90 mb-1">人员状态</h3>
+                    <p className="text-sm text-white/40">实时追踪员工在职情况</p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span className="text-xs text-white/40">在职</span>
+                      </div>
+                      {isLoading ? (
+                        <Skeleton className="h-8 w-12 bg-white/10" />
+                      ) : (
+                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', sans-serif" }}>
+                          {employeeStats?.active || 0}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span className="text-xs text-white/40">离职</span>
+                      </div>
+                      {isLoading ? (
+                        <Skeleton className="h-8 w-12 bg-white/10" />
+                      ) : (
+                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', sans-serif" }}>
+                          {employeeStats?.inactive || 0}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-violet-400" />
+                        <span className="text-xs text-white/40">管理员</span>
+                      </div>
+                      {isLoading ? (
+                        <Skeleton className="h-8 w-12 bg-white/10" />
+                      ) : (
+                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', sans-serif" }}>
+                          {employeeStats?.superusers || 0}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 总员工数 - 突出卡片 */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-600/10 border border-emerald-500/20 p-8 flex flex-col justify-between"
+            >
+              <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-400/20 rounded-full blur-3xl" />
+
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                  <span className="text-sm text-emerald-400/80 font-medium">员工总数</span>
+                </div>
+
+                {isLoading ? (
+                  <Skeleton className="h-16 w-24 bg-white/10" />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                    className="text-6xl font-light text-white"
+                    style={{ fontFamily: "'Sora', sans-serif" }}
+                  >
+                    {employeeStats?.total || 0}
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="relative flex items-center gap-2 mt-6 text-emerald-400/60">
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm">组织规模持续增长</span>
+              </div>
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* 组织架构统计 */}
+        <section className="mb-10">
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-lg font-medium text-white/80">组织架构</h2>
+            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {statConfigs.map((config, index) => {
+              const value = stats ? (stats as Record<string, number>)[config.key] : 0
+              return (
+                <StatCard
+                  key={config.key}
+                  label={config.label}
+                  value={value}
+                  icon={config.icon}
+                  gradient={config.gradient}
+                  index={index}
+                  isLoading={isLoading}
+                  onClick={() => navigate({ to: `/admin/${config.key}` })}
+                />
               )
             })}
           </div>
-        </div>
+        </section>
 
-        {/* Employee Stats - Simplified */}
-        <div className="bg-secondary/30 rounded-2xl p-6">
-          <h3 className="text-lg font-serif font-medium mb-6">Personnel Status</h3>
+        {/* 快捷操作 */}
+        <section>
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-lg font-medium text-white/80">快捷操作</h2>
+            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+          </div>
 
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
-            </div>
-          ) : employeeStats ? (
-            <div className="space-y-8">
-              <div className="flex items-baseline justify-between">
-                <div>
-                  <div className="text-4xl font-serif text-foreground">{employeeStats.activeRate}%</div>
-                  <div className="text-sm text-muted-foreground mt-1">Active Employment Rate</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-serif text-foreground">{employeeStats.total}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Total Staff</div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500/70"></span>
-                    Active
-                  </span>
-                  <span className="font-medium">{employeeStats.active}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-500/70"></span>
-                    Inactive
-                  </span>
-                  <span className="font-medium">{employeeStats.inactive}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary/70"></span>
-                    Admin
-                  </span>
-                  <span className="font-medium">{employeeStats.superusers}</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">No data available.</p>
-          )}
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {quickActions.map((action, index) => (
+              <QuickActionButton
+                key={action.key}
+                title={action.title}
+                icon={action.icon}
+                onClick={() => navigate({ to: action.path })}
+                index={index}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )
