@@ -30,7 +30,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { leadsApi } from '@/features/crm/leads/api'
 import type { LeadListItem } from '@/features/crm/leads/types'
-import { leadStatusLabels, leadStatusColors } from '@/features/crm/leads/types'
+import { leadStatusLabels } from '@/features/crm/leads/types'
 
 export interface SelectedLead {
   id: string
@@ -209,10 +209,7 @@ export function LeadSelectDialog({
                           {lead.grade || '-'}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn('text-xs h-5', leadStatusColors[lead.status])}
-                          >
+                          <Badge variant="secondary" className="text-xs h-5">
                             {leadStatusLabels[lead.status] || lead.status}
                           </Badge>
                         </TableCell>
