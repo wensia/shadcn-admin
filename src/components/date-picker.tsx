@@ -241,16 +241,10 @@ export function DateRangePickerSingle({
     }
   }
 
-  // 格式化显示文本
-  const displayText = React.useMemo(() => {
-    if (fromDate && toDate) {
-      return `${format(fromDate, 'yy-MM-dd')} - ${format(toDate, 'yy-MM-dd')}`
-    }
-    if (fromDate) {
-      return `${format(fromDate, 'yy-MM-dd')} - ...`
-    }
-    return placeholder
-  }, [fromDate, toDate, placeholder])
+  // 格式化日期
+  const fromText = fromDate ? format(fromDate, 'yy-MM-dd') : ''
+  const toText = toDate ? format(toDate, 'yy-MM-dd') : ''
+  const hasSelection = fromDate || toDate
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -258,18 +252,26 @@ export function DateRangePickerSingle({
         <Button
           variant="outline"
           disabled={disabled}
-          data-empty={!fromDate && !toDate}
+          data-empty={!hasSelection}
           className={cn(
-            'justify-start text-start font-normal data-[empty=true]:text-muted-foreground',
+            'justify-between font-normal data-[empty=true]:text-muted-foreground',
             s.height.control,
             s.text.xs,
             s.rounded,
-            'min-w-[220px]',
+            'min-w-[240px]',
             className
           )}
         >
-          <span className="truncate">{displayText}</span>
-          <CalendarIcon className="ms-auto h-4 w-4 opacity-50" />
+          {hasSelection ? (
+            <div className="flex w-full items-center">
+              <span className="flex-1 text-left">{fromText || '...'}</span>
+              <span className="mx-2 text-muted-foreground">-</span>
+              <span className="flex-1 text-right">{toText || '...'}</span>
+            </div>
+          ) : (
+            <span>{placeholder}</span>
+          )}
+          <CalendarIcon className="ms-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className={cn('w-auto p-0', s.rounded)} align="end">
