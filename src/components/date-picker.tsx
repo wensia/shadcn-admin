@@ -244,10 +244,10 @@ export function DateRangePickerSingle({
   // 格式化显示文本
   const displayText = React.useMemo(() => {
     if (fromDate && toDate) {
-      return `${format(fromDate, 'yyyy/MM/dd', { locale: zhCN })} - ${format(toDate, 'yyyy/MM/dd', { locale: zhCN })}`
+      return `${format(fromDate, 'yy-MM-dd')} - ${format(toDate, 'yy-MM-dd')}`
     }
     if (fromDate) {
-      return `${format(fromDate, 'yyyy/MM/dd', { locale: zhCN })} - ...`
+      return `${format(fromDate, 'yy-MM-dd')} - ...`
     }
     return placeholder
   }, [fromDate, toDate, placeholder])
