@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -17,8 +17,14 @@ import {
   DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { DateTimePicker } from '@/components/date-time-picker'
 import {
   Form,
@@ -30,6 +36,7 @@ import {
 } from '@/components/ui/form'
 import { UserPlus, X } from 'lucide-react'
 import { visitScheduleApi } from '@/features/crm/lead-conversion/api'
+import { coursesApi } from '@/features/admin/api'
 import type { VisitScheduleCreate } from '@/features/crm/lead-conversion/types'
 import { LeadSelectDialog, type SelectedLead } from './lead-select-dialog'
 
@@ -63,6 +70,15 @@ export function VisitScheduleDialog({
 
   const isScheduled = defaultStatus === 'scheduled'
   const title = isScheduled ? '新建诺到记录' : '新建到访记录'
+
+  // 获取课程列表
+  const { data: courses = [] } = useQuery({
+    queryKey: ['courses-for-visit'],
+    queryFn: () => coursesApi.getCourses(),
+    staleTime: 5 * 60 * 1000
+  })
+  // 只显示启用的课程
+  const activeCourses = courses.filter(c => c.is_active)
 
   // 默认预约时间：今天 10:00
   const getDefaultScheduledAt = () => {
@@ -217,9 +233,23 @@ export function VisitScheduleDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>体验课程</FormLabel>
-                  <FormControl>
-                    <Input placeholder="请输入体验课程" {...field} />
-                  </FormControl>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择体验课程" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {activeCourses.map((course) => (
+                        <SelectItem key={course.id} value={course.name}>
+                          {course.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
