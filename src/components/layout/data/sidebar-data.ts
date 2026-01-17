@@ -80,7 +80,7 @@ export const crmNavGroups: NavGroup[] = [
         icon: Headphones,
       },
       {
-        title: '到访表',
+        title: '日控表',
         url: '/crm/visit-schedule',
         icon: Calendar,
       },

@@ -112,7 +112,7 @@ export function DatePicker({
 }
 
 /**
- * 日期范围选择器组件
+ * 日期范围选择器组件（双输入框版本）
  * 用于筛选场景的日期区间选择
  */
 interface DateRangePickerProps {
@@ -181,6 +181,107 @@ export function DateRangePicker({
         fullWidth
       />
     </div>
+  )
+}
+
+/**
+ * 真正的日期范围选择器（单按钮触发，日历可选范围）
+ * 使用 react-day-picker 的 range 模式
+ */
+interface DateRangePickerSingleProps {
+  /** 日期范围 { from, to } */
+  value: { from: string | undefined; to: string | undefined }
+  /** 日期范围变更回调 */
+  onChange: (range: { from: string | undefined; to: string | undefined }) => void
+  /** 占位文本 */
+  placeholder?: string
+  /** 自定义类名 */
+  className?: string
+  /** 是否禁用 */
+  disabled?: boolean
+  /** 显示几个月 */
+  numberOfMonths?: number
+}
+
+export function DateRangePickerSingle({
+  value,
+  onChange,
+  placeholder = '选择日期范围',
+  className,
+  disabled = false,
+  numberOfMonths = 2,
+}: DateRangePickerSingleProps) {
+  const s = useStyleClasses()
+  const [open, setOpen] = React.useState(false)
+
+  // 将字符串日期转换为 Date 对象
+  const parseDate = (dateStr: string | undefined): Date | undefined => {
+    if (!dateStr) return undefined
+    const date = new Date(dateStr)
+    return isNaN(date.getTime()) ? undefined : date
+  }
+
+  // 将 Date 对象转换为 YYYY-MM-DD 格式字符串
+  const formatDateString = (date: Date | undefined): string | undefined => {
+    if (!date) return undefined
+    return format(date, 'yyyy-MM-dd')
+  }
+
+  const fromDate = parseDate(value.from)
+  const toDate = parseDate(value.to)
+
+  const handleSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    onChange({
+      from: formatDateString(range?.from),
+      to: formatDateString(range?.to),
+    })
+    // 当选择完整范围后关闭弹窗
+    if (range?.from && range?.to) {
+      setOpen(false)
+    }
+  }
+
+  // 格式化显示文本
+  const displayText = React.useMemo(() => {
+    if (fromDate && toDate) {
+      return `${format(fromDate, 'yyyy/MM/dd', { locale: zhCN })} - ${format(toDate, 'yyyy/MM/dd', { locale: zhCN })}`
+    }
+    if (fromDate) {
+      return `${format(fromDate, 'yyyy/MM/dd', { locale: zhCN })} - ...`
+    }
+    return placeholder
+  }, [fromDate, toDate, placeholder])
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          disabled={disabled}
+          data-empty={!fromDate && !toDate}
+          className={cn(
+            'justify-start text-start font-normal data-[empty=true]:text-muted-foreground',
+            s.height.control,
+            s.text.xs,
+            s.rounded,
+            'min-w-[220px]',
+            className
+          )}
+        >
+          <span className="truncate">{displayText}</span>
+          <CalendarIcon className="ms-auto h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className={cn('w-auto p-0', s.rounded)} align="end">
+        <Calendar
+          mode="range"
+          selected={{ from: fromDate, to: toDate }}
+          onSelect={handleSelect}
+          numberOfMonths={numberOfMonths}
+          locale={zhCN}
+        />
+      </PopoverContent>
+    </Popover>
   )
 }
 
