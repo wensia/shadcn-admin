@@ -37,15 +37,18 @@ export interface SelectedLead {
   parent_phone: string
 }
 
-// 搜索结果类型
+// 搜索结果类型（使用 checkPhoneDuplicate 返回的格式）
 interface SearchResultItem {
   id: string
   child_name: string
   parent_name: string
-  parent_phone: string
+  parent_phone?: string
   status: string
   advisor_name?: string
   owner_campus_name?: string
+  created_by_name?: string
+  created_at?: string
+  no_permission?: boolean
 }
 
 interface LeadSelectDialogProps {
@@ -71,11 +74,11 @@ export function LeadSelectDialog({
   // 判断是否为有效的完整手机号（11位数字）
   const isValidPhone = (phone: string) => /^1\d{10}$/.test(phone)
 
-  // 通过手机号搜索线索
+  // 通过手机号搜索线索（使用 checkPhoneDuplicate，可查询包括公海在内的所有线索）
   const { data: searchData, isLoading, isFetched } = useQuery({
-    queryKey: ['search-leads-by-phone', searchPhone],
+    queryKey: ['check-phone-for-select', searchPhone],
     queryFn: async () => {
-      const response = await leadsApi.searchLeadsByPhone(searchPhone)
+      const response = await leadsApi.checkPhoneDuplicate(searchPhone)
       return response.data
     },
     enabled: open && isValidPhone(searchPhone)
@@ -118,13 +121,14 @@ export function LeadSelectDialog({
       onSelect({
         id: selectedLead.id,
         child_name: selectedLead.child_name || '',
-        parent_phone: selectedLead.parent_phone || ''
+        parent_phone: selectedLead.parent_phone || searchPhone || ''
       })
       onOpenChange(false)
     }
   }
 
-  const searchResults = searchData?.items || []
+  // checkPhoneDuplicate 返回 duplicate_leads 数组
+  const searchResults = searchData?.duplicate_leads || []
   const hasSearched = isFetched && isValidPhone(searchPhone)
 
   return (
@@ -220,7 +224,7 @@ export function LeadSelectDialog({
                             {lead.child_name || '-'}
                           </TableCell>
                           <TableCell className="text-xs">
-                            {lead.parent_phone || '-'}
+                            {lead.parent_phone || searchPhone || '-'}
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="text-xs h-5">
