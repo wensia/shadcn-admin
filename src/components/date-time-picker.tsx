@@ -162,13 +162,18 @@ export function DateTimePicker({
               disabled={(date) => minDate ? date < minDate : date < new Date(new Date().setHours(0, 0, 0, 0))}
               locale={zhCN}
             />
-            {/* 时间选择 */}
-            <div className="flex flex-col border-l p-3 gap-2">
-              <div className="text-xs text-muted-foreground mb-1 text-center">时间</div>
-              <TimePickerWheel
-                value={timeValue}
-                onChange={handleTimeChange}
-              />
+            {/* 时间选择 - 与日历等高 */}
+            <div className="flex flex-col border-l">
+              <div className="text-xs text-muted-foreground py-2 px-4 text-center border-b font-medium">
+                时间
+              </div>
+              <div className="flex-1 flex items-center justify-center px-2">
+                <TimePickerWheel
+                  value={timeValue}
+                  onChange={handleTimeChange}
+                  height={252}
+                />
+              </div>
             </div>
           </div>
           {/* 底部按钮 */}

@@ -1,6 +1,7 @@
 /**
  * 滚轮时间选择器组件
  * 类似 iOS 风格的滚动选择小时和分钟
+ * 支持鼠标拖动、滚轮滚动、点击选择
  */
 
 import * as React from 'react'
@@ -10,6 +11,8 @@ interface TimePickerWheelProps {
   value: string // HH:mm 格式
   onChange: (value: string) => void
   className?: string
+  /** 组件高度，默认 280px 匹配日历高度 */
+  height?: number
 }
 
 // 生成小时选项 (6-22)
@@ -22,18 +25,24 @@ interface WheelColumnProps {
   value: number
   onChange: (value: number) => void
   formatValue?: (value: number) => string
+  height?: number
 }
 
-function WheelColumn({ options, value, onChange, formatValue = (v) => String(v).padStart(2, '0') }: WheelColumnProps) {
+function WheelColumn({ options, value, onChange, formatValue = (v) => String(v).padStart(2, '0'), height = 280 }: WheelColumnProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
-  const itemHeight = 32
-  const visibleItems = 5
+  const itemHeight = 36
+  const visibleItems = Math.floor(height / itemHeight)
   const paddingItems = Math.floor(visibleItems / 2)
+
+  // 拖动状态
+  const isDragging = React.useRef(false)
+  const startY = React.useRef(0)
+  const startScrollTop = React.useRef(0)
 
   // 滚动到选中项
   React.useEffect(() => {
     const container = containerRef.current
-    if (!container) return
+    if (!container || isDragging.current) return
 
     const index = options.indexOf(value)
     if (index !== -1) {
@@ -41,22 +50,96 @@ function WheelColumn({ options, value, onChange, formatValue = (v) => String(v).
     }
   }, [value, options])
 
-  // 处理滚动结束
-  const handleScroll = React.useCallback(() => {
+  // 滚动结束后吸附到最近的选项
+  const snapToNearest = React.useCallback(() => {
     const container = containerRef.current
     if (!container) return
 
-    // 使用 requestAnimationFrame 确保滚动结束后计算
-    requestAnimationFrame(() => {
-      const scrollTop = container.scrollTop
-      const index = Math.round(scrollTop / itemHeight)
-      const clampedIndex = Math.max(0, Math.min(index, options.length - 1))
+    const scrollTop = container.scrollTop
+    const index = Math.round(scrollTop / itemHeight)
+    const clampedIndex = Math.max(0, Math.min(index, options.length - 1))
 
-      if (options[clampedIndex] !== value) {
-        onChange(options[clampedIndex])
-      }
+    // 平滑滚动到对齐位置
+    container.scrollTo({
+      top: clampedIndex * itemHeight,
+      behavior: 'smooth'
     })
+
+    if (options[clampedIndex] !== value) {
+      onChange(options[clampedIndex])
+    }
   }, [options, value, onChange])
+
+  // 鼠标按下开始拖动
+  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+    isDragging.current = true
+    startY.current = e.clientY
+    startScrollTop.current = containerRef.current?.scrollTop ?? 0
+
+    // 阻止文本选择
+    e.preventDefault()
+  }, [])
+
+  // 鼠标移动时拖动
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return
+
+      const deltaY = startY.current - e.clientY
+      containerRef.current.scrollTop = startScrollTop.current + deltaY
+    }
+
+    const handleMouseUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false
+        snapToNearest()
+      }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [snapToNearest])
+
+  // 滚轮滚动
+  const handleWheel = React.useCallback((e: React.WheelEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+
+    const container = containerRef.current
+    if (!container) return
+
+    container.scrollTop += e.deltaY
+  }, [])
+
+  // 滚轮滚动结束后吸附
+  const scrollEndTimer = React.useRef<NodeJS.Timeout>()
+  const handleScroll = React.useCallback(() => {
+    // 清除之前的定时器
+    if (scrollEndTimer.current) {
+      clearTimeout(scrollEndTimer.current)
+    }
+
+    // 设置新的定时器，滚动停止 150ms 后吸附
+    scrollEndTimer.current = setTimeout(() => {
+      if (!isDragging.current) {
+        snapToNearest()
+      }
+    }, 150)
+  }, [snapToNearest])
+
+  // 清理定时器
+  React.useEffect(() => {
+    return () => {
+      if (scrollEndTimer.current) {
+        clearTimeout(scrollEndTimer.current)
+      }
+    }
+  }, [])
 
   // 点击选项
   const handleItemClick = (option: number) => {
@@ -71,37 +154,52 @@ function WheelColumn({ options, value, onChange, formatValue = (v) => String(v).
     }
   }
 
+  const gradientHeight = Math.floor(height / 3)
+
   return (
-    <div className="relative h-[160px] w-16 overflow-hidden">
+    <div className="relative w-16 overflow-hidden" style={{ height }}>
       {/* 选中区域高亮 */}
       <div
-        className="pointer-events-none absolute left-0 right-0 top-1/2 z-10 h-8 -translate-y-1/2 rounded border bg-accent/50"
+        className="pointer-events-none absolute left-1 right-1 top-1/2 z-10 -translate-y-1/2 rounded-md border bg-accent/50"
+        style={{ height: itemHeight }}
       />
       {/* 上下渐变遮罩 */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-background to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-background to-transparent" />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-background to-transparent"
+        style={{ height: gradientHeight }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-background to-transparent"
+        style={{ height: gradientHeight }}
+      />
 
-      {/* 滚动容器 */}
+      {/* 滚动容器 - 隐藏滚动条 */}
+      <style>{`
+        .time-picker-scroll::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
       <div
         ref={containerRef}
-        className="h-full overflow-y-auto scrollbar-none"
+        className="time-picker-scroll h-full cursor-grab overflow-y-scroll active:cursor-grabbing"
         style={{
-          scrollSnapType: 'y mandatory',
           paddingTop: paddingItems * itemHeight,
           paddingBottom: paddingItems * itemHeight,
+          scrollbarWidth: 'none', // Firefox
+          msOverflowStyle: 'none', // IE/Edge
         }}
+        onMouseDown={handleMouseDown}
+        onWheel={handleWheel}
         onScroll={handleScroll}
-        onWheel={(e) => e.stopPropagation()}
       >
         {options.map((option) => (
           <div
             key={option}
             className={cn(
-              'flex h-8 cursor-pointer items-center justify-center text-sm transition-all',
-              'scroll-snap-align-center',
-              option === value ? 'font-semibold text-foreground' : 'text-muted-foreground'
+              'flex cursor-pointer items-center justify-center text-base transition-all select-none',
+              option === value ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground/70'
             )}
-            style={{ scrollSnapAlign: 'center' }}
+            style={{ height: itemHeight }}
             onClick={() => handleItemClick(option)}
           >
             {formatValue(option)}
@@ -112,7 +210,7 @@ function WheelColumn({ options, value, onChange, formatValue = (v) => String(v).
   )
 }
 
-export function TimePickerWheel({ value, onChange, className }: TimePickerWheelProps) {
+export function TimePickerWheel({ value, onChange, className, height = 280 }: TimePickerWheelProps) {
   const [hour, minute] = React.useMemo(() => {
     const [h, m] = value.split(':').map(Number)
     return [isNaN(h) ? 10 : h, isNaN(m) ? 0 : m]
@@ -132,12 +230,14 @@ export function TimePickerWheel({ value, onChange, className }: TimePickerWheelP
         options={hours}
         value={hour}
         onChange={handleHourChange}
+        height={height}
       />
-      <span className="text-lg font-medium">:</span>
+      <span className="text-lg font-medium text-muted-foreground">:</span>
       <WheelColumn
         options={minutes}
         value={minute}
         onChange={handleMinuteChange}
+        height={height}
       />
     </div>
   )
