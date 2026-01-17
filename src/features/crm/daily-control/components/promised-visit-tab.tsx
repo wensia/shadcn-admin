@@ -10,7 +10,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { CheckCircle, XCircle, MoreHorizontal, RefreshCw } from 'lucide-react'
+import { CheckCircle, XCircle, MoreHorizontal, RefreshCw, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -42,6 +42,7 @@ import {
   visitScheduleStatusLabels,
   visitScheduleStatusColors,
 } from '../api'
+import { VisitScheduleDialog } from './visit-schedule-dialog'
 
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
@@ -78,6 +79,7 @@ export function PromisedVisitTab({ dateFrom, dateTo }: PromisedVisitTabProps) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [isLoading, setIsLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   // 加载数据
   const fetchData = async () => {
@@ -304,9 +306,15 @@ export function PromisedVisitTab({ dateFrom, dateTo }: PromisedVisitTabProps) {
     <Card className="flex flex-1 flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-medium">诺到列表</CardTitle>
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={fetchData}>
-          <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="h-8 gap-1" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            新建诺到
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={fetchData}>
+            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 pt-0">
         {/* 数据表 */}
@@ -369,6 +377,14 @@ export function PromisedVisitTab({ dateFrom, dateTo }: PromisedVisitTabProps) {
           isLoading={isLoading}
         />
       </CardContent>
+
+      {/* 新建诺到弹窗 */}
+      <VisitScheduleDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        defaultStatus="scheduled"
+        onSuccess={fetchData}
+      />
     </Card>
   )
 }
