@@ -176,7 +176,7 @@ export function VisitScheduleDialog({
               name="lead_id"
               render={() => (
                 <FormItem>
-                  <FormLabel>选择线索 *</FormLabel>
+                  <FormLabel>选择线索 <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <div>
                       {selectedLead ? (
@@ -218,7 +218,7 @@ export function VisitScheduleDialog({
               name="scheduled_at"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{isScheduled ? '预约时间' : '到访时间'} *</FormLabel>
+                  <FormLabel>{isScheduled ? '预约时间' : '到访时间'} <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <DateTimePicker
                       value={field.value}
