@@ -6,15 +6,13 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { motion } from 'motion/react'
+import { useEffect, useState } from 'react'
 import {
   MapPin,
   Building2,
   Network,
   Briefcase,
   Users,
-  UserCheck,
-  ShieldCheck,
   Plus,
   GitBranch,
   ArrowUpRight,
@@ -24,6 +22,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { adminApi } from '../api'
 import type { AdminStats } from '../types'
@@ -53,19 +52,29 @@ function CircularProgress({
   value,
   size = 120,
   strokeWidth = 8,
-  color = '#10b981'
 }: {
   value: number
   size?: number
   strokeWidth?: number
-  color?: string
 }) {
+  const [animatedValue, setAnimatedValue] = useState(0)
   const radius = (size - strokeWidth) / 2
   const circumference = radius * 2 * Math.PI
-  const offset = circumference - (value / 100) * circumference
+  const offset = circumference - (animatedValue / 100) * circumference
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimatedValue(value), 300)
+    return () => clearTimeout(timer)
+  }, [value])
 
   return (
     <svg width={size} height={size} className="transform -rotate-90">
+      <defs>
+        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#34d399" />
+          <stop offset="100%" stopColor="#14b8a6" />
+        </linearGradient>
+      </defs>
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -75,18 +84,17 @@ function CircularProgress({
         strokeWidth={strokeWidth}
         className="text-white/5"
       />
-      <motion.circle
+      <circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke={color}
+        stroke="url(#progressGradient)"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeDasharray={circumference}
-        initial={{ strokeDashoffset: circumference }}
-        animate={{ strokeDashoffset: offset }}
-        transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
+        strokeDashoffset={offset}
+        className="transition-all duration-[1.5s] ease-out"
       />
     </svg>
   )
@@ -111,23 +119,24 @@ function StatCard({
   onClick: () => void
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.08 }}
+    <div
       onClick={onClick}
-      className="group relative cursor-pointer"
+      className="group relative cursor-pointer animate-in fade-in slide-in-from-bottom-4 duration-500"
+      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'backwards' }}
     >
       <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl -z-10"
         style={{ background: `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))` }}
       />
       <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.05] p-5 backdrop-blur-sm hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300">
         {/* 装饰性渐变角 */}
-        <div className={`absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br ${gradient} opacity-20 rounded-full blur-2xl group-hover:opacity-40 transition-opacity`} />
+        <div className={cn(
+          "absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br opacity-20 rounded-full blur-2xl group-hover:opacity-40 transition-opacity",
+          gradient
+        )} />
 
         <div className="flex items-start justify-between mb-4">
-          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} bg-opacity-10`}>
-            <Icon className="w-4 h-4 text-white/80" />
+          <div className={cn("p-2.5 rounded-xl bg-gradient-to-br", gradient)}>
+            <Icon className="w-4 h-4 text-white/90" />
           </div>
           <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
         </div>
@@ -135,19 +144,20 @@ function StatCard({
         {isLoading ? (
           <Skeleton className="h-10 w-16 bg-white/10" />
         ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: index * 0.08 + 0.2 }}
-            className="text-4xl font-light tracking-tight text-white mb-1"
-            style={{ fontFamily: "'Sora', sans-serif" }}
+          <div
+            className="text-4xl font-light tracking-tight text-white mb-1 animate-in zoom-in-50 duration-500"
+            style={{
+              fontFamily: "'Sora', system-ui, sans-serif",
+              animationDelay: `${index * 80 + 200}ms`,
+              animationFillMode: 'backwards'
+            }}
           >
             {value.toLocaleString()}
-          </motion.div>
+          </div>
         )}
         <div className="text-sm text-white/40 font-medium">{label}</div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
@@ -164,12 +174,10 @@ function QuickActionButton({
   index: number
 }) {
   return (
-    <motion.button
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, delay: 0.5 + index * 0.05 }}
+    <button
       onClick={onClick}
-      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200 group text-left"
+      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200 group text-left animate-in fade-in slide-in-from-left-2 duration-400"
+      style={{ animationDelay: `${500 + index * 50}ms`, animationFillMode: 'backwards' }}
     >
       <div className="p-2 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] transition-colors">
         <Icon className="w-4 h-4 text-white/60 group-hover:text-white/90 transition-colors" />
@@ -178,7 +186,7 @@ function QuickActionButton({
         {title}
       </span>
       <ArrowUpRight className="w-3.5 h-3.5 text-white/20 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-    </motion.button>
+    </button>
   )
 }
 
@@ -234,12 +242,7 @@ export function AdminDashboardPage() {
 
       <div className="relative z-10 p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Header */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-10"
-        >
+        <header className="mb-10 animate-in fade-in slide-in-from-top-4 duration-600">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -250,7 +253,7 @@ export function AdminDashboardPage() {
               </div>
               <h1
                 className="text-3xl lg:text-4xl font-light text-white mb-2"
-                style={{ fontFamily: "'Sora', sans-serif" }}
+                style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
               >
                 {getGreeting()}，
                 <span className="bg-gradient-to-r from-emerald-300 to-teal-400 bg-clip-text text-transparent">
@@ -262,11 +265,7 @@ export function AdminDashboardPage() {
               </p>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
+            <div className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: '200ms' }}>
               <Button
                 onClick={() => navigate({ to: '/admin/employees' })}
                 className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white border-0 rounded-full px-6 h-11 font-medium shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all"
@@ -274,17 +273,12 @@ export function AdminDashboardPage() {
                 <Plus className="w-4 h-4 mr-2" />
                 创建员工
               </Button>
-            </motion.div>
+            </div>
           </div>
-        </motion.header>
+        </header>
 
         {/* 主要统计 - 员工概览 */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-10"
-        >
+        <section className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-600" style={{ animationDelay: '100ms' }}>
           <div className="grid lg:grid-cols-3 gap-6">
             {/* 员工活跃率 - 大卡片 */}
             <div className="lg:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.05] p-8">
@@ -298,30 +292,18 @@ export function AdminDashboardPage() {
                     value={employeeStats?.activeRate || 0}
                     size={160}
                     strokeWidth={12}
-                    color="url(#progressGradient)"
                   />
-                  <svg width="0" height="0">
-                    <defs>
-                      <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#34d399" />
-                        <stop offset="100%" stopColor="#14b8a6" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     {isLoading ? (
                       <Skeleton className="h-10 w-16 bg-white/10" />
                     ) : (
                       <>
-                        <motion.span
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.8 }}
-                          className="text-4xl font-light text-white"
-                          style={{ fontFamily: "'Sora', sans-serif" }}
+                        <span
+                          className="text-4xl font-light text-white animate-in fade-in duration-500"
+                          style={{ fontFamily: "'Sora', system-ui, sans-serif", animationDelay: '800ms' }}
                         >
                           {employeeStats?.activeRate || 0}%
-                        </motion.span>
+                        </span>
                         <span className="text-xs text-white/40 mt-1">在职率</span>
                       </>
                     )}
@@ -344,7 +326,7 @@ export function AdminDashboardPage() {
                       {isLoading ? (
                         <Skeleton className="h-8 w-12 bg-white/10" />
                       ) : (
-                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', sans-serif" }}>
+                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
                           {employeeStats?.active || 0}
                         </span>
                       )}
@@ -357,7 +339,7 @@ export function AdminDashboardPage() {
                       {isLoading ? (
                         <Skeleton className="h-8 w-12 bg-white/10" />
                       ) : (
-                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', sans-serif" }}>
+                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
                           {employeeStats?.inactive || 0}
                         </span>
                       )}
@@ -370,7 +352,7 @@ export function AdminDashboardPage() {
                       {isLoading ? (
                         <Skeleton className="h-8 w-12 bg-white/10" />
                       ) : (
-                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', sans-serif" }}>
+                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
                           {employeeStats?.superusers || 0}
                         </span>
                       )}
@@ -381,11 +363,9 @@ export function AdminDashboardPage() {
             </div>
 
             {/* 总员工数 - 突出卡片 */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-600/10 border border-emerald-500/20 p-8 flex flex-col justify-between"
+            <div
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-600/10 border border-emerald-500/20 p-8 flex flex-col justify-between animate-in fade-in zoom-in-95 duration-500"
+              style={{ animationDelay: '300ms' }}
             >
               <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-400/20 rounded-full blur-3xl" />
 
@@ -398,15 +378,12 @@ export function AdminDashboardPage() {
                 {isLoading ? (
                   <Skeleton className="h-16 w-24 bg-white/10" />
                 ) : (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                    className="text-6xl font-light text-white"
-                    style={{ fontFamily: "'Sora', sans-serif" }}
+                  <div
+                    className="text-6xl font-light text-white animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    style={{ fontFamily: "'Sora', system-ui, sans-serif", animationDelay: '500ms' }}
                   >
                     {employeeStats?.total || 0}
-                  </motion.div>
+                  </div>
                 )}
               </div>
 
@@ -414,9 +391,9 @@ export function AdminDashboardPage() {
                 <TrendingUp className="w-4 h-4" />
                 <span className="text-sm">组织规模持续增长</span>
               </div>
-            </motion.div>
+            </div>
           </div>
-        </motion.section>
+        </section>
 
         {/* 组织架构统计 */}
         <section className="mb-10">

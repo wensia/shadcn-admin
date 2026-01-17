@@ -9,7 +9,6 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { DateTimePicker } from '@/components/date-time-picker'
 import {
   Form,
   FormControl,
@@ -36,8 +36,7 @@ import { LeadSelectDialog, type SelectedLead } from './lead-select-dialog'
 // 表单验证 schema
 const visitScheduleFormSchema = z.object({
   lead_id: z.string().min(1, '请选择线索'),
-  scheduled_date: z.string().min(1, '请选择预约日期'),
-  scheduled_time: z.string().min(1, '请选择预约时间'),
+  scheduled_at: z.string().min(1, '请选择预约时间'),
   trial_course: z.string().optional(),
   remark: z.string().optional()
 })
@@ -65,12 +64,18 @@ export function VisitScheduleDialog({
   const isScheduled = defaultStatus === 'scheduled'
   const title = isScheduled ? '新建诺到记录' : '新建到访记录'
 
+  // 默认预约时间：今天 10:00
+  const getDefaultScheduledAt = () => {
+    const date = new Date()
+    date.setHours(10, 0, 0, 0)
+    return date.toISOString()
+  }
+
   const form = useForm<VisitScheduleFormValues>({
     resolver: zodResolver(visitScheduleFormSchema),
     defaultValues: {
       lead_id: '',
-      scheduled_date: format(new Date(), 'yyyy-MM-dd'),
-      scheduled_time: '10:00',
+      scheduled_at: getDefaultScheduledAt(),
       trial_course: '',
       remark: ''
     }
@@ -81,8 +86,7 @@ export function VisitScheduleDialog({
     if (open) {
       form.reset({
         lead_id: '',
-        scheduled_date: format(new Date(), 'yyyy-MM-dd'),
-        scheduled_time: '10:00',
+        scheduled_at: getDefaultScheduledAt(),
         trial_course: '',
         remark: ''
       })
@@ -118,19 +122,16 @@ export function VisitScheduleDialog({
 
   // 提交表单
   const onSubmit = (values: VisitScheduleFormValues) => {
-    // 组合日期和时间
-    const scheduledAt = `${values.scheduled_date}T${values.scheduled_time}:00`
-
     const data: VisitScheduleCreate = {
       lead_id: values.lead_id,
-      scheduled_at: scheduledAt,
+      scheduled_at: values.scheduled_at,
       trial_course: values.trial_course || undefined,
       remark: values.remark || undefined
     }
 
     // 如果是到访，需要额外设置实际到访时间
     if (!isScheduled) {
-      ;(data as any).actual_visit_at = scheduledAt
+      ;(data as any).actual_visit_at = values.scheduled_at
       ;(data as any).status = 'visited'
     }
 
@@ -191,35 +192,23 @@ export function VisitScheduleDialog({
             />
 
             {/* 预约日期和时间 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="scheduled_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{isScheduled ? '预约日期' : '到访日期'} *</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="scheduled_time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{isScheduled ? '预约时间' : '到访时间'} *</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="scheduled_at"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{isScheduled ? '预约时间' : '到访时间'} *</FormLabel>
+                  <FormControl>
+                    <DateTimePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder={isScheduled ? '选择预约时间' : '选择到访时间'}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* 体验课程 */}
             <FormField
