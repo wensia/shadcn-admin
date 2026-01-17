@@ -17,6 +17,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -45,6 +46,7 @@ const visitScheduleFormSchema = z.object({
   lead_id: z.string().min(1, '请选择线索'),
   scheduled_at: z.string().min(1, '请选择预约时间'),
   trial_course: z.string().optional(),
+  trial_teacher: z.string().optional(),
   remark: z.string().optional()
 })
 
@@ -93,6 +95,7 @@ export function VisitScheduleDialog({
       lead_id: '',
       scheduled_at: getDefaultScheduledAt(),
       trial_course: '',
+      trial_teacher: '',
       remark: ''
     }
   })
@@ -104,6 +107,7 @@ export function VisitScheduleDialog({
         lead_id: '',
         scheduled_at: getDefaultScheduledAt(),
         trial_course: '',
+        trial_teacher: '',
         remark: ''
       })
       setSelectedLead(null)
@@ -142,6 +146,7 @@ export function VisitScheduleDialog({
       lead_id: values.lead_id,
       scheduled_at: values.scheduled_at,
       trial_course: values.trial_course || undefined,
+      trial_teacher: values.trial_teacher || undefined,
       remark: values.remark || undefined
     }
 
@@ -226,7 +231,7 @@ export function VisitScheduleDialog({
               )}
             />
 
-            {/* 体验课程 */}
+            {/* 体验课程和讲师 */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -251,6 +256,19 @@ export function VisitScheduleDialog({
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="trial_teacher"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>体验课讲师</FormLabel>
+                    <FormControl>
+                      <Input placeholder="讲师姓名" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

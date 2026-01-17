@@ -217,6 +217,7 @@ export interface VisitScheduleCreate {
   scheduled_at: string
   campus_id?: string
   trial_course?: string
+  trial_teacher?: string
   remark?: string
 }
 
@@ -226,6 +227,7 @@ export interface VisitScheduleUpdate {
   status?: string
   campus_id?: string
   trial_course?: string
+  trial_teacher?: string
   remark?: string
 }
 
