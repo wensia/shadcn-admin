@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -16,15 +16,17 @@ import { PaymentTab } from './components/payment-tab'
 
 type DailyControlTab = 'promised' | 'visited' | 'payment'
 
-// 获取今天的日期字符串
-const getTodayStr = () => format(new Date(), 'yyyy-MM-dd')
+// 获取本月第一天
+const getMonthStartStr = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
+// 获取本月最后一天
+const getMonthEndStr = () => format(endOfMonth(new Date()), 'yyyy-MM-dd')
 
 export function DailyControlPage() {
   useDocumentTitle('日控表')
   const [activeTab, setActiveTab] = useState<DailyControlTab>('promised')
   const [dateRange, setDateRange] = useState<{ from: string | undefined; to: string | undefined }>({
-    from: getTodayStr(),
-    to: getTodayStr(),
+    from: getMonthStartStr(),
+    to: getMonthEndStr(),
   })
 
   return (
