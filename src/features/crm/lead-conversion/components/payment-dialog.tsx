@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -35,10 +34,10 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form'
-import { Search, X } from 'lucide-react'
+import { UserPlus, X } from 'lucide-react'
 import { paymentApi, employeeApi } from '../api'
-import { leadsApi } from '../../leads/api'
 import type { Payment, PaymentCreate, PaymentUpdate } from '../types'
+import { LeadSelectDialog, type SelectedLead } from '@/features/crm/daily-control/components/lead-select-dialog'
 import {
   paymentMethodOptions,
   paymentTypeOptions,
@@ -81,12 +80,8 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const queryClient = useQueryClient()
   const isEdit = !!payment?.id
-  const [searchPhone, setSearchPhone] = useState('')
-  const [selectedLead, setSelectedLead] = useState<{
-    id: string
-    child_name: string
-    parent_phone: string
-  } | null>(null)
+  const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
+  const [leadSelectOpen, setLeadSelectOpen] = useState(false)
 
   // 获取收款人列表
   const { data: employeesData } = useQuery({
@@ -96,17 +91,6 @@ export function PaymentDialog({
       return response.data?.items || []
     },
     staleTime: 5 * 60 * 1000
-  })
-
-  // 搜索线索
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ['search-leads-for-payment', searchPhone],
-    queryFn: async () => {
-      if (!searchPhone || searchPhone.length < 3) return []
-      const response = await leadsApi.searchLeadsByPhone(searchPhone)
-      return response.data?.items || []
-    },
-    enabled: searchPhone.length >= 3
   })
 
   const form = useForm<PaymentFormValues>({
@@ -165,7 +149,6 @@ export function PaymentDialog({
         remark: ''
       })
       setSelectedLead(null)
-      setSearchPhone('')
     }
   }, [payment, open, form])
 
@@ -201,10 +184,9 @@ export function PaymentDialog({
   })
 
   // 选择线索
-  const handleSelectLead = (lead: { id: string; child_name: string; parent_phone: string }) => {
+  const handleSelectLead = (lead: SelectedLead) => {
     setSelectedLead(lead)
     form.setValue('lead_id', lead.id)
-    setSearchPhone('')
   }
 
   // 清除选择的线索
@@ -256,10 +238,10 @@ export function PaymentDialog({
                 <FormItem>
                   <FormLabel>选择线索 *</FormLabel>
                   <FormControl>
-                    <div className="space-y-2">
+                    <div>
                       {selectedLead ? (
                         <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                          <span className="font-medium">{selectedLead.child_name}</span>
+                          <span className="font-medium">{selectedLead.child_name || '-'}</span>
                           <span className="text-muted-foreground">-</span>
                           <span>{selectedLead.parent_phone}</span>
                           <Button
@@ -273,36 +255,15 @@ export function PaymentDialog({
                           </Button>
                         </div>
                       ) : (
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="输入手机号搜索线索"
-                            value={searchPhone}
-                            onChange={(e) => setSearchPhone(e.target.value)}
-                            className="pl-9"
-                          />
-                        </div>
-                      )}
-                      {!selectedLead && searchResults && searchResults.length > 0 && (
-                        <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
-                          {searchResults.map((lead: any) => (
-                            <div
-                              key={lead.id}
-                              className="p-2 hover:bg-muted cursor-pointer text-sm"
-                              onClick={() => handleSelectLead({
-                                id: lead.id,
-                                child_name: lead.child_name,
-                                parent_phone: lead.parent_phone
-                              })}
-                            >
-                              <span className="font-medium">{lead.child_name}</span>
-                              <span className="text-muted-foreground ml-2">{lead.parent_phone}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {!selectedLead && searchPhone.length >= 3 && isSearching && (
-                        <div className="text-sm text-muted-foreground p-2">搜索中...</div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-start text-muted-foreground"
+                          onClick={() => setLeadSelectOpen(true)}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          点击选择线索
+                        </Button>
                       )}
                     </div>
                   </FormControl>
@@ -563,6 +524,15 @@ export function PaymentDialog({
           </form>
         </Form>
       </DialogContent>
+
+      {/* 线索选择弹窗 */}
+      <LeadSelectDialog
+        open={leadSelectOpen}
+        onOpenChange={setLeadSelectOpen}
+        onSelect={handleSelectLead}
+        title="选择线索"
+        description="选择要登记缴费的线索"
+      />
     </Dialog>
   )
 }

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -28,10 +28,10 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form'
-import { Search, X } from 'lucide-react'
+import { UserPlus, X } from 'lucide-react'
 import { visitScheduleApi } from '@/features/crm/lead-conversion/api'
-import { leadsApi } from '@/features/crm/leads/api'
 import type { VisitScheduleCreate } from '@/features/crm/lead-conversion/types'
+import { LeadSelectDialog, type SelectedLead } from './lead-select-dialog'
 
 // 表单验证 schema
 const visitScheduleFormSchema = z.object({
@@ -59,26 +59,11 @@ export function VisitScheduleDialog({
   onSuccess
 }: VisitScheduleDialogProps) {
   const queryClient = useQueryClient()
-  const [searchPhone, setSearchPhone] = useState('')
-  const [selectedLead, setSelectedLead] = useState<{
-    id: string
-    child_name: string
-    parent_phone: string
-  } | null>(null)
+  const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
+  const [leadSelectOpen, setLeadSelectOpen] = useState(false)
 
   const isScheduled = defaultStatus === 'scheduled'
   const title = isScheduled ? '新建诺到记录' : '新建到访记录'
-
-  // 搜索线索
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ['search-leads-for-visit', searchPhone],
-    queryFn: async () => {
-      if (!searchPhone || searchPhone.length < 3) return []
-      const response = await leadsApi.searchLeadsByPhone(searchPhone)
-      return response.data?.items || []
-    },
-    enabled: searchPhone.length >= 3
-  })
 
   const form = useForm<VisitScheduleFormValues>({
     resolver: zodResolver(visitScheduleFormSchema),
@@ -102,7 +87,6 @@ export function VisitScheduleDialog({
         remark: ''
       })
       setSelectedLead(null)
-      setSearchPhone('')
     }
   }, [open, form])
 
@@ -121,10 +105,9 @@ export function VisitScheduleDialog({
   })
 
   // 选择线索
-  const handleSelectLead = (lead: { id: string; child_name: string; parent_phone: string }) => {
+  const handleSelectLead = (lead: SelectedLead) => {
     setSelectedLead(lead)
     form.setValue('lead_id', lead.id)
-    setSearchPhone('')
   }
 
   // 清除选择的线索
@@ -173,10 +156,10 @@ export function VisitScheduleDialog({
                 <FormItem>
                   <FormLabel>选择线索 *</FormLabel>
                   <FormControl>
-                    <div className="space-y-2">
+                    <div>
                       {selectedLead ? (
                         <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                          <span className="font-medium">{selectedLead.child_name}</span>
+                          <span className="font-medium">{selectedLead.child_name || '-'}</span>
                           <span className="text-muted-foreground">-</span>
                           <span>{selectedLead.parent_phone}</span>
                           <Button
@@ -190,39 +173,15 @@ export function VisitScheduleDialog({
                           </Button>
                         </div>
                       ) : (
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="输入手机号搜索线索"
-                            value={searchPhone}
-                            onChange={(e) => setSearchPhone(e.target.value)}
-                            className="pl-9"
-                          />
-                        </div>
-                      )}
-                      {!selectedLead && searchResults && searchResults.length > 0 && (
-                        <div className="border rounded-md divide-y max-h-40 overflow-y-auto">
-                          {searchResults.map((lead: any) => (
-                            <div
-                              key={lead.id}
-                              className="p-2 hover:bg-muted cursor-pointer text-sm"
-                              onClick={() => handleSelectLead({
-                                id: lead.id,
-                                child_name: lead.child_name,
-                                parent_phone: lead.parent_phone
-                              })}
-                            >
-                              <span className="font-medium">{lead.child_name}</span>
-                              <span className="text-muted-foreground ml-2">{lead.parent_phone}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {!selectedLead && searchPhone.length >= 3 && isSearching && (
-                        <div className="text-sm text-muted-foreground p-2">搜索中...</div>
-                      )}
-                      {!selectedLead && searchPhone.length >= 3 && !isSearching && searchResults?.length === 0 && (
-                        <div className="text-sm text-muted-foreground p-2">未找到匹配的线索</div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-start text-muted-foreground"
+                          onClick={() => setLeadSelectOpen(true)}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          点击选择线索
+                        </Button>
                       )}
                     </div>
                   </FormControl>
@@ -308,6 +267,15 @@ export function VisitScheduleDialog({
           </form>
         </Form>
       </DialogContent>
+
+      {/* 线索选择弹窗 */}
+      <LeadSelectDialog
+        open={leadSelectOpen}
+        onOpenChange={setLeadSelectOpen}
+        onSelect={handleSelectLead}
+        title="选择线索"
+        description={isScheduled ? '选择要预约到访的线索' : '选择已到访的线索'}
+      />
     </Dialog>
   )
 }
