@@ -227,33 +227,35 @@ export function VisitScheduleDialog({
             />
 
             {/* 体验课程 */}
-            <FormField
-              control={form.control}
-              name="trial_course"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>体验课程</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || ''}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="选择体验课程" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {activeCourses.map((course) => (
-                        <SelectItem key={course.id} value={course.name}>
-                          {course.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="trial_course"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>体验课程</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ''}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择体验课程" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {activeCourses.map((course) => (
+                          <SelectItem key={course.id} value={course.name}>
+                            {course.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* 备注 */}
             <FormField
