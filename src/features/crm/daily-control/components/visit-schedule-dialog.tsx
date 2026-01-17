@@ -239,7 +239,7 @@ export function VisitScheduleDialog({
                       value={field.value || ''}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="选择体验课程" />
                         </SelectTrigger>
                       </FormControl>
