@@ -552,7 +552,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                           <FormLabel className="text-xs">与儿童关系</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-8 text-xs">
+                              <SelectTrigger className="h-8 text-xs w-full">
                                 <SelectValue placeholder="选择关系" />
                               </SelectTrigger>
                             </FormControl>
@@ -700,7 +700,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                           ) : (
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="h-8 text-xs">
+                                <SelectTrigger className="h-8 text-xs w-full">
                                   <SelectValue placeholder="选择渠道" />
                                 </SelectTrigger>
                               </FormControl>
@@ -811,7 +811,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                           ) : (
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger className="h-8 text-xs">
+                                <SelectTrigger className="h-8 text-xs w-full">
                                   <SelectValue placeholder="选择校区" />
                                 </SelectTrigger>
                               </FormControl>
