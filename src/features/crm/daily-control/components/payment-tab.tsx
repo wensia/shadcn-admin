@@ -45,6 +45,25 @@ import {
   paymentTypeLabels,
 } from '../api'
 import { PaymentDialog } from '@/features/crm/lead-conversion/components/payment-dialog'
+import { CopyableCell } from './copyable-cell'
+import { ColumnToggle } from './column-toggle'
+
+// 星期映射
+const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+// 格式化日期带星期
+function formatDateWithWeekday(dateStr: string | undefined): string {
+  if (!dateStr) return '-'
+  try {
+    // 处理 ISO 格式日期，取日期部分
+    const datePart = dateStr.split('T')[0]
+    const date = new Date(datePart)
+    const weekday = weekDays[date.getDay()]
+    return `${datePart} ${weekday}`
+  } catch {
+    return dateStr
+  }
+}
 
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
@@ -84,6 +103,7 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
   const [pageSize, setPageSize] = useState(20)
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editData, setEditData] = useState<PaymentItem | null>(null)
 
   // 加载数据
   const fetchData = async () => {
@@ -131,8 +151,14 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
 
   // 编辑
   const handleEdit = (item: PaymentItem) => {
-    // TODO: 打开编辑弹窗
-    toast.info('编辑功能开发中')
+    setEditData(item)
+    setDialogOpen(true)
+  }
+
+  // 新建
+  const handleCreate = () => {
+    setEditData(null)
+    setDialogOpen(true)
   }
 
   // 删除
@@ -153,6 +179,21 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
   const displayData = useMemo(() => {
     return isLoading ? createSkeletonData(pageSize) : data
   }, [isLoading, data, pageSize])
+
+  // 列名映射（用于列可见性控制显示）
+  const columnLabels: Record<string, string> = {
+    child_name: '学生姓名',
+    parent_phone: '联系电话',
+    amount: '缴费金额',
+    payment_method: '支付方式',
+    payment_type: '缴费类型',
+    payment_at: '缴费日期',
+    status: '状态',
+    collector_name: '收款人',
+    course_name: '课程',
+    remark: '备注',
+    actions: '操作',
+  }
 
   // 表格列定义
   const columns = useMemo<ColumnDef<PaymentItem>[]>(
@@ -223,12 +264,11 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
         header: '缴费日期',
         cell: ({ row }) => {
           if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
+            return <Skeleton className="h-4 w-28" />
           }
-          const date = row.original.payment_at
-          return <span>{date?.split('T')[0] || '-'}</span>
+          return <span>{formatDateWithWeekday(row.original.payment_at)}</span>
         },
-        size: 100,
+        size: 120,
       },
       {
         accessorKey: 'status',
@@ -264,10 +304,11 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className="h-4 w-24" />
           }
-          return (
-            <span className="truncate max-w-[100px]" title={row.original.course_name}>
-              {row.original.course_name || '-'}
-            </span>
+          const courseName = row.original.course_name
+          return courseName ? (
+            <CopyableCell content={courseName} maxWidthClass="max-w-[100px]" />
+          ) : (
+            <span className="text-muted-foreground">-</span>
           )
         },
         size: 100,
@@ -279,10 +320,11 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className="h-4 w-24" />
           }
-          return (
-            <span className="truncate max-w-[100px] text-muted-foreground" title={row.original.remark}>
-              {row.original.remark || '-'}
-            </span>
+          const remark = row.original.remark
+          return remark ? (
+            <CopyableCell content={remark} maxWidthClass="max-w-[100px]" className="text-muted-foreground" />
+          ) : (
+            <span className="text-muted-foreground">-</span>
           )
         },
         size: 100,
@@ -341,10 +383,11 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-medium">缴费列表</CardTitle>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="h-8 gap-1" onClick={() => setDialogOpen(true)}>
+          <Button size="sm" className="h-8 gap-1" onClick={handleCreate}>
             <Plus className="h-4 w-4" />
             新建缴费
           </Button>
+          <ColumnToggle table={table} columnLabels={columnLabels} />
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={fetchData}>
             <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
           </Button>
@@ -357,17 +400,23 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
             <TableHeader className="sticky top-0 z-10 bg-card">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      style={{ width: header.getSize() }}
-                      className="text-xs font-semibold"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const isActionsColumn = header.id === 'actions'
+                    return (
+                      <TableHead
+                        key={header.id}
+                        style={{ width: header.getSize() }}
+                        className={cn(
+                          "text-xs font-semibold",
+                          isActionsColumn && "sticky right-0 z-20 bg-card shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                        )}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
               ))}
             </TableHeader>
@@ -375,15 +424,21 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        style={{ width: cell.column.getSize() }}
-                        className="py-2 text-xs"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const isActionsColumn = cell.column.id === 'actions'
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          style={{ width: cell.column.getSize() }}
+                          className={cn(
+                            "py-2 text-xs",
+                            isActionsColumn && "sticky right-0 bg-card shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      )
+                    })}
                   </TableRow>
                 ))
               ) : (
@@ -412,11 +467,18 @@ export function PaymentTab({ dateFrom, dateTo }: PaymentTabProps) {
         />
       </CardContent>
 
-      {/* 新建缴费弹窗 */}
+      {/* 新建/编辑缴费弹窗 */}
       <PaymentDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSuccess={fetchData}
+        payment={editData ? {
+          ...editData,
+          payment_method_display: editData.payment_method_display || '',
+          payment_type_display: editData.payment_type_display || '',
+          status_display: editData.status_display || '',
+          updated_at: editData.updated_at || editData.created_at,
+        } : null}
       />
     </Card>
   )

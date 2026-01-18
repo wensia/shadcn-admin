@@ -11,13 +11,14 @@ import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
 // 到访预约状态
 export type VisitScheduleStatus = 'scheduled' | 'visited' | 'noshow' | 'cancelled'
 
-// 到访预约记录
+// 到访预约记录（字段名与后端 VisitScheduleResponse 对应）
 export interface VisitScheduleItem {
   id: string
   lead_id: string
-  child_name: string
-  parent_name?: string
-  parent_phone?: string
+  student_name?: string  // 后端返回 student_name
+  phone?: string         // 后端返回 phone
+  grade?: string
+  grade_display?: string
   visit_date: string
   visit_time?: string
   advisor_id?: string
@@ -29,7 +30,12 @@ export interface VisitScheduleItem {
   course_names?: string[]
   remark?: string
   created_at: string
+  created_by?: string
+  created_by_name?: string
   updated_at?: string
+  // 兼容旧字段名（前端使用）
+  child_name?: string    // 映射自 student_name
+  parent_phone?: string  // 映射自 phone
 }
 
 // 到访预约查询参数
@@ -165,6 +171,45 @@ export async function updateVisitScheduleStatus(id: string, status: VisitSchedul
 }
 
 /**
+ * 更新到访预约信息
+ */
+export interface VisitScheduleUpdateData {
+  scheduled_at?: string
+  trial_course?: string
+  trial_teacher?: string
+  remark?: string
+  status?: VisitScheduleStatus
+}
+
+export async function updateVisitSchedule(id: string, data: VisitScheduleUpdateData) {
+  // 转换数据格式以匹配后端 API
+  const apiData: Record<string, unknown> = {}
+
+  if (data.scheduled_at) {
+    // 解析 scheduled_at 为 visit_date 和 visit_time
+    const dateTime = new Date(data.scheduled_at)
+    apiData.visit_date = dateTime.toISOString().split('T')[0] // YYYY-MM-DD
+    apiData.visit_time = dateTime.toTimeString().split(' ')[0] // HH:MM:SS
+  }
+
+  if (data.remark !== undefined) {
+    apiData.remark = data.remark
+  }
+
+  if (data.status !== undefined) {
+    apiData.status = data.status
+  }
+
+  // trial_course 和 trial_teacher 暂不支持更新
+
+  const response = await apiClient.put<ApiResponse<VisitScheduleItem>>(
+    `/visit-schedules/${id}`,
+    apiData
+  )
+  return response
+}
+
+/**
  * 删除到访预约
  */
 export async function deleteVisitSchedule(id: string) {
@@ -190,6 +235,27 @@ export async function updatePaymentStatus(id: string, status: PaymentStatus) {
   const response = await apiClient.put<ApiResponse<PaymentItem>>(
     `/payments/${id}`,
     { status }
+  )
+  return response
+}
+
+/**
+ * 更新缴费记录信息
+ */
+export interface PaymentUpdateData {
+  amount?: number
+  payment_method?: PaymentMethod
+  payment_type?: PaymentType
+  payment_at?: string
+  course_id?: string
+  remark?: string
+  status?: PaymentStatus
+}
+
+export async function updatePayment(id: string, data: PaymentUpdateData) {
+  const response = await apiClient.put<ApiResponse<PaymentItem>>(
+    `/payments/${id}`,
+    data
   )
   return response
 }

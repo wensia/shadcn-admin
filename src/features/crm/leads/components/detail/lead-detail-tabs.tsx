@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,10 +19,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { formatTime } from '@/lib/utils/time'
-import { Receipt } from 'lucide-react'
+import { Receipt, Copy, Check } from 'lucide-react'
 
 import { leadsApi } from '../../api'
 import type { Lead, LeadFollowup } from '../../types'
@@ -41,6 +48,60 @@ import { ChangeHistoryTimeline } from './change-history-timeline'
 import { FollowupFrequencyChart } from './charts/followup-frequency-chart'
 import { FollowupMethodPie } from './charts/followup-method-pie'
 import { FollowupResultPie } from './charts/followup-result-pie'
+
+/**
+ * 跟进内容单元格组件 - 支持悬浮展示完整内容和复制
+ */
+function FollowupContentCell({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      toast.success('已复制到剪贴板')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('复制失败')
+    }
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="truncate block cursor-pointer">{content}</span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="start"
+        className="max-w-[320px] bg-popover text-popover-foreground border shadow-md"
+      >
+        <div className="space-y-2">
+          <p className="text-xs whitespace-pre-wrap break-words">{content}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-xs w-full gap-1"
+            onClick={handleCopy}
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" />
+                已复制
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                复制内容
+              </>
+            )}
+          </Button>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
 
 interface LeadDetailTabsProps {
   /** 线索ID */
@@ -289,11 +350,12 @@ export function LeadDetailTabs({
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell
-                        className={cn(s.text.xs, 'max-w-[200px] truncate')}
-                        title={followup.content}
-                      >
-                        {followup.content || '-'}
+                      <TableCell className={cn(s.text.xs, 'max-w-[200px]')}>
+                        {followup.content ? (
+                          <FollowupContentCell content={followup.content} />
+                        ) : (
+                          '-'
+                        )}
                       </TableCell>
                       <TableCell className={s.text.xs}>
                         {followup.followup_by_name || '-'}

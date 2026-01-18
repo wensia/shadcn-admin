@@ -31,10 +31,16 @@ import {
   Loader2,
 } from 'lucide-react'
 import { leadsApi, yunkeApi } from '../api'
-import type { Lead, IntentionLevel } from '../types'
+import type { Lead } from '../types'
+import { IntentionLevel, intentionLevelLabels } from '../types'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { LeadStatusBadge, IntentionLevelBadge } from './status-badges'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 // 详情 Tabs 组件
 import { LeadDetailTabs } from './detail/lead-detail-tabs'
@@ -61,6 +67,9 @@ export function LeadDetailSheet({
 
   // ==================== 跟进表单对话框状态 ====================
   const [followupDialogOpen, setFollowupDialogOpen] = useState(false)
+
+  // ==================== 意向等级快捷编辑 ====================
+  const [intentionPopoverOpen, setIntentionPopoverOpen] = useState(false)
 
   // ==================== 外呼状态 ====================
   const [isInCall, setIsInCall] = useState(false)
@@ -234,8 +243,45 @@ export function LeadDetailSheet({
               {lead && (
                 <LeadStatusBadge status={lead.status} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
               )}
-              {lead?.intention_level && (
-                <IntentionLevelBadge level={lead.intention_level} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
+              {/* 意向等级 - 支持快捷编辑 */}
+              {lead && (
+                <Popover open={intentionPopoverOpen} onOpenChange={setIntentionPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      title="点击修改意向等级"
+                    >
+                      {lead.intention_level ? (
+                        <IntentionLevelBadge level={lead.intention_level} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
+                      ) : (
+                        <span className={cn('text-muted-foreground border border-dashed rounded px-2 py-0.5', s.text.xs)}>
+                          设置意向
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-1" align="start">
+                    <div className="flex flex-col gap-0.5">
+                      {Object.entries(intentionLevelLabels).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={cn(
+                            'flex items-center gap-2 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors text-left',
+                            lead.intention_level === value && 'bg-accent'
+                          )}
+                          onClick={async () => {
+                            await handleFieldUpdate('intention_level', value)
+                            setIntentionPopoverOpen(false)
+                          }}
+                        >
+                          <IntentionLevelBadge level={value as IntentionLevel} className="text-xs" />
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
               {lead?.is_starred && (
                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />

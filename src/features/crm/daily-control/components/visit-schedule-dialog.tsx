@@ -40,6 +40,7 @@ import { visitScheduleApi } from '@/features/crm/lead-conversion/api'
 import { coursesApi } from '@/features/admin/api'
 import type { VisitScheduleCreate } from '@/features/crm/lead-conversion/types'
 import { LeadSelectDialog, type SelectedLead } from './lead-select-dialog'
+import { updateVisitSchedule, type VisitScheduleItem, type VisitScheduleUpdateData } from '../api'
 
 // 表单验证 schema
 const visitScheduleFormSchema = z.object({
@@ -58,20 +59,26 @@ interface VisitScheduleDialogProps {
   /** 默认状态：scheduled=诺到，visited=到访 */
   defaultStatus: 'scheduled' | 'visited'
   onSuccess?: () => void
+  /** 编辑数据，传入时为编辑模式 */
+  editData?: VisitScheduleItem | null
 }
 
 export function VisitScheduleDialog({
   open,
   onOpenChange,
   defaultStatus,
-  onSuccess
+  onSuccess,
+  editData
 }: VisitScheduleDialogProps) {
   const queryClient = useQueryClient()
   const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
   const [leadSelectOpen, setLeadSelectOpen] = useState(false)
 
   const isScheduled = defaultStatus === 'scheduled'
-  const title = isScheduled ? '新建诺到记录' : '新建到访记录'
+  const isEditMode = !!editData
+  const title = isEditMode
+    ? (isScheduled ? '编辑诺到记录' : '编辑到访记录')
+    : (isScheduled ? '新建诺到记录' : '新建到访记录')
 
   // 获取课程列表
   const { data: courses = [] } = useQuery({
@@ -103,16 +110,38 @@ export function VisitScheduleDialog({
   // 重置表单
   useEffect(() => {
     if (open) {
-      form.reset({
-        lead_id: '',
-        scheduled_at: getDefaultScheduledAt(),
-        trial_course: '',
-        trial_teacher: '',
-        remark: ''
-      })
-      setSelectedLead(null)
+      if (editData) {
+        // 编辑模式：填充现有数据
+        const scheduledAt = editData.visit_date && editData.visit_time
+          ? `${editData.visit_date}T${editData.visit_time}`
+          : editData.visit_date
+            ? `${editData.visit_date}T10:00:00`
+            : getDefaultScheduledAt()
+        form.reset({
+          lead_id: editData.lead_id,
+          scheduled_at: scheduledAt,
+          trial_course: editData.course_names?.[0] || '',
+          trial_teacher: '',
+          remark: editData.remark || ''
+        })
+        setSelectedLead({
+          id: editData.lead_id,
+          child_name: editData.child_name,
+          parent_phone: editData.parent_phone || ''
+        })
+      } else {
+        // 新建模式
+        form.reset({
+          lead_id: '',
+          scheduled_at: getDefaultScheduledAt(),
+          trial_course: '',
+          trial_teacher: '',
+          remark: ''
+        })
+        setSelectedLead(null)
+      }
     }
-  }, [open, form])
+  }, [open, form, editData])
 
   // 创建记录
   const createMutation = useMutation({
@@ -125,6 +154,20 @@ export function VisitScheduleDialog({
     },
     onError: (error: any) => {
       toast.error(error?.message || '创建失败')
+    }
+  })
+
+  // 更新记录
+  const updateMutation = useMutation({
+    mutationFn: (data: VisitScheduleUpdateData) => updateVisitSchedule(editData!.id, data),
+    onSuccess: () => {
+      toast.success(isScheduled ? '诺到记录更新成功' : '到访记录更新成功')
+      queryClient.invalidateQueries({ queryKey: ['visit-schedules'] })
+      onOpenChange(false)
+      onSuccess?.()
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || '更新失败')
     }
   })
 
@@ -142,24 +185,36 @@ export function VisitScheduleDialog({
 
   // 提交表单
   const onSubmit = (values: VisitScheduleFormValues) => {
-    const data: VisitScheduleCreate = {
-      lead_id: values.lead_id,
-      scheduled_at: values.scheduled_at,
-      trial_course: values.trial_course || undefined,
-      trial_teacher: values.trial_teacher || undefined,
-      remark: values.remark || undefined
-    }
+    if (isEditMode) {
+      // 编辑模式
+      const updateData: VisitScheduleUpdateData = {
+        scheduled_at: values.scheduled_at,
+        trial_course: values.trial_course || undefined,
+        trial_teacher: values.trial_teacher || undefined,
+        remark: values.remark || undefined
+      }
+      updateMutation.mutate(updateData)
+    } else {
+      // 新建模式
+      const data: VisitScheduleCreate = {
+        lead_id: values.lead_id,
+        scheduled_at: values.scheduled_at,
+        trial_course: values.trial_course || undefined,
+        trial_teacher: values.trial_teacher || undefined,
+        remark: values.remark || undefined
+      }
 
-    // 如果是到访，需要额外设置实际到访时间
-    if (!isScheduled) {
-      ;(data as any).actual_visit_at = values.scheduled_at
-      ;(data as any).status = 'visited'
-    }
+      // 如果是到访，需要额外设置实际到访时间
+      if (!isScheduled) {
+        ;(data as any).actual_visit_at = values.scheduled_at
+        ;(data as any).status = 'visited'
+      }
 
-    createMutation.mutate(data)
+      createMutation.mutate(data)
+    }
   }
 
-  const isSubmitting = createMutation.isPending
+  const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -184,15 +239,17 @@ export function VisitScheduleDialog({
                           <span className="font-medium">{selectedLead.child_name || '-'}</span>
                           <span className="text-muted-foreground">-</span>
                           <span>{selectedLead.parent_phone}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="ml-auto h-6 w-6"
-                            onClick={handleClearLead}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          {!isEditMode && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="ml-auto h-6 w-6"
+                              onClick={handleClearLead}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       ) : (
                         <Button
@@ -200,6 +257,7 @@ export function VisitScheduleDialog({
                           variant="outline"
                           className="w-full justify-start text-muted-foreground"
                           onClick={() => setLeadSelectOpen(true)}
+                          disabled={isEditMode}
                         >
                           <UserPlus className="mr-2 h-4 w-4" />
                           点击选择线索
@@ -300,7 +358,7 @@ export function VisitScheduleDialog({
                 取消
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? '提交中...' : '创建'}
+                {isSubmitting ? '提交中...' : (isEditMode ? '保存' : '创建')}
               </Button>
             </DialogFooter>
           </form>

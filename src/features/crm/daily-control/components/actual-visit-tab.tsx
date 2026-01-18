@@ -10,7 +10,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { Wallet, MoreHorizontal, RefreshCw, Plus } from 'lucide-react'
+import { Wallet, MoreHorizontal, RefreshCw, Plus, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
@@ -41,6 +42,23 @@ import {
   visitScheduleStatusColors,
 } from '../api'
 import { VisitScheduleDialog } from './visit-schedule-dialog'
+import { CopyableCell } from './copyable-cell'
+import { ColumnToggle } from './column-toggle'
+
+// 星期映射
+const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+// 格式化日期带星期
+function formatDateWithWeekday(dateStr: string | undefined): string {
+  if (!dateStr) return '-'
+  try {
+    const date = new Date(dateStr)
+    const weekday = weekDays[date.getDay()]
+    return `${dateStr} ${weekday}`
+  } catch {
+    return dateStr
+  }
+}
 
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
@@ -49,8 +67,8 @@ function createSkeletonData(count: number): VisitScheduleItem[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_ID_PREFIX}${i}`,
     lead_id: '',
-    child_name: '',
-    parent_phone: '',
+    student_name: '',
+    phone: '',
     visit_date: '',
     visit_time: '',
     advisor_name: '',
@@ -78,6 +96,7 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
   const [pageSize, setPageSize] = useState(20)
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editData, setEditData] = useState<VisitScheduleItem | null>(null)
 
   // 加载数据
   const fetchData = async () => {
@@ -113,6 +132,18 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
     fetchData()
   }, [page, pageSize, dateFrom, dateTo])
 
+  // 编辑
+  const handleEdit = (item: VisitScheduleItem) => {
+    setEditData(item)
+    setDialogOpen(true)
+  }
+
+  // 新建
+  const handleCreate = () => {
+    setEditData(null)
+    setDialogOpen(true)
+  }
+
   // 登记缴费
   const handleRegisterPayment = (item: VisitScheduleItem) => {
     // TODO: 打开缴费登记弹窗
@@ -124,28 +155,41 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
     return isLoading ? createSkeletonData(pageSize) : data
   }, [isLoading, data, pageSize])
 
+  // 列名映射（用于列可见性控制显示）
+  const columnLabels: Record<string, string> = {
+    student_name: '学生姓名',
+    phone: '联系电话',
+    visit_date: '到访日期',
+    visit_time: '到访时间',
+    advisor_name: '接待顾问',
+    course_names: '体验课程',
+    status: '状态',
+    remark: '备注',
+    actions: '操作',
+  }
+
   // 表格列定义
   const columns = useMemo<ColumnDef<VisitScheduleItem>[]>(
     () => [
       {
-        accessorKey: 'child_name',
+        accessorKey: 'student_name',
         header: '学生姓名',
         cell: ({ row }) => {
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className="h-4 w-20" />
           }
-          return <span className="font-medium">{row.original.child_name || '-'}</span>
+          return <span className="font-medium">{row.original.student_name || '-'}</span>
         },
         size: 100,
       },
       {
-        accessorKey: 'parent_phone',
+        accessorKey: 'phone',
         header: '联系电话',
         cell: ({ row }) => {
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className="h-4 w-28" />
           }
-          return <span>{row.original.parent_phone || '-'}</span>
+          return <span>{row.original.phone || '-'}</span>
         },
         size: 120,
       },
@@ -154,11 +198,11 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
         header: '到访日期',
         cell: ({ row }) => {
           if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
+            return <Skeleton className="h-4 w-28" />
           }
-          return <span>{row.original.visit_date || '-'}</span>
+          return <span>{formatDateWithWeekday(row.original.visit_date)}</span>
         },
-        size: 100,
+        size: 120,
       },
       {
         accessorKey: 'visit_time',
@@ -190,9 +234,12 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
             return <Skeleton className="h-4 w-32" />
           }
           const courses = row.original.course_names
-          return <span className="truncate max-w-[150px]" title={courses?.join('、')}>
-            {courses?.join('、') || '-'}
-          </span>
+          const content = courses?.join('、')
+          return content ? (
+            <CopyableCell content={content} maxWidthClass="max-w-[150px]" />
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )
         },
         size: 150,
       },
@@ -219,10 +266,11 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className="h-4 w-24" />
           }
-          return (
-            <span className="truncate max-w-[120px] text-muted-foreground" title={row.original.remark}>
-              {row.original.remark || '-'}
-            </span>
+          const remark = row.original.remark
+          return remark ? (
+            <CopyableCell content={remark} maxWidthClass="max-w-[120px]" className="text-muted-foreground" />
+          ) : (
+            <span className="text-muted-foreground">-</span>
           )
         },
         size: 120,
@@ -243,6 +291,11 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleEdit(item)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  编辑
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleRegisterPayment(item)}>
                   <Wallet className="mr-2 h-4 w-4 text-green-600" />
                   登记缴费
@@ -270,10 +323,11 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-medium">到访列表</CardTitle>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="h-8 gap-1" onClick={() => setDialogOpen(true)}>
+          <Button size="sm" className="h-8 gap-1" onClick={handleCreate}>
             <Plus className="h-4 w-4" />
             新建到访
           </Button>
+          <ColumnToggle table={table} columnLabels={columnLabels} />
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={fetchData}>
             <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
           </Button>
@@ -286,17 +340,23 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
             <TableHeader className="sticky top-0 z-10 bg-card">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      style={{ width: header.getSize() }}
-                      className="text-xs font-semibold"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const isActionsColumn = header.id === 'actions'
+                    return (
+                      <TableHead
+                        key={header.id}
+                        style={{ width: header.getSize() }}
+                        className={cn(
+                          "text-xs font-semibold",
+                          isActionsColumn && "sticky right-0 z-20 bg-card shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                        )}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
               ))}
             </TableHeader>
@@ -304,15 +364,21 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        style={{ width: cell.column.getSize() }}
-                        className="py-2 text-xs"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const isActionsColumn = cell.column.id === 'actions'
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          style={{ width: cell.column.getSize() }}
+                          className={cn(
+                            "py-2 text-xs",
+                            isActionsColumn && "sticky right-0 bg-card shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      )
+                    })}
                   </TableRow>
                 ))
               ) : (
@@ -341,12 +407,13 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
         />
       </CardContent>
 
-      {/* 新建到访弹窗 */}
+      {/* 新建/编辑到访弹窗 */}
       <VisitScheduleDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultStatus="visited"
         onSuccess={fetchData}
+        editData={editData}
       />
     </Card>
   )
