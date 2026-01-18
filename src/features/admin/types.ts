@@ -202,6 +202,7 @@ export interface EmployeeIdentityItem {
   employee_id: string
   employee_name: string
   employee_username: string
+  employee_joined_at?: string  // 员工入职日期
   campus_id: string
   campus_name: string
   department_id: string

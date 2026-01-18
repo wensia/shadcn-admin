@@ -460,6 +460,32 @@ export function EmployeesPage() {
         },
       },
       {
+        id: 'campus',
+        header: '所属校区',
+        cell: ({ row }) => {
+          if (row.original.id.startsWith('__skeleton__')) {
+            return <Skeleton className="h-5 w-16" />
+          }
+          const identities = employeeIdentitiesMap[row.original.id] || []
+          // 获取活跃身份的校区，若有多个则显示第一个
+          const activeIdentity = identities.find(i => i.is_active) || identities[0]
+          if (!activeIdentity || !activeIdentity.campus_name) {
+            return <span className="text-muted-foreground">-</span>
+          }
+          // 如果有多个校区，显示数量
+          const uniqueCampuses = [...new Set(identities.map(i => i.campus_name).filter(Boolean))]
+          if (uniqueCampuses.length > 1) {
+            return (
+              <div className="flex items-center gap-1">
+                <Badge variant="outline">{activeIdentity.campus_name}</Badge>
+                <span className="text-xs text-muted-foreground">+{uniqueCampuses.length - 1}</span>
+              </div>
+            )
+          }
+          return <Badge variant="outline">{activeIdentity.campus_name}</Badge>
+        },
+      },
+      {
         accessorKey: 'email',
         header: '邮箱',
         cell: ({ row }) => {

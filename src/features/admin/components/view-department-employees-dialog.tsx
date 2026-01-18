@@ -1,10 +1,12 @@
 /**
  * 查看部门员工对话框组件
- * 用于显示校区部门下的所有员工信息
+ * 用于显示校区部门下的所有在职员工信息
+ * 排序规则：职位等级（高在前）> 入职日期（早在前）
  */
 
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Users, Building2, Network, Briefcase, Phone } from 'lucide-react'
+import { Users, Building2, Network } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -24,30 +26,12 @@ import {
 } from '@/components/ui/table'
 import { adminApi } from '../api'
 import type { CampusDepartmentItem, EmployeeIdentityItem } from '../types'
+import { PositionNameBadge, PositionLevelBadge } from './status-badge'
 
 interface ViewDepartmentEmployeesDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   campusDepartment: CampusDepartmentItem | null
-}
-
-/** 职级显示配置 */
-const positionLevelLabels: Record<string, string> = {
-  '1': '实习',
-  '2': '初级',
-  '3': '中级',
-  '4': '高级',
-  '5': '专家',
-  '6': '资深专家',
-}
-
-const positionLevelVariants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  '1': 'outline',
-  '2': 'outline',
-  '3': 'secondary',
-  '4': 'default',
-  '5': 'default',
-  '6': 'default',
 }
 
 export function ViewDepartmentEmployeesDialog({
@@ -80,7 +64,22 @@ export function ViewDepartmentEmployeesDialog({
     enabled: !!campusDepartment?.campus_id && !!campusDepartment?.department_id && open,
   })
 
-  const employees = employeesData?.items || []
+  // 对员工数据排序：职位等级（高在前）> 入职日期（早在前）
+  const employees = useMemo(() => {
+    const items = employeesData?.items || []
+    return [...items].sort((a, b) => {
+      // 首先按职位等级降序（数字大的在前）
+      const levelA = parseInt(a.position_level) || 1
+      const levelB = parseInt(b.position_level) || 1
+      if (levelA !== levelB) {
+        return levelB - levelA
+      }
+      // 然后按入职日期升序（早入职的在前）
+      const joinedA = a.employee_joined_at ? new Date(a.employee_joined_at).getTime() : Infinity
+      const joinedB = b.employee_joined_at ? new Date(b.employee_joined_at).getTime() : Infinity
+      return joinedA - joinedB
+    })
+  }, [employeesData?.items])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,7 +91,7 @@ export function ViewDepartmentEmployeesDialog({
           </DialogTitle>
           <DialogDescription>
             {campusDepartment
-              ? `「${campusDepartment.campus_name} - ${campusDepartment.department_name}」的员工列表`
+              ? `「${campusDepartment.campus_name} - ${campusDepartment.department_name}」的在职员工列表`
               : '查看部门员工'}
           </DialogDescription>
         </DialogHeader>
@@ -132,7 +131,7 @@ export function ViewDepartmentEmployeesDialog({
           ) : employees.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground border rounded-lg border-dashed">
               <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-              <p>该部门暂无员工</p>
+              <p>该部门暂无在职员工</p>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -143,7 +142,7 @@ export function ViewDepartmentEmployeesDialog({
                     <TableHead className="w-[120px]">用户名</TableHead>
                     <TableHead className="w-[140px]">职位</TableHead>
                     <TableHead className="w-[80px]">职级</TableHead>
-                    <TableHead>状态</TableHead>
+                    <TableHead className="w-[100px]">入职日期</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -163,26 +162,15 @@ export function ViewDepartmentEmployeesDialog({
                         {employee.employee_username}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>{employee.position_name}</span>
-                        </div>
+                        <PositionNameBadge positionName={employee.position_name} />
                       </TableCell>
                       <TableCell>
-                        <Badge variant={positionLevelVariants[employee.position_level] || 'outline'}>
-                          {positionLevelLabels[employee.position_level] || `L${employee.position_level}`}
-                        </Badge>
+                        <PositionLevelBadge level={parseInt(employee.position_level) || 1} />
                       </TableCell>
-                      <TableCell>
-                        {employee.is_active ? (
-                          <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-                            在职
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">
-                            离职
-                          </Badge>
-                        )}
+                      <TableCell className="text-muted-foreground">
+                        {employee.employee_joined_at
+                          ? new Date(employee.employee_joined_at).toLocaleDateString('zh-CN')
+                          : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
