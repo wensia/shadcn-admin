@@ -188,11 +188,22 @@ export function InfoItem({
           className={cn(
             'group flex items-center gap-1.5 text-left',
             'rounded px-1 -mx-1 py-0.5 -my-0.5',
-            'hover:bg-muted/50 transition-colors cursor-pointer'
+            'hover:bg-muted/50 transition-colors cursor-pointer',
+            isSaving && 'pointer-events-none'
           )}
+          disabled={isSaving}
         >
-          <span className="break-words">{displayValue}</span>
-          <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+          {isSaving ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground text-xs">保存中...</span>
+            </>
+          ) : (
+            <>
+              <span className="break-words">{displayValue}</span>
+              <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </>
+          )}
         </button>
       )
 
@@ -216,12 +227,17 @@ export function InfoItem({
             </PopoverTrigger>
           )}
           <PopoverContent
-            className={cn("p-3", fieldType === 'datetime' ? 'w-auto' : 'w-64')}
+            className={cn("p-3 relative", fieldType === 'datetime' ? 'w-auto' : 'w-64')}
             align="start"
             // 使用 modal 模式防止页面重新渲染时焦点丢失导致 Popover 关闭
             onOpenAutoFocus={(e) => e.preventDefault()}
             onCloseAutoFocus={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => {
+              // 保存过程中阻止关闭
+              if (isSaving) {
+                e.preventDefault()
+                return
+              }
               // 阻止点击 DateTimePicker 弹窗时关闭外层 Popover
               const target = e.target as HTMLElement
               if (target?.closest('[data-radix-popper-content-wrapper]')) {
@@ -229,6 +245,11 @@ export function InfoItem({
               }
             }}
             onInteractOutside={(e) => {
+              // 保存过程中阻止关闭
+              if (isSaving) {
+                e.preventDefault()
+                return
+              }
               // 阻止点击 DateTimePicker 弹窗时关闭外层 Popover
               const target = e.target as HTMLElement
               if (target?.closest('[data-radix-popper-content-wrapper]')) {
@@ -239,7 +260,22 @@ export function InfoItem({
               // 防止焦点移出时关闭 Popover（计时器更新导致的焦点问题）
               e.preventDefault()
             }}
+            onEscapeKeyDown={(e) => {
+              // 保存过程中阻止 ESC 关闭
+              if (isSaving) {
+                e.preventDefault()
+              }
+            }}
           >
+            {/* 保存中的遮罩层 */}
+            {isSaving && (
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-md">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-xs">保存中...</span>
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <div className="text-xs font-medium text-muted-foreground">{label}</div>
               {renderEditControl()}

@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { formatTime } from '@/lib/utils/time'
 import { EmptyState } from './empty-state'
 import type { LeadInfoChangeLog, LeadOwnershipChangeLog } from '../../types'
@@ -150,6 +151,8 @@ function InfoChangeTable({
   showTitle?: boolean
 }) {
   const s = useStyleClasses()
+  const [page, setPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
 
   // 展开 changes 数组，每个字段变更一行
   const flattenedData = React.useMemo(() => {
@@ -207,8 +210,20 @@ function InfoChangeTable({
     return rows
   }, [data])
 
+  // 客户端分页
+  const paginatedData = React.useMemo(() => {
+    const start = (page - 1) * pageSize
+    const end = start + pageSize
+    return flattenedData.slice(start, end)
+  }, [flattenedData, page, pageSize])
+
+  // 数据变化时重置页码
+  React.useEffect(() => {
+    setPage(1)
+  }, [data])
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {showTitle && (
         <div className="flex items-center gap-2">
           <FileEdit className={cn(s.size.icon)} style={{ color: anthropicColors.orange }} />
@@ -232,7 +247,7 @@ function InfoChangeTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {flattenedData.map((row) => (
+            {paginatedData.map((row) => (
               <TableRow key={row.rowKey}>
                 {row.isFirstInGroup ? (
                   <TableCell
@@ -281,6 +296,19 @@ function InfoChangeTable({
           </TableBody>
         </Table>
       </div>
+      {/* 分页器 */}
+      {flattenedData.length > 10 && (
+        <SimplePagination
+          page={page}
+          pageSize={pageSize}
+          total={flattenedData.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size)
+            setPage(1)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -296,9 +324,23 @@ function OwnershipChangeTable({
   showTitle?: boolean
 }) {
   const s = useStyleClasses()
+  const [page, setPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
+
+  // 客户端分页
+  const paginatedData = React.useMemo(() => {
+    const start = (page - 1) * pageSize
+    const end = start + pageSize
+    return data.slice(start, end)
+  }, [data, page, pageSize])
+
+  // 数据变化时重置页码
+  React.useEffect(() => {
+    setPage(1)
+  }, [data])
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {showTitle && (
         <div className="flex items-center gap-2">
           <UserCog className={cn(s.size.icon)} style={{ color: anthropicColors.orange }} />
@@ -320,7 +362,7 @@ function OwnershipChangeTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((log) => {
+            {paginatedData.map((log) => {
               const hasAdvisorChange = log.previous_advisor_name || log.current_advisor_name
               const hasCampusChange = log.previous_campus_name || log.current_campus_name
 
@@ -373,6 +415,19 @@ function OwnershipChangeTable({
           </TableBody>
         </Table>
       </div>
+      {/* 分页器 */}
+      {data.length > 10 && (
+        <SimplePagination
+          page={page}
+          pageSize={pageSize}
+          total={data.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size)
+            setPage(1)
+          }}
+        />
+      )}
     </div>
   )
 }

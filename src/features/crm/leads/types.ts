@@ -422,7 +422,7 @@ export interface SourceChannelExtraFieldOption {
 export interface SourceChannelExtraField {
   field_name: string
   field_label: string
-  field_type: 'text' | 'select' | 'date' | 'datetime' | 'number'
+  field_type: 'text' | 'select' | 'date' | 'datetime' | 'number' | 'textarea'
   required?: boolean
   placeholder?: string
   options?: SourceChannelExtraFieldOption[]  // 选项列表（仅 select 类型使用）

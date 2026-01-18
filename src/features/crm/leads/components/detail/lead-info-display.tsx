@@ -175,7 +175,11 @@ function EditableLeadStatus({ status, editable, onSave }: EditableLeadStatusProp
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(newOpen) => {
+      // 保存过程中阻止关闭
+      if (isSaving && !newOpen) return
+      setOpen(newOpen)
+    }}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -201,7 +205,28 @@ function EditableLeadStatus({ status, editable, onSave }: EditableLeadStatusProp
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-2" align="start">
+      <PopoverContent
+        className="w-auto p-2 relative"
+        align="start"
+        onPointerDownOutside={(e) => {
+          if (isSaving) e.preventDefault()
+        }}
+        onEscapeKeyDown={(e) => {
+          if (isSaving) e.preventDefault()
+        }}
+        onInteractOutside={(e) => {
+          if (isSaving) e.preventDefault()
+        }}
+      >
+        {/* 保存中的遮罩层 */}
+        {isSaving && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-md">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-xs">保存中...</span>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-1">
           {leadStatusOptions.map(option => {
             const isSelected = status === option.value
@@ -287,7 +312,11 @@ function EditableIntentionLevel({ level, editable, onSave }: EditableIntentionLe
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(newOpen) => {
+      // 保存过程中阻止关闭
+      if (isSaving && !newOpen) return
+      setOpen(newOpen)
+    }}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -313,7 +342,28 @@ function EditableIntentionLevel({ level, editable, onSave }: EditableIntentionLe
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-2" align="start">
+      <PopoverContent
+        className="w-auto p-2 relative"
+        align="start"
+        onPointerDownOutside={(e) => {
+          if (isSaving) e.preventDefault()
+        }}
+        onEscapeKeyDown={(e) => {
+          if (isSaving) e.preventDefault()
+        }}
+        onInteractOutside={(e) => {
+          if (isSaving) e.preventDefault()
+        }}
+      >
+        {/* 保存中的遮罩层 */}
+        {isSaving && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-md">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-xs">保存中...</span>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col gap-1">
           {intentionLevelOptions.map(option => {
             const isSelected = level === option.value

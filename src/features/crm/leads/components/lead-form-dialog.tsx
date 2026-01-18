@@ -3,7 +3,7 @@
  * Mira风格: 紧凑表单布局、小字号
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -39,8 +39,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import { leadsApi } from '../api'
 import { apiClient } from '@/lib/api/client'
-import type { Lead, LeadCreate, LeadUpdate, Gender, Grade, IntentionLevel } from '../types'
+import type { Lead, LeadCreate, LeadUpdate, Gender, SourceChannelExtraField } from '../types'
 import { gradeLabels } from '../types'
+import type { SourceChannel } from '@/features/admin/types'
 
 interface LeadFormDialogProps {
   lead?: Lead | null
@@ -134,11 +135,11 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     enabled: open
   })
 
-  // 获取来源渠道列表（与 leads-page 使用相同的查询）
+  // 获取来源渠道列表（包含完整信息，用于渲染额外字段）
   const { data: sourceChannels } = useQuery({
-    queryKey: ['source-channels-active'],
+    queryKey: ['source-channels-active-full'],
     queryFn: async () => {
-      const response = await apiClient.get<{ code: number; data: { items: Array<{ id: string; name: string; category: string }> } }>(
+      const response = await apiClient.get<{ code: number; data: { items: SourceChannel[] } }>(
         '/source-channels',
         { params: { page: 1, size: 100, is_active: true } }
       )
@@ -146,6 +147,34 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     },
     enabled: open
   })
+
+  // 当前选中的渠道ID
+  const watchedChannelId = form.watch('source_channel_id')
+
+  // 获取当前选中渠道的额外字段配置
+  const selectedChannelExtraFields = useMemo<SourceChannelExtraField[]>(() => {
+    if (!watchedChannelId || !sourceChannels) return []
+    const channel = sourceChannels.find(c => c.id === watchedChannelId)
+    if (!channel) return []
+    // 兼容多种格式
+    const fields = channel.extra_fields || channel.channel_config?.fields || []
+    return fields.map(f => ({
+      field_name: f.field_name,
+      field_label: f.field_label,
+      field_type: f.field_type as SourceChannelExtraField['field_type'],
+      required: f.required,
+      placeholder: f.placeholder,
+      options: f.options
+    }))
+  }, [watchedChannelId, sourceChannels])
+
+  // 额外字段值状态
+  const [extraFieldValues, setExtraFieldValues] = useState<Record<string, string>>({})
+
+  // 更新额外字段值
+  const handleExtraFieldChange = (fieldName: string, value: string) => {
+    setExtraFieldValues(prev => ({ ...prev, [fieldName]: value }))
+  }
 
   // 创建线索Mutation
   const createMutation = useMutation({
@@ -212,10 +241,20 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
         notes: lead.notes || '',
         owner_campus_id: lead.owner_campus_id || ''
       })
+      // 加载现有的额外字段值
+      setExtraFieldValues(lead.source_extra_info || {})
     } else if (!lead && open) {
       form.reset()
+      setExtraFieldValues({})
     }
   }, [lead, open, form])
+
+  // 当渠道变化时，清空额外字段值（仅新建模式）
+  useEffect(() => {
+    if (!isEdit && watchedChannelId) {
+      setExtraFieldValues({})
+    }
+  }, [watchedChannelId, isEdit])
 
   // 手机号变化时检查重复(防抖)
   const handlePhoneChange = async (phone: string) => {
@@ -239,6 +278,22 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
 
   // 提交表单
   const onSubmit = (data: FormData) => {
+    // 验证额外字段必填项
+    for (const field of selectedChannelExtraFields) {
+      if (field.required && !extraFieldValues[field.field_name]?.trim()) {
+        toast.error(`请填写${field.field_label}`)
+        return
+      }
+    }
+
+    // 构建额外字段数据（仅包含有值的字段）
+    const sourceExtraInfo: Record<string, any> = {}
+    for (const [key, value] of Object.entries(extraFieldValues)) {
+      if (value?.trim()) {
+        sourceExtraInfo[key] = value.trim()
+      }
+    }
+
     const formattedData: any = {
       ...data,
       age: data.age || undefined,
@@ -246,7 +301,9 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
         ? data.course_interests.split(',').map((s) => s.trim()).filter(Boolean)
         : [],
       parent_email: data.parent_email || undefined,
-      intention_level: data.intention_level || undefined
+      intention_level: data.intention_level || undefined,
+      // 添加额外字段数据
+      source_extra_info: Object.keys(sourceExtraInfo).length > 0 ? sourceExtraInfo : undefined
     }
 
     if (isEdit && lead) {
@@ -678,6 +735,66 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                         </FormItem>
                       )}
                     />
+
+                    {/* 渠道额外字段动态渲染 */}
+                    {selectedChannelExtraFields.length > 0 && (
+                      <>
+                        {selectedChannelExtraFields.map((field) => (
+                          <div key={field.field_name} className="space-y-1">
+                            <label className="text-xs font-medium">
+                              {field.field_label}
+                              {field.required && <span className="text-destructive ml-0.5">*</span>}
+                            </label>
+                            {field.field_type === 'select' && field.options?.length ? (
+                              <Select
+                                value={extraFieldValues[field.field_name] || ''}
+                                onValueChange={(value) => handleExtraFieldChange(field.field_name, value)}
+                              >
+                                <SelectTrigger className="h-8 text-xs w-full">
+                                  <SelectValue placeholder={field.placeholder || `选择${field.field_label}`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {field.options.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : field.field_type === 'textarea' ? (
+                              <Textarea
+                                value={extraFieldValues[field.field_name] || ''}
+                                onChange={(e) => handleExtraFieldChange(field.field_name, e.target.value)}
+                                placeholder={field.placeholder || `请输入${field.field_label}`}
+                                className="min-h-[60px] text-xs resize-none"
+                              />
+                            ) : field.field_type === 'number' ? (
+                              <Input
+                                type="number"
+                                value={extraFieldValues[field.field_name] || ''}
+                                onChange={(e) => handleExtraFieldChange(field.field_name, e.target.value)}
+                                placeholder={field.placeholder || `请输入${field.field_label}`}
+                                className="h-8 text-xs"
+                              />
+                            ) : field.field_type === 'date' ? (
+                              <FormDatePicker
+                                value={extraFieldValues[field.field_name] || ''}
+                                onChange={(value) => handleExtraFieldChange(field.field_name, value || '')}
+                                placeholder={field.placeholder || `选择${field.field_label}`}
+                              />
+                            ) : (
+                              <Input
+                                type="text"
+                                value={extraFieldValues[field.field_name] || ''}
+                                onChange={(e) => handleExtraFieldChange(field.field_name, e.target.value)}
+                                placeholder={field.placeholder || `请输入${field.field_label}`}
+                                className="h-8 text-xs"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
 
                     <FormField
                       control={form.control}

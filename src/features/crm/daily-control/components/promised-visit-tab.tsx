@@ -383,6 +383,11 @@ export function PromisedVisitTab({ dateFrom, dateTo }: PromisedVisitTabProps) {
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     pageCount: Math.ceil(total / pageSize),
+    initialState: {
+      columnVisibility: {
+        status: false, // 状态列默认隐藏
+      },
+    },
   })
 
   return (
