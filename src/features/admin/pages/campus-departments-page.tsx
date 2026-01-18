@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Trash2, Search, Building2, Network, Filter, RefreshCw, Users } from 'lucide-react'
+import { Plus, Trash2, Search, Building2, Network, Filter, RefreshCw, Users, Eye } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -72,6 +72,7 @@ import {
 } from '@/components/ui/tooltip'
 import { StatusBadge } from '../components/status-badge'
 import { ManageManagersDialog } from '../components/manage-managers-dialog'
+import { ViewDepartmentEmployeesDialog } from '../components/view-department-employees-dialog'
 
 // 表单验证 schema
 const formSchema = z.object({
@@ -83,13 +84,12 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-const pageSize = 20
-
 export function CampusDepartmentsPage() {
   const queryClient = useQueryClient()
 
   // 状态管理
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
   const [campusFilter, setCampusFilter] = useState<string>('all')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
@@ -98,6 +98,8 @@ export function CampusDepartmentsPage() {
   const [deletingItem, setDeletingItem] = useState<CampusDepartmentItem | null>(null)
   const [managerDialogOpen, setManagerDialogOpen] = useState(false)
   const [selectedDepartment, setSelectedDepartment] = useState<CampusDepartmentItem | null>(null)
+  const [employeesDialogOpen, setEmployeesDialogOpen] = useState(false)
+  const [viewingDepartment, setViewingDepartment] = useState<CampusDepartmentItem | null>(null)
 
   // 表单
   const form = useForm<FormData>({
@@ -319,6 +321,14 @@ export function CampusDepartmentsPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => handleViewEmployees(row.original)}
+                title="查看员工"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => handleManageManagers(row.original)}
                 title="负责人管理"
               >
@@ -386,6 +396,12 @@ export function CampusDepartmentsPage() {
     setManagerDialogOpen(true)
   }
 
+  // 处理查看员工点击
+  const handleViewEmployees = (item: CampusDepartmentItem) => {
+    setViewingDepartment(item)
+    setEmployeesDialogOpen(true)
+  }
+
   // 处理删除确认
   const handleDeleteConfirm = () => {
     if (deletingItem) {
@@ -403,8 +419,6 @@ export function CampusDepartmentsPage() {
     setPage(1)
     refetch()
   }
-
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0
 
   return (
     <Main fixed>
@@ -521,11 +535,17 @@ export function CampusDepartmentsPage() {
         </div>
 
         {/* 分页 */}
-        {totalPages > 0 && (
+        {data && data.total > 0 && (
           <SimplePagination
-            currentPage={page}
-            totalPages={totalPages}
+            page={page}
+            pageSize={pageSize}
+            total={data.total}
             onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setPage(1)
+            }}
+            isLoading={isLoading}
           />
         )}
       </div>
@@ -666,6 +686,13 @@ export function CampusDepartmentsPage() {
         onOpenChange={setManagerDialogOpen}
         campusDepartment={selectedDepartment}
         onSuccess={() => refetch()}
+      />
+
+      {/* 查看部门员工对话框 */}
+      <ViewDepartmentEmployeesDialog
+        open={employeesDialogOpen}
+        onOpenChange={setEmployeesDialogOpen}
+        campusDepartment={viewingDepartment}
       />
     </Main>
   )

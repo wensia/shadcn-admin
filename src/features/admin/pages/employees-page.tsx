@@ -103,13 +103,12 @@ interface IdentityFormData {
   is_active: boolean
 }
 
-const pageSize = 20
-
 export function EmployeesPage() {
   const queryClient = useQueryClient()
 
   // 状态管理
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -767,8 +766,6 @@ export function EmployeesPage() {
     refetch()
   }
 
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0
-
   return (
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
@@ -887,11 +884,17 @@ export function EmployeesPage() {
         </div>
 
         {/* 分页 */}
-        {totalPages > 0 && (
+        {data && data.total > 0 && (
           <SimplePagination
-            currentPage={page}
-            totalPages={totalPages}
+            page={page}
+            pageSize={pageSize}
+            total={data.total}
             onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setPage(1)
+            }}
+            isLoading={isLoading}
           />
         )}
       </div>
