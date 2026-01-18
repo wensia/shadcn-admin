@@ -250,11 +250,20 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
         notes: lead.notes || '',
         owner_campus_id: lead.owner_campus_id || ''
       })
-      // 加载现有的额外字段值（确保转换为字符串）
+      // 加载现有的额外字段值
+      // 处理两种可能的格式:
+      // 1. 简单格式: { channel: "小红书" }
+      // 2. 嵌套格式: { channel: { label: "渠道", value: "小红书" } }
       const extraInfo = lead.source_extra_info || {}
       const stringifiedExtraInfo: Record<string, string> = {}
       for (const [key, value] of Object.entries(extraInfo)) {
-        stringifiedExtraInfo[key] = value != null ? String(value) : ''
+        if (value && typeof value === 'object' && 'value' in value) {
+          // 嵌套格式，提取 value 字段
+          stringifiedExtraInfo[key] = String((value as { value: unknown }).value || '')
+        } else {
+          // 简单格式，直接转换
+          stringifiedExtraInfo[key] = value != null ? String(value) : ''
+        }
       }
       setExtraFieldValues(stringifiedExtraInfo)
     } else if (!lead && open) {
