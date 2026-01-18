@@ -296,12 +296,30 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
 
     const formattedData: any = {
       ...data,
+      // 将空字符串转换为 undefined，避免后端枚举验证失败
+      child_name: data.child_name || undefined,
+      child_gender: data.child_gender || undefined,
+      child_birthday: data.child_birthday || undefined,
       age: data.age || undefined,
+      grade: data.grade || undefined,
+      school_name: data.school_name || undefined,
       course_interests: data.course_interests
         ? data.course_interests.split(',').map((s) => s.trim()).filter(Boolean)
         : [],
+      parent_name: data.parent_name || undefined,
+      parent_wechat: data.parent_wechat || undefined,
       parent_email: data.parent_email || undefined,
+      parent_relation: data.parent_relation || undefined,
+      backup_contact_name: data.backup_contact_name || undefined,
+      backup_contact_phone: data.backup_contact_phone || undefined,
+      backup_contact_relation: data.backup_contact_relation || undefined,
+      province: data.province || undefined,
+      city: data.city || undefined,
+      district: data.district || undefined,
+      address_detail: data.address_detail || undefined,
+      source_detail: data.source_detail || undefined,
       intention_level: data.intention_level || undefined,
+      notes: data.notes || undefined,
       // 添加额外字段数据
       source_extra_info: Object.keys(sourceExtraInfo).length > 0 ? sourceExtraInfo : undefined
     }
