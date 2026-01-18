@@ -17,13 +17,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import type { Lead } from '../../types'
-import { gradeLabels, LeadStatus } from '../../types'
+import { gradeLabels, LeadStatus, IntentionLevel } from '../../types'
 import { formatTime } from '@/lib/utils/time'
 import { InfoCard } from './info-card'
 import { InfoGrid } from './info-grid'
 import { InfoItem } from './info-item'
 import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
-import { leadStatusStyles } from '@/lib/status-styles'
+import { leadStatusStyles, intentionLevelStyles } from '@/lib/status-styles'
 import { ChevronDown, Check } from 'lucide-react'
 
 /**
@@ -206,6 +206,118 @@ function EditableLeadStatus({ status, editable, onSave }: EditableLeadStatusProp
           {leadStatusOptions.map(option => {
             const isSelected = status === option.value
             const color = statusColorMap[option.color] || statusColorMap.gray
+            return (
+              <Button
+                key={option.value}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-7 justify-start text-xs px-2',
+                  isSelected && 'font-medium'
+                )}
+                style={{
+                  color: color,
+                  backgroundColor: isSelected ? color + '20' : 'transparent',
+                }}
+                onClick={() => handleSelect(option.value)}
+                disabled={isSaving}
+              >
+                {isSelected && <Check className="mr-1 h-3 w-3" />}
+                {option.label}
+              </Button>
+            )
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/**
+ * 意向等级选项
+ */
+const intentionLevelOptions = Object.entries(intentionLevelStyles).map(([value, config]) => ({
+  value: value as IntentionLevel,
+  label: config.label,
+  color: config.color,
+}))
+
+const intentionColorMap: Record<string, string> = {
+  green: '#22c55e',
+  orange: '#f59e0b',
+  gray: '#6b7280',
+}
+
+/**
+ * 可编辑的意向等级选择器
+ */
+interface EditableIntentionLevelProps {
+  level: IntentionLevel
+  editable?: boolean
+  onSave?: (value: string) => Promise<void>
+}
+
+function EditableIntentionLevel({ level, editable, onSave }: EditableIntentionLevelProps) {
+  const s = useStyleClasses()
+  const [open, setOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const selectedOption = intentionLevelOptions.find(o => o.value === level)
+  const selectedColor = selectedOption ? intentionColorMap[selectedOption.color] || intentionColorMap.gray : intentionColorMap.gray
+
+  const handleSelect = async (newLevel: IntentionLevel) => {
+    if (!onSave || newLevel === level) {
+      setOpen(false)
+      return
+    }
+    setIsSaving(true)
+    try {
+      await onSave(newLevel)
+      setOpen(false)
+      toast.success('意向等级已更新')
+    } catch (error: any) {
+      toast.error(error?.message || '更新失败')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (!editable) {
+    return <IntentionLevelBadge level={level} />
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            s.text.xs,
+            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border cursor-pointer',
+            'hover:opacity-80 transition-opacity'
+          )}
+          style={{
+            color: selectedColor,
+            borderColor: selectedColor,
+            backgroundColor: selectedColor + '15',
+          }}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              {selectedOption?.label || level}
+              <ChevronDown className="h-3 w-3" />
+            </>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-2" align="start">
+        <div className="flex flex-col gap-1">
+          {intentionLevelOptions.map(option => {
+            const isSelected = level === option.value
+            const color = intentionColorMap[option.color] || intentionColorMap.gray
             return (
               <Button
                 key={option.value}
@@ -515,7 +627,13 @@ export function LeadInfoDisplay({
             />
             <InfoItem
               label="意向等级"
-              value={lead.intention_level ? <IntentionLevelBadge level={lead.intention_level} /> : undefined}
+              value={lead.intention_level ? (
+                <EditableIntentionLevel
+                  level={lead.intention_level}
+                  editable={editable}
+                  onSave={createSaveHandler('intention_level')}
+                />
+              ) : undefined}
             />
             <InfoItem label="负责顾问" value={lead.advisor_name} />
             <InfoItem label="归属校区" value={lead.owner_campus_name} />

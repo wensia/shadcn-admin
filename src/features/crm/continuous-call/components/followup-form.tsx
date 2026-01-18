@@ -18,7 +18,6 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { Calendar } from '@/components/ui/calendar'
 import { TimePickerWheel } from '@/components/ui/time-picker-wheel'
@@ -27,6 +26,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
 import { leadsApi } from '../../leads/api'
@@ -84,11 +90,11 @@ const resultMapping: Record<string, FollowupResult> = {
   other: FollowupResult.OTHER,
 }
 
-// 意向等级选项
+// 意向等级选项（带颜色）
 const intentionLevelOptions = [
-  { label: '高意向', value: IntentionLevel.HIGH },
-  { label: '中意向', value: IntentionLevel.MEDIUM },
-  { label: '低意向', value: IntentionLevel.LOW },
+  { label: '高意向', value: IntentionLevel.HIGH, color: '#22c55e' },   // 绿色
+  { label: '中意向', value: IntentionLevel.MEDIUM, color: '#f59e0b' }, // 橙色
+  { label: '低意向', value: IntentionLevel.LOW, color: '#ef4444' },    // 红色
 ]
 
 // 跟进结果选择器组件
@@ -383,18 +389,40 @@ export function FollowupForm({
       {/* 意向等级 */}
       <div className="flex items-center">
         <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap w-16 shrink-0">意向等级</Label>
-        <RadioGroup
+        <Select
           value={intentionLevel}
           onValueChange={(value) => setIntentionLevel(value as IntentionLevel)}
-          className="flex-1 flex justify-between"
         >
-          {intentionLevelOptions.map((option) => (
-            <div key={option.value} className="flex items-center space-x-1.5">
-              <RadioGroupItem value={option.value} id={`intention-${option.value}`} className="h-3.5 w-3.5" />
-              <Label htmlFor={`intention-${option.value}`} className="text-sm cursor-pointer">{option.label}</Label>
-            </div>
-          ))}
-        </RadioGroup>
+          <SelectTrigger className="flex-1 h-8">
+            <SelectValue placeholder="选择意向等级">
+              {intentionLevel && (() => {
+                const selected = intentionLevelOptions.find(o => o.value === intentionLevel)
+                return selected ? (
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: selected.color }}
+                    />
+                    <span style={{ color: selected.color }}>{selected.label}</span>
+                  </span>
+                ) : null
+              })()}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {intentionLevelOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: option.color }}
+                  />
+                  <span>{option.label}</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="border-t my-3" />
