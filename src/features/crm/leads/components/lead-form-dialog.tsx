@@ -136,12 +136,18 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
   })
 
   // 获取来源渠道列表（包含完整信息，用于渲染额外字段）
+  // 编辑模式下获取所有渠道（包括禁用的），新建模式下只获取启用的
   const { data: sourceChannels } = useQuery({
-    queryKey: ['source-channels-active-full'],
+    queryKey: ['source-channels-full', isEdit],
     queryFn: async () => {
+      const params: Record<string, unknown> = { page: 1, size: 100 }
+      // 新建模式只显示启用的渠道
+      if (!isEdit) {
+        params.is_active = true
+      }
       const response = await apiClient.get<{ code: number; data: { items: SourceChannel[] } }>(
         '/source-channels',
-        { params: { page: 1, size: 100, is_active: true } }
+        { params }
       )
       return response.data?.items || []
     },
@@ -152,9 +158,12 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
   const watchedChannelId = form.watch('source_channel_id')
 
   // 获取当前选中渠道的额外字段配置
+  // 编辑模式下也可以使用 lead.source_channel_id 作为备选
+  const effectiveChannelId = watchedChannelId || (isEdit && lead?.source_channel_id) || ''
+
   const selectedChannelExtraFields = useMemo<SourceChannelExtraField[]>(() => {
-    if (!watchedChannelId || !sourceChannels) return []
-    const channel = sourceChannels.find(c => c.id === watchedChannelId)
+    if (!effectiveChannelId || !sourceChannels) return []
+    const channel = sourceChannels.find(c => c.id === effectiveChannelId)
     if (!channel) return []
     // 兼容多种格式
     const fields = channel.extra_fields || channel.channel_config?.fields || []
@@ -166,7 +175,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       placeholder: f.placeholder,
       options: f.options
     }))
-  }, [watchedChannelId, sourceChannels])
+  }, [effectiveChannelId, sourceChannels])
 
   // 额外字段值状态
   const [extraFieldValues, setExtraFieldValues] = useState<Record<string, string>>({})
@@ -241,8 +250,13 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
         notes: lead.notes || '',
         owner_campus_id: lead.owner_campus_id || ''
       })
-      // 加载现有的额外字段值
-      setExtraFieldValues(lead.source_extra_info || {})
+      // 加载现有的额外字段值（确保转换为字符串）
+      const extraInfo = lead.source_extra_info || {}
+      const stringifiedExtraInfo: Record<string, string> = {}
+      for (const [key, value] of Object.entries(extraInfo)) {
+        stringifiedExtraInfo[key] = value != null ? String(value) : ''
+      }
+      setExtraFieldValues(stringifiedExtraInfo)
     } else if (!lead && open) {
       form.reset()
       setExtraFieldValues({})
