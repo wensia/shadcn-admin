@@ -36,6 +36,15 @@ export interface YunkeSubAccount {
     name: string
     username: string
   }
+  // 登录状态（基于绑定员工的 cookies）
+  login_status?: {
+    is_logged_in: boolean
+    has_password: boolean
+  }
+  // 来源凭证信息（从多凭证 API 返回时填充）
+  source_account_id?: string
+  source_account_phone?: string
+  source_company_name?: string
 }
 
 // 可绑定的员工
@@ -127,4 +136,53 @@ export interface YunkeDashboardStats {
   bound_employees: number
   today_calls: number
   today_duration: number
+}
+
+// ============ 云客账号凭证管理 ============
+
+// 云客账号凭证
+export interface YunkeCredential {
+  id: string
+  phone: string
+  company_id: string
+  company_code: string | null
+  company_name: string | null
+  user_id: string | null
+  status: number  // 0=失效, 1=正常
+  last_login: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+// 创建账号凭证请求
+export interface YunkeCredentialCreate {
+  phone: string
+  password: string
+  company_code: string
+  company_name: string
+  domain?: string
+}
+
+// 更新账号凭证请求
+export interface YunkeCredentialUpdate {
+  phone?: string
+  password?: string
+  company_code?: string
+  company_name?: string
+  domain?: string
+}
+
+// 账号状态响应
+export interface YunkeCredentialStatus {
+  valid: boolean
+  status: number
+  last_login: string | null
+  hours_since_login: number | null
+  message: string
+}
+
+// 账号列表响应
+export interface YunkeCredentialListResponse {
+  items: YunkeCredential[]
+  total: number
 }

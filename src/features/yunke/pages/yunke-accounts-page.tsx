@@ -1,5 +1,6 @@
 /**
  * 云客子账号管理页面
+ * 按凭证分 Tab 展示子账号
  */
 
 import { useState, useMemo } from 'react'
@@ -11,9 +12,6 @@ import {
   type ColumnDef,
   type RowSelectionState,
 } from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import {
   User,
   Phone,
@@ -27,8 +25,7 @@ import {
   CheckCircle,
   XCircle,
   PauseCircle,
-  LogIn,
-  Zap,
+  AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -37,6 +34,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table,
   TableBody,
@@ -63,35 +61,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { yunkeApi } from '../api'
-import type { YunkeSubAccount, YunkeAvailableEmployee, YunkePasswordResetResponse } from '../types'
-import { formatTime } from '@/lib/utils/time'
-
-// 登录表单验证
-const loginFormSchema = z.object({
-  phone: z.string().min(1, '请输入手机号').regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
-  password: z.string().min(6, '密码至少6位'),
-})
-
-type LoginFormData = z.infer<typeof loginFormSchema>
+import { yunkeApi, yunkeCredentialsApi } from '../api'
+import type { YunkeSubAccount, YunkeAvailableEmployee, YunkePasswordResetResponse, YunkeCredential } from '../types'
 
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
@@ -105,56 +79,41 @@ function createSkeletonData(count: number): YunkeSubAccount[] {
   }))
 }
 
-// 状态选项
-const STATUS_OPTIONS = [
-  { value: 'all', label: '全部状态' },
-  { value: 'active', label: '正常' },
-  { value: 'paused', label: '暂停' },
-  { value: 'inactive', label: '停用' },
-]
-
-export function YunkeAccountsPage() {
+// 子账号表格组件
+function SubAccountsTable({
+  credential,
+  searchValue,
+}: {
+  credential: YunkeCredential
+  searchValue: string
+}) {
   const queryClient = useQueryClient()
-
-  // 状态管理
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [searchValue, setSearchValue] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [loginDialogOpen, setLoginDialogOpen] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [bindDialogOpen, setBindDialogOpen] = useState(false)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'resetPassword' | 'unbind' | 'autoSync' | 'batchLogin'
+    type: 'resetPassword' | 'unbind'
     account?: YunkeSubAccount
   } | null>(null)
   const [selectedAccount, setSelectedAccount] = useState<YunkeSubAccount | null>(null)
   const [passwordResult, setPasswordResult] = useState<YunkePasswordResetResponse | null>(null)
   const [loginStatusMap, setLoginStatusMap] = useState<Map<string, { is_logged_in: boolean; message: string }>>(new Map())
 
-  // 登录表单
-  const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginFormSchema),
-    defaultValues: {
-      phone: '',
-      password: '',
-    },
-  })
-
-  // 查询云客子账号列表
+  // 查询子账号列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['yunke-sub-accounts', page, pageSize, searchValue, statusFilter],
+    queryKey: ['yunke-sub-accounts', credential.id, page, pageSize, searchValue],
     queryFn: async () => {
-      const params: { page?: number; page_size?: number; real_name?: string; auth_status?: string } = {
+      const params: { page?: number; page_size?: number; real_name?: string } = {
         page,
         page_size: pageSize,
       }
       if (searchValue) params.real_name = searchValue
-      if (statusFilter !== 'all') params.auth_status = statusFilter
-      return yunkeApi.getSubAccounts(params)
+      return yunkeCredentialsApi.getSubAccountsByCredential(credential.id, params)
     },
+    enabled: credential.status === 1,
   })
 
   // 查询可绑定员工列表
@@ -166,20 +125,6 @@ export function YunkeAccountsPage() {
   const employees = employeesData || []
   const accounts = data?.users || []
   const total = data?.total || 0
-
-  // 管理员登录
-  const loginMutation = useMutation({
-    mutationFn: (data: LoginFormData) => yunkeApi.login({ phone: data.phone, password: data.password }),
-    onSuccess: () => {
-      toast.success('云客管理员登录成功')
-      setLoginDialogOpen(false)
-      loginForm.reset()
-      refetch()
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || '登录失败')
-    },
-  })
 
   // 重置密码
   const resetPasswordMutation = useMutation({
@@ -223,71 +168,16 @@ export function YunkeAccountsPage() {
     },
   })
 
-  // 自动同步绑定
-  const autoSyncMutation = useMutation({
-    mutationFn: () => yunkeApi.autoSyncBindings(),
-    onSuccess: (response) => {
-      if (response.matched > 0) {
-        toast.success(`同步完成：成功匹配并绑定 ${response.matched}/${response.total} 个账号`)
-      } else {
-        toast.info('未找到可匹配的账号，请检查姓名是否一致')
-      }
-      queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
-      queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || '同步失败')
-    },
-  })
-
-  // 检查登录状态
-  const checkLoginStatusMutation = useMutation({
-    mutationFn: () => yunkeApi.checkAllLoginStatus(),
-    onSuccess: (response) => {
-      const newMap = new Map<string, { is_logged_in: boolean; message: string }>()
-      response.details.forEach((detail) => {
-        newMap.set(detail.employee_id, {
-          is_logged_in: detail.is_logged_in,
-          message: detail.message,
-        })
-      })
-      setLoginStatusMap(newMap)
-      toast.info(`检查完成：${response.logged_in}/${response.total} 个账号已登录`)
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || '检查登录状态失败')
-    },
-  })
-
-  // 批量更新登录
-  const batchLoginMutation = useMutation({
-    mutationFn: () => yunkeApi.batchUpdateLogin(),
-    onSuccess: (response) => {
-      const { success, failed, skipped } = response
-      if (success > 0) {
-        toast.success(`成功更新 ${success} 个账号的登录状态`)
-      }
-      if (failed > 0) {
-        toast.warning(`${failed} 个账号更新失败`)
-      }
-      if (skipped > 0) {
-        toast.info(`${skipped} 个账号被跳过（未保存密码）`)
-      }
-      setTimeout(() => checkLoginStatusMutation.mutate(), 1000)
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || '批量更新失败')
-    },
-  })
-
   // 状态图标映射
-  const getStatusInfo = (status: string) => {
+  const getStatusInfo = (status: string | number) => {
     const statusMap: Record<string, { icon: typeof CheckCircle; variant: 'default' | 'secondary' | 'destructive'; label: string }> = {
       active: { icon: CheckCircle, variant: 'default', label: '正常' },
+      '1': { icon: CheckCircle, variant: 'default', label: '正常' },
       paused: { icon: PauseCircle, variant: 'secondary', label: '暂停' },
       inactive: { icon: XCircle, variant: 'destructive', label: '停用' },
+      '0': { icon: XCircle, variant: 'destructive', label: '停用' },
     }
-    return statusMap[status] || statusMap.active
+    return statusMap[String(status)] || statusMap.active
   }
 
   // 列定义
@@ -363,36 +253,7 @@ export function YunkeAccountsPage() {
             return <Skeleton className="h-5 w-16" />
           }
           return (
-            <Badge variant="outline">{row.original.position || '未设置'}</Badge>
-          )
-        },
-      },
-      {
-        id: 'login_status',
-        header: '云客登录状态',
-        size: 120,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
-          }
-          const boundEmployee = row.original.bound_employee
-          if (!boundEmployee) {
-            return <Badge variant="outline">未绑定</Badge>
-          }
-
-          const status = loginStatusMap.get(boundEmployee.id)
-          if (checkLoginStatusMutation.isPending) {
-            return <span className="text-xs text-muted-foreground">检查中...</span>
-          }
-          if (!status) {
-            return <Badge variant="outline">未检查</Badge>
-          }
-
-          return (
-            <Badge variant={status.is_logged_in ? 'default' : 'destructive'} className="gap-1">
-              {status.is_logged_in ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-              {status.is_logged_in ? '已登录' : '未登录'}
-            </Badge>
+            <Badge variant="outline">{row.original.position || row.original.role_name || '未设置'}</Badge>
           )
         },
       },
@@ -437,6 +298,53 @@ export function YunkeAccountsPage() {
         },
       },
       {
+        accessorKey: 'login_status',
+        header: '登录状态',
+        size: 100,
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-5 w-16" />
+          }
+          const loginStatus = row.original.login_status
+          const bound = row.original.bound_employee
+
+          // 未绑定员工
+          if (!bound) {
+            return (
+              <span className="text-xs text-muted-foreground">未绑定</span>
+            )
+          }
+
+          // 已登录
+          if (loginStatus?.is_logged_in) {
+            return (
+              <Badge variant="default" className="gap-1 bg-green-500 hover:bg-green-600">
+                <CheckCircle className="h-3 w-3" />
+                已登录
+              </Badge>
+            )
+          }
+
+          // 未登录但有密码
+          if (loginStatus?.has_password) {
+            return (
+              <Badge variant="secondary" className="gap-1">
+                <XCircle className="h-3 w-3" />
+                未登录
+              </Badge>
+            )
+          }
+
+          // 无密码
+          return (
+            <Badge variant="outline" className="gap-1 text-muted-foreground">
+              <AlertCircle className="h-3 w-3" />
+              无密码
+            </Badge>
+          )
+        },
+      },
+      {
         accessorKey: 'status',
         header: '状态',
         size: 100,
@@ -452,17 +360,6 @@ export function YunkeAccountsPage() {
               {statusInfo.label}
             </Badge>
           )
-        },
-      },
-      {
-        accessorKey: 'last_login_time',
-        header: '最后登录',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
-          }
-          return row.original.last_login_time ? formatTime(row.original.last_login_time) : '从未登录'
         },
       },
       {
@@ -486,7 +383,7 @@ export function YunkeAccountsPage() {
         },
       },
     ],
-    [loginStatusMap, checkLoginStatusMutation.isPending]
+    [loginStatusMap]
   )
 
   // 表格数据
@@ -504,27 +401,7 @@ export function YunkeAccountsPage() {
     getRowId: (row) => row.id,
   })
 
-  const selectedCount = Object.keys(rowSelection).length
-
   // 处理函数
-  const handleSearch = () => {
-    setPage(1)
-    refetch()
-  }
-
-  const handleRefresh = () => {
-    refetch()
-    checkLoginStatusMutation.mutate()
-  }
-
-  const handleLoginClick = () => {
-    setLoginDialogOpen(true)
-  }
-
-  const handleLoginSubmit = (data: LoginFormData) => {
-    loginMutation.mutate(data)
-  }
-
   const handleResetPasswordClick = (account: YunkeSubAccount) => {
     setSelectedAccount(account)
     setConfirmAction({ type: 'resetPassword', account })
@@ -539,16 +416,6 @@ export function YunkeAccountsPage() {
   const handleUnbindClick = (account: YunkeSubAccount) => {
     setSelectedAccount(account)
     setConfirmAction({ type: 'unbind', account })
-    setConfirmDialogOpen(true)
-  }
-
-  const handleAutoSync = () => {
-    setConfirmAction({ type: 'autoSync' })
-    setConfirmDialogOpen(true)
-  }
-
-  const handleBatchLogin = () => {
-    setConfirmAction({ type: 'batchLogin' })
     setConfirmDialogOpen(true)
   }
 
@@ -568,12 +435,6 @@ export function YunkeAccountsPage() {
         if (confirmAction.account?.bound_employee) {
           unbindMutation.mutate({ employee_id: confirmAction.account.bound_employee.id })
         }
-        break
-      case 'autoSync':
-        autoSyncMutation.mutate()
-        break
-      case 'batchLogin':
-        batchLoginMutation.mutate()
         break
     }
     setConfirmDialogOpen(false)
@@ -625,201 +486,75 @@ export function YunkeAccountsPage() {
           title: '确认解绑',
           description: `确定要解绑用户 ${confirmAction.account?.real_name} 与员工 ${confirmAction.account?.bound_employee?.name} 的绑定关系吗？`,
         }
-      case 'autoSync':
-        return {
-          title: '一键同步',
-          description: '将自动匹配云客账号和CRM员工的姓名，如果姓名一致则自动绑定。是否继续？',
-        }
-      case 'batchLogin':
-        return {
-          title: '确认批量更新登录',
-          description: '将为所有已绑定的员工执行云客登录并更新cookies，该操作可能需要一些时间。是否继续？',
-        }
     }
   }
 
   const confirmMessage = getConfirmMessage()
 
+  // 凭证未登录时显示提示
+  if (credential.status !== 1) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <AlertCircle className="h-12 w-12 mb-4" />
+        <p className="text-lg font-medium">凭证未登录</p>
+        <p className="text-sm">请先在「账号凭证管理」页面登录此凭证</p>
+      </div>
+    )
+  }
+
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">云客子账号管理</h1>
-            <p className="text-sm text-muted-foreground">
-              管理云客子账号、绑定员工、重置密码
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleLoginClick}>
-              <LogIn className="mr-2 h-4 w-4" />
-              云客管理员登录
-            </Button>
-            <Button variant="outline" onClick={handleAutoSync} disabled={autoSyncMutation.isPending}>
-              <Zap className="mr-2 h-4 w-4" />
-              一键同步
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => checkLoginStatusMutation.mutate()}
-              disabled={checkLoginStatusMutation.isPending}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              检查登录状态
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleBatchLogin}
-              disabled={batchLoginMutation.isPending}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              一键更新登录
-            </Button>
-          </div>
-        </div>
-
-        {/* 搜索栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="输入姓名搜索..."
-                className="pl-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="状态筛选" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
+    <>
+      {/* 表格 */}
+      <div className="flex-1 overflow-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} style={{ width: header.getSize() }}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
-            {selectedCount > 0 && (
-              <Badge variant="secondary">
-                已选择 {selectedCount} 个账号
-              </Badge>
-            )}
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleRefresh} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   ))}
                 </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {total > 0 && (
-          <SimplePagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
-          />
-        )}
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  暂无数据
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* 云客管理员登录对话框 */}
-      <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>云客管理员登录</DialogTitle>
-            <DialogDescription>
-              请输入云客管理员的手机号和密码
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...loginForm}>
-            <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-              <FormField
-                control={loginForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>手机号</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入云客管理员手机号" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={loginForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>密码</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="请输入密码" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setLoginDialogOpen(false)}>
-                  取消
-                </Button>
-                <Button type="submit" disabled={loginMutation.isPending}>
-                  {loginMutation.isPending ? '登录中...' : '登录'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {/* 分页 */}
+      {total > 0 && (
+        <SimplePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size)
+            setPage(1)
+          }}
+        />
+      )}
 
       {/* 绑定员工对话框 */}
       <Dialog open={bindDialogOpen} onOpenChange={setBindDialogOpen}>
@@ -967,6 +702,181 @@ export function YunkeAccountsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  )
+}
+
+// 主页面组件
+export function YunkeAccountsPage() {
+  const queryClient = useQueryClient()
+  const [searchValue, setSearchValue] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [activeTab, setActiveTab] = useState<string>('')
+
+  // 查询凭证列表
+  const { data: credentialsData, isLoading: credentialsLoading } = useQuery({
+    queryKey: ['yunke-credentials-for-tabs'],
+    queryFn: () => yunkeCredentialsApi.getCredentials({ limit: 100 }),
+  })
+
+  const credentials = credentialsData?.items || []
+
+  // 设置默认 Tab
+  useMemo(() => {
+    if (credentials.length > 0 && !activeTab) {
+      setActiveTab(credentials[0].id)
+    }
+  }, [credentials, activeTab])
+
+  const handleSearch = () => {
+    setSearchValue(searchInput)
+  }
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
+    queryClient.invalidateQueries({ queryKey: ['yunke-credentials-for-tabs'] })
+  }
+
+  // 加载状态
+  if (credentialsLoading) {
+    return (
+      <Main fixed>
+        <div className="flex h-full flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">云客子账号管理</h1>
+              <p className="text-sm text-muted-foreground">加载中...</p>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </div>
+      </Main>
+    )
+  }
+
+  // 无凭证时显示提示
+  if (credentials.length === 0) {
+    return (
+      <Main fixed>
+        <div className="flex h-full flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">云客子账号管理</h1>
+              <p className="text-sm text-muted-foreground">管理云客子账号、绑定员工、重置密码</p>
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <AlertCircle className="h-16 w-16 mb-4" />
+            <p className="text-lg font-medium mb-2">暂无账号凭证</p>
+            <p className="text-sm mb-4">请先在「账号凭证管理」页面添加云客账号</p>
+            <Button variant="outline" onClick={() => window.location.href = '/yunke/credentials'}>
+              前往添加凭证
+            </Button>
+          </div>
+        </div>
+      </Main>
+    )
+  }
+
+  return (
+    <Main fixed>
+      <div className="flex h-full flex-col gap-4">
+        {/* 标题栏 */}
+        <div>
+          <h1 className="text-2xl font-bold">云客子账号管理</h1>
+          <p className="text-sm text-muted-foreground">
+            共 {credentials.length} 个凭证，管理子账号、绑定员工、重置密码
+          </p>
+        </div>
+
+        {/* 搜索栏 */}
+        <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="输入姓名搜索..."
+              className="pl-8"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+          </div>
+          <Button variant="outline" onClick={handleSearch}>
+            搜索
+          </Button>
+          <div className="flex-1" />
+          <Button variant="ghost" size="icon" onClick={handleRefresh} title="刷新">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Tab 切换 */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <div className="border-b">
+            <TabsList className="h-auto bg-transparent p-0 gap-0">
+              {credentials.map((cred) => (
+                <TabsTrigger
+                  key={cred.id}
+                  value={cred.id}
+                  className="relative rounded-none border-b-2 border-transparent px-4 py-2.5 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`h-2 w-2 rounded-full ${
+                        cred.status === 1 ? 'bg-green-500' : 'bg-red-500'
+                      }`}
+                    />
+                    <span className="max-w-[180px] truncate">
+                      {cred.company_name || cred.phone}
+                    </span>
+                  </div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {credentials.map((cred) => (
+            <TabsContent
+              key={cred.id}
+              value={cred.id}
+              className="flex-1 flex flex-col gap-4 mt-4 min-h-0"
+            >
+              {/* 凭证信息卡片 */}
+              <div className="flex items-center gap-6 px-4 py-3 bg-muted/50 rounded-lg text-sm">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{cred.phone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span>{cred.company_name || '未设置公司'}</span>
+                </div>
+                <Badge
+                  variant={cred.status === 1 ? 'default' : 'destructive'}
+                  className="ml-auto"
+                >
+                  {cred.status === 1 ? (
+                    <>
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      已登录
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-3 w-3 mr-1" />
+                      未登录
+                    </>
+                  )}
+                </Badge>
+              </div>
+
+              {/* 子账号表格 */}
+              <SubAccountsTable credential={cred} searchValue={searchValue} />
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
     </Main>
   )
 }

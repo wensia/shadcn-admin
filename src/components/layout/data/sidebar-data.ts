@@ -37,11 +37,10 @@ import {
   Shield,
   ShoppingCart,
   Cloud,
-  UserCheck,
   History,
-  Link,
   Key,
   Activity,
+  Clock,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -289,6 +288,11 @@ export const adminNavGroups: NavGroup[] = [
         url: '/admin/disc-test',
         icon: ClipboardList,
       },
+      {
+        title: '定时任务',
+        url: '/admin/scheduled-tasks',
+        icon: Clock,
+      },
     ],
   },
 ]
@@ -314,19 +318,14 @@ export const yunkeNavGroups: NavGroup[] = [
     title: '账号管理',
     items: [
       {
+        title: '账号凭证管理',
+        url: '/yunke/credentials',
+        icon: KeyRound,
+      },
+      {
         title: '子账号管理',
         url: '/yunke/accounts',
         icon: Users,
-      },
-      {
-        title: '登录状态',
-        url: '/yunke/login-status',
-        icon: UserCheck,
-      },
-      {
-        title: '员工绑定',
-        url: '/yunke/employee-bindingS',
-        icon: Link,
       },
     ],
   },

@@ -1105,3 +1105,105 @@ export const DEFAULT_API_SCOPES = {
     permissions: ['read'],
   },
 }
+
+// ============================================================================
+// 定时任务相关类型
+// ============================================================================
+
+/** 间隔调度周期类型 */
+export type IntervalPeriod = 'seconds' | 'minutes' | 'hours' | 'days'
+
+/** 间隔调度配置 */
+export interface IntervalSchedule {
+  id?: number
+  every: number
+  period: IntervalPeriod
+}
+
+/** Crontab 调度配置 */
+export interface CrontabSchedule {
+  id?: number
+  minute: string
+  hour: string
+  day_of_week: string
+  day_of_month: string
+  month_of_year: string
+}
+
+/** 定时任务 */
+export interface ScheduledTask {
+  id: number
+  name: string
+  task: string
+  enabled: boolean
+  description?: string
+  interval?: IntervalSchedule
+  crontab?: CrontabSchedule
+  args?: unknown[]
+  kwargs?: Record<string, unknown>
+  queue?: string
+  one_off: boolean
+  start_time?: string
+  expires?: string
+  last_run_at?: string
+  total_run_count: number
+  date_changed?: string
+}
+
+/** 创建定时任务 */
+export interface ScheduledTaskCreate {
+  name: string
+  task: string
+  enabled?: boolean
+  description?: string
+  interval?: Omit<IntervalSchedule, 'id'>
+  crontab?: Omit<CrontabSchedule, 'id'>
+  args?: unknown[]
+  kwargs?: Record<string, unknown>
+  queue?: string
+  one_off?: boolean
+  start_time?: string
+  expires?: string
+}
+
+/** 更新定时任务 */
+export interface ScheduledTaskUpdate {
+  name?: string
+  task?: string
+  enabled?: boolean
+  description?: string
+  interval?: Omit<IntervalSchedule, 'id'>
+  crontab?: Omit<CrontabSchedule, 'id'>
+  args?: unknown[]
+  kwargs?: Record<string, unknown>
+  queue?: string
+  one_off?: boolean
+  start_time?: string
+  expires?: string
+}
+
+/** 可用任务信息 */
+export interface AvailableTask {
+  name: string
+  description?: string
+  module: string
+}
+
+/** 间隔周期选项 */
+export const INTERVAL_PERIOD_OPTIONS = [
+  { label: '秒', value: 'seconds' },
+  { label: '分钟', value: 'minutes' },
+  { label: '小时', value: 'hours' },
+  { label: '天', value: 'days' },
+] as const
+
+/** Crontab 预设模板 */
+export const CRONTAB_PRESETS = [
+  { label: '每分钟', value: { minute: '*', hour: '*', day_of_week: '*', day_of_month: '*', month_of_year: '*' } },
+  { label: '每小时', value: { minute: '0', hour: '*', day_of_week: '*', day_of_month: '*', month_of_year: '*' } },
+  { label: '每3小时', value: { minute: '0', hour: '*/3', day_of_week: '*', day_of_month: '*', month_of_year: '*' } },
+  { label: '每天凌晨', value: { minute: '0', hour: '0', day_of_week: '*', day_of_month: '*', month_of_year: '*' } },
+  { label: '每天早8点', value: { minute: '0', hour: '8', day_of_week: '*', day_of_month: '*', month_of_year: '*' } },
+  { label: '每周一凌晨', value: { minute: '0', hour: '0', day_of_week: '1', day_of_month: '*', month_of_year: '*' } },
+  { label: '每月1号凌晨', value: { minute: '0', hour: '0', day_of_week: '*', day_of_month: '1', month_of_year: '*' } },
+] as const

@@ -46,12 +46,13 @@ import type {
   AdminStats,
   PaginatedResponse,
   ListQuery,
-  SubordinateInfo,
   ManagementScope,
   EmployeeSubordinatesResponse,
   EmployeeHierarchyTreeResponse,
-  YunkeLoginStatusResult,
-  YunkeBatchLoginResult,
+  ScheduledTask,
+  ScheduledTaskCreate,
+  ScheduledTaskUpdate,
+  AvailableTask,
 } from './types'
 
 const BASE_URL = '/admin'
@@ -1151,5 +1152,81 @@ export const apiKeysApi = {
       throw new Error(response.message || '更新失败')
     }
     return response.data
+  },
+}
+
+// ============================================================================
+// 定时任务 API
+// ============================================================================
+
+export const scheduledTasksApi = {
+  /** 获取定时任务列表 */
+  async list(params?: {
+    page?: number
+    page_size?: number
+    enabled?: boolean
+    search?: string
+  }): Promise<{ items: ScheduledTask[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<{ items: ScheduledTask[]; total: number }>>('/scheduled-tasks', { params })
+    return response.data || { items: [], total: 0 }
+  },
+
+  /** 获取定时任务详情 */
+  async get(taskId: number): Promise<ScheduledTask> {
+    const response = await apiClient.get<ApiResponse<ScheduledTask>>(`/scheduled-tasks/${taskId}`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取详情失败')
+    }
+    return response.data
+  },
+
+  /** 创建定时任务 */
+  async create(data: ScheduledTaskCreate): Promise<ScheduledTask> {
+    const response = await apiClient.post<ApiResponse<ScheduledTask>>('/scheduled-tasks', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '创建失败')
+    }
+    return response.data
+  },
+
+  /** 更新定时任务 */
+  async update(taskId: number, data: ScheduledTaskUpdate): Promise<ScheduledTask> {
+    const response = await apiClient.put<ApiResponse<ScheduledTask>>(`/scheduled-tasks/${taskId}`, data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '更新失败')
+    }
+    return response.data
+  },
+
+  /** 删除定时任务 */
+  async delete(taskId: number): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<void>>(`/scheduled-tasks/${taskId}`)
+    if (!response.success) {
+      throw new Error(response.message || '删除失败')
+    }
+  },
+
+  /** 切换定时任务状态 */
+  async toggle(taskId: number): Promise<ScheduledTask> {
+    const response = await apiClient.post<ApiResponse<ScheduledTask>>(`/scheduled-tasks/${taskId}/toggle`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '操作失败')
+    }
+    return response.data
+  },
+
+  /** 立即执行定时任务 */
+  async runNow(taskId: number): Promise<{ task_id: string }> {
+    const response = await apiClient.post<ApiResponse<{ task_id: string }>>(`/scheduled-tasks/${taskId}/run-now`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '执行失败')
+    }
+    return response.data
+  },
+
+  /** 获取可用任务列表 */
+  async getAvailableTasks(): Promise<{ items: AvailableTask[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<{ items: AvailableTask[]; total: number }>>('/scheduled-tasks/available-tasks/list')
+    return response.data || { items: [], total: 0 }
   },
 }

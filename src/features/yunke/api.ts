@@ -14,6 +14,11 @@ import type {
   YunkeLoginStatusResult,
   YunkeAutoSyncResult,
   YunkeDashboardStats,
+  YunkeCredential,
+  YunkeCredentialCreate,
+  YunkeCredentialUpdate,
+  YunkeCredentialStatus,
+  YunkeCredentialListResponse,
 } from './types'
 
 /**
@@ -138,6 +143,132 @@ export const yunkeApi = {
       today_calls: 0,
       today_duration: 0,
     }
+  },
+}
+
+/**
+ * 云客账号凭证管理 API
+ */
+export const yunkeCredentialsApi = {
+  /** 获取账号凭证列表 */
+  async getCredentials(params?: {
+    company_id?: string
+    status?: number
+    skip?: number
+    limit?: number
+  }): Promise<YunkeCredentialListResponse> {
+    const response = await apiClient.get<ApiResponse<YunkeCredentialListResponse>>(
+      '/external/yunke-accounts',
+      { params }
+    )
+    return response.data!
+  },
+
+  /** 获取单个账号凭证 */
+  async getCredential(id: string): Promise<YunkeCredential> {
+    const response = await apiClient.get<ApiResponse<YunkeCredential>>(
+      `/external/yunke-accounts/${id}`
+    )
+    return response.data!
+  },
+
+  /** 创建账号凭证（Upsert） */
+  async createCredential(data: YunkeCredentialCreate): Promise<YunkeCredential> {
+    const response = await apiClient.post<ApiResponse<YunkeCredential>>(
+      '/external/yunke-accounts',
+      data
+    )
+    return response.data!
+  },
+
+  /** 更新账号密码 */
+  async updateCredential(id: string, data: YunkeCredentialUpdate): Promise<YunkeCredential> {
+    const response = await apiClient.put<ApiResponse<YunkeCredential>>(
+      `/external/yunke-accounts/${id}`,
+      data
+    )
+    return response.data!
+  },
+
+  /** 删除账号凭证 */
+  async deleteCredential(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.delete<ApiResponse<{ success: boolean; message: string }>>(
+      `/external/yunke-accounts/${id}`
+    )
+    return response.data!
+  },
+
+  /** 手动登录/刷新登录 */
+  async loginCredential(id: string): Promise<{ success: boolean; message: string; status?: number }> {
+    const response = await apiClient.post<ApiResponse<{ status: number }>>(
+      `/external/yunke-accounts/${id}/refresh`
+    )
+    // apiClient 返回的是完整的 ApiResponse，需要根据 success 字段判断
+    const apiResponse = response as unknown as ApiResponse<{ status: number }>
+    return {
+      success: apiResponse.success,
+      message: apiResponse.message || '',
+      status: apiResponse.data?.status,
+    }
+  },
+
+  /** 检查账号状态 */
+  async checkCredentialStatus(id: string): Promise<YunkeCredentialStatus> {
+    const response = await apiClient.get<ApiResponse<YunkeCredentialStatus>>(
+      `/external/yunke-accounts/${id}/status`
+    )
+    return response.data!
+  },
+
+  /** 获取所有凭证的子账号列表 */
+  async getSubAccountsFromCredentials(params?: {
+    page?: number
+    page_size?: number
+    real_name?: string
+  }): Promise<{
+    users: YunkeSubAccount[]
+    total: number
+    accounts_count: number
+    errors?: Array<{ account_id: string; account_phone: string; error: string }>
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      users: YunkeSubAccount[]
+      total: number
+      accounts_count: number
+      errors?: Array<{ account_id: string; account_phone: string; error: string }>
+    }>>('/external/yunke-accounts/sub-accounts', params)
+    return response.data!
+  },
+
+  /** 获取指定凭证的子账号列表 */
+  async getSubAccountsByCredential(
+    accountId: string,
+    params?: {
+      page?: number
+      page_size?: number
+      real_name?: string
+    }
+  ): Promise<{
+    users: YunkeSubAccount[]
+    total: number
+    account: {
+      id: string
+      phone: string
+      company_code: string | null
+      company_name: string | null
+    }
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      users: YunkeSubAccount[]
+      total: number
+      account: {
+        id: string
+        phone: string
+        company_code: string | null
+        company_name: string | null
+      }
+    }>>(`/external/yunke-accounts/${accountId}/sub-accounts`, params)
+    return response.data!
   },
 }
 

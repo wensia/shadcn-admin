@@ -41,6 +41,7 @@ import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
 import { Route as AuthenticatedYunkeLoginStatusRouteImport } from './routes/_authenticated/yunke/login-status'
 import { Route as AuthenticatedYunkeDashboardRouteImport } from './routes/_authenticated/yunke/dashboard'
+import { Route as AuthenticatedYunkeCredentialsRouteImport } from './routes/_authenticated/yunke/credentials'
 import { Route as AuthenticatedYunkeCallRecordsRouteImport } from './routes/_authenticated/yunke/call-records'
 import { Route as AuthenticatedYunkeAccountsRouteImport } from './routes/_authenticated/yunke/accounts'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
@@ -59,6 +60,7 @@ import { Route as AuthenticatedAdminWebhookHooksRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminTempDiscRecordsRouteImport } from './routes/_authenticated/admin/temp-disc-records'
 import { Route as AuthenticatedAdminSourceChannelsRouteImport } from './routes/_authenticated/admin/source-channels'
 import { Route as AuthenticatedAdminSchoolsRouteImport } from './routes/_authenticated/admin/schools'
+import { Route as AuthenticatedAdminScheduledTasksRouteImport } from './routes/_authenticated/admin/scheduled-tasks'
 import { Route as AuthenticatedAdminRegionsRouteImport } from './routes/_authenticated/admin/regions'
 import { Route as AuthenticatedAdminPositionsRouteImport } from './routes/_authenticated/admin/positions'
 import { Route as AuthenticatedAdminOrganizationTreeRouteImport } from './routes/_authenticated/admin/organization-tree'
@@ -243,6 +245,12 @@ const AuthenticatedYunkeDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedYunkeRouteRoute,
   } as any)
+const AuthenticatedYunkeCredentialsRoute =
+  AuthenticatedYunkeCredentialsRouteImport.update({
+    id: '/credentials',
+    path: '/credentials',
+    getParentRoute: () => AuthenticatedYunkeRouteRoute,
+  } as any)
 const AuthenticatedYunkeCallRecordsRoute =
   AuthenticatedYunkeCallRecordsRouteImport.update({
     id: '/call-records',
@@ -348,6 +356,12 @@ const AuthenticatedAdminSchoolsRoute =
   AuthenticatedAdminSchoolsRouteImport.update({
     id: '/schools',
     path: '/schools',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminScheduledTasksRoute =
+  AuthenticatedAdminScheduledTasksRouteImport.update({
+    id: '/scheduled-tasks',
+    path: '/scheduled-tasks',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminRegionsRoute =
@@ -505,6 +519,7 @@ export interface FileRoutesByFullPath {
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
   '/admin/regions': typeof AuthenticatedAdminRegionsRoute
+  '/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
   '/admin/schools': typeof AuthenticatedAdminSchoolsRoute
   '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
   '/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
@@ -523,6 +538,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
   '/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
   '/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
@@ -571,6 +587,7 @@ export interface FileRoutesByTo {
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
   '/admin/regions': typeof AuthenticatedAdminRegionsRoute
+  '/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
   '/admin/schools': typeof AuthenticatedAdminSchoolsRoute
   '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
   '/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
@@ -589,6 +606,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
   '/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
   '/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
@@ -644,6 +662,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/_authenticated/admin/positions': typeof AuthenticatedAdminPositionsRoute
   '/_authenticated/admin/regions': typeof AuthenticatedAdminRegionsRoute
+  '/_authenticated/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
   '/_authenticated/admin/schools': typeof AuthenticatedAdminSchoolsRoute
   '/_authenticated/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
   '/_authenticated/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
@@ -662,6 +681,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/_authenticated/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/_authenticated/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
   '/_authenticated/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
   '/_authenticated/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
@@ -715,6 +735,7 @@ export interface FileRouteTypes {
     | '/admin/organization-tree'
     | '/admin/positions'
     | '/admin/regions'
+    | '/admin/scheduled-tasks'
     | '/admin/schools'
     | '/admin/source-channels'
     | '/admin/temp-disc-records'
@@ -733,6 +754,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/yunke/accounts'
     | '/yunke/call-records'
+    | '/yunke/credentials'
     | '/yunke/dashboard'
     | '/yunke/login-status'
     | '/clerk/sign-in'
@@ -781,6 +803,7 @@ export interface FileRouteTypes {
     | '/admin/organization-tree'
     | '/admin/positions'
     | '/admin/regions'
+    | '/admin/scheduled-tasks'
     | '/admin/schools'
     | '/admin/source-channels'
     | '/admin/temp-disc-records'
@@ -799,6 +822,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/yunke/accounts'
     | '/yunke/call-records'
+    | '/yunke/credentials'
     | '/yunke/dashboard'
     | '/yunke/login-status'
     | '/clerk/sign-in'
@@ -853,6 +877,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/organization-tree'
     | '/_authenticated/admin/positions'
     | '/_authenticated/admin/regions'
+    | '/_authenticated/admin/scheduled-tasks'
     | '/_authenticated/admin/schools'
     | '/_authenticated/admin/source-channels'
     | '/_authenticated/admin/temp-disc-records'
@@ -871,6 +896,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/notifications'
     | '/_authenticated/yunke/accounts'
     | '/_authenticated/yunke/call-records'
+    | '/_authenticated/yunke/credentials'
     | '/_authenticated/yunke/dashboard'
     | '/_authenticated/yunke/login-status'
     | '/clerk/(auth)/sign-in'
@@ -1130,6 +1156,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedYunkeDashboardRouteImport
       parentRoute: typeof AuthenticatedYunkeRouteRoute
     }
+    '/_authenticated/yunke/credentials': {
+      id: '/_authenticated/yunke/credentials'
+      path: '/credentials'
+      fullPath: '/yunke/credentials'
+      preLoaderRoute: typeof AuthenticatedYunkeCredentialsRouteImport
+      parentRoute: typeof AuthenticatedYunkeRouteRoute
+    }
     '/_authenticated/yunke/call-records': {
       id: '/_authenticated/yunke/call-records'
       path: '/call-records'
@@ -1254,6 +1287,13 @@ declare module '@tanstack/react-router' {
       path: '/schools'
       fullPath: '/admin/schools'
       preLoaderRoute: typeof AuthenticatedAdminSchoolsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/scheduled-tasks': {
+      id: '/_authenticated/admin/scheduled-tasks'
+      path: '/scheduled-tasks'
+      fullPath: '/admin/scheduled-tasks'
+      preLoaderRoute: typeof AuthenticatedAdminScheduledTasksRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/regions': {
@@ -1418,6 +1458,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminOrganizationTreeRoute: typeof AuthenticatedAdminOrganizationTreeRoute
   AuthenticatedAdminPositionsRoute: typeof AuthenticatedAdminPositionsRoute
   AuthenticatedAdminRegionsRoute: typeof AuthenticatedAdminRegionsRoute
+  AuthenticatedAdminScheduledTasksRoute: typeof AuthenticatedAdminScheduledTasksRoute
   AuthenticatedAdminSchoolsRoute: typeof AuthenticatedAdminSchoolsRoute
   AuthenticatedAdminSourceChannelsRoute: typeof AuthenticatedAdminSourceChannelsRoute
   AuthenticatedAdminTempDiscRecordsRoute: typeof AuthenticatedAdminTempDiscRecordsRoute
@@ -1451,6 +1492,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
       AuthenticatedAdminOrganizationTreeRoute,
     AuthenticatedAdminPositionsRoute: AuthenticatedAdminPositionsRoute,
     AuthenticatedAdminRegionsRoute: AuthenticatedAdminRegionsRoute,
+    AuthenticatedAdminScheduledTasksRoute:
+      AuthenticatedAdminScheduledTasksRoute,
     AuthenticatedAdminSchoolsRoute: AuthenticatedAdminSchoolsRoute,
     AuthenticatedAdminSourceChannelsRoute:
       AuthenticatedAdminSourceChannelsRoute,
@@ -1492,6 +1535,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedYunkeRouteRouteChildren {
   AuthenticatedYunkeAccountsRoute: typeof AuthenticatedYunkeAccountsRoute
   AuthenticatedYunkeCallRecordsRoute: typeof AuthenticatedYunkeCallRecordsRoute
+  AuthenticatedYunkeCredentialsRoute: typeof AuthenticatedYunkeCredentialsRoute
   AuthenticatedYunkeDashboardRoute: typeof AuthenticatedYunkeDashboardRoute
   AuthenticatedYunkeLoginStatusRoute: typeof AuthenticatedYunkeLoginStatusRoute
   AuthenticatedYunkeIndexRoute: typeof AuthenticatedYunkeIndexRoute
@@ -1501,6 +1545,7 @@ const AuthenticatedYunkeRouteRouteChildren: AuthenticatedYunkeRouteRouteChildren
   {
     AuthenticatedYunkeAccountsRoute: AuthenticatedYunkeAccountsRoute,
     AuthenticatedYunkeCallRecordsRoute: AuthenticatedYunkeCallRecordsRoute,
+    AuthenticatedYunkeCredentialsRoute: AuthenticatedYunkeCredentialsRoute,
     AuthenticatedYunkeDashboardRoute: AuthenticatedYunkeDashboardRoute,
     AuthenticatedYunkeLoginStatusRoute: AuthenticatedYunkeLoginStatusRoute,
     AuthenticatedYunkeIndexRoute: AuthenticatedYunkeIndexRoute,
