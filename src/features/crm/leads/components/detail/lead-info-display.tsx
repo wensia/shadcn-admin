@@ -579,7 +579,15 @@ export function LeadInfoDisplay({
                 value={lead.school_name}
                 rawValue={lead.school_name || ''}
                 editable={editable}
-                fieldType="text"
+                fieldType="async-select"
+                asyncSelectConfig={{
+                  apiEndpoint: '/admin/schools',
+                  searchParam: 'search',
+                  labelKey: 'name',
+                  valueKey: 'name',
+                  creatable: true,
+                  createFieldName: 'name',
+                }}
                 onSave={createSaveHandler('school_name')}
               />
               {!compact && (

@@ -5,10 +5,11 @@
  */
 
 import * as React from 'react'
-import { Copy, Check, Pencil, Loader2 } from 'lucide-react'
+import { Copy, Check, Pencil, Loader2, Plus, Search } from 'lucide-react'
 import { cn, copyToClipboard } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { toast } from 'sonner'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Popover,
   PopoverContent,
@@ -27,9 +28,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command'
 import { Button } from '@/components/ui/button'
 import { FormDatePicker } from '@/components/date-picker'
 import { DateTimePicker } from '@/components/date-time-picker'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { apiClient } from '@/lib/api/client'
+
+// 异步 Select 配置
+interface AsyncSelectConfig {
+  /** API 端点路径（如 /admin/schools） */
+  apiEndpoint: string
+  /** 搜索参数名（默认 search） */
+  searchParam?: string
+  /** 响应中 items 的字段名 */
+  itemsKey?: string
+  /** 选项 label 字段（默认 name） */
+  labelKey?: string
+  /** 选项 value 字段（默认 name，用于保存） */
+  valueKey?: string
+  /** 是否允许创建新选项 */
+  creatable?: boolean
+  /** 创建 API 端点（默认同 apiEndpoint） */
+  createEndpoint?: string
+  /** 创建时的字段名（默认 name） */
+  createFieldName?: string
+}
 
 interface InfoItemProps {
   label: string
@@ -42,8 +74,10 @@ interface InfoItemProps {
   className?: string
   // 编辑相关 props
   editable?: boolean
-  fieldType?: 'text' | 'number' | 'select' | 'date' | 'datetime'
+  fieldType?: 'text' | 'number' | 'select' | 'date' | 'datetime' | 'async-select'
   options?: Array<{ label: string; value: string }>
+  /** 异步 Select 配置 */
+  asyncSelectConfig?: AsyncSelectConfig
   onSave?: (value: string) => Promise<void>
 }
 
@@ -58,13 +92,47 @@ export function InfoItem({
   editable = false,
   fieldType = 'text',
   options = [],
+  asyncSelectConfig,
   onSave,
 }: InfoItemProps) {
   const s = useStyleClasses()
+  const queryClient = useQueryClient()
   const [copied, setCopied] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
   const [editValue, setEditValue] = React.useState('')
   const [isSaving, setIsSaving] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [isCreating, setIsCreating] = React.useState(false)
+
+  // 异步 Select 搜索查询
+  const { data: asyncOptions = [], isLoading: isLoadingOptions } = useQuery({
+    queryKey: ['async-select', asyncSelectConfig?.apiEndpoint, searchQuery],
+    queryFn: async () => {
+      if (!asyncSelectConfig) return []
+      const searchParam = asyncSelectConfig.searchParam || 'search'
+      const params = new URLSearchParams({ page: '1', size: '20' })
+      if (searchQuery) params.set(searchParam, searchQuery)
+      const res = await apiClient.get(`${asyncSelectConfig.apiEndpoint}?${params}`)
+      const itemsKey = asyncSelectConfig.itemsKey || 'items'
+      return res.data[itemsKey] || []
+    },
+    enabled: isEditing && fieldType === 'async-select' && !!asyncSelectConfig,
+    staleTime: 30000,
+  })
+
+  // 创建新选项
+  const createMutation = useMutation({
+    mutationFn: async (newValue: string) => {
+      if (!asyncSelectConfig) throw new Error('Missing config')
+      const endpoint = asyncSelectConfig.createEndpoint || asyncSelectConfig.apiEndpoint
+      const fieldName = asyncSelectConfig.createFieldName || 'name'
+      const res = await apiClient.post(endpoint, { [fieldName]: newValue })
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['async-select', asyncSelectConfig?.apiEndpoint] })
+    },
+  })
 
   // 打开编辑时初始化值
   React.useEffect(() => {
@@ -163,6 +231,98 @@ export function InfoItem({
             autoFocus
           />
         )
+      case 'async-select':
+        if (!asyncSelectConfig) return null
+        const labelKey = asyncSelectConfig.labelKey || 'name'
+        const valueKey = asyncSelectConfig.valueKey || 'name'
+        const showCreateOption = asyncSelectConfig.creatable && searchQuery && !asyncOptions.some(
+          (opt: any) => opt[labelKey]?.toLowerCase() === searchQuery.toLowerCase()
+        )
+        return (
+          <Command className="border rounded-md" shouldFilter={false}>
+            <div className="flex items-center border-b px-2">
+              <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <CommandInput
+                placeholder="搜索或输入新值..."
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+                className="h-8 text-xs border-0 focus:ring-0"
+              />
+            </div>
+            <CommandList>
+              <ScrollArea className="h-[160px]">
+                {isLoadingOptions ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
+                      {searchQuery ? '未找到匹配项' : '输入关键词搜索'}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {asyncOptions.map((opt: any) => (
+                        <CommandItem
+                          key={opt.id || opt[valueKey]}
+                          value={opt[valueKey]}
+                          onSelect={() => {
+                            setEditValue(opt[valueKey])
+                            setSearchQuery('')
+                          }}
+                          className={cn(
+                            "text-xs cursor-pointer",
+                            editValue === opt[valueKey] && "bg-accent"
+                          )}
+                        >
+                          {opt[labelKey]}
+                          {editValue === opt[valueKey] && (
+                            <Check className="ml-auto h-3.5 w-3.5" />
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                    {showCreateOption && (
+                      <>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={async () => {
+                              setIsCreating(true)
+                              try {
+                                await createMutation.mutateAsync(searchQuery)
+                                setEditValue(searchQuery)
+                                setSearchQuery('')
+                                toast.success(`"${searchQuery}" 创建成功`)
+                              } catch (e: any) {
+                                toast.error(e?.message || '创建失败')
+                              } finally {
+                                setIsCreating(false)
+                              }
+                            }}
+                            className="text-xs cursor-pointer"
+                            disabled={isCreating}
+                          >
+                            {isCreating ? (
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Plus className="mr-1.5 h-3.5 w-3.5" />
+                            )}
+                            创建 "{searchQuery}"
+                          </CommandItem>
+                        </CommandGroup>
+                      </>
+                    )}
+                  </>
+                )}
+              </ScrollArea>
+            </CommandList>
+            {editValue && (
+              <div className="border-t px-2 py-1.5 text-xs text-muted-foreground">
+                已选择: <span className="font-medium text-foreground">{editValue}</span>
+              </div>
+            )}
+          </Command>
+        )
       default:
         return (
           <Input
@@ -227,7 +387,7 @@ export function InfoItem({
             </PopoverTrigger>
           )}
           <PopoverContent
-            className={cn("p-3 relative", fieldType === 'datetime' ? 'w-auto' : 'w-64')}
+            className={cn("p-3 relative", fieldType === 'datetime' ? 'w-auto' : fieldType === 'async-select' ? 'w-72 p-2' : 'w-64')}
             align="start"
             // 使用 modal 模式防止页面重新渲染时焦点丢失导致 Popover 关闭
             onOpenAutoFocus={(e) => e.preventDefault()}
