@@ -239,13 +239,27 @@ export function LeadsTable({
         header: '最后回访结果',
         cell: ({ row }) => {
           if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className={cn("h-5 w-16", s.rounded)} />
+            return <Skeleton className={cn("h-8 w-24", s.rounded)} />
           }
           const result = row.original.last_followup_result
-          if (!result) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
-          return <FollowupResultBadge result={result} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
+          const content = row.original.last_followup_content
+          if (!result && !content) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
+          return (
+            <div className="flex flex-col gap-0.5 min-w-0 max-w-full">
+              {result && (
+                <FollowupResultBadge result={result} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
+              )}
+              {content && (
+                <span className={cn(s.text.xs, 'text-muted-foreground truncate')} title={content}>
+                  {content}
+                </span>
+              )}
+            </div>
+          )
         },
-        size: getColumnSize(120)
+        size: getColumnSize(100),
+        minSize: 80,
+        maxSize: 120
       },
       // 顾问
       {
@@ -341,7 +355,8 @@ export function LeadsTable({
     onRowSelectionChange: setRowSelection,
     state: {
       rowSelection: isLoading ? {} : rowSelection
-    }
+    },
+    columnResizeMode: 'onChange'
   })
 
   // 当数据变化时，清空选中状态
@@ -393,7 +408,7 @@ export function LeadsTable({
           isLoading && "opacity-60 pointer-events-none transition-opacity duration-200"
         )}
       >
-        <Table>
+        <Table style={{ tableLayout: 'fixed' }}>
           <TableHeader className="sticky top-0 z-10 bg-card">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

@@ -217,6 +217,7 @@ export interface LeadListItem {
   is_starred: boolean
   last_followup_at?: string
   last_followup_result?: FollowupResult
+  last_followup_content?: string  // 最后跟进内容
   followup_count: number
   import_batch_id?: string
   batch_remark?: string | null
