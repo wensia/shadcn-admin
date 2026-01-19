@@ -40,7 +40,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { FormDatePicker } from '@/components/date-picker'
 import { DateTimePicker } from '@/components/date-time-picker'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { apiClient } from '@/lib/api/client'
 
 // 异步 Select 配置
@@ -249,72 +248,70 @@ export function InfoItem({
                 className="h-8 text-xs border-0 focus:ring-0"
               />
             </div>
-            <CommandList>
-              <ScrollArea className="h-[160px]">
-                {isLoadingOptions ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <>
-                    <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
-                      {searchQuery ? '未找到匹配项' : '输入关键词搜索'}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {asyncOptions.map((opt: any) => (
+            <CommandList className="max-h-[200px] overflow-y-auto">
+              {isLoadingOptions ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
+                    {searchQuery ? '未找到匹配项' : '输入关键词搜索'}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {asyncOptions.map((opt: any) => (
+                      <CommandItem
+                        key={opt.id || opt[valueKey]}
+                        value={opt[valueKey]}
+                        onSelect={() => {
+                          setEditValue(opt[valueKey])
+                          setSearchQuery('')
+                        }}
+                        className={cn(
+                          "text-xs cursor-pointer",
+                          editValue === opt[valueKey] && "bg-accent"
+                        )}
+                      >
+                        {opt[labelKey]}
+                        {editValue === opt[valueKey] && (
+                          <Check className="ml-auto h-3.5 w-3.5" />
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  {showCreateOption && (
+                    <>
+                      <CommandSeparator />
+                      <CommandGroup>
                         <CommandItem
-                          key={opt.id || opt[valueKey]}
-                          value={opt[valueKey]}
-                          onSelect={() => {
-                            setEditValue(opt[valueKey])
-                            setSearchQuery('')
+                          onSelect={async () => {
+                            setIsCreating(true)
+                            try {
+                              await createMutation.mutateAsync(searchQuery)
+                              setEditValue(searchQuery)
+                              setSearchQuery('')
+                              toast.success(`"${searchQuery}" 创建成功`)
+                            } catch (e: any) {
+                              toast.error(e?.message || '创建失败')
+                            } finally {
+                              setIsCreating(false)
+                            }
                           }}
-                          className={cn(
-                            "text-xs cursor-pointer",
-                            editValue === opt[valueKey] && "bg-accent"
-                          )}
+                          className="text-xs cursor-pointer"
+                          disabled={isCreating}
                         >
-                          {opt[labelKey]}
-                          {editValue === opt[valueKey] && (
-                            <Check className="ml-auto h-3.5 w-3.5" />
+                          {isCreating ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Plus className="mr-1.5 h-3.5 w-3.5" />
                           )}
+                          创建 "{searchQuery}"
                         </CommandItem>
-                      ))}
-                    </CommandGroup>
-                    {showCreateOption && (
-                      <>
-                        <CommandSeparator />
-                        <CommandGroup>
-                          <CommandItem
-                            onSelect={async () => {
-                              setIsCreating(true)
-                              try {
-                                await createMutation.mutateAsync(searchQuery)
-                                setEditValue(searchQuery)
-                                setSearchQuery('')
-                                toast.success(`"${searchQuery}" 创建成功`)
-                              } catch (e: any) {
-                                toast.error(e?.message || '创建失败')
-                              } finally {
-                                setIsCreating(false)
-                              }
-                            }}
-                            className="text-xs cursor-pointer"
-                            disabled={isCreating}
-                          >
-                            {isCreating ? (
-                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Plus className="mr-1.5 h-3.5 w-3.5" />
-                            )}
-                            创建 "{searchQuery}"
-                          </CommandItem>
-                        </CommandGroup>
-                      </>
-                    )}
-                  </>
-                )}
-              </ScrollArea>
+                      </CommandGroup>
+                    </>
+                  )}
+                </>
+              )}
             </CommandList>
             {editValue && (
               <div className="border-t px-2 py-1.5 text-xs text-muted-foreground">
