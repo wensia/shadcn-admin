@@ -409,6 +409,9 @@ export interface LeadListParams {
   age_min?: number  // 最小年龄
   age_max?: number  // 最大年龄
   grade?: Grade[]   // 年级筛选（多选）
+  // 激活时间筛选
+  activated_from?: string  // 激活开始时间
+  activated_to?: string    // 激活结束时间
 }
 
 // ==================== 来源渠道额外字段配置 ====================

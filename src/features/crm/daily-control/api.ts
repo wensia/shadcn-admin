@@ -19,6 +19,9 @@ export interface VisitScheduleItem {
   phone?: string         // 后端返回 phone
   grade?: string
   grade_display?: string
+  // 来源渠道信息
+  source_channel_name?: string
+  source_extra?: string
   visit_date: string
   visit_time?: string
   advisor_id?: string
@@ -65,6 +68,15 @@ export interface PaymentItem {
   child_name?: string
   parent_name?: string
   parent_phone?: string
+  // 跟进顾问信息（来自线索）
+  advisor_id?: string
+  advisor_name?: string
+  // 年级信息（来自线索）
+  grade?: string
+  grade_display?: string
+  // 来源渠道信息（来自线索）
+  source_channel_name?: string
+  source_extra?: string
   amount: number
   payment_method: PaymentMethod
   payment_method_display?: string

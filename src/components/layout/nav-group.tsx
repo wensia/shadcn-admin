@@ -35,6 +35,9 @@ import {
 // 用于存储分类折叠状态的 localStorage key
 const COLLAPSED_GROUPS_KEY = 'sidebar_collapsed_groups'
 
+// 默认折叠的分类（首次访问时）
+const DEFAULT_COLLAPSED_GROUPS = ['教管部', '行政部']
+
 // 获取已折叠的分类
 function getCollapsedGroups(): string[] {
   try {
@@ -43,6 +46,11 @@ function getCollapsedGroups(): string[] {
   } catch {
     return []
   }
+}
+
+// 检查是否首次访问（localStorage 中没有折叠状态记录）
+function isFirstVisit(): boolean {
+  return localStorage.getItem(COLLAPSED_GROUPS_KEY) === null
 }
 
 // 保存已折叠的分类
@@ -58,13 +66,17 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const href = useLocation({ select: (location) => location.href })
 
-  // 检查当前分类下是否有活动的菜单项
-  const hasActiveItem = items.some(item => checkIsActive(href, item, true))
+  // 检查当前分类下是否有活动的菜单项（精确匹配，不使用 mainNav 宽松模式）
+  const hasActiveItem = items.some(item => checkIsActive(href, item, false))
 
   // 分类折叠状态
   const [isOpen, setIsOpen] = useState(() => {
     // 如果有活动项，默认展开
     if (hasActiveItem) return true
+    // 首次访问时，使用默认折叠状态
+    if (isFirstVisit()) {
+      return !DEFAULT_COLLAPSED_GROUPS.includes(title)
+    }
     // 否则检查 localStorage
     const collapsed = getCollapsedGroups()
     return !collapsed.includes(title)

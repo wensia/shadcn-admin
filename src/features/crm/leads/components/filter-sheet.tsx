@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
@@ -262,6 +263,16 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
   // 额外字段筛选状态
   const [sourceExtraFilters, setSourceExtraFilters] = useState<Record<string, string>>({})
 
+  // 激活时间筛选启用状态
+  const [enableActivatedFilter, setEnableActivatedFilter] = useState(false)
+
+  // 同步激活时间筛选状态
+  useEffect(() => {
+    if (open) {
+      setEnableActivatedFilter(!!(filters.activated_from || filters.activated_to))
+    }
+  }, [open, filters.activated_from, filters.activated_to])
+
   // 计算当前选中渠道的 extra_fields（仅单选时显示）
   const selectedChannelExtraFields = useMemo<SourceChannelExtraField[]>(() => {
     if (localFilters.source_channel_id?.length === 1 && sourceChannels) {
@@ -317,6 +328,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
     const emptyFilters: LeadListParams = {}
     setLocalFilters(emptyFilters)
     setSourceExtraFilters({})
+    setEnableActivatedFilter(false)
     // 同时清空快捷筛选
     onClearQuickFilters?.()
     onApplyFilters(emptyFilters)
@@ -573,6 +585,39 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
                   endPlaceholder="结束日期"
                 />
               </FilterField>
+
+              {/* 激活时间筛选（带复选框控制） */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="enable-activated-filter"
+                    checked={enableActivatedFilter}
+                    onCheckedChange={(checked) => {
+                      setEnableActivatedFilter(!!checked)
+                      if (!checked) {
+                        updateFilter('activated_from', undefined)
+                        updateFilter('activated_to', undefined)
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor="enable-activated-filter"
+                    className={cn(s.text.xs, 'text-muted-foreground cursor-pointer')}
+                  >
+                    包含激活时间筛选
+                  </Label>
+                </div>
+                {enableActivatedFilter && (
+                  <DateRangePicker
+                    startDate={localFilters.activated_from}
+                    endDate={localFilters.activated_to}
+                    onStartDateChange={(date) => updateFilter('activated_from', date)}
+                    onEndDateChange={(date) => updateFilter('activated_to', date)}
+                    startPlaceholder="激活开始"
+                    endPlaceholder="激活结束"
+                  />
+                )}
+              </div>
             </FilterGroup>
 
             {/* ========== 其他条件 ========== */}

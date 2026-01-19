@@ -22,8 +22,8 @@ import { cn } from '@/lib/utils'
 import { useStyle } from '@/context/style-provider'
 import { useStyleClasses } from '@/lib/style-utils'
 import type { LeadListItem } from '../types'
-import { gradeLabels } from '../types'
-import { LeadStatusBadge, IntentionLevelBadge } from './status-badges'
+import { gradeLabels, LeadStatus } from '../types'
+import { LeadStatusBadge, IntentionLevelBadge, FollowupResultBadge } from './status-badges'
 
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
@@ -232,6 +232,20 @@ export function LeadsTable({
           return <IntentionLevelBadge level={level} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
         },
         size: getColumnSize(100)
+      },
+      // 最后回访结果
+      {
+        accessorKey: 'last_followup_result',
+        header: '最后回访结果',
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className={cn("h-5 w-16", s.rounded)} />
+          }
+          const result = row.original.last_followup_result
+          if (!result) return <span className={cn(s.text.xs, 'text-muted-foreground')}>-</span>
+          return <FollowupResultBadge result={result} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
+        },
+        size: getColumnSize(120)
       },
       // 顾问
       {
