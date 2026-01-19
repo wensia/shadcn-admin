@@ -248,7 +248,15 @@ export function InfoItem({
                 className="h-8 text-xs border-0 focus:ring-0"
               />
             </div>
-            <CommandList className="max-h-[200px] overflow-y-auto">
+            <CommandList
+              className="max-h-[200px] overflow-y-auto"
+              onWheel={(e) => {
+                // 修复 cmdk 阻止滚轮事件的问题
+                e.stopPropagation()
+                const target = e.currentTarget
+                target.scrollTop += e.deltaY
+              }}
+            >
               {isLoadingOptions ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
