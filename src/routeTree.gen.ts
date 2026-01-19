@@ -25,8 +25,10 @@ import { Route as authOtpRouteImport } from './routes/(auth)/otp'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
+import { Route as AuthenticatedYunkeRouteRouteImport } from './routes/_authenticated/yunke/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as AuthenticatedYunkeIndexRouteImport } from './routes/_authenticated/yunke/index'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
@@ -37,6 +39,10 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
+import { Route as AuthenticatedYunkeLoginStatusRouteImport } from './routes/_authenticated/yunke/login-status'
+import { Route as AuthenticatedYunkeDashboardRouteImport } from './routes/_authenticated/yunke/dashboard'
+import { Route as AuthenticatedYunkeCallRecordsRouteImport } from './routes/_authenticated/yunke/call-records'
+import { Route as AuthenticatedYunkeAccountsRouteImport } from './routes/_authenticated/yunke/accounts'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
@@ -151,6 +157,11 @@ const ClerkauthRouteRoute = ClerkauthRouteRouteImport.update({
   id: '/(auth)',
   getParentRoute: () => ClerkRouteRoute,
 } as any)
+const AuthenticatedYunkeRouteRoute = AuthenticatedYunkeRouteRouteImport.update({
+  id: '/yunke',
+  path: '/yunke',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRouteRoute =
   AuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
@@ -161,6 +172,11 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedYunkeIndexRoute = AuthenticatedYunkeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedYunkeRouteRoute,
 } as any)
 const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
   id: '/users/',
@@ -215,6 +231,30 @@ const ClerkauthSignInRoute = ClerkauthSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => ClerkauthRouteRoute,
 } as any)
+const AuthenticatedYunkeLoginStatusRoute =
+  AuthenticatedYunkeLoginStatusRouteImport.update({
+    id: '/login-status',
+    path: '/login-status',
+    getParentRoute: () => AuthenticatedYunkeRouteRoute,
+  } as any)
+const AuthenticatedYunkeDashboardRoute =
+  AuthenticatedYunkeDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedYunkeRouteRoute,
+  } as any)
+const AuthenticatedYunkeCallRecordsRoute =
+  AuthenticatedYunkeCallRecordsRouteImport.update({
+    id: '/call-records',
+    path: '/call-records',
+    getParentRoute: () => AuthenticatedYunkeRouteRoute,
+  } as any)
+const AuthenticatedYunkeAccountsRoute =
+  AuthenticatedYunkeAccountsRouteImport.update({
+    id: '/accounts',
+    path: '/accounts',
+    getParentRoute: () => AuthenticatedYunkeRouteRoute,
+  } as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -435,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/sign-in': typeof authSignInRoute
@@ -480,6 +521,10 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
+  '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
+  '/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
@@ -490,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/yunke/': typeof AuthenticatedYunkeIndexRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
 }
@@ -541,6 +587,10 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
+  '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
+  '/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
@@ -551,6 +601,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/yunke': typeof AuthenticatedYunkeIndexRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
 }
@@ -561,6 +612,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/_authenticated/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
   '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
@@ -608,6 +660,10 @@ export interface FileRoutesById {
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
+  '/_authenticated/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/_authenticated/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
+  '/_authenticated/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
@@ -618,6 +674,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/yunke/': typeof AuthenticatedYunkeIndexRoute
   '/_authenticated/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/_authenticated/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
 }
@@ -628,6 +685,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin'
     | '/settings'
+    | '/yunke'
     | '/forgot-password'
     | '/otp'
     | '/sign-in'
@@ -673,6 +731,10 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/yunke/accounts'
+    | '/yunke/call-records'
+    | '/yunke/dashboard'
+    | '/yunke/login-status'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
@@ -683,6 +745,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks'
     | '/users'
+    | '/yunke/'
     | '/crm/leads/pool'
     | '/crm/leads'
   fileRoutesByTo: FileRoutesByTo
@@ -734,6 +797,10 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/yunke/accounts'
+    | '/yunke/call-records'
+    | '/yunke/dashboard'
+    | '/yunke/login-status'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
@@ -744,6 +811,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/yunke'
     | '/crm/leads/pool'
     | '/crm/leads'
   id:
@@ -753,6 +821,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/admin'
     | '/_authenticated/settings'
+    | '/_authenticated/yunke'
     | '/clerk/(auth)'
     | '/clerk/_authenticated'
     | '/(auth)/forgot-password'
@@ -800,6 +869,10 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/yunke/accounts'
+    | '/_authenticated/yunke/call-records'
+    | '/_authenticated/yunke/dashboard'
+    | '/_authenticated/yunke/login-status'
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
     | '/clerk/_authenticated/user-management'
@@ -810,6 +883,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
+    | '/_authenticated/yunke/'
     | '/_authenticated/crm/leads/pool'
     | '/_authenticated/crm/leads/'
   fileRoutesById: FileRoutesById
@@ -944,6 +1018,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClerkauthRouteRouteImport
       parentRoute: typeof ClerkRouteRoute
     }
+    '/_authenticated/yunke': {
+      id: '/_authenticated/yunke'
+      path: '/yunke'
+      fullPath: '/yunke'
+      preLoaderRoute: typeof AuthenticatedYunkeRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -957,6 +1038,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/yunke/': {
+      id: '/_authenticated/yunke/'
+      path: '/'
+      fullPath: '/yunke/'
+      preLoaderRoute: typeof AuthenticatedYunkeIndexRouteImport
+      parentRoute: typeof AuthenticatedYunkeRouteRoute
     }
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
@@ -1027,6 +1115,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/clerk/sign-in'
       preLoaderRoute: typeof ClerkauthSignInRouteImport
       parentRoute: typeof ClerkauthRouteRoute
+    }
+    '/_authenticated/yunke/login-status': {
+      id: '/_authenticated/yunke/login-status'
+      path: '/login-status'
+      fullPath: '/yunke/login-status'
+      preLoaderRoute: typeof AuthenticatedYunkeLoginStatusRouteImport
+      parentRoute: typeof AuthenticatedYunkeRouteRoute
+    }
+    '/_authenticated/yunke/dashboard': {
+      id: '/_authenticated/yunke/dashboard'
+      path: '/dashboard'
+      fullPath: '/yunke/dashboard'
+      preLoaderRoute: typeof AuthenticatedYunkeDashboardRouteImport
+      parentRoute: typeof AuthenticatedYunkeRouteRoute
+    }
+    '/_authenticated/yunke/call-records': {
+      id: '/_authenticated/yunke/call-records'
+      path: '/call-records'
+      fullPath: '/yunke/call-records'
+      preLoaderRoute: typeof AuthenticatedYunkeCallRecordsRouteImport
+      parentRoute: typeof AuthenticatedYunkeRouteRoute
+    }
+    '/_authenticated/yunke/accounts': {
+      id: '/_authenticated/yunke/accounts'
+      path: '/accounts'
+      fullPath: '/yunke/accounts'
+      preLoaderRoute: typeof AuthenticatedYunkeAccountsRouteImport
+      parentRoute: typeof AuthenticatedYunkeRouteRoute
     }
     '/_authenticated/settings/notifications': {
       id: '/_authenticated/settings/notifications'
@@ -1373,9 +1489,32 @@ const AuthenticatedSettingsRouteRouteWithChildren =
     AuthenticatedSettingsRouteRouteChildren,
   )
 
+interface AuthenticatedYunkeRouteRouteChildren {
+  AuthenticatedYunkeAccountsRoute: typeof AuthenticatedYunkeAccountsRoute
+  AuthenticatedYunkeCallRecordsRoute: typeof AuthenticatedYunkeCallRecordsRoute
+  AuthenticatedYunkeDashboardRoute: typeof AuthenticatedYunkeDashboardRoute
+  AuthenticatedYunkeLoginStatusRoute: typeof AuthenticatedYunkeLoginStatusRoute
+  AuthenticatedYunkeIndexRoute: typeof AuthenticatedYunkeIndexRoute
+}
+
+const AuthenticatedYunkeRouteRouteChildren: AuthenticatedYunkeRouteRouteChildren =
+  {
+    AuthenticatedYunkeAccountsRoute: AuthenticatedYunkeAccountsRoute,
+    AuthenticatedYunkeCallRecordsRoute: AuthenticatedYunkeCallRecordsRoute,
+    AuthenticatedYunkeDashboardRoute: AuthenticatedYunkeDashboardRoute,
+    AuthenticatedYunkeLoginStatusRoute: AuthenticatedYunkeLoginStatusRoute,
+    AuthenticatedYunkeIndexRoute: AuthenticatedYunkeIndexRoute,
+  }
+
+const AuthenticatedYunkeRouteRouteWithChildren =
+  AuthenticatedYunkeRouteRoute._addFileChildren(
+    AuthenticatedYunkeRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedYunkeRouteRoute: typeof AuthenticatedYunkeRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
@@ -1396,6 +1535,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedYunkeRouteRoute: AuthenticatedYunkeRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,

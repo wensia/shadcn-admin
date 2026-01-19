@@ -14,8 +14,10 @@ import { Button } from '@/components/ui/button'
 import {
   crmNavGroups,
   adminNavGroups,
+  yunkeNavGroups,
   crmTeams,
   adminTeams,
+  yunkeTeams,
 } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
@@ -56,8 +58,20 @@ export function AppSidebar() {
 
   // 根据当前路径判断使用哪个导航组
   const isAdminRoute = location.pathname.startsWith('/admin')
-  const navGroups = isAdminRoute ? adminNavGroups : crmNavGroups
-  const teams = isAdminRoute ? adminTeams : crmTeams
+  const isYunkeRoute = location.pathname.startsWith('/yunke')
+
+  // 选择对应的导航组和团队配置
+  const getNavConfig = () => {
+    if (isYunkeRoute) {
+      return { navGroups: yunkeNavGroups, teams: yunkeTeams }
+    }
+    if (isAdminRoute) {
+      return { navGroups: adminNavGroups, teams: adminTeams }
+    }
+    return { navGroups: crmNavGroups, teams: crmTeams }
+  }
+
+  const { navGroups, teams } = getNavConfig()
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>

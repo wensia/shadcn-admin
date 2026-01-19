@@ -13,6 +13,18 @@ shadcn-admin (React + shadcn/ui) 前端开发的核心规范。
 - Tailwind CSS 样式
 - recharts 图表库
 
+## ⚠️ 品牌规范
+
+**重要：前端开发必须遵循 Anthropic 品牌规范**
+
+在进行 UI 设计、样式调整、颜色选择等前端开发工作时，必须调用 `/brand-guidelines` skill 以确保符合 Anthropic 官方品牌标准。
+
+适用场景：
+- 设计新页面或组件的视觉风格
+- 选择颜色、字体、间距等样式
+- 创建图表、图标或其他视觉元素
+- 调整整体 UI 风格
+
 ## 组件使用优先级
 
 **重要：组件和样式选择遵循以下优先级顺序：**
@@ -68,36 +80,6 @@ src/
 ## 端口配置
 
 **前端端口: 3457** - 禁止随意更改
-
-## 三种 UI 风格
-
-项目支持 Mira/Lyra/Maia 三种风格切换，使用 `useStyleClasses()` Hook：
-
-```tsx
-import { useStyleClasses } from '@/lib/style-utils'
-
-function MyComponent() {
-  const s = useStyleClasses()
-
-  return (
-    <div className={cn(s.text.xs, s.height.control, s.rounded)}>
-      内容
-    </div>
-  )
-}
-```
-
-### 风格尺寸对比
-
-| 属性 | Mira | Lyra | Maia |
-|------|------|------|------|
-| text.xs | text-xs | text-xs | text-sm |
-| text.sm | text-xs | text-sm | text-base |
-| text.base | text-sm | text-base | text-lg |
-| height.control | h-8 | h-9 | h-11 |
-| height.badge | h-5 | h-6 | h-6 |
-| gap.tight | gap-1.5 | gap-2 | gap-4 |
-| rounded | rounded-sm | rounded-none | rounded-lg |
 
 ## Sheet/抽屉组件规范
 
@@ -497,5 +479,4 @@ import { Phone, Edit, Plus, X, Star } from 'lucide-react'
 
 // 工具
 import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
 ```

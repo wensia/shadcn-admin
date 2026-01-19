@@ -36,6 +36,12 @@ import {
   ArrowLeft,
   Shield,
   ShoppingCart,
+  Cloud,
+  UserCheck,
+  History,
+  Link,
+  Key,
+  Activity,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -129,6 +135,11 @@ export const crmNavGroups: NavGroup[] = [
   {
     title: '系统',
     items: [
+      {
+        title: '云客管理',
+        url: '/yunke/dashboard',
+        icon: Cloud,
+      },
       {
         title: '管理后台',
         url: '/admin/dashboard',
@@ -282,6 +293,75 @@ export const adminNavGroups: NavGroup[] = [
   },
 ]
 
+// 云客导航组
+export const yunkeNavGroups: NavGroup[] = [
+  {
+    title: '导航',
+    items: [
+      {
+        title: '返回 CRM',
+        url: '/crm/leads',
+        icon: ArrowLeft,
+      },
+      {
+        title: '云客概览',
+        url: '/yunke/dashboard',
+        icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    title: '账号管理',
+    items: [
+      {
+        title: '子账号管理',
+        url: '/yunke/accounts',
+        icon: Users,
+      },
+      {
+        title: '登录状态',
+        url: '/yunke/login-status',
+        icon: UserCheck,
+      },
+      {
+        title: '员工绑定',
+        url: '/yunke/employee-bindingS',
+        icon: Link,
+      },
+    ],
+  },
+  {
+    title: '通话管理',
+    items: [
+      {
+        title: '通话记录',
+        url: '/yunke/call-records',
+        icon: PhoneCall,
+      },
+      {
+        title: '录音管理',
+        url: '/yunke/recordings',
+        icon: History,
+      },
+    ],
+  },
+  {
+    title: '系统配置',
+    items: [
+      {
+        title: '管理员登录',
+        url: '/yunke/admin-login',
+        icon: Key,
+      },
+      {
+        title: '运行状态',
+        url: '/yunke/status',
+        icon: Activity,
+      },
+    ],
+  },
+]
+
 // CRM 团队配置
 export const crmTeams = [
   {
@@ -297,6 +377,15 @@ export const adminTeams = [
     name: '管理后台',
     logo: Settings,
     plan: '系统管理',
+  },
+]
+
+// 云客团队配置
+export const yunkeTeams = [
+  {
+    name: '云客管理',
+    logo: Cloud,
+    plan: '外呼系统',
   },
 ]
 
