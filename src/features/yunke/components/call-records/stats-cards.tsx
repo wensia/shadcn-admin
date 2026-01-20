@@ -1,10 +1,9 @@
 /**
- * 通话统计卡片组件
+ * 通话统计卡片组件 - 紧凑单行展示
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PhoneCall, Clock, PhoneIncoming, Percent } from 'lucide-react'
+import { PhoneCall, Clock, PhoneIncoming, Percent, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CallRecordStats } from '../../types'
 
@@ -33,85 +32,74 @@ function formatDuration(seconds: number): string {
 }
 
 export function StatsCards({ stats, isLoading }: StatsCardsProps) {
-  const cards = [
+  const items = [
     {
-      title: '今日通话',
+      label: '今日通话',
       value: stats?.today_count ?? 0,
       suffix: '通',
       icon: PhoneCall,
-      iconClassName: 'text-blue-500',
-      bgClassName: 'bg-blue-50 dark:bg-blue-950',
+      color: 'text-blue-500',
     },
     {
-      title: '今日时长',
+      label: '今日时长',
       value: stats?.today_duration ?? 0,
       formatter: formatDuration,
       icon: Clock,
-      iconClassName: 'text-green-500',
-      bgClassName: 'bg-green-50 dark:bg-green-950',
+      color: 'text-green-500',
     },
     {
-      title: '今日接通',
+      label: '今日接通',
       value: stats?.answered_count ?? 0,
       suffix: '通',
       icon: PhoneIncoming,
-      iconClassName: 'text-purple-500',
-      bgClassName: 'bg-purple-50 dark:bg-purple-950',
+      color: 'text-purple-500',
     },
     {
-      title: '接通率',
+      label: '接通率',
       value: stats?.answer_rate ?? 0,
       suffix: '%',
       icon: Percent,
-      iconClassName: 'text-amber-500',
-      bgClassName: 'bg-amber-50 dark:bg-amber-950',
+      color: 'text-amber-500',
+    },
+    {
+      label: '总记录',
+      value: stats?.total_count ?? 0,
+      suffix: '条',
+      icon: Database,
+      color: 'text-muted-foreground',
     },
   ]
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {cards.map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-24 mb-1" />
-              <Skeleton className="h-3 w-16" />
-            </CardContent>
-          </Card>
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card px-4 py-2.5">
+        {items.map((_, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-16" />
+          </div>
         ))}
       </div>
     )
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {cards.map((card) => {
-        const Icon = card.icon
-        const displayValue = card.formatter
-          ? card.formatter(card.value)
-          : `${card.value.toLocaleString()}${card.suffix || ''}`
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border bg-card px-4 py-2.5">
+      {items.map((item, index) => {
+        const Icon = item.icon
+        const displayValue = item.formatter
+          ? item.formatter(item.value)
+          : `${item.value.toLocaleString()}${item.suffix || ''}`
 
         return (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <div className={cn('rounded-full p-2', card.bgClassName)}>
-                <Icon className={cn('h-4 w-4', card.iconClassName)} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{displayValue}</div>
-              <p className="text-xs text-muted-foreground">
-                总记录: {(stats?.total_count ?? 0).toLocaleString()} 条
-              </p>
-            </CardContent>
-          </Card>
+          <div key={item.label} className="flex items-center gap-2">
+            <Icon className={cn('h-4 w-4', item.color)} />
+            <span className="text-sm text-muted-foreground">{item.label}</span>
+            <span className="text-sm font-semibold">{displayValue}</span>
+            {index < items.length - 1 && (
+              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+            )}
+          </div>
         )
       })}
     </div>

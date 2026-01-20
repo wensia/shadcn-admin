@@ -30,7 +30,10 @@ interface SimplePaginationProps {
   selectedCount?: number
   className?: string
   isLoading?: boolean
+  pageSizeOptions?: number[]
 }
+
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 500]
 
 export function SimplePagination({
   page,
@@ -40,7 +43,8 @@ export function SimplePagination({
   onPageSizeChange,
   selectedCount = 0,
   className,
-  isLoading = false
+  isLoading = false,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS
 }: SimplePaginationProps) {
   const s = useStyleClasses()
   const totalPages = Math.ceil(total / pageSize)
@@ -118,7 +122,7 @@ export function SimplePagination({
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">
-              {[10, 20, 50, 100, 200, 300, 500].map((size) => (
+              {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={`${size}`} className={s.text.xs}>
                   {size}
                 </SelectItem>

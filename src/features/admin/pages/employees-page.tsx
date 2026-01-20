@@ -15,7 +15,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, User, Filter, KeyRound, RefreshCw, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, User, KeyRound, RefreshCw, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,12 +69,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { DataTableViewOptions } from '@/components/data-table/view-options'
 import { adminApi } from '../api'
-import type { EmployeeItem, EmployeeCreate, EmployeeUpdate, EmployeeIdentityItem } from '../types'
+import type { EmployeeItem, EmployeeUpdate, EmployeeIdentityItem } from '../types'
 import { StatusBadge, EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
 
 // 表单验证 schema
 const formSchema = z.object({
-  username: z.string().min(2, '用户名至少2个字符').max(50, '用户名不能超过50个字符'),
+  username: z.string().min(2, '用户名至少2个字符').max(50, '用户名不能超过50个字符').optional().or(z.literal('')),
   name: z.string().min(1, '请输入姓名').max(50, '姓名不能超过50个字符'),
   email: z.string().email('请输入有效的邮箱地址').optional().or(z.literal('')),
   phone: z.string().max(20, '手机号不能超过20个字符').optional(),
@@ -85,14 +85,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-// 快速创建表单 schema
-const quickCreateSchema = z.object({
-  username: z.string().min(2, '用户名至少2个字符').max(50, '用户名不能超过50个字符'),
-  name: z.string().min(1, '请输入姓名').max(50, '姓名不能超过50个字符'),
-  password: z.string().min(6, '密码至少6个字符'),
-})
-
-type QuickCreateFormData = z.infer<typeof quickCreateSchema>
 
 // 员工身份数据类型
 interface IdentityFormData {
@@ -112,13 +104,15 @@ export function EmployeesPage() {
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [quickCreateDialogOpen, setQuickCreateDialogOpen] = useState(false)
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<EmployeeItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<EmployeeItem | null>(null)
   const [resetPasswordItem, setResetPasswordItem] = useState<EmployeeItem | null>(null)
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null) // 后端生成的新密码
+  // 创建成功结果显示
+  const [createSuccessDialogOpen, setCreateSuccessDialogOpen] = useState(false)
+  const [createResult, setCreateResult] = useState<{ username: string; password: string; name: string } | null>(null)
   // 列可见性状态 - 默认隐藏邮箱列
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     email: false,
@@ -149,15 +143,6 @@ export function EmployeesPage() {
     },
   })
 
-  // 快速创建表单
-  const quickCreateForm = useForm<QuickCreateFormData>({
-    resolver: zodResolver(quickCreateSchema),
-    defaultValues: {
-      username: '',
-      name: '',
-      password: '',
-    },
-  })
 
   // 获取员工列表
   const { data, isLoading, refetch } = useQuery({
@@ -215,34 +200,30 @@ export function EmployeesPage() {
     return map
   }, [identitiesData])
 
-  // 创建员工
+  // 创建员工（使用快速创建API，自动生成用户名和密码）
   const createMutation = useMutation({
-    mutationFn: (data: EmployeeCreate) => adminApi.createEmployee(data),
-    onSuccess: () => {
-      toast.success('创建成功')
+    mutationFn: (data: { name: string; campus_id: string; department_id: string; position_id: string; joined_at?: string }) =>
+      adminApi.quickCreateEmployee(data),
+    onSuccess: (response) => {
+      if (response.data) {
+        // 保存创建结果用于显示
+        setCreateResult({
+          username: response.data.username,
+          password: response.data.password,
+          name: response.data.name,
+        })
+        setCreateSuccessDialogOpen(true)
+      }
       setDialogOpen(false)
       form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-employee-identities'] })
     },
     onError: (error: Error) => {
       toast.error(`创建失败: ${error.message}`)
     },
   })
 
-  // 快速创建员工
-  const quickCreateMutation = useMutation({
-    mutationFn: (data: { username: string; name: string; password: string }) =>
-      adminApi.quickCreateEmployee(data),
-    onSuccess: () => {
-      toast.success('创建成功')
-      setQuickCreateDialogOpen(false)
-      quickCreateForm.reset()
-      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
-    },
-    onError: (error: Error) => {
-      toast.error(`创建失败: ${error.message}`)
-    },
-  })
 
   // 更新员工
   const updateMutation = useMutation({
@@ -633,15 +614,6 @@ export function EmployeesPage() {
     setDialogOpen(true)
   }
 
-  // 处理快速创建
-  const handleQuickCreate = () => {
-    quickCreateForm.reset({
-      username: '',
-      name: '',
-      password: '',
-    })
-    setQuickCreateDialogOpen(true)
-  }
 
   // 处理编辑
   const handleEdit = async (item: EmployeeItem) => {
@@ -722,30 +694,28 @@ export function EmployeesPage() {
 
   // 处理表单提交
   const handleSubmit = async (data: FormData) => {
-    const submitData = {
-      ...data,
-      email: data.email || undefined,
-      phone: data.phone || undefined,
-      joined_at: data.joined_at || undefined,
+    // 验证身份信息必须完整
+    const validIdentities = identities.filter(i => i.campus_id && i.department_id && i.position_id)
+    if (validIdentities.length === 0) {
+      toast.warning('请至少配置一个完整的校区-部门-职位身份')
+      return
     }
 
-    // 验证身份信息（编辑时需要至少一个完整身份）
     if (editingItem) {
-      const validIdentities = identities.filter(i => i.campus_id && i.department_id && i.position_id)
-      if (validIdentities.length === 0) {
-        toast.warning('请至少配置一个完整的校区-部门-职位身份')
-        return
+      // 编辑模式
+      const submitData = {
+        ...data,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        joined_at: data.joined_at || undefined,
       }
-    }
 
-    if (editingItem) {
       setIsSavingIdentities(true)
       try {
         // 先更新员工基本信息
         await adminApi.updateEmployee(editingItem.id, submitData as EmployeeUpdate)
 
         // 再更新身份信息
-        const validIdentities = identities.filter(i => i.campus_id && i.department_id && i.position_id)
         await adminApi.updateEmployeeIdentities(editingItem.id, validIdentities)
 
         toast.success('更新成功')
@@ -761,14 +731,21 @@ export function EmployeesPage() {
         setIsSavingIdentities(false)
       }
     } else {
-      createMutation.mutate(submitData as EmployeeCreate)
+      // 新建模式：使用第一个身份配置
+      const firstIdentity = validIdentities[0]
+      // 获取 campus_department_id（需要通过 departmentOptionsMap 查找）
+      const deptInfo = departmentOptionsMap[firstIdentity.campus_id]?.find(d => d.id === firstIdentity.department_id)
+
+      createMutation.mutate({
+        name: data.name,
+        campus_id: firstIdentity.campus_id,
+        department_id: deptInfo?.campus_department_id || firstIdentity.department_id, // 使用 campus_department_id
+        position_id: firstIdentity.position_id,
+        joined_at: data.joined_at || undefined,
+      })
     }
   }
 
-  // 处理快速创建提交
-  const handleQuickCreateSubmit = (data: QuickCreateFormData) => {
-    quickCreateMutation.mutate(data)
-  }
 
   // 处理重置密码确认
   const handleResetPasswordConfirm = () => {
@@ -803,16 +780,10 @@ export function EmployeesPage() {
               管理系统中的员工账号和权限
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleQuickCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              快速创建
-            </Button>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              新建员工
-            </Button>
-          </div>
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            新建员工
+          </Button>
         </div>
 
         {/* 工具栏 */}
@@ -941,24 +912,27 @@ export function EmployeesPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-y-auto px-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>用户名</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="请输入用户名"
-                          {...field}
-                          disabled={!!editingItem}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className={editingItem ? "grid grid-cols-2 gap-4" : ""}>
+                {/* 用户名字段仅在编辑时显示 */}
+                {editingItem && (
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>用户名</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="请输入用户名"
+                            {...field}
+                            disabled={true}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={form.control}
                   name="name"
@@ -1051,133 +1025,138 @@ export function EmployeesPage() {
                 />
               </div>
 
-              {/* 身份管理区域 - 仅编辑时显示 */}
-              {editingItem && (
-                <>
-                  <Separator className="my-4" />
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">校区身份配置</h4>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addIdentity}
-                      >
-                        <Plus className="mr-1 h-3 w-3" />
-                        添加身份
-                      </Button>
-                    </div>
+              {/* 身份管理区域 */}
+              <Separator className="my-4" />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">校区身份配置</h4>
+                  {/* 编辑时允许添加多个身份 */}
+                  {editingItem && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addIdentity}
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      添加身份
+                    </Button>
+                  )}
+                </div>
 
-                    <Alert className="py-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-xs">
-                        员工需要至少一个有效的校区身份配置才能正常使用系统功能。
-                      </AlertDescription>
-                    </Alert>
+                <Alert className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    {editingItem
+                      ? '员工需要至少一个有效的校区身份配置才能正常使用系统功能。'
+                      : '请为新员工配置校区、部门和职位，用户名和密码将自动生成。'
+                    }
+                  </AlertDescription>
+                </Alert>
 
-                    <div className="space-y-3">
-                      {identities.map((identity, index) => (
-                        <Card key={index} className="relative">
-                          <CardHeader className="p-3 pb-0">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">身份 {index + 1}</span>
-                                {identity.campus_id && identity.department_id && identity.position_id ? (
-                                  <Badge variant="outline" className="gap-1 text-xs">
-                                    <CheckCircle className="h-3 w-3 text-green-500" />
-                                    完整
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="gap-1 text-xs text-orange-500">
-                                    <AlertCircle className="h-3 w-3" />
-                                    未完成
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-muted-foreground">启用</span>
-                                  <Switch
-                                    checked={identity.is_active}
-                                    onCheckedChange={(checked) => handleIdentityActiveChange(index, checked)}
-                                  />
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => removeIdentity(index)}
-                                  disabled={identities.length <= 1}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
+                <div className="space-y-3">
+                  {identities.map((identity, index) => (
+                    <Card key={index} className="relative">
+                      {/* 编辑时显示身份头部（启用开关、删除按钮等） */}
+                      {editingItem && (
+                        <CardHeader className="p-3 pb-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">身份 {index + 1}</span>
+                              {identity.campus_id && identity.department_id && identity.position_id ? (
+                                <Badge variant="outline" className="gap-1 text-xs">
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                  完整
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="gap-1 text-xs text-orange-500">
+                                  <AlertCircle className="h-3 w-3" />
+                                  未完成
+                                </Badge>
+                              )}
                             </div>
-                          </CardHeader>
-                          <CardContent className="p-3 pt-2">
-                            <div className="grid grid-cols-3 gap-2">
-                              {/* 校区选择 */}
-                              <Select
-                                value={identity.campus_id}
-                                onValueChange={(value) => handleIdentityCampusChange(index, value)}
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground">启用</span>
+                                <Switch
+                                  checked={identity.is_active}
+                                  onCheckedChange={(checked) => handleIdentityActiveChange(index, checked)}
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => removeIdentity(index)}
+                                disabled={identities.length <= 1}
                               >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="选择校区" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {campuses.map((campus) => (
-                                    <SelectItem key={campus.id} value={campus.id}>
-                                      {campus.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-
-                              {/* 部门选择 */}
-                              <Select
-                                value={identity.department_id}
-                                onValueChange={(value) => handleIdentityDepartmentChange(index, value)}
-                                disabled={!identity.campus_id}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="选择部门" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(departmentOptionsMap[identity.campus_id] || []).map((dept) => (
-                                    <SelectItem key={dept.id} value={dept.id}>
-                                      {dept.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-
-                              {/* 职位选择 */}
-                              <Select
-                                value={identity.position_id}
-                                onValueChange={(value) => handleIdentityPositionChange(index, value)}
-                                disabled={!identity.department_id}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="选择职位" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(positionOptionsMap[identity.department_id] || []).map((pos) => (
-                                    <SelectItem key={pos.id} value={pos.id}>
-                                      {pos.name} ({pos.level_display})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                <X className="h-3 w-3" />
+                              </Button>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
+                          </div>
+                        </CardHeader>
+                      )}
+                      <CardContent className={editingItem ? "p-3 pt-2" : "p-3"}>
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* 校区选择 */}
+                          <Select
+                            value={identity.campus_id}
+                            onValueChange={(value) => handleIdentityCampusChange(index, value)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="选择校区" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {campuses.map((campus) => (
+                                <SelectItem key={campus.id} value={campus.id}>
+                                  {campus.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {/* 部门选择 */}
+                          <Select
+                            value={identity.department_id}
+                            onValueChange={(value) => handleIdentityDepartmentChange(index, value)}
+                            disabled={!identity.campus_id}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="选择部门" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(departmentOptionsMap[identity.campus_id] || []).map((dept) => (
+                                <SelectItem key={dept.id} value={dept.id}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {/* 职位选择 */}
+                          <Select
+                            value={identity.position_id}
+                            onValueChange={(value) => handleIdentityPositionChange(index, value)}
+                            disabled={!identity.department_id}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="选择职位" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(positionOptionsMap[identity.department_id] || []).map((pos) => (
+                                <SelectItem key={pos.id} value={pos.id}>
+                                  {pos.name} ({pos.level_display})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
               </div>
               <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
                 <Button
@@ -1201,77 +1180,6 @@ export function EmployeesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 快速创建对话框 */}
-      <Dialog open={quickCreateDialogOpen} onOpenChange={setQuickCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>快速创建员工</DialogTitle>
-            <DialogDescription>
-              快速创建一个新员工账号，只需填写基本信息
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...quickCreateForm}>
-            <form onSubmit={quickCreateForm.handleSubmit(handleQuickCreateSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-              <FormField
-                control={quickCreateForm.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>用户名</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入用户名" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={quickCreateForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>姓名</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入姓名" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={quickCreateForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>初始密码</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="请输入初始密码" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setQuickCreateDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={quickCreateMutation.isPending}
-                >
-                  {quickCreateMutation.isPending ? '创建中...' : '创建'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
       {/* 重置密码对话框 */}
       <Dialog open={resetPasswordDialogOpen} onOpenChange={handleResetPasswordClose}>
@@ -1357,6 +1265,78 @@ export function EmployeesPage() {
                 </Button>
               </>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 创建成功弹窗 */}
+      <Dialog open={createSuccessDialogOpen} onOpenChange={setCreateSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              员工创建成功
+            </DialogTitle>
+            <DialogDescription>
+              员工「{createResult?.name}」已创建成功，请将以下登录信息告知员工。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                密码只显示一次，请妥善保存。
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">用户名</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={createResult?.username || ''}
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">初始密码</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={createResult?.password || ''}
+                    className="font-mono text-lg tracking-wider"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateSuccessDialogOpen(false)
+                setCreateResult(null)
+              }}
+            >
+              关闭
+            </Button>
+            <Button
+              onClick={async () => {
+                if (createResult) {
+                  const { copyToClipboard } = await import('@/lib/utils')
+                  const text = `用户名: ${createResult.username}\n密码: ${createResult.password}`
+                  const success = await copyToClipboard(text)
+                  if (success) {
+                    toast.success('账号信息已复制到剪贴板')
+                  } else {
+                    toast.error('复制失败')
+                  }
+                }
+              }}
+            >
+              复制账号信息
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

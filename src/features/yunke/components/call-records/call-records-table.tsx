@@ -147,6 +147,7 @@ export function CallRecordsTable({
         totalPages={totalPages}
         onPageChange={onPageChange}
         onPageSizeChange={onSizeChange}
+        pageSizeOptions={[10, 20, 50, 100]}
       />
 
       {/* 录音详情弹窗 */}
