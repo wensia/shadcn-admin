@@ -1207,3 +1207,23 @@ export const CRONTAB_PRESETS = [
   { label: '每周一凌晨', value: { minute: '0', hour: '0', day_of_week: '1', day_of_month: '*', month_of_year: '*' } },
   { label: '每月1号凌晨', value: { minute: '0', hour: '0', day_of_week: '*', day_of_month: '1', month_of_year: '*' } },
 ] as const
+
+/** 任务执行历史 */
+export interface TaskExecutionHistory {
+  id: number
+  name: string
+  task: string
+  enabled: boolean
+  last_run_at: string | null
+  total_run_count: number
+  date_changed: string | null
+}
+
+/** 任务执行结果 */
+export interface TaskResult {
+  task_id: string
+  status: 'PENDING' | 'STARTED' | 'SUCCESS' | 'FAILURE' | 'RETRY' | 'REVOKED'
+  result: string | null
+  traceback: string | null
+  date_done: string | null
+}

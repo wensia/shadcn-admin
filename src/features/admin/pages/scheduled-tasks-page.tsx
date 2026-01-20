@@ -21,6 +21,11 @@ import {
   Play,
   Timer,
   Calendar,
+  History,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -81,6 +86,7 @@ import type {
   ScheduledTaskUpdate,
   AvailableTask,
   IntervalPeriod,
+  TaskExecutionHistory,
 } from '../types'
 import { INTERVAL_PERIOD_OPTIONS, CRONTAB_PRESETS } from '../types'
 import { formatTime } from '@/lib/utils/time'
@@ -151,6 +157,9 @@ function getScheduleType(task: ScheduledTask): 'interval' | 'crontab' | null {
 export function ScheduledTasksPage() {
   const queryClient = useQueryClient()
 
+  // 顶层 Tab 状态
+  const [activeTab, setActiveTab] = useState<'tasks' | 'history'>('tasks')
+
   // 状态管理
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -201,8 +210,19 @@ export function ScheduledTasksPage() {
     },
   })
 
+  // 查询执行历史
+  const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
+    queryKey: ['execution-history'],
+    queryFn: async () => {
+      const response = await scheduledTasksApi.getExecutionHistory()
+      return response
+    },
+    enabled: activeTab === 'history',
+  })
+
   const tasks = data?.items || []
   const availableTasks = availableTasksData?.items || []
+  const executionHistory = historyData?.items || []
 
   // 创建任务
   const createMutation = useMutation({
@@ -586,58 +606,158 @@ export function ScheduledTasksPage() {
               管理 Celery Beat 定时任务
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            新建任务
-          </Button>
+          {activeTab === 'tasks' && (
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新建任务
+            </Button>
+          )}
+          {activeTab === 'history' && (
+            <Button variant="outline" onClick={() => refetchHistory()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              刷新
+            </Button>
+          )}
         </div>
 
-        {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
+        {/* 顶层 Tab */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'history')} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="w-fit">
+            <TabsTrigger value="tasks" className="gap-2">
+              <Clock className="h-4 w-4" />
+              定时任务
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <History className="h-4 w-4" />
+              执行记录
+            </TabsTrigger>
+          </TabsList>
+
+          {/* 定时任务 Tab */}
+          <TabsContent value="tasks" className="flex-1 mt-4 min-h-0">
+            <div className="h-full overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} style={{ width: header.getSize() }}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
                   ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        暂无定时任务
                       </TableCell>
-                    ))}
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          {/* 执行记录 Tab */}
+          <TabsContent value="history" className="flex-1 mt-4 min-h-0">
+            <div className="h-full overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead style={{ width: 200 }}>任务名称</TableHead>
+                    <TableHead style={{ width: 250 }}>任务路径</TableHead>
+                    <TableHead style={{ width: 100 }}>状态</TableHead>
+                    <TableHead style={{ width: 160 }}>最后执行时间</TableHead>
+                    <TableHead style={{ width: 100 }}>执行次数</TableHead>
+                    <TableHead style={{ width: 160 }}>最后修改时间</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无定时任务
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                </TableHeader>
+                <TableBody>
+                  {historyLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-14" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : executionHistory.length > 0 ? (
+                    executionHistory.map((item: TaskExecutionHistory) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-blue-500" />
+                            <span className="font-medium">{item.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {item.task}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          {item.enabled ? (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              启用
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1">
+                              <XCircle className="h-3 w-3" />
+                              禁用
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.last_run_at ? formatTime(item.last_run_at) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{item.total_run_count}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.date_changed ? formatTime(item.date_changed) : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        暂无执行记录
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* 创建/编辑对话框 */}

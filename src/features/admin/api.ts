@@ -53,6 +53,8 @@ import type {
   ScheduledTaskCreate,
   ScheduledTaskUpdate,
   AvailableTask,
+  TaskExecutionHistory,
+  TaskResult,
 } from './types'
 
 const BASE_URL = '/admin'
@@ -1167,7 +1169,7 @@ export const scheduledTasksApi = {
     enabled?: boolean
     search?: string
   }): Promise<{ items: ScheduledTask[]; total: number }> {
-    const response = await apiClient.get<ApiResponse<{ items: ScheduledTask[]; total: number }>>('/scheduled-tasks', { params })
+    const response = await apiClient.get<ApiResponse<{ items: ScheduledTask[]; total: number }>>('/scheduled-tasks/', { params })
     return response.data || { items: [], total: 0 }
   },
 
@@ -1182,7 +1184,7 @@ export const scheduledTasksApi = {
 
   /** 创建定时任务 */
   async create(data: ScheduledTaskCreate): Promise<ScheduledTask> {
-    const response = await apiClient.post<ApiResponse<ScheduledTask>>('/scheduled-tasks', data)
+    const response = await apiClient.post<ApiResponse<ScheduledTask>>('/scheduled-tasks/', data)
     if (!response.success || !response.data) {
       throw new Error(response.message || '创建失败')
     }
@@ -1228,5 +1230,24 @@ export const scheduledTasksApi = {
   async getAvailableTasks(): Promise<{ items: AvailableTask[]; total: number }> {
     const response = await apiClient.get<ApiResponse<{ items: AvailableTask[]; total: number }>>('/scheduled-tasks/available-tasks/list')
     return response.data || { items: [], total: 0 }
+  },
+
+  /** 获取任务执行历史 */
+  async getExecutionHistory(params?: {
+    page?: number
+    page_size?: number
+    task_name?: string
+  }): Promise<{ items: TaskExecutionHistory[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<{ items: TaskExecutionHistory[]; total: number }>>('/scheduled-tasks/execution-history', { params })
+    return response.data || { items: [], total: 0 }
+  },
+
+  /** 获取任务执行结果 */
+  async getTaskResult(taskId: string): Promise<TaskResult> {
+    const response = await apiClient.get<ApiResponse<TaskResult>>(`/scheduled-tasks/task-result/${taskId}`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取任务结果失败')
+    }
+    return response.data
   },
 }
