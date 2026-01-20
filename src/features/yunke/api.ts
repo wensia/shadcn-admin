@@ -19,7 +19,12 @@ import type {
   YunkeCredentialUpdate,
   YunkeCredentialStatus,
   YunkeCredentialListResponse,
+  CallRecord,
+  CallRecordListParams,
+  CallRecordStats,
+  RecordUrlResponse,
 } from './types'
+import type { PaginatedResponse } from '@/lib/api/types'
 
 /**
  * 云客管理 API
@@ -269,6 +274,66 @@ export const yunkeCredentialsApi = {
       }
     }>>(`/external/yunke-accounts/${accountId}/sub-accounts`, params)
     return response.data!
+  },
+}
+
+/**
+ * 云客通话记录 API
+ */
+export const callRecordsApi = {
+  /** 获取通话记录列表 */
+  async getCallRecords(params?: CallRecordListParams): Promise<PaginatedResponse<CallRecord>> {
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<CallRecord>>>(
+      '/yunke/call-records',
+      { params }
+    )
+    return response.data!
+  },
+
+  /** 获取通话统计 */
+  async getCallStats(): Promise<CallRecordStats> {
+    const response = await apiClient.get<ApiResponse<CallRecordStats>>(
+      '/yunke/call-records/stats'
+    )
+    return response.data!
+  },
+
+  /** 获取通话记录详情 */
+  async getCallRecord(id: string): Promise<CallRecord> {
+    const response = await apiClient.get<ApiResponse<CallRecord>>(
+      `/yunke/call-records/${id}`
+    )
+    return response.data!
+  },
+
+  /** 获取录音 URL */
+  async getRecordUrl(voiceId: string): Promise<RecordUrlResponse> {
+    const response = await apiClient.post<ApiResponse<RecordUrlResponse>>(
+      '/yunke/call-records/record-url',
+      { voice_id: voiceId }
+    )
+    return response.data!
+  },
+
+  /** 获取录音流代理 URL */
+  getRecordStreamUrl(voiceId: string): string {
+    return `/api/v1/yunke/call-records/record-stream?voice_id=${encodeURIComponent(voiceId)}`
+  },
+
+  /** 获取部门列表 */
+  async getDepartments(): Promise<string[]> {
+    const response = await apiClient.get<ApiResponse<string[]>>(
+      '/yunke/call-records/departments/list'
+    )
+    return response.data || []
+  },
+
+  /** 获取员工列表 */
+  async getStaffList(): Promise<string[]> {
+    const response = await apiClient.get<ApiResponse<string[]>>(
+      '/yunke/call-records/staff/list'
+    )
+    return response.data || []
   },
 }
 

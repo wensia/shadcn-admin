@@ -113,7 +113,71 @@ export interface YunkeAutoSyncResult {
   }>
 }
 
+// ============ 通话记录 ============
+
+// 转写文本段落
+export interface TranscriptSegment {
+  speaker: string
+  start_time: number
+  end_time: number
+  text: string
+}
+
 // 通话记录
+export interface CallRecord {
+  id: string
+  source: string
+  record_id: string
+  caller: string | null
+  callee: string | null
+  call_time: string | null
+  duration: number | null
+  call_type: string | null
+  call_result: string | null
+  customer_name: string | null
+  staff_name: string | null
+  department: string | null
+  has_recording: boolean
+  transcript: TranscriptSegment[] | null
+  transcript_status: string | null
+  created_at: string
+}
+
+// 通话记录查询参数
+export interface CallRecordListParams {
+  page?: number
+  size?: number
+  start_date?: string
+  end_date?: string
+  department?: string
+  staff_name?: string
+  call_type?: string
+  call_result?: string
+  has_recording?: boolean
+  search?: string
+}
+
+// 通话统计数据
+export interface CallRecordStats {
+  today_count: number
+  today_duration: number
+  answered_count: number
+  answer_rate: number
+  total_count: number
+}
+
+// 录音 URL 请求
+export interface RecordUrlRequest {
+  voice_id: string
+}
+
+// 录音 URL 响应
+export interface RecordUrlResponse {
+  url: string
+  expires_in?: number
+}
+
+// 兼容旧类型（保留）
 export interface YunkeCallRecord {
   id: string
   caller_phone: string
