@@ -267,7 +267,7 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
         )}
 
         {/* 转写文本区域 - 聊天气泡样式 */}
-        <div className={cn('flex-1 min-h-0 overflow-hidden', !hasRecording && 'border-t')}>
+        <div className={cn('flex-1 min-h-[300px] overflow-hidden relative', !hasRecording && 'border-t')}>
           {hasTranscript ? (
             <TranscriptViewer
               transcript={record?.transcript || []}

@@ -4,7 +4,6 @@
  */
 
 import { useRef, useEffect } from 'react'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import type { TranscriptSegment } from '../../types'
 
@@ -64,7 +63,10 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
   }
 
   return (
-    <ScrollArea className="h-full" ref={containerRef}>
+    <div
+      ref={containerRef}
+      className="absolute inset-0 overflow-y-auto"
+    >
       <div className="flex flex-col gap-3 p-4">
         {transcript.map((segment, index) => {
           const isActive = index === activeIndex
@@ -109,6 +111,6 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
           )
         })}
       </div>
-    </ScrollArea>
+    </div>
   )
 }
