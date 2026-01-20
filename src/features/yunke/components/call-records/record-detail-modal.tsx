@@ -136,7 +136,7 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] p-0 flex flex-col gap-0">
+      <DialogContent className="sm:max-w-2xl h-[85vh] p-0 flex flex-col gap-0">
         {/* 头部信息 */}
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
           <DialogTitle className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
         )}
 
         {/* 转写文本区域 - 聊天气泡样式 */}
-        <div className={cn('flex-1 min-h-[300px] overflow-hidden relative', !hasRecording && 'border-t')}>
+        <div className={cn('flex-1 min-h-0 overflow-hidden relative', !hasRecording && 'border-t')}>
           {hasTranscript ? (
             <TranscriptViewer
               transcript={record?.transcript || []}
