@@ -1,5 +1,6 @@
 /**
  * 云客通话记录页面
+ * 布局参考线索管理页面
  */
 
 import { Main } from '@/components/layout/main'
@@ -29,24 +30,14 @@ function CallRecordsContent() {
   } = useCallRecords()
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      {/* 标题栏 */}
-      <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold">通话记录</h1>
-          <p className="text-sm text-muted-foreground">
-            查看云客系统通话记录和录音
-          </p>
-        </div>
-      </div>
-
-      {/* 统计卡片 */}
-      <div className="shrink-0">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+      {/* 统计卡片 - flex-shrink-0 防止收缩 */}
+      <div className="flex-shrink-0">
         <StatsCards stats={stats} isLoading={isStatsLoading} />
       </div>
 
-      {/* 筛选工具栏 */}
-      <div className="shrink-0">
+      {/* 筛选工具栏 - flex-shrink-0 */}
+      <div className="flex-shrink-0">
         <CallRecordsToolbar
           filters={filters}
           onFilterChange={updateFilter}
@@ -56,8 +47,8 @@ function CallRecordsContent() {
         />
       </div>
 
-      {/* 数据表格 */}
-      <div className="flex-1 min-h-0">
+      {/* 数据表格容器 - flex-1 min-h-0 允许收缩和滚动 */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <CallRecordsTable
           records={records}
           total={total}
@@ -74,7 +65,7 @@ function CallRecordsContent() {
 
 export function YunkeCallRecordsPage() {
   return (
-    <Main fixed>
+    <Main fixed className="min-h-0">
       <CallRecordsProvider>
         <CallRecordsContent />
       </CallRecordsProvider>
