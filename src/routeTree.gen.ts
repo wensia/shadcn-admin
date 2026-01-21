@@ -65,6 +65,7 @@ import { Route as AuthenticatedAdminRegionsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminPositionsRouteImport } from './routes/_authenticated/admin/positions'
 import { Route as AuthenticatedAdminOrganizationTreeRouteImport } from './routes/_authenticated/admin/organization-tree'
 import { Route as AuthenticatedAdminLeadAccessStatsRouteImport } from './routes/_authenticated/admin/lead-access-stats'
+import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated/admin/integrations'
 import { Route as AuthenticatedAdminIdentitiesRouteImport } from './routes/_authenticated/admin/identities'
 import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
 import { Route as AuthenticatedAdminEmployeeHierarchyRouteImport } from './routes/_authenticated/admin/employee-hierarchy'
@@ -389,6 +390,12 @@ const AuthenticatedAdminLeadAccessStatsRoute =
     path: '/lead-access-stats',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminIntegrationsRoute =
+  AuthenticatedAdminIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminIdentitiesRoute =
   AuthenticatedAdminIdentitiesRouteImport.update({
     id: '/identities',
@@ -523,6 +530,7 @@ export interface FileRoutesByFullPath {
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
@@ -592,6 +600,7 @@ export interface FileRoutesByTo {
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
@@ -668,6 +677,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/_authenticated/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/_authenticated/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/_authenticated/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/_authenticated/admin/positions': typeof AuthenticatedAdminPositionsRoute
@@ -742,6 +752,7 @@ export interface FileRouteTypes {
     | '/admin/employee-hierarchy'
     | '/admin/employees'
     | '/admin/identities'
+    | '/admin/integrations'
     | '/admin/lead-access-stats'
     | '/admin/organization-tree'
     | '/admin/positions'
@@ -811,6 +822,7 @@ export interface FileRouteTypes {
     | '/admin/employee-hierarchy'
     | '/admin/employees'
     | '/admin/identities'
+    | '/admin/integrations'
     | '/admin/lead-access-stats'
     | '/admin/organization-tree'
     | '/admin/positions'
@@ -886,6 +898,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/employee-hierarchy'
     | '/_authenticated/admin/employees'
     | '/_authenticated/admin/identities'
+    | '/_authenticated/admin/integrations'
     | '/_authenticated/admin/lead-access-stats'
     | '/_authenticated/admin/organization-tree'
     | '/_authenticated/admin/positions'
@@ -1337,6 +1350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminLeadAccessStatsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/integrations': {
+      id: '/_authenticated/admin/integrations'
+      path: '/integrations'
+      fullPath: '/admin/integrations'
+      preLoaderRoute: typeof AuthenticatedAdminIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/identities': {
       id: '/_authenticated/admin/identities'
       path: '/identities'
@@ -1475,6 +1495,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminEmployeeHierarchyRoute: typeof AuthenticatedAdminEmployeeHierarchyRoute
   AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
   AuthenticatedAdminIdentitiesRoute: typeof AuthenticatedAdminIdentitiesRoute
+  AuthenticatedAdminIntegrationsRoute: typeof AuthenticatedAdminIntegrationsRoute
   AuthenticatedAdminLeadAccessStatsRoute: typeof AuthenticatedAdminLeadAccessStatsRoute
   AuthenticatedAdminOrganizationTreeRoute: typeof AuthenticatedAdminOrganizationTreeRoute
   AuthenticatedAdminPositionsRoute: typeof AuthenticatedAdminPositionsRoute
@@ -1508,6 +1529,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
       AuthenticatedAdminEmployeeHierarchyRoute,
     AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
     AuthenticatedAdminIdentitiesRoute: AuthenticatedAdminIdentitiesRoute,
+    AuthenticatedAdminIntegrationsRoute: AuthenticatedAdminIntegrationsRoute,
     AuthenticatedAdminLeadAccessStatsRoute:
       AuthenticatedAdminLeadAccessStatsRoute,
     AuthenticatedAdminOrganizationTreeRoute:

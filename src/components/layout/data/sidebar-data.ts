@@ -25,14 +25,12 @@ import {
   Tag,
   School,
   Eye,
-  Bot,
-  Webhook,
-  CloudCog,
   PhoneCall,
   Library,
   FileText,
   ClipboardList,
   Settings,
+  Settings2,
   ArrowLeft,
   Shield,
   ShoppingCart,
@@ -41,7 +39,6 @@ import {
   Key,
   Activity,
   Clock,
-  Mic,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -229,11 +226,6 @@ export const adminNavGroups: NavGroup[] = [
         url: '/admin/identities',
         icon: UsersRound,
       },
-      {
-        title: 'API密钥管理',
-        url: '/admin/api-keys',
-        icon: KeyRound,
-      },
     ],
   },
   {
@@ -253,21 +245,6 @@ export const adminNavGroups: NavGroup[] = [
         title: '线索查看统计',
         url: '/admin/lead-access-stats',
         icon: Eye,
-      },
-      {
-        title: '钉钉机器人管理',
-        url: '/admin/dingtalk-robots',
-        icon: Bot,
-      },
-      {
-        title: 'Webhook钩子',
-        url: '/admin/webhook-hooks',
-        icon: Webhook,
-      },
-      {
-        title: '云客账号管理',
-        url: '/admin/yunke-accounts',
-        icon: CloudCog,
       },
       {
         title: '连续外呼配置',
@@ -295,9 +272,9 @@ export const adminNavGroups: NavGroup[] = [
         icon: Clock,
       },
       {
-        title: 'ASR 配置',
-        url: '/admin/asr-config',
-        icon: Mic,
+        title: '集成配置',
+        url: '/admin/integrations',
+        icon: Settings2,
       },
     ],
   },
