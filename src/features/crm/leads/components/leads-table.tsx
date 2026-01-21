@@ -412,29 +412,34 @@ export function LeadsTable({
           <TableHeader className="sticky top-0 z-10 bg-card">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{
-                      width: header.getSize(),
-                      ...(header.id === 'select' && {
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 20,
-                      })
-                    }}
-                    className={cn(
-                      s.text.xs,
-                      'font-semibold',
-                      s.height.control,
-                      header.id === 'select' && 'bg-card'
-                    )}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const isSelectColumn = header.id === 'select'
+                  const isChildNameColumn = header.id === 'child_name'
+                  const isFrozenColumn = isSelectColumn || isChildNameColumn
+                  return (
+                    <TableHead
+                      key={header.id}
+                      style={{
+                        width: header.getSize(),
+                        ...(isFrozenColumn && {
+                          position: 'sticky',
+                          left: isSelectColumn ? 0 : 50, // select 列宽度为 50
+                          zIndex: 20,
+                        })
+                      }}
+                      className={cn(
+                        s.text.xs,
+                        'font-semibold',
+                        s.height.control,
+                        isFrozenColumn && 'bg-card'
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -458,22 +463,24 @@ export function LeadsTable({
                 >
                   {row.getVisibleCells().map((cell) => {
                     const isSelectColumn = cell.column.id === 'select'
+                    const isChildNameColumn = cell.column.id === 'child_name'
+                    const isFrozenColumn = isSelectColumn || isChildNameColumn
                     const isSelected = row.getIsSelected()
                     return (
                       <TableCell
                         key={cell.id}
                         style={{
                           width: cell.column.getSize(),
-                          ...(isSelectColumn && {
+                          ...(isFrozenColumn && {
                             position: 'sticky',
-                            left: 0,
+                            left: isSelectColumn ? 0 : 50, // select 列宽度为 50
                             zIndex: 10,
                           })
                         }}
                         className={cn(
                           s.padding.cell,
                           s.text.xs,
-                          isSelectColumn && (isSelected ? 'bg-muted' : 'bg-background')
+                          isFrozenColumn && (isSelected ? 'bg-muted' : 'bg-background')
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
