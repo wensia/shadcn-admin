@@ -337,7 +337,8 @@ export function LeadAccessStatsPage() {
     },
     enableRowSelection: (row) =>
       !row.original.user_id?.startsWith(SKELETON_PREFIX),
-    getRowId: (row) => row.user_id,
+    // 使用 user_id + campus_name 组合作为唯一键，避免同一用户多校区时 key 重复
+    getRowId: (row, index) => `${row.user_id}_${row.campus_name || index}`,
   })
 
   // 获取选中的行 - 使用 table 的 API
