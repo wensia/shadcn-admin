@@ -61,7 +61,11 @@ function getCallResultStyle(result: string | null, duration: number | null): {
       return { label: '已接通', variant: 'success' }
     case 'noanswer':
     case '未接听':
-      return { label: '未接听', variant: 'secondary' }
+    case '0':  // 云客返回的未接通状态
+    case '':
+    case null:
+    case undefined:
+      return { label: '未接通', variant: 'secondary' }
     case 'busy':
     case '占线':
       return { label: '占线', variant: 'secondary' }
@@ -69,7 +73,8 @@ function getCallResultStyle(result: string | null, duration: number | null): {
     case '拒接':
       return { label: '拒接', variant: 'destructive' }
     default:
-      return { label: result || '未知', variant: 'secondary' }
+      // 其他未知状态也显示为未接通
+      return { label: '未接通', variant: 'secondary' }
   }
 }
 

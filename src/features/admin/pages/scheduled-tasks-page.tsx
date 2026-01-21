@@ -2,7 +2,7 @@
  * 定时任务管理页面
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   flexRender,
@@ -26,6 +26,8 @@ import {
   XCircle,
   Loader2,
   RefreshCw,
+  FileText,
+  AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -79,6 +81,7 @@ import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { scheduledTasksApi } from '../api'
 import type {
   ScheduledTask,
@@ -87,6 +90,7 @@ import type {
   AvailableTask,
   IntervalPeriod,
   TaskExecutionHistory,
+  TaskResult,
 } from '../types'
 import { INTERVAL_PERIOD_OPTIONS, CRONTAB_PRESETS } from '../types'
 import { formatTime } from '@/lib/utils/time'
@@ -164,9 +168,12 @@ export function ScheduledTasksPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [runDialogOpen, setRunDialogOpen] = useState(false)
+  const [logDialogOpen, setLogDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ScheduledTask | null>(null)
   const [deletingItem, setDeletingItem] = useState<ScheduledTask | null>(null)
   const [runningItem, setRunningItem] = useState<ScheduledTask | null>(null)
+  const [viewingTaskId, setViewingTaskId] = useState<string | null>(null)
+  const [viewingTaskName, setViewingTaskName] = useState<string>('')
   const [scheduleType, setScheduleType] = useState<'interval' | 'crontab'>('interval')
 
   // 表单
@@ -223,6 +230,25 @@ export function ScheduledTasksPage() {
   const tasks = data?.items || []
   const availableTasks = availableTasksData?.items || []
   const executionHistory = historyData?.items || []
+
+  // 查询任务执行结果（用于日志对话框）
+  const { data: taskResultData, isLoading: taskResultLoading, refetch: refetchTaskResult } = useQuery({
+    queryKey: ['task-result', viewingTaskId],
+    queryFn: async () => {
+      if (!viewingTaskId) return null
+      const response = await scheduledTasksApi.getTaskResult(viewingTaskId)
+      return response
+    },
+    enabled: !!viewingTaskId && logDialogOpen,
+    refetchInterval: (data) => {
+      // 如果任务还在执行中，每 2 秒轮询一次
+      const status = data?.state?.data?.status
+      if (status === 'PENDING' || status === 'STARTED') {
+        return 2000
+      }
+      return false
+    },
+  })
 
   // 创建任务
   const createMutation = useMutation({
@@ -284,9 +310,15 @@ export function ScheduledTasksPage() {
   const runNowMutation = useMutation({
     mutationFn: (id: number) => scheduledTasksApi.runNow(id),
     onSuccess: (data) => {
-      toast.success(`任务已提交执行，任务ID: ${data.task_id}`)
+      toast.success(`任务已提交执行`)
+      // 打开日志对话框查看执行状态
+      setViewingTaskId(data.task_id)
+      setViewingTaskName(runningItem?.name || '任务')
       setRunDialogOpen(false)
+      setLogDialogOpen(true)
       setRunningItem(null)
+      // 刷新执行历史
+      queryClient.invalidateQueries({ queryKey: ['execution-history'] })
     },
     onError: (error: Error) => {
       toast.error(error.message || '执行失败')
@@ -528,6 +560,20 @@ export function ScheduledTasksPage() {
     }
   }
 
+  // 从执行记录直接执行任务
+  const handleHistoryRunClick = (item: TaskExecutionHistory) => {
+    // 将执行记录项转换为定时任务格式来复用 runNowMutation
+    setRunningItem({
+      id: item.id,
+      name: item.name,
+      task: item.task,
+      enabled: item.enabled,
+      one_off: false,
+      total_run_count: item.total_run_count,
+    } as ScheduledTask)
+    setRunDialogOpen(true)
+  }
+
   // 应用 Crontab 预设
   const handleApplyPreset = (preset: typeof CRONTAB_PRESETS[number]) => {
     form.setValue('crontab_minute', preset.value.minute)
@@ -641,7 +687,15 @@ export function ScheduledTasksPage() {
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id} style={{ width: header.getSize() }}>
+                        <TableHead
+                          key={header.id}
+                          style={{ width: header.getSize() }}
+                          className={
+                            header.id === 'actions'
+                              ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                              : undefined
+                          }
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -658,7 +712,14 @@ export function ScheduledTasksPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
+                          <TableCell
+                            key={cell.id}
+                            className={
+                              cell.column.id === 'actions'
+                                ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                                : undefined
+                            }
+                          >
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
@@ -694,6 +755,7 @@ export function ScheduledTasksPage() {
                     <TableHead style={{ width: 160 }}>最后执行时间</TableHead>
                     <TableHead style={{ width: 100 }}>执行次数</TableHead>
                     <TableHead style={{ width: 160 }}>最后修改时间</TableHead>
+                    <TableHead style={{ width: 100 }}>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -706,6 +768,7 @@ export function ScheduledTasksPage() {
                         <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                       </TableRow>
                     ))
                   ) : executionHistory.length > 0 ? (
@@ -744,11 +807,22 @@ export function ScheduledTasksPage() {
                         <TableCell className="text-muted-foreground">
                           {item.date_changed ? formatTime(item.date_changed) : '-'}
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleHistoryRunClick(item)}
+                            disabled={runNowMutation.isPending}
+                            title="立即执行并查看日志"
+                          >
+                            <Play className="h-4 w-4 text-green-500" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         暂无执行记录
                       </TableCell>
                     </TableRow>
@@ -1147,6 +1221,146 @@ export function ScheduledTasksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 任务执行日志对话框 */}
+      <Dialog open={logDialogOpen} onOpenChange={(open) => {
+        setLogDialogOpen(open)
+        if (!open) {
+          setViewingTaskId(null)
+          setViewingTaskName('')
+        }
+      }}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              任务执行日志
+            </DialogTitle>
+            <DialogDescription>
+              {viewingTaskName} - {viewingTaskId}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* 执行状态 */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">执行状态：</span>
+              {taskResultLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <TaskStatusBadge status={taskResultData?.status} />
+              )}
+            </div>
+
+            {/* 完成时间 */}
+            {taskResultData?.date_done && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">完成时间：</span>
+                <span className="text-sm">{formatTime(taskResultData.date_done)}</span>
+              </div>
+            )}
+
+            {/* 执行结果 */}
+            {taskResultData?.result && (
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">执行结果：</span>
+                <ScrollArea className="h-[200px] rounded-md border bg-muted/50 p-3">
+                  <pre className="text-xs whitespace-pre-wrap break-all font-mono">
+                    {taskResultData.result}
+                  </pre>
+                </ScrollArea>
+              </div>
+            )}
+
+            {/* 错误信息 */}
+            {taskResultData?.traceback && (
+              <div className="space-y-2">
+                <span className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  错误信息：
+                </span>
+                <ScrollArea className="h-[200px] rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                  <pre className="text-xs whitespace-pre-wrap break-all font-mono text-destructive">
+                    {taskResultData.traceback}
+                  </pre>
+                </ScrollArea>
+              </div>
+            )}
+
+            {/* 轮询提示 */}
+            {(taskResultData?.status === 'PENDING' || taskResultData?.status === 'STARTED') && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                任务执行中，自动更新状态...
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => refetchTaskResult()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              刷新
+            </Button>
+            <Button onClick={() => setLogDialogOpen(false)}>
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Main>
   )
+}
+
+/**
+ * 任务状态徽章组件
+ */
+function TaskStatusBadge({ status }: { status?: string }) {
+  switch (status) {
+    case 'SUCCESS':
+      return (
+        <Badge variant="default" className="gap-1 bg-green-500">
+          <CheckCircle className="h-3 w-3" />
+          成功
+        </Badge>
+      )
+    case 'FAILURE':
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <XCircle className="h-3 w-3" />
+          失败
+        </Badge>
+      )
+    case 'PENDING':
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <Clock className="h-3 w-3" />
+          等待中
+        </Badge>
+      )
+    case 'STARTED':
+      return (
+        <Badge variant="default" className="gap-1 bg-blue-500">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          执行中
+        </Badge>
+      )
+    case 'RETRY':
+      return (
+        <Badge variant="outline" className="gap-1">
+          <RefreshCw className="h-3 w-3" />
+          重试中
+        </Badge>
+      )
+    case 'REVOKED':
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <XCircle className="h-3 w-3" />
+          已撤销
+        </Badge>
+      )
+    default:
+      return (
+        <Badge variant="outline" className="gap-1">
+          未知
+        </Badge>
+      )
+  }
 }
