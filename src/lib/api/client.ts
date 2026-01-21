@@ -59,6 +59,8 @@ class ApiClient {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('user_info')
+    // 同步清除 zustand 持久化的认证状态，避免刷新后仍认为已登录
+    localStorage.removeItem('auth-storage')
   }
 
   /**
@@ -156,7 +158,10 @@ class ApiClient {
           }
 
           // 如果当前在登录页面，也不自动处理401
-          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/login')) {
+          if (typeof window !== 'undefined' && (
+            window.location.pathname.startsWith('/login') ||
+            window.location.pathname.startsWith('/sign-in')
+          )) {
             return Promise.reject(error)
           }
 
