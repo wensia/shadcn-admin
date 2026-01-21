@@ -4,7 +4,7 @@
  * 包含：概览、跟进记录、订单记录、统计图表、变更历史 五个 Tab
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -25,10 +25,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { formatTime } from '@/lib/utils/time'
-import { Receipt, Copy, Check } from 'lucide-react'
+import { Receipt, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { leadsApi } from '../../api'
 import type { Lead, LeadFollowup } from '../../types'
@@ -143,6 +150,10 @@ export function LeadDetailTabs({
   const s = useStyleClasses()
   const [activeTab, setActiveTab] = useState(defaultTab)
 
+  // 跟进记录分页状态
+  const [followupPage, setFollowupPage] = useState(1)
+  const [followupPageSize, setFollowupPageSize] = useState(5)
+
   // 如果外部没有传入 lead 数据，则内部获取
   const { data: internalLead, isLoading: internalLoading } = useQuery({
     queryKey: ['lead', leadId],
@@ -160,11 +171,21 @@ export function LeadDetailTabs({
   const { data: followupsResponse, isLoading: isFollowupsLoading } = useQuery({
     queryKey: ['lead-followups', leadId],
     queryFn: async () => {
-      const response = await leadsApi.getLeadFollowups(leadId, { page: 1, size: 50 })
+      const response = await leadsApi.getLeadFollowups(leadId, { page: 1, size: 100 })
       return response
     },
     enabled: !!leadId && (activeTab === 'followups' || activeTab === 'statistics'),
   })
+
+  // 跟进记录分页计算
+  const followupsPaginated = useMemo(() => {
+    const allFollowups = followupsResponse?.data || []
+    const total = allFollowups.length
+    const totalPages = Math.ceil(total / followupPageSize)
+    const startIndex = (followupPage - 1) * followupPageSize
+    const items = allFollowups.slice(startIndex, startIndex + followupPageSize)
+    return { items, total, totalPages }
+  }, [followupsResponse?.data, followupPage, followupPageSize])
 
   // 获取信息变更记录
   const { data: infoChangeLogs, isLoading: isInfoChangeLoading } = useQuery({
@@ -311,75 +332,133 @@ export function LeadDetailTabs({
 
       {/* ==================== 跟进记录 Tab ==================== */}
       <TabsContent value="followups" className="flex-1 m-0 min-h-0 overflow-hidden">
-        <ContentWrapper>
-          <div className="p-4 space-y-6">
-            {/* 跟进记录表格 */}
-            <div>
-              <h4 className={cn(s.text.sm, 'font-medium mb-3')}>跟进记录</h4>
-              {isFollowupsLoading ? (
-                <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
-                  加载中...
-                </div>
-              ) : !followupsResponse?.data?.length ? (
-                <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
-                  暂无跟进记录
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className={cn(s.text.xs, 'w-[140px]')}>跟进时间</TableHead>
-                      <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进方式</TableHead>
-                      <TableHead className={cn(s.text.xs, 'w-[90px]')}>跟进结果</TableHead>
-                      <TableHead className={cn(s.text.xs)}>跟进内容</TableHead>
-                      <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进人</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {followupsResponse.data.map((followup: LeadFollowup) => (
-                      <TableRow key={followup.id}>
-                        <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                          {formatTime(followup.followup_at)}
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          {followupMethodLabels[followup.method] || followup.method}
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          {followup.result ? (
-                            <FollowupResultBadge
-                              result={followup.result}
-                              className={cn(s.text.xs, s.roundedBadge, s.height.badge)}
-                            />
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className={cn(s.text.xs, 'max-w-[200px]')}>
-                          {followup.content ? (
-                            <FollowupContentCell content={followup.content} />
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          {followup.followup_by_name || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+        <div className="flex flex-col h-full">
+          {/* 跟进记录区域 - 占50%高度 */}
+          <div className="flex-1 min-h-0 flex flex-col border-b">
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+              <h4 className={cn(s.text.sm, 'font-medium')}>跟进记录</h4>
+              {followupsPaginated.total > 0 && (
+                <span className={cn(s.text.xs, 'text-muted-foreground')}>
+                  共 {followupsPaginated.total} 条
+                </span>
               )}
             </div>
-
-            {/* 云客通话记录 */}
-            {lead?.parent_phone && (
-              <div>
-                <h4 className={cn(s.text.sm, 'font-medium mb-3')}>云客通话记录</h4>
-                <YunkeCallLogs phone={lead.parent_phone} />
+            <ScrollArea className="flex-1">
+              <div className="p-4">
+                {isFollowupsLoading ? (
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
+                    加载中...
+                  </div>
+                ) : !followupsPaginated.items.length ? (
+                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
+                    暂无跟进记录
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className={cn(s.text.xs, 'w-[140px]')}>跟进时间</TableHead>
+                        <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进方式</TableHead>
+                        <TableHead className={cn(s.text.xs, 'w-[90px]')}>跟进结果</TableHead>
+                        <TableHead className={cn(s.text.xs)}>跟进内容</TableHead>
+                        <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进人</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {followupsPaginated.items.map((followup: LeadFollowup) => (
+                        <TableRow key={followup.id}>
+                          <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
+                            {formatTime(followup.followup_at)}
+                          </TableCell>
+                          <TableCell className={s.text.xs}>
+                            {followupMethodLabels[followup.method] || followup.method}
+                          </TableCell>
+                          <TableCell className={s.text.xs}>
+                            {followup.result ? (
+                              <FollowupResultBadge
+                                result={followup.result}
+                                className={cn(s.text.xs, s.roundedBadge, s.height.badge)}
+                              />
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className={cn(s.text.xs, 'max-w-[200px]')}>
+                            {followup.content ? (
+                              <FollowupContentCell content={followup.content} />
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell className={s.text.xs}>
+                            {followup.followup_by_name || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </ScrollArea>
+            {/* 跟进记录分页器 */}
+            {followupsPaginated.total > 0 && (
+              <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20">
+                <div className={cn('flex items-center gap-2', s.text.xs)}>
+                  <span className="text-muted-foreground">每页</span>
+                  <Select
+                    value={`${followupPageSize}`}
+                    onValueChange={(value) => {
+                      setFollowupPageSize(Number(value))
+                      setFollowupPage(1)
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[60px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 10, 20].map((size) => (
+                        <SelectItem key={size} value={`${size}`} className="text-xs">
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-muted-foreground">条</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setFollowupPage(followupPage - 1)}
+                    disabled={followupPage <= 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className={cn(s.text.xs, 'px-2')}>
+                    {followupPage} / {followupsPaginated.totalPages || 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setFollowupPage(followupPage + 1)}
+                    disabled={followupPage >= followupsPaginated.totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>
-        </ContentWrapper>
+
+          {/* 云客通话记录区域 - 占50%高度 */}
+          {lead?.parent_phone && (
+            <div className="flex-1 min-h-0 flex flex-col">
+              <YunkeCallLogs phone={lead.parent_phone} showHeader />
+            </div>
+          )}
+        </div>
       </TabsContent>
 
       {/* ==================== 订单记录 Tab ==================== */}

@@ -202,6 +202,7 @@ export interface LeadListItem {
   id: string
   child_name: string
   parent_name: string
+  parent_phone?: string  // 手机号（需脱敏显示）
   grade?: Grade
   source_channel_id: string
   source_channel_name?: string

@@ -28,12 +28,27 @@ import { LeadStatusBadge, IntentionLevelBadge, FollowupResultBadge } from './sta
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
 
+// 手机号脱敏函数：将中间4位替换为****
+function maskPhone(phone?: string): string {
+  if (!phone) return '-'
+  // 只处理11位手机号
+  if (phone.length === 11) {
+    return phone.slice(0, 3) + '****' + phone.slice(7)
+  }
+  // 其他情况保留前3后2
+  if (phone.length > 5) {
+    return phone.slice(0, 3) + '****' + phone.slice(-2)
+  }
+  return phone
+}
+
 // 生成骨架屏占位数据
 function createSkeletonData(count: number): LeadListItem[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_ID_PREFIX}${i}`,
     child_name: '',
     parent_name: '',
+    parent_phone: '',
     grade: undefined,
     source_channel_id: '',
     source_channel_name: '',
@@ -148,6 +163,22 @@ export function LeadsTable({
           )
         },
         size: getColumnSize(120)
+      },
+      // 手机号（脱敏）
+      {
+        accessorKey: 'parent_phone',
+        header: '手机号',
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className="h-4 w-24" />
+          }
+          return (
+            <div className={cn(s.text.xs, 'font-mono text-muted-foreground')}>
+              {maskPhone(row.original.parent_phone)}
+            </div>
+          )
+        },
+        size: getColumnSize(110)
       },
       // 年龄
       {
@@ -415,7 +446,10 @@ export function LeadsTable({
                 {headerGroup.headers.map((header) => {
                   const isSelectColumn = header.id === 'select'
                   const isChildNameColumn = header.id === 'child_name'
-                  const isFrozenColumn = isSelectColumn || isChildNameColumn
+                  const isPhoneColumn = header.id === 'parent_phone'
+                  const isFrozenColumn = isSelectColumn || isChildNameColumn || isPhoneColumn
+                  // 冻结列的 left 值：select(50) + child_name(120) = 170
+                  const frozenLeft = isSelectColumn ? 0 : isChildNameColumn ? 50 : 170
                   return (
                     <TableHead
                       key={header.id}
@@ -423,7 +457,7 @@ export function LeadsTable({
                         width: header.getSize(),
                         ...(isFrozenColumn && {
                           position: 'sticky',
-                          left: isSelectColumn ? 0 : 50, // select 列宽度为 50
+                          left: frozenLeft,
                           zIndex: 20,
                         })
                       }}
@@ -464,7 +498,10 @@ export function LeadsTable({
                   {row.getVisibleCells().map((cell) => {
                     const isSelectColumn = cell.column.id === 'select'
                     const isChildNameColumn = cell.column.id === 'child_name'
-                    const isFrozenColumn = isSelectColumn || isChildNameColumn
+                    const isPhoneColumn = cell.column.id === 'parent_phone'
+                    const isFrozenColumn = isSelectColumn || isChildNameColumn || isPhoneColumn
+                    // 冻结列的 left 值：select(50) + child_name(120) = 170
+                    const frozenLeft = isSelectColumn ? 0 : isChildNameColumn ? 50 : 170
                     const isSelected = row.getIsSelected()
                     return (
                       <TableCell
@@ -473,7 +510,7 @@ export function LeadsTable({
                           width: cell.column.getSize(),
                           ...(isFrozenColumn && {
                             position: 'sticky',
-                            left: isSelectColumn ? 0 : 50, // select 列宽度为 50
+                            left: frozenLeft,
                             zIndex: 10,
                           })
                         }}

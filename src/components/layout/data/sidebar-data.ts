@@ -164,8 +164,13 @@ export const adminNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: '组织架构管理',
+    title: '组织架构',
     items: [
+      {
+        title: '组织架构树',
+        url: '/admin/organization-tree',
+        icon: Network,
+      },
       {
         title: '大区管理',
         url: '/admin/regions',
@@ -186,6 +191,11 @@ export const adminNavGroups: NavGroup[] = [
         url: '/admin/campuses',
         icon: Building2,
       },
+    ],
+  },
+  {
+    title: '部门职位',
+    items: [
       {
         title: '部门管理',
         url: '/admin/departments',
@@ -201,11 +211,6 @@ export const adminNavGroups: NavGroup[] = [
         url: '/admin/positions',
         icon: Briefcase,
       },
-      {
-        title: '组织架构树',
-        url: '/admin/organization-tree',
-        icon: Network,
-      },
     ],
   },
   {
@@ -217,19 +222,19 @@ export const adminNavGroups: NavGroup[] = [
         icon: UserPlus,
       },
       {
-        title: '管理层级',
-        url: '/admin/employee-hierarchy',
-        icon: GitBranch,
-      },
-      {
         title: '员工身份管理',
         url: '/admin/identities',
         icon: UsersRound,
       },
+      {
+        title: '管理层级',
+        url: '/admin/employee-hierarchy',
+        icon: GitBranch,
+      },
     ],
   },
   {
-    title: '业务配置',
+    title: '业务数据',
     items: [
       {
         title: '来源渠道管理',
@@ -242,29 +247,39 @@ export const adminNavGroups: NavGroup[] = [
         icon: School,
       },
       {
+        title: '课程配置',
+        url: '/admin/courses',
+        icon: Library,
+      },
+      {
         title: '线索查看统计',
         url: '/admin/lead-access-stats',
         icon: Eye,
       },
+    ],
+  },
+  {
+    title: 'DISC测试',
+    items: [
       {
-        title: '连续外呼配置',
-        url: '/admin/call-config',
-        icon: PhoneCall,
-      },
-      {
-        title: '课程配置',
-        url: '/admin/courses',
-        icon: Library,
+        title: 'DISC性格测试',
+        url: '/admin/disc-test',
+        icon: ClipboardList,
       },
       {
         title: '临时DISC记录',
         url: '/admin/temp-disc-records',
         icon: FileText,
       },
+    ],
+  },
+  {
+    title: '系统配置',
+    items: [
       {
-        title: 'DISC性格测试',
-        url: '/admin/disc-test',
-        icon: ClipboardList,
+        title: '连续外呼配置',
+        url: '/admin/call-config',
+        icon: PhoneCall,
       },
       {
         title: '定时任务',

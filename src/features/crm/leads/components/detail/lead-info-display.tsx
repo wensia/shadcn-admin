@@ -538,6 +538,7 @@ export function LeadInfoDisplay({
                 rawValue={lead.child_name || ''}
                 editable={editable}
                 fieldType="text"
+                maxLength={10}
                 onSave={createSaveHandler('child_name')}
               />
               <InfoItem

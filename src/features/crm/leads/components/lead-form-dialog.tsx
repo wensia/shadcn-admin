@@ -50,10 +50,13 @@ interface LeadFormDialogProps {
   onSuccess?: () => void
 }
 
+// 儿童姓名最大长度
+const CHILD_NAME_MAX_LENGTH = 10
+
 // Zod表单验证Schema - Mira风格关注核心必填项
 const formSchema = z.object({
   // 儿童信息
-  child_name: z.string().max(50, '姓名过长').optional(),
+  child_name: z.string().max(CHILD_NAME_MAX_LENGTH, `姓名最多${CHILD_NAME_MAX_LENGTH}个字`).optional(),
   child_gender: z.string().optional().nullable(),
   child_birthday: z.string().optional(),
   age: z.number().min(0).max(30).optional(),
@@ -63,7 +66,7 @@ const formSchema = z.object({
 
   // 家长信息
   parent_name: z.string().max(50).optional(),
-  parent_phone: z.string().min(11, '请输入正确的手机号').max(11, '请输入正确的手机号'),
+  parent_phone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的11位大陆手机号'),
   parent_wechat: z.string().max(50).optional(),
   parent_email: z.string().email('请输入正确的邮箱').optional().or(z.literal('')),
   parent_relation: z.string().max(20).optional(),
@@ -381,7 +384,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                         <FormItem>
                           <FormLabel className="text-xs">儿童姓名</FormLabel>
                           <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
+                            <Input {...field} className="h-8 text-xs" placeholder="请输入" maxLength={CHILD_NAME_MAX_LENGTH} />
                           </FormControl>
                           <FormMessage className="text-xs" />
                         </FormItem>

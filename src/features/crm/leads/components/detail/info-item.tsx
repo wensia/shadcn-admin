@@ -74,6 +74,8 @@ interface InfoItemProps {
   // 编辑相关 props
   editable?: boolean
   fieldType?: 'text' | 'number' | 'select' | 'date' | 'datetime' | 'async-select'
+  /** 文本输入最大长度 */
+  maxLength?: number
   options?: Array<{ label: string; value: string }>
   /** 异步 Select 配置 */
   asyncSelectConfig?: AsyncSelectConfig
@@ -90,6 +92,7 @@ export function InfoItem({
   className,
   editable = false,
   fieldType = 'text',
+  maxLength,
   options = [],
   asyncSelectConfig,
   onSave,
@@ -336,6 +339,7 @@ export function InfoItem({
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
             className="h-8 text-xs"
+            maxLength={maxLength}
             autoFocus
           />
         )

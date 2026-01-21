@@ -107,6 +107,7 @@ export const yunkeApi = {
   async resetPassword(data: {
     yunke_user_id: string
     phone: string
+    credential_id?: string  // 凭证ID，用于获取对应凭证的cookies
   }): Promise<YunkePasswordResetResponse> {
     const response = await apiClient.post<ApiResponse<YunkePasswordResetResponse>>('/yunke/auth/reset-password', data)
     return response.data!

@@ -26,6 +26,7 @@ import {
   XCircle,
   PauseCircle,
   AlertCircle,
+  Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -63,6 +64,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { yunkeApi, yunkeCredentialsApi } from '../api'
 import type { YunkeSubAccount, YunkeAvailableEmployee, YunkePasswordResetResponse, YunkeCredential } from '../types'
@@ -94,6 +97,11 @@ function SubAccountsTable({
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [bindDialogOpen, setBindDialogOpen] = useState(false)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  // 绑定员工弹窗状态
+  const [bindSearchText, setBindSearchText] = useState('')
+  const [bindPage, setBindPage] = useState(1)
+  const [selectedBindEmployee, setSelectedBindEmployee] = useState<YunkeAvailableEmployee | null>(null)
+  const bindPageSize = 5
   const [confirmAction, setConfirmAction] = useState<{
     type: 'resetPassword' | 'unbind'
     account?: YunkeSubAccount
@@ -126,9 +134,28 @@ function SubAccountsTable({
   const accounts = data?.users || []
   const total = data?.total || 0
 
+  // 过滤后的员工列表（前端搜索）
+  const filteredEmployees = useMemo(() => {
+    if (!bindSearchText.trim()) return employees
+    const searchLower = bindSearchText.toLowerCase()
+    return employees.filter(
+      (emp) =>
+        emp.name.toLowerCase().includes(searchLower) ||
+        emp.username.toLowerCase().includes(searchLower)
+    )
+  }, [employees, bindSearchText])
+
+  // 分页后的员工列表
+  const paginatedEmployees = useMemo(() => {
+    const start = (bindPage - 1) * bindPageSize
+    return filteredEmployees.slice(start, start + bindPageSize)
+  }, [filteredEmployees, bindPage, bindPageSize])
+
+  const totalBindPages = Math.max(1, Math.ceil(filteredEmployees.length / bindPageSize))
+
   // 重置密码
   const resetPasswordMutation = useMutation({
-    mutationFn: (data: { yunke_user_id: string; phone: string }) => yunkeApi.resetPassword(data),
+    mutationFn: (data: { yunke_user_id: string; phone: string; credential_id: string }) => yunkeApi.resetPassword(data),
     onSuccess: (response) => {
       setPasswordResult(response)
       setPasswordDialogOpen(true)
@@ -147,6 +174,7 @@ function SubAccountsTable({
       toast.success('绑定成功')
       setBindDialogOpen(false)
       setSelectedAccount(null)
+      setSelectedBindEmployee(null)
       queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
       queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
     },
@@ -410,6 +438,10 @@ function SubAccountsTable({
 
   const handleBindClick = (account: YunkeSubAccount) => {
     setSelectedAccount(account)
+    // 重置绑定弹窗状态
+    setBindSearchText('')
+    setBindPage(1)
+    setSelectedBindEmployee(null)
     setBindDialogOpen(true)
   }
 
@@ -428,6 +460,7 @@ function SubAccountsTable({
           resetPasswordMutation.mutate({
             yunke_user_id: confirmAction.account.id,
             phone: confirmAction.account.phone,
+            credential_id: credential.id,  // 使用当前凭证的ID
           })
         }
         break
@@ -441,13 +474,22 @@ function SubAccountsTable({
     setConfirmAction(null)
   }
 
-  const handleBindEmployee = (employeeId: string) => {
-    if (!selectedAccount) return
+  const handleBindEmployee = () => {
+    if (!selectedAccount || !selectedBindEmployee) return
     bindMutation.mutate({
       yunke_phone: selectedAccount.phone,
       yunke_user_id: selectedAccount.id,
-      employee_id: employeeId,
+      employee_id: selectedBindEmployee.id,
     })
+  }
+
+  // 选择/取消选择员工
+  const handleSelectBindEmployee = (emp: YunkeAvailableEmployee) => {
+    if (selectedBindEmployee?.id === emp.id) {
+      setSelectedBindEmployee(null)
+    } else {
+      setSelectedBindEmployee(emp)
+    }
   }
 
   const handleCopyToClipboard = async (text: string, label: string) => {
@@ -507,16 +549,30 @@ function SubAccountsTable({
       {/* 表格 */}
       <div className="flex-1 overflow-auto rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-card">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} style={{ width: header.getSize() }}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const isActionsColumn = header.id === 'actions'
+                  return (
+                    <TableHead
+                      key={header.id}
+                      style={{
+                        width: header.getSize(),
+                        ...(isActionsColumn && {
+                          position: 'sticky',
+                          right: 0,
+                          zIndex: 20,
+                        }),
+                      }}
+                      className={isActionsColumn ? 'bg-card' : ''}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -524,11 +580,25 @@ function SubAccountsTable({
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isActionsColumn = cell.column.id === 'actions'
+                    const isSelected = row.getIsSelected()
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{
+                          ...(isActionsColumn && {
+                            position: 'sticky',
+                            right: 0,
+                            zIndex: 10,
+                          }),
+                        }}
+                        className={isActionsColumn ? (isSelected ? 'bg-muted' : 'bg-background') : ''}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (
@@ -558,45 +628,153 @@ function SubAccountsTable({
 
       {/* 绑定员工对话框 */}
       <Dialog open={bindDialogOpen} onOpenChange={setBindDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>绑定员工</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-3xl p-0 max-h-[85vh] flex flex-col">
+          <DialogHeader className="px-4 py-3 border-b shrink-0">
+            <DialogTitle className="text-base">选择要绑定的员工</DialogTitle>
+            <DialogDescription className="text-xs">
               为云客账号 {selectedAccount?.real_name}（{selectedAccount?.phone}）选择要绑定的员工
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[400px] overflow-y-auto space-y-2">
-            {employees.map((emp) => (
-              <div
-                key={emp.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted cursor-pointer"
-                onClick={() => handleBindEmployee(emp.id)}
-              >
-                <div>
-                  <div className="font-medium">{emp.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {emp.username} · {emp.campus_name || '未分配校区'}
-                  </div>
-                  {emp.bound_yunke && (
-                    <div className="text-xs text-orange-500">
-                      已绑定: {emp.bound_yunke.phone}
-                    </div>
-                  )}
-                </div>
-                <Button variant="ghost" size="sm" disabled={bindMutation.isPending}>
-                  选择
-                </Button>
+
+          <div className="flex-1 overflow-hidden flex flex-col p-4 space-y-4">
+            {/* 搜索栏 */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={bindSearchText}
+                  onChange={(e) => {
+                    setBindSearchText(e.target.value)
+                    setBindPage(1)
+                  }}
+                  placeholder="输入姓名或用户名搜索"
+                  className="h-8 text-xs pl-8 w-56"
+                />
               </div>
-            ))}
-            {employees.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                暂无可绑定的员工
+              <span className="text-xs text-muted-foreground">
+                共 {filteredEmployees.length} 位员工
+              </span>
+            </div>
+
+            {/* 员工表格 */}
+            <ScrollArea className="flex-1 border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-14 text-xs text-center">选择</TableHead>
+                    <TableHead className="w-28 text-xs">姓名</TableHead>
+                    <TableHead className="w-32 text-xs">用户名</TableHead>
+                    <TableHead className="w-28 text-xs">校区</TableHead>
+                    <TableHead className="text-xs">已绑定云客</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedEmployees.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-32 text-center text-xs text-muted-foreground">
+                        {bindSearchText ? '没有找到匹配的员工' : '暂无可绑定的员工'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedEmployees.map((emp) => {
+                      const isSelected = selectedBindEmployee?.id === emp.id
+                      return (
+                        <TableRow
+                          key={emp.id}
+                          className={cn(
+                            'cursor-pointer hover:bg-muted/50 transition-colors',
+                            isSelected && 'bg-primary/5'
+                          )}
+                          onClick={() => handleSelectBindEmployee(emp)}
+                        >
+                          <TableCell className="text-center">
+                            <div
+                              className={cn(
+                                'w-4 h-4 rounded-full border-2 mx-auto flex items-center justify-center transition-colors',
+                                isSelected
+                                  ? 'border-primary bg-primary'
+                                  : 'border-muted-foreground/30'
+                              )}
+                            >
+                              {isSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                            </div>
+                          </TableCell>
+                          <TableCell className={cn('text-xs', isSelected && 'font-semibold text-primary')}>
+                            {emp.name}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {emp.username}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {emp.campus_name || '未分配'}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {emp.bound_yunke ? (
+                              <Badge variant="outline" className="text-orange-500 border-orange-300">
+                                {emp.bound_yunke.phone}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+
+            {/* 分页 */}
+            {filteredEmployees.length > 0 && (
+              <div className="flex items-center justify-center gap-4 shrink-0 pt-2 border-t">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                    disabled={bindPage <= 1}
+                    onClick={() => setBindPage((p) => p - 1)}
+                  >
+                    上一页
+                  </Button>
+                  <span className="text-xs px-2">
+                    第 {bindPage} / {totalBindPages} 页
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                    disabled={bindPage >= totalBindPages}
+                    onClick={() => setBindPage((p) => p + 1)}
+                  >
+                    下一页
+                  </Button>
+                </div>
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBindDialogOpen(false)}>
+
+          <DialogFooter className="px-4 py-3 border-t gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setBindDialogOpen(false)}
+              size="sm"
+              className="h-8 text-xs"
+            >
               取消
+            </Button>
+            <Button
+              onClick={handleBindEmployee}
+              size="sm"
+              className="h-8 text-xs"
+              disabled={!selectedBindEmployee || bindMutation.isPending}
+            >
+              {bindMutation.isPending
+                ? '绑定中...'
+                : selectedBindEmployee
+                  ? `确定选择 ${selectedBindEmployee.name}`
+                  : '请先选择员工'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -814,28 +992,22 @@ export function YunkeAccountsPage() {
 
         {/* Tab 切换 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <div className="border-b">
-            <TabsList className="h-auto bg-transparent p-0 gap-0">
-              {credentials.map((cred) => (
-                <TabsTrigger
-                  key={cred.id}
-                  value={cred.id}
-                  className="relative rounded-none border-b-2 border-transparent px-4 py-2.5 font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`h-2 w-2 rounded-full ${
-                        cred.status === 1 ? 'bg-green-500' : 'bg-red-500'
-                      }`}
-                    />
-                    <span className="max-w-[180px] truncate">
-                      {cred.company_name || cred.phone}
-                    </span>
-                  </div>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+          <TabsList>
+            {credentials.map((cred) => (
+              <TabsTrigger key={cred.id} value={cred.id}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      cred.status === 1 ? 'bg-green-500' : 'bg-red-500'
+                    }`}
+                  />
+                  <span className="max-w-[180px] truncate">
+                    {cred.company_name || cred.phone}
+                  </span>
+                </div>
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
           {credentials.map((cred) => (
             <TabsContent

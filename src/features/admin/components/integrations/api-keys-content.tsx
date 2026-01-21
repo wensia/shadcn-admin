@@ -69,13 +69,6 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
@@ -120,8 +113,6 @@ export function ApiKeysContent() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
-  const [hasApiKeyFilter, setHasApiKeyFilter] = useState<string>('all')
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [keyResultDialogOpen, setKeyResultDialogOpen] = useState(false)
   const [scopesDialogOpen, setScopesDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -129,6 +120,10 @@ export function ApiKeysContent() {
   const [createdKey, setCreatedKey] = useState<ApiKeyCreateResponse | null>(null)
   const [showKey, setShowKey] = useState(false)
   const [selectedScopes, setSelectedScopes] = useState<Record<string, string[]>>({})
+  // 配置密钥对话框相关状态
+  const [configDialogOpen, setConfigDialogOpen] = useState(false)
+  const [employeeSearchValue, setEmployeeSearchValue] = useState('')
+  const [configSelectedEmployee, setConfigSelectedEmployee] = useState<EmployeeApiKeyInfo | null>(null)
 
   // 表单
   const createForm = useForm<CreateFormData>({
@@ -140,18 +135,33 @@ export function ApiKeysContent() {
     },
   })
 
-  // 查询员工列表
+  // 查询已配置密钥的员工列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-api-keys', page, pageSize, searchValue, hasApiKeyFilter],
+    queryKey: ['admin-api-keys', page, pageSize, searchValue],
     queryFn: async () => {
       const params: { page?: number; size?: number; search?: string; has_api_key?: boolean } = {
         page,
         size: pageSize,
+        has_api_key: true, // 只查询已配置密钥的用户
       }
       if (searchValue) params.search = searchValue
-      if (hasApiKeyFilter !== 'all') params.has_api_key = hasApiKeyFilter === 'yes'
       return apiKeysApi.list(params)
     },
+  })
+
+  // 查询未配置密钥的员工列表（用于配置密钥对话框）
+  const { data: availableEmployees, isLoading: isLoadingAvailable } = useQuery({
+    queryKey: ['admin-api-keys-available', employeeSearchValue],
+    queryFn: async () => {
+      const params: { page?: number; size?: number; search?: string; has_api_key?: boolean } = {
+        page: 1,
+        size: 50,
+        has_api_key: false, // 只查询未配置密钥的用户
+      }
+      if (employeeSearchValue) params.search = employeeSearchValue
+      return apiKeysApi.list(params)
+    },
+    enabled: configDialogOpen, // 只在对话框打开时查询
   })
 
   const employees = data?.items || []
@@ -167,7 +177,6 @@ export function ApiKeysContent() {
       }),
     onSuccess: (response) => {
       setCreatedKey(response)
-      setCreateDialogOpen(false)
       setKeyResultDialogOpen(true)
       createForm.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
@@ -387,23 +396,10 @@ export function ApiKeysContent() {
       {
         id: 'actions',
         header: '操作',
-        size: 180,
+        size: 140,
         cell: ({ row }) => {
           if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-32" />
-          }
-
-          if (!row.original.has_api_key) {
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleCreateClick(row.original)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                创建密钥
-              </Button>
-            )
+            return <Skeleton className="h-8 w-24" />
           }
 
           return (
@@ -455,21 +451,6 @@ export function ApiKeysContent() {
   const handleSearch = () => {
     setPage(1)
     refetch()
-  }
-
-  const handleCreateClick = (employee: EmployeeApiKeyInfo) => {
-    setSelectedEmployee(employee)
-    createForm.reset({
-      name: `${employee.name}的API密钥`,
-      expires_in_days: 365,
-      scopes: {},
-    })
-    setCreateDialogOpen(true)
-  }
-
-  const handleCreateSubmit = (data: CreateFormData) => {
-    if (!selectedEmployee) return
-    createMutation.mutate({ employeeId: selectedEmployee.employee_id, formData: data })
   }
 
   const handleRegenerateClick = (employee: EmployeeApiKeyInfo) => {
@@ -543,16 +524,6 @@ export function ApiKeysContent() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
-            <Select value={hasApiKeyFilter} onValueChange={setHasApiKeyFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="密钥状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="yes">已创建密钥</SelectItem>
-                <SelectItem value="no">未创建密钥</SelectItem>
-              </SelectContent>
-            </Select>
             <Button variant="outline" onClick={handleSearch}>
               搜索
             </Button>
@@ -560,6 +531,10 @@ export function ApiKeysContent() {
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
+          <Button onClick={() => setConfigDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            配置密钥
+          </Button>
         </div>
 
         {/* 表格 */}
@@ -614,116 +589,6 @@ export function ApiKeysContent() {
           />
         )}
       </div>
-
-      {/* 创建密钥对话框 */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>创建API密钥</DialogTitle>
-            <DialogDescription>
-              为员工 {selectedEmployee?.name}（{selectedEmployee?.username}）创建API密钥
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...createForm}>
-            <form onSubmit={createForm.handleSubmit(handleCreateSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                <FormField
-                  control={createForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>密钥名称</FormLabel>
-                      <FormControl>
-                        <Input placeholder="请输入密钥名称" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={createForm.control}
-                  name="expires_in_days"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>有效期（天）</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={1} max={3650} {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        最短1天，最长10年（3650天）
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="space-y-2">
-                  <FormLabel>权限范围</FormLabel>
-                  <FormDescription>
-                    选择此API密钥可访问的功能和权限
-                  </FormDescription>
-                  <div className="space-y-3 mt-2">
-                    {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
-                      <div key={scope} className="border rounded-lg p-3">
-                        <div className="font-medium mb-2">{info.description}</div>
-                        <div className="flex flex-wrap gap-2">
-                          {info.permissions.map((permission) => {
-                            const currentScopes = createForm.watch('scopes')
-                            const isChecked = currentScopes[scope]?.includes(permission)
-                            return (
-                              <label
-                                key={permission}
-                                className="flex items-center gap-2 cursor-pointer"
-                              >
-                                <Checkbox
-                                  checked={isChecked}
-                                  onCheckedChange={(checked) => {
-                                    const current = currentScopes[scope] || []
-                                    if (checked) {
-                                      createForm.setValue('scopes', {
-                                        ...currentScopes,
-                                        [scope]: [...current, permission],
-                                      })
-                                    } else {
-                                      const newPermissions = current.filter((p) => p !== permission)
-                                      if (newPermissions.length === 0) {
-                                        const { [scope]: _, ...rest } = currentScopes
-                                        createForm.setValue('scopes', rest)
-                                      } else {
-                                        createForm.setValue('scopes', {
-                                          ...currentScopes,
-                                          [scope]: newPermissions,
-                                        })
-                                      }
-                                    }
-                                  }}
-                                />
-                                <span className="text-sm">
-                                  {PERMISSION_LABELS[permission] || permission}
-                                </span>
-                              </label>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                  取消
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? '创建中...' : '创建密钥'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
       {/* 密钥结果对话框 */}
       <Dialog open={keyResultDialogOpen} onOpenChange={setKeyResultDialogOpen}>
@@ -857,6 +722,219 @@ export function ApiKeysContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 配置密钥对话框 */}
+      <Dialog open={configDialogOpen} onOpenChange={(open) => {
+        setConfigDialogOpen(open)
+        if (!open) {
+          setConfigSelectedEmployee(null)
+          setEmployeeSearchValue('')
+          createForm.reset()
+        }
+      }}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+            <DialogTitle>配置 API 密钥</DialogTitle>
+            <DialogDescription>
+              {configSelectedEmployee
+                ? `为员工 ${configSelectedEmployee.name}（${configSelectedEmployee.username}）创建 API 密钥`
+                : '选择一个员工来配置 API 密钥'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!configSelectedEmployee ? (
+            // 员工选择步骤
+            <div className="flex-1 overflow-hidden px-6 pb-6 flex flex-col gap-4">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="搜索员工姓名或用户名..."
+                  className="pl-8"
+                  value={employeeSearchValue}
+                  onChange={(e) => setEmployeeSearchValue(e.target.value)}
+                />
+              </div>
+              <div className="flex-1 overflow-auto border rounded-md">
+                {isLoadingAvailable ? (
+                  <div className="p-4 space-y-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : (availableEmployees?.items || []).length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    {employeeSearchValue ? '未找到匹配的员工' : '所有员工都已配置 API 密钥'}
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {(availableEmployees?.items || []).map((emp) => (
+                      <div
+                        key={emp.employee_id}
+                        className="p-3 hover:bg-muted/50 cursor-pointer flex items-center justify-between"
+                        onClick={() => {
+                          setConfigSelectedEmployee(emp)
+                          createForm.reset({
+                            name: `${emp.name}的API密钥`,
+                            expires_in_days: 365,
+                            scopes: {},
+                          })
+                        }}
+                      >
+                        <div>
+                          <div className="font-medium">{emp.name}</div>
+                          <div className="text-sm text-muted-foreground">{emp.username}</div>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          选择
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {(availableEmployees?.total || 0) > 50 && (
+                <div className="text-sm text-muted-foreground text-center">
+                  显示前 50 个结果，请使用搜索缩小范围
+                </div>
+              )}
+            </div>
+          ) : (
+            // 创建密钥表单
+            <Form {...createForm}>
+              <form
+                onSubmit={createForm.handleSubmit((data) => {
+                  createMutation.mutate(
+                    { employeeId: configSelectedEmployee.employee_id, formData: data },
+                    {
+                      onSuccess: (response) => {
+                        setCreatedKey(response)
+                        setConfigDialogOpen(false)
+                        setConfigSelectedEmployee(null)
+                        setEmployeeSearchValue('')
+                        setKeyResultDialogOpen(true)
+                        createForm.reset()
+                        queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
+                        queryClient.invalidateQueries({ queryKey: ['admin-api-keys-available'] })
+                      },
+                    }
+                  )
+                })}
+                className="flex flex-col flex-1 min-h-0"
+              >
+                <div className="flex-1 overflow-y-auto px-6 space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfigSelectedEmployee(null)}
+                    >
+                      ← 返回选择
+                    </Button>
+                  </div>
+
+                  <FormField
+                    control={createForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>密钥名称</FormLabel>
+                        <FormControl>
+                          <Input placeholder="请输入密钥名称" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={createForm.control}
+                    name="expires_in_days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>有效期（天）</FormLabel>
+                        <FormControl>
+                          <Input type="number" min={1} max={3650} {...field} />
+                        </FormControl>
+                        <FormDescription>最短1天，最长10年（3650天）</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="space-y-2">
+                    <FormLabel>权限范围</FormLabel>
+                    <FormDescription>选择此 API 密钥可访问的功能和权限</FormDescription>
+                    <div className="space-y-3 mt-2">
+                      {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
+                        <div key={scope} className="border rounded-lg p-3">
+                          <div className="font-medium mb-2">{info.description}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {info.permissions.map((permission) => {
+                              const currentScopes = createForm.watch('scopes')
+                              const isChecked = currentScopes[scope]?.includes(permission)
+                              return (
+                                <label
+                                  key={permission}
+                                  className="flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Checkbox
+                                    checked={isChecked}
+                                    onCheckedChange={(checked) => {
+                                      const current = currentScopes[scope] || []
+                                      if (checked) {
+                                        createForm.setValue('scopes', {
+                                          ...currentScopes,
+                                          [scope]: [...current, permission],
+                                        })
+                                      } else {
+                                        const newPermissions = current.filter((p) => p !== permission)
+                                        if (newPermissions.length === 0) {
+                                          const { [scope]: _, ...rest } = currentScopes
+                                          createForm.setValue('scopes', rest)
+                                        } else {
+                                          createForm.setValue('scopes', {
+                                            ...currentScopes,
+                                            [scope]: newPermissions,
+                                          })
+                                        }
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm">
+                                    {PERMISSION_LABELS[permission] || permission}
+                                  </span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setConfigDialogOpen(false)
+                      setConfigSelectedEmployee(null)
+                      setEmployeeSearchValue('')
+                    }}
+                  >
+                    取消
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? '创建中...' : '创建密钥'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
