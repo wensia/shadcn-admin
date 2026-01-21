@@ -225,6 +225,7 @@ export function ScheduledTasksPage() {
       return response
     },
     enabled: activeTab === 'history',
+    refetchInterval: activeTab === 'history' ? 5000 : false,
   })
 
   const tasks = data?.items || []
@@ -560,18 +561,11 @@ export function ScheduledTasksPage() {
     }
   }
 
-  // 从执行记录直接执行任务
-  const handleHistoryRunClick = (item: TaskExecutionHistory) => {
-    // 将执行记录项转换为定时任务格式来复用 runNowMutation
-    setRunningItem({
-      id: item.id,
-      name: item.name,
-      task: item.task,
-      enabled: item.enabled,
-      one_off: false,
-      total_run_count: item.total_run_count,
-    } as ScheduledTask)
-    setRunDialogOpen(true)
+  // 查看执行日志
+  const handleViewLog = (item: TaskExecutionHistory) => {
+    setViewingTaskId(item.task_id)
+    setViewingTaskName(item.task_name)
+    setLogDialogOpen(true)
   }
 
   // 应用 Crontab 预设
@@ -749,13 +743,13 @@ export function ScheduledTasksPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead style={{ width: 200 }}>任务名称</TableHead>
-                    <TableHead style={{ width: 250 }}>任务路径</TableHead>
-                    <TableHead style={{ width: 100 }}>状态</TableHead>
-                    <TableHead style={{ width: 160 }}>最后执行时间</TableHead>
-                    <TableHead style={{ width: 100 }}>执行次数</TableHead>
-                    <TableHead style={{ width: 160 }}>最后修改时间</TableHead>
-                    <TableHead style={{ width: 100 }}>操作</TableHead>
+                    <TableHead style={{ width: 160 }}>任务名称</TableHead>
+                    <TableHead style={{ width: 80 }}>触发方式</TableHead>
+                    <TableHead style={{ width: 90 }}>状态</TableHead>
+                    <TableHead style={{ width: 200 }}>结果摘要</TableHead>
+                    <TableHead style={{ width: 150 }}>执行时间</TableHead>
+                    <TableHead style={{ width: 80 }}>耗时</TableHead>
+                    <TableHead style={{ width: 60 }}>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -763,70 +757,76 @@ export function ScheduledTasksPage() {
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-14" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-36" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                         <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                       </TableRow>
                     ))
                   ) : executionHistory.length > 0 ? (
-                    executionHistory.map((item: TaskExecutionHistory) => (
-                      <TableRow
-                        key={item.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleHistoryRunClick(item)}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium">{item.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <code className="text-xs bg-muted px-2 py-1 rounded">
-                            {item.task}
-                          </code>
-                        </TableCell>
-                        <TableCell>
-                          {item.enabled ? (
-                            <Badge variant="default" className="gap-1">
-                              <CheckCircle className="h-3 w-3" />
-                              启用
+                    executionHistory.map((item: TaskExecutionHistory) => {
+                      // 提取结果摘要
+                      const getResultSummary = () => {
+                        if (!item.result) return '-'
+                        const formatted = formatTaskResult(item.result)
+                        if (formatted) {
+                          const messageLine = formatted.lines.find(l => l.label === '执行结果')
+                          if (messageLine) return messageLine.value
+                        }
+                        return item.result.length > 50 ? item.result.slice(0, 50) + '...' : item.result
+                      }
+
+                      return (
+                        <TableRow
+                          key={item.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleViewLog(item)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-blue-500 shrink-0" />
+                              <span className="font-medium truncate max-w-[130px]" title={item.task_name}>
+                                {item.task_name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.trigger_type === 'manual' ? 'outline' : 'secondary'}>
+                              {item.trigger_type === 'manual' ? '手动' : '定时'}
                             </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="gap-1">
-                              <XCircle className="h-3 w-3" />
-                              禁用
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {item.last_run_at ? formatTime(item.last_run_at) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{item.total_run_count}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {item.date_changed ? formatTime(item.date_changed) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleHistoryRunClick(item)
-                            }}
-                            disabled={runNowMutation.isPending}
-                            title="立即执行并查看日志"
-                          >
-                            <Play className="h-4 w-4 text-green-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell>
+                            <TaskStatusBadge status={item.status} />
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground truncate block max-w-[180px]" title={item.result || ''}>
+                              {getResultSummary()}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {item.created_at ? formatTime(item.created_at) : '-'}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {item.duration != null ? `${item.duration.toFixed(2)}s` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleViewLog(item)
+                              }}
+                              title="查看详情"
+                            >
+                              <FileText className="h-4 w-4 text-blue-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={7} className="h-24 text-center">
@@ -1267,16 +1267,42 @@ export function ScheduledTasksPage() {
             )}
 
             {/* 执行结果 */}
-            {taskResultData?.result && (
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">执行结果：</span>
-                <ScrollArea className="h-[200px] rounded-md border bg-muted/50 p-3">
-                  <pre className="text-xs whitespace-pre-wrap break-all font-mono">
-                    {taskResultData.result}
-                  </pre>
-                </ScrollArea>
-              </div>
-            )}
+            {taskResultData?.result && (() => {
+              const formatted = formatTaskResult(taskResultData.result)
+              if (formatted) {
+                return (
+                  <div className="space-y-3">
+                    <span className="text-sm font-medium">执行详情：</span>
+                    <div className="rounded-md border bg-muted/30 p-4 space-y-2">
+                      {formatted.lines.map((line, index) => (
+                        <div key={index} className="flex items-center gap-3 text-sm">
+                          <span className="text-muted-foreground min-w-[80px]">{line.label}：</span>
+                          <span className={
+                            line.type === 'success' ? 'text-green-600 font-medium' :
+                            line.type === 'error' ? 'text-red-600 font-medium' :
+                            line.type === 'warning' ? 'text-yellow-600' :
+                            ''
+                          }>
+                            {line.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              }
+              // 无法解析时显示原始内容
+              return (
+                <div className="space-y-2">
+                  <span className="text-sm text-muted-foreground">执行结果：</span>
+                  <ScrollArea className="h-[200px] rounded-md border bg-muted/50 p-3">
+                    <pre className="text-xs whitespace-pre-wrap break-all font-mono">
+                      {taskResultData.result}
+                    </pre>
+                  </ScrollArea>
+                </div>
+              )
+            })()}
 
             {/* 错误信息 */}
             {taskResultData?.traceback && (
@@ -1314,6 +1340,100 @@ export function ScheduledTasksPage() {
       </Dialog>
     </Main>
   )
+}
+
+/**
+ * 格式化任务执行结果为人类可读格式
+ */
+function formatTaskResult(result: string | null | undefined): { lines: Array<{ label: string; value: string; type?: 'success' | 'info' | 'warning' | 'error' }> } | null {
+  if (!result) return null
+
+  try {
+    // 尝试解析 Python dict 字符串格式 (单引号) 或 JSON 格式 (双引号)
+    const normalized = result
+      .replace(/'/g, '"')
+      .replace(/True/g, 'true')
+      .replace(/False/g, 'false')
+      .replace(/None/g, 'null')
+
+    const data = JSON.parse(normalized)
+    const lines: Array<{ label: string; value: string; type?: 'success' | 'info' | 'warning' | 'error' }> = []
+
+    // 执行状态
+    if (typeof data.success === 'boolean') {
+      lines.push({
+        label: '执行状态',
+        value: data.success ? '成功' : '失败',
+        type: data.success ? 'success' : 'error'
+      })
+    }
+
+    // 消息
+    if (data.message) {
+      lines.push({ label: '执行结果', value: data.message, type: 'info' })
+    }
+
+    // 同步时间范围
+    if (data.time_range) {
+      const { start, end } = data.time_range
+      if (start && end) {
+        lines.push({ label: '时间范围', value: `${start} ~ ${end}`, type: 'info' })
+      }
+    }
+
+    // 同步统计
+    if (typeof data.total_fetched === 'number') {
+      lines.push({ label: '获取记录数', value: `${data.total_fetched} 条` })
+    }
+    if (typeof data.total_inserted === 'number') {
+      lines.push({
+        label: '新增记录',
+        value: `${data.total_inserted} 条`,
+        type: data.total_inserted > 0 ? 'success' : 'info'
+      })
+    }
+    if (typeof data.total_skipped === 'number') {
+      lines.push({ label: '跳过记录', value: `${data.total_skipped} 条（已存在）` })
+    }
+
+    // 刷新凭证任务
+    if (typeof data.success_count === 'number' && typeof data.failed_count === 'number') {
+      lines.push({ label: '成功数', value: `${data.success_count} 个`, type: 'success' })
+      if (data.failed_count > 0) {
+        lines.push({ label: '失败数', value: `${data.failed_count} 个`, type: 'error' })
+      }
+    }
+
+    // 清理任务
+    if (typeof data.timeout_count === 'number') {
+      lines.push({ label: '清理数量', value: `${data.timeout_count} 条` })
+    }
+    if (typeof data.cleaned_count === 'number') {
+      lines.push({ label: '清理数量', value: `${data.cleaned_count} 条` })
+    }
+
+    // 执行时间
+    if (data.synced_at || data.refreshed_at || data.cleaned_at) {
+      const timestamp = data.synced_at || data.refreshed_at || data.cleaned_at
+      const date = new Date(timestamp)
+      lines.push({
+        label: '执行时间',
+        value: date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      })
+    }
+
+    return lines.length > 0 ? { lines } : null
+  } catch {
+    // 解析失败，返回 null 使用原始显示
+    return null
+  }
 }
 
 /**

@@ -250,3 +250,26 @@ export interface YunkeCredentialListResponse {
   items: YunkeCredential[]
   total: number
 }
+
+// 云客通话记录原始数据（从云客 API 实时查询返回）
+export interface YunkeCallLogItem {
+  id: string
+  startCallTime: string  // 通话开始时间
+  callDuration: string  // 格式化的通话时长，如 "0'07\""
+  callSeconds: number  // 通话时长（秒）
+  createdTime: string  // 创建时间
+  ringTime: string  // 振铃时间
+  ringSecond: number  // 振铃时长（秒）
+  callStatus: number  // 通话状态：0=未接通, 2=已接通
+  incomingCall: number  // 是否呼入：0=外呼, 1=呼入
+  callNumber: string  // 被叫号码
+  simPhone: string  // 主叫号码（SIM卡）
+  userIdName: string  // 员工姓名
+  departmentList: string  // 部门名称
+  planCustomerName?: string  // 客户名称
+  planCustomerCompany?: string  // 客户公司
+  recordFile?: string  // 录音文件URL
+  companyCode: string
+  userId: string
+  departmentId: string
+}

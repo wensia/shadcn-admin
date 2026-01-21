@@ -43,6 +43,7 @@ import type { Order } from '@/features/crm/orders/types'
 // 详情组件
 import { LeadInfoDisplay } from './lead-info-display'
 import { ChangeHistoryTimeline } from './change-history-timeline'
+import { YunkeCallLogs } from './yunke-call-logs'
 
 // 图表组件
 import { FollowupFrequencyChart } from './charts/followup-frequency-chart'
@@ -311,59 +312,71 @@ export function LeadDetailTabs({
       {/* ==================== 跟进记录 Tab ==================== */}
       <TabsContent value="followups" className="flex-1 m-0 min-h-0 overflow-hidden">
         <ContentWrapper>
-          <div className="p-4">
-            {isFollowupsLoading ? (
-              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
-                加载中...
-              </div>
-            ) : !followupsResponse?.data?.length ? (
-              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
-                暂无跟进记录
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={cn(s.text.xs, 'w-[140px]')}>跟进时间</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进方式</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[90px]')}>跟进结果</TableHead>
-                    <TableHead className={cn(s.text.xs)}>跟进内容</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进人</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {followupsResponse.data.map((followup: LeadFollowup) => (
-                    <TableRow key={followup.id}>
-                      <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                        {formatTime(followup.followup_at)}
-                      </TableCell>
-                      <TableCell className={s.text.xs}>
-                        {followupMethodLabels[followup.method] || followup.method}
-                      </TableCell>
-                      <TableCell className={s.text.xs}>
-                        {followup.result ? (
-                          <FollowupResultBadge
-                            result={followup.result}
-                            className={cn(s.text.xs, s.roundedBadge, s.height.badge)}
-                          />
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className={cn(s.text.xs, 'max-w-[200px]')}>
-                        {followup.content ? (
-                          <FollowupContentCell content={followup.content} />
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell className={s.text.xs}>
-                        {followup.followup_by_name || '-'}
-                      </TableCell>
+          <div className="p-4 space-y-6">
+            {/* 跟进记录表格 */}
+            <div>
+              <h4 className={cn(s.text.sm, 'font-medium mb-3')}>跟进记录</h4>
+              {isFollowupsLoading ? (
+                <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
+                  加载中...
+                </div>
+              ) : !followupsResponse?.data?.length ? (
+                <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
+                  暂无跟进记录
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={cn(s.text.xs, 'w-[140px]')}>跟进时间</TableHead>
+                      <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进方式</TableHead>
+                      <TableHead className={cn(s.text.xs, 'w-[90px]')}>跟进结果</TableHead>
+                      <TableHead className={cn(s.text.xs)}>跟进内容</TableHead>
+                      <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进人</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {followupsResponse.data.map((followup: LeadFollowup) => (
+                      <TableRow key={followup.id}>
+                        <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
+                          {formatTime(followup.followup_at)}
+                        </TableCell>
+                        <TableCell className={s.text.xs}>
+                          {followupMethodLabels[followup.method] || followup.method}
+                        </TableCell>
+                        <TableCell className={s.text.xs}>
+                          {followup.result ? (
+                            <FollowupResultBadge
+                              result={followup.result}
+                              className={cn(s.text.xs, s.roundedBadge, s.height.badge)}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className={cn(s.text.xs, 'max-w-[200px]')}>
+                          {followup.content ? (
+                            <FollowupContentCell content={followup.content} />
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell className={s.text.xs}>
+                          {followup.followup_by_name || '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+
+            {/* 云客通话记录 */}
+            {lead?.parent_phone && (
+              <div>
+                <h4 className={cn(s.text.sm, 'font-medium mb-3')}>云客通话记录</h4>
+                <YunkeCallLogs phone={lead.parent_phone} />
+              </div>
             )}
           </div>
         </ContentWrapper>

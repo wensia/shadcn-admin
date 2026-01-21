@@ -23,6 +23,7 @@ import type {
   CallRecordListParams,
   CallRecordStats,
   RecordUrlResponse,
+  YunkeCallLogItem,
 } from './types'
 import type { PaginatedResponse } from '@/lib/api/types'
 
@@ -334,6 +335,28 @@ export const callRecordsApi = {
       '/yunke/call-records/staff/list'
     )
     return response.data || []
+  },
+
+  /** 按电话号码搜索云客通话记录（实时查询） */
+  async searchByPhone(params: {
+    phone: string
+    page?: number
+    size?: number
+    department_id?: string
+    call_type?: string
+  }): Promise<{
+    items: YunkeCallLogItem[]
+    total: number
+    page: number
+    size: number
+  }> {
+    const response = await apiClient.get<ApiResponse<{
+      items: YunkeCallLogItem[]
+      total: number
+      page: number
+      size: number
+    }>>('/yunke/call-records/yunke/search', { params })
+    return response.data!
   },
 }
 

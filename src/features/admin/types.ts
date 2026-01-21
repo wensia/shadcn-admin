@@ -1208,15 +1208,24 @@ export const CRONTAB_PRESETS = [
   { label: '每月1号凌晨', value: { minute: '0', hour: '0', day_of_week: '*', day_of_month: '1', month_of_year: '*' } },
 ] as const
 
-/** 任务执行历史 */
+/** 任务执行历史（执行日志） */
 export interface TaskExecutionHistory {
   id: number
-  name: string
-  task: string
-  enabled: boolean
-  last_run_at: string | null
-  total_run_count: number
-  date_changed: string | null
+  task_id: string
+  periodic_task_id: number | null
+  task_name: string
+  task_path: string
+  trigger_type: 'manual' | 'scheduled'
+  status: 'PENDING' | 'STARTED' | 'SUCCESS' | 'FAILURE' | 'RETRY' | 'REVOKED'
+  args: string | null
+  kwargs: string | null
+  result: string | null
+  traceback: string | null
+  executed_by: string | null
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  duration: number | null
 }
 
 /** 任务执行结果 */
