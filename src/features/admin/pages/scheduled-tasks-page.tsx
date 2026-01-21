@@ -2,7 +2,7 @@
  * 定时任务管理页面
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   flexRender,
@@ -28,6 +28,9 @@ import {
   RefreshCw,
   FileText,
   AlertCircle,
+  Activity,
+  TrendingUp,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -82,17 +85,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { scheduledTasksApi } from '../api'
-import type {
-  ScheduledTask,
-  ScheduledTaskCreate,
-  ScheduledTaskUpdate,
-  AvailableTask,
-  IntervalPeriod,
-  TaskExecutionHistory,
-  TaskResult,
+import {
+  INTERVAL_PERIOD_OPTIONS,
+  CRONTAB_PRESETS,
+  type ScheduledTask,
+  type ScheduledTaskCreate,
+  type ScheduledTaskUpdate,
+  type AvailableTask,
+  type IntervalPeriod,
+  type TaskExecutionHistory,
 } from '../types'
-import { INTERVAL_PERIOD_OPTIONS, CRONTAB_PRESETS } from '../types'
 import { formatTime } from '@/lib/utils/time'
 import { ASRTaskForm } from '../components/asr-task-form'
 
@@ -232,6 +236,16 @@ export function ScheduledTasksPage() {
     },
     enabled: activeTab === 'history',
     refetchInterval: activeTab === 'history' ? 5000 : false,
+  })
+
+  // 查询统计数据
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['task-stats'],
+    queryFn: async () => {
+      const response = await scheduledTasksApi.getStats()
+      return response
+    },
+    refetchInterval: 30000, // 每 30 秒刷新一次
   })
 
   const tasks = data?.items || []
@@ -674,6 +688,66 @@ export function ScheduledTasksPage() {
               刷新
             </Button>
           )}
+        </div>
+
+        {/* 统计卡片 */}
+        <div className="grid grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">今日执行</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {statsLoading ? <Skeleton className="h-8 w-16" /> : statsData?.today?.total ?? 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {statsData?.today?.running ?? 0} 个执行中
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">成功率</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {statsLoading ? <Skeleton className="h-8 w-16" /> : `${statsData?.today?.success_rate ?? 0}%`}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {statsData?.today?.success ?? 0} 成功 / {statsData?.today?.failure ?? 0} 失败
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均耗时</CardTitle>
+              <Timer className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {statsLoading ? <Skeleton className="h-8 w-16" /> : `${statsData?.today?.avg_duration ?? 0}s`}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                今日任务平均执行时间
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">最近失败</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {statsLoading ? <Skeleton className="h-8 w-16" /> : statsData?.recent_failures?.length ?? 0}
+              </div>
+              <p className="text-xs text-muted-foreground truncate" title={statsData?.recent_failures?.[0]?.task_name}>
+                {statsData?.recent_failures?.[0]?.task_name || '暂无失败任务'}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* 顶层 Tab */}

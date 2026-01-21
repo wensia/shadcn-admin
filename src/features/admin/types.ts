@@ -1237,6 +1237,24 @@ export interface TaskResult {
   date_done: string | null
 }
 
+/** 任务统计数据 */
+export interface TaskStats {
+  today: {
+    total: number
+    success: number
+    failure: number
+    running: number
+    success_rate: number
+    avg_duration: number
+  }
+  recent_failures: Array<{
+    task_name: string
+    task_path: string
+    created_at: string | null
+    error: string | null
+  }>
+}
+
 // ============================================================================
 // ASR 配置相关类型
 // ============================================================================

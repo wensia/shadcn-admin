@@ -55,6 +55,40 @@ import type {
   AvailableTask,
   TaskExecutionHistory,
   TaskResult,
+  TaskStats,
+  // 来源渠道相关
+  SourceChannel,
+  DingtalkRobot,
+  DingtalkRobotCreate,
+  DingtalkRobotUpdate,
+  DingtalkRobotTest,
+  WebhookHook,
+  WebhookHookCreate,
+  WebhookHookUpdate,
+  WebhookTriggerResponse,
+  Course,
+  CourseFormData,
+  AdvisorAccessStatistics,
+  AccessStatisticsSummary,
+  AccessLog,
+  UserAccessLimit,
+  AccessStatsFilters,
+  AccessLogFilters,
+  BatchUpdateLimit,
+  YunkeAdminStatus,
+  YunkeAdminLoginResponse,
+  YunkeSubAccount,
+  YunkeAvailableEmployee,
+  YunkePasswordResetResponse,
+  YunkeBatchLoginResult,
+  YunkeLoginStatusResult,
+  EmployeeApiKeyInfo,
+  ApiKeyCreate,
+  ApiKeyCreateResponse,
+  ApiKeyScopesUpdate,
+  // ASR 配置相关
+  ASRConfigItem,
+  ASRConfigListResponse,
 } from './types'
 
 const BASE_URL = '/admin'
@@ -576,38 +610,6 @@ export default adminApi
 // ============================================================================
 // 来源渠道 API
 // ============================================================================
-
-import type {
-  SourceChannel,
-  DingtalkRobot,
-  DingtalkRobotCreate,
-  DingtalkRobotUpdate,
-  DingtalkRobotTest,
-  WebhookHook,
-  WebhookHookCreate,
-  WebhookHookUpdate,
-  WebhookTriggerResponse,
-  Course,
-  CourseFormData,
-  AdvisorAccessStatistics,
-  AccessStatisticsSummary,
-  AccessLog,
-  UserAccessLimit,
-  AccessStatsFilters,
-  AccessLogFilters,
-  BatchUpdateLimit,
-  YunkeAdminStatus,
-  YunkeAdminLoginResponse,
-  YunkeSubAccount,
-  YunkeAvailableEmployee,
-  YunkePasswordResetResponse,
-  YunkeBatchLoginResult,
-  YunkeLoginStatusResult,
-  EmployeeApiKeyInfo,
-  ApiKeyCreate,
-  ApiKeyCreateResponse,
-  ApiKeyScopesUpdate,
-} from './types'
 
 export const sourceChannelApi = {
   /** 获取启用的来源渠道 */
@@ -1165,11 +1167,6 @@ export const apiKeysApi = {
 // ASR 配置 API
 // ============================================================================
 
-import type {
-  ASRConfigItem,
-  ASRConfigListResponse,
-} from './types'
-
 /** ASR 配置创建请求 */
 export interface ASRConfigCreate {
   provider: string
@@ -1357,6 +1354,37 @@ export const scheduledTasksApi = {
     const response = await apiClient.get<ApiResponse<TaskResult>>(`/scheduled-tasks/task-result/${taskId}`)
     if (!response.success || !response.data) {
       throw new Error(response.message || '获取任务结果失败')
+    }
+    return response.data
+  },
+
+  /** 获取任务统计数据 */
+  async getStats(): Promise<TaskStats> {
+    const response = await apiClient.get<ApiResponse<TaskStats>>('/scheduled-tasks/stats')
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取统计数据失败')
+    }
+    return response.data
+  },
+
+  /** 批量启用/禁用定时任务 */
+  async batchToggle(taskIds: number[], enabled: boolean): Promise<{ updated_count: number }> {
+    const response = await apiClient.post<ApiResponse<{ updated_count: number }>>('/scheduled-tasks/batch/toggle', null, {
+      params: { task_ids: taskIds, enabled }
+    })
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '批量操作失败')
+    }
+    return response.data
+  },
+
+  /** 获取下次执行时间预览 */
+  async getNextRuns(taskId: number, count?: number): Promise<{ task_id: number; task_name: string; next_runs: string[] }> {
+    const response = await apiClient.get<ApiResponse<{ task_id: number; task_name: string; next_runs: string[] }>>(`/scheduled-tasks/next-runs/${taskId}`, {
+      params: count ? { count } : undefined
+    })
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取执行时间失败')
     }
     return response.data
   },
