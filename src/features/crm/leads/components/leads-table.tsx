@@ -415,8 +415,20 @@ export function LeadsTable({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    style={{ width: header.getSize() }}
-                    className={cn(s.text.xs, 'font-semibold', s.height.control)}
+                    style={{
+                      width: header.getSize(),
+                      ...(header.id === 'select' && {
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 20,
+                      })
+                    }}
+                    className={cn(
+                      s.text.xs,
+                      'font-semibold',
+                      s.height.control,
+                      header.id === 'select' && 'bg-card'
+                    )}
                   >
                     {header.isPlaceholder
                       ? null
@@ -444,15 +456,30 @@ export function LeadsTable({
                   )}
                   onClick={() => !isSkeleton && onRowClick?.(row.original)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className={cn(s.padding.cell, s.text.xs)}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isSelectColumn = cell.column.id === 'select'
+                    const isSelected = row.getIsSelected()
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{
+                          width: cell.column.getSize(),
+                          ...(isSelectColumn && {
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 10,
+                          })
+                        }}
+                        className={cn(
+                          s.padding.cell,
+                          s.text.xs,
+                          isSelectColumn && (isSelected ? 'bg-muted' : 'bg-background')
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               )
             })}
