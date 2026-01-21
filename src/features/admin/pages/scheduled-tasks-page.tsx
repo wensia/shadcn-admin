@@ -773,7 +773,11 @@ export function ScheduledTasksPage() {
                     ))
                   ) : executionHistory.length > 0 ? (
                     executionHistory.map((item: TaskExecutionHistory) => (
-                      <TableRow key={item.id}>
+                      <TableRow
+                        key={item.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleHistoryRunClick(item)}
+                      >
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-blue-500" />
@@ -811,7 +815,10 @@ export function ScheduledTasksPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleHistoryRunClick(item)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleHistoryRunClick(item)
+                            }}
                             disabled={runNowMutation.isPending}
                             title="立即执行并查看日志"
                           >
