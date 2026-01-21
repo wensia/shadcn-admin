@@ -1236,3 +1236,56 @@ export interface TaskResult {
   traceback: string | null
   date_done: string | null
 }
+
+// ============================================================================
+// ASR 配置相关类型
+// ============================================================================
+
+/** ASR 提供商 */
+export type ASRProvider = 'volcengine' | 'tencent' | 'alibaba'
+
+/** ASR 配置 */
+export interface ASRConfigItem {
+  id: string
+  provider: ASRProvider
+  name: string
+  credentials_masked: Record<string, string>
+  is_active: boolean
+  is_default: boolean
+  last_verified_at: string | null
+  notes: string | null
+}
+
+/** ASR 配置列表响应 */
+export interface ASRConfigListResponse {
+  items: ASRConfigItem[]
+  total: number
+}
+
+/** ASR 任务参数 */
+export interface ASRTaskParams {
+  asr_config_id: string  // UUID 格式
+  time_range_type: 'yesterday' | 'last_7_days' | 'last_30_days' | 'custom'
+  custom_start_time?: string
+  custom_end_time?: string
+  skip_existing: boolean
+  min_duration: number
+  batch_size: number
+  max_records: number
+  concurrency: number
+}
+
+/** 时间范围预设选项 */
+export const TIME_RANGE_PRESETS = [
+  { label: '昨天', value: 'yesterday', start: '{{yesterday_start}}', end: '{{yesterday_end}}' },
+  { label: '过去7天', value: 'last_7_days', start: '{{last_7_days_start}}', end: '{{last_7_days_end}}' },
+  { label: '过去30天', value: 'last_30_days', start: '{{last_30_days_start}}', end: '{{last_30_days_end}}' },
+  { label: '自定义', value: 'custom', start: '', end: '' },
+] as const
+
+/** ASR 提供商选项 */
+export const ASR_PROVIDER_OPTIONS = [
+  { label: '火山引擎', value: 'volcengine' },
+  { label: '腾讯云', value: 'tencent' },
+  { label: '阿里云', value: 'alibaba' },
+] as const

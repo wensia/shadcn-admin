@@ -41,6 +41,7 @@ import {
   Key,
   Activity,
   Clock,
+  Mic,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -292,6 +293,11 @@ export const adminNavGroups: NavGroup[] = [
         title: '定时任务',
         url: '/admin/scheduled-tasks',
         icon: Clock,
+      },
+      {
+        title: 'ASR 配置',
+        url: '/admin/asr-config',
+        icon: Mic,
       },
     ],
   },

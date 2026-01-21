@@ -1161,6 +1161,116 @@ export const apiKeysApi = {
 // 定时任务 API
 // ============================================================================
 
+// ============================================================================
+// ASR 配置 API
+// ============================================================================
+
+import type {
+  ASRConfigItem,
+  ASRConfigListResponse,
+} from './types'
+
+/** ASR 配置创建请求 */
+export interface ASRConfigCreate {
+  provider: string
+  name: string
+  credentials: Record<string, string>
+  is_default?: boolean
+  notes?: string
+}
+
+/** ASR 配置更新请求 */
+export interface ASRConfigUpdate {
+  name?: string
+  credentials?: Record<string, string>
+  is_active?: boolean
+  is_default?: boolean
+  notes?: string
+}
+
+/** ASR 提供商字段要求 */
+export interface ASRProviderFields {
+  provider: string
+  required: string[]
+  optional: string[]
+}
+
+export const asrConfigApi = {
+  /** 获取 ASR 配置列表 */
+  async list(params?: {
+    provider?: string
+    is_active?: boolean
+    skip?: number
+    limit?: number
+  }): Promise<{ items: ASRConfigItem[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<ASRConfigListResponse>>('/external/asr-config', { params })
+    return response.data || { items: [], total: 0 }
+  },
+
+  /** 获取简单的 ASR 配置列表（用于下拉选择） */
+  async getSimpleList(): Promise<Array<{ id: string; name: string; provider: string; is_default: boolean }>> {
+    const response = await apiClient.get<ApiResponse<ASRConfigListResponse>>('/external/asr-config', {
+      params: { is_active: true, limit: 100 }
+    })
+    return (response.data?.items || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      provider: item.provider,
+      is_default: item.is_default,
+    }))
+  },
+
+  /** 获取 ASR 提供商字段要求 */
+  async getProviders(): Promise<ASRProviderFields[]> {
+    const response = await apiClient.get<ApiResponse<ASRProviderFields[]>>('/external/asr-config/providers')
+    return response.data || []
+  },
+
+  /** 获取 ASR 配置详情 */
+  async get(id: string): Promise<ASRConfigItem> {
+    const response = await apiClient.get<ApiResponse<ASRConfigItem>>(`/external/asr-config/${id}`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取配置失败')
+    }
+    return response.data
+  },
+
+  /** 创建 ASR 配置 */
+  async create(data: ASRConfigCreate): Promise<ASRConfigItem> {
+    const response = await apiClient.post<ApiResponse<ASRConfigItem>>('/external/asr-config', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '创建失败')
+    }
+    return response.data
+  },
+
+  /** 更新 ASR 配置 */
+  async update(id: string, data: ASRConfigUpdate): Promise<ASRConfigItem> {
+    const response = await apiClient.patch<ApiResponse<ASRConfigItem>>(`/external/asr-config/${id}`, data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '更新失败')
+    }
+    return response.data
+  },
+
+  /** 删除 ASR 配置 */
+  async delete(id: string): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<{ success: boolean }>>(`/external/asr-config/${id}`)
+    if (!response.success) {
+      throw new Error(response.message || '删除失败')
+    }
+  },
+
+  /** 测试 ASR 配置 */
+  async test(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/external/asr-config/${id}/test`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '测试失败')
+    }
+    return response.data
+  },
+}
+
 export const scheduledTasksApi = {
   /** 获取定时任务列表 */
   async list(params?: {

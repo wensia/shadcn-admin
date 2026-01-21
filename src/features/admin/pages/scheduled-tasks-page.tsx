@@ -94,6 +94,10 @@ import type {
 } from '../types'
 import { INTERVAL_PERIOD_OPTIONS, CRONTAB_PRESETS } from '../types'
 import { formatTime } from '@/lib/utils/time'
+import { ASRTaskForm } from '../components/asr-task-form'
+
+// ASR 任务名称常量
+const ASR_TASK_NAME = 'rmf.asr_transcribe'
 
 // 表单验证模式
 const formSchema = z.object({
@@ -175,6 +179,8 @@ export function ScheduledTasksPage() {
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null)
   const [viewingTaskName, setViewingTaskName] = useState<string>('')
   const [scheduleType, setScheduleType] = useState<'interval' | 'crontab'>('interval')
+  // ASR 任务参数（当选择 ASR 任务时使用）
+  const [asrTaskKwargs, setAsrTaskKwargs] = useState<Record<string, unknown>>({})
 
   // 表单
   const form = useForm<FormData>({
@@ -577,27 +583,37 @@ export function ScheduledTasksPage() {
     form.setValue('crontab_month_of_year', preset.value.month_of_year)
   }
 
+  // 监听任务类型变化
+  const selectedTask = form.watch('task')
+  const isASRTask = selectedTask === ASR_TASK_NAME
+
   // 提交表单
   const handleSubmit = (data: FormData) => {
     // 解析 JSON 参数
     let args: unknown[] | undefined
     let kwargs: Record<string, unknown> | undefined
 
-    if (data.args_json) {
-      try {
-        args = JSON.parse(data.args_json)
-      } catch {
-        toast.error('位置参数 JSON 格式错误')
-        return
+    // 如果是 ASR 任务，使用专用表单的参数
+    if (isASRTask) {
+      kwargs = asrTaskKwargs
+    } else {
+      // 非 ASR 任务，使用 JSON 输入
+      if (data.args_json) {
+        try {
+          args = JSON.parse(data.args_json)
+        } catch {
+          toast.error('位置参数 JSON 格式错误')
+          return
+        }
       }
-    }
 
-    if (data.kwargs_json) {
-      try {
-        kwargs = JSON.parse(data.kwargs_json)
-      } catch {
-        toast.error('关键字参数 JSON 格式错误')
-        return
+      if (data.kwargs_json) {
+        try {
+          kwargs = JSON.parse(data.kwargs_json)
+        } catch {
+          toast.error('关键字参数 JSON 格式错误')
+          return
+        }
       }
     }
 
@@ -1138,33 +1154,49 @@ export function ScheduledTasksPage() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="args_json"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>位置参数（可选，JSON 数组）</FormLabel>
-                        <FormControl>
-                          <Input placeholder='例如：["arg1", "arg2"]' {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* 根据任务类型显示不同的参数表单 */}
+                  {isASRTask ? (
+                    <div className="space-y-3 rounded-lg border p-4 bg-blue-50/50">
+                      <div className="flex items-center gap-2 text-sm font-medium text-blue-700">
+                        <Clock className="h-4 w-4" />
+                        ASR 任务参数
+                      </div>
+                      <ASRTaskForm
+                        initialValues={editingItem?.kwargs as Record<string, unknown> | undefined}
+                        onChange={setAsrTaskKwargs}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="args_json"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>位置参数（可选，JSON 数组）</FormLabel>
+                            <FormControl>
+                              <Input placeholder='例如：["arg1", "arg2"]' {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <FormField
-                    control={form.control}
-                    name="kwargs_json"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>关键字参数（可选，JSON 对象）</FormLabel>
-                        <FormControl>
-                          <Input placeholder='例如：{"key": "value"}' {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      <FormField
+                        control={form.control}
+                        name="kwargs_json"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>关键字参数（可选，JSON 对象）</FormLabel>
+                            <FormControl>
+                              <Input placeholder='例如：{"key": "value"}' {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
