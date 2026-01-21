@@ -61,17 +61,11 @@ export function IntegrationsPage() {
           onValueChange={handleTabChange}
           className="flex flex-1 flex-col overflow-hidden"
         >
-          <TabsList className="w-full justify-start border-b bg-transparent p-0 h-auto flex-wrap">
+          <TabsList>
             {TABS.map((tab) => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="relative rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-              >
-                <div className="flex items-center gap-2">
-                  <tab.icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </div>
+              <TabsTrigger key={tab.id} value={tab.id} className="gap-2">
+                <tab.icon className="h-4 w-4" />
+                <span>{tab.label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
