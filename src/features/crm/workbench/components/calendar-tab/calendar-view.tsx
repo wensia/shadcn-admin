@@ -27,6 +27,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { leadsApi } from '@/features/crm/leads/api'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
+import { LeadStatusBadge } from '@/features/crm/leads/components/status-badges'
 import { Badge } from '@/components/ui/badge'
 
 export function CalendarView() {
@@ -283,7 +284,7 @@ export function CalendarView() {
                     <User className="w-3 h-3" />
                     <span>{lead.parent_name}</span>
                     <span className="w-px h-3 bg-border mx-1" />
-                    <span>{lead.status}</span>
+                    <LeadStatusBadge status={lead.status} showDot={false} className="text-[10px] py-0 h-4" />
                   </div>
 
                   {lead.notes && (

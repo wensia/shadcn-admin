@@ -216,6 +216,8 @@ export interface YunkeCredential {
   last_login: string | null
   created_at: string | null
   updated_at: string | null
+  notify_robot_id: string | null  // 通知机器人ID
+  notify_robot_name: string | null  // 通知机器人名称
 }
 
 // 创建账号凭证请求
@@ -234,6 +236,7 @@ export interface YunkeCredentialUpdate {
   company_code?: string
   company_name?: string
   domain?: string
+  notify_robot_id?: string  // 通知机器人ID，空字符串表示清除
 }
 
 // 账号状态响应

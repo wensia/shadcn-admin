@@ -961,14 +961,6 @@ export function YunkeAccountsPage() {
   return (
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div>
-          <h1 className="text-2xl font-bold">云客子账号管理</h1>
-          <p className="text-sm text-muted-foreground">
-            共 {credentials.length} 个凭证，管理子账号、绑定员工、重置密码
-          </p>
-        </div>
-
         {/* 搜索栏 */}
         <div className="flex items-center gap-2">
           <div className="relative w-64">

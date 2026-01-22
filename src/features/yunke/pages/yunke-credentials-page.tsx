@@ -28,6 +28,7 @@ import {
   XCircle,
   MoreHorizontal,
   Clock,
+  Bell,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -35,6 +36,7 @@ import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -85,7 +87,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { yunkeCredentialsApi } from '../api'
+import { dingtalkRobotsApi } from '@/features/admin/api'
 import type { YunkeCredential } from '../types'
+import type { DingtalkRobot } from '@/features/admin/types'
 import { formatTime } from '@/lib/utils/time'
 
 // 创建表单验证
@@ -112,6 +116,7 @@ const updateFormSchema = z.object({
   company_code: z.string().min(1, '公司代码不能为空'),
   company_name: z.string().min(1, '公司名称不能为空'),
   domain: z.string().optional(),
+  notify_robot_id: z.string().optional(),
 })
 
 type CreateFormData = z.infer<typeof createFormSchema>
@@ -131,6 +136,8 @@ function createSkeletonData(count: number): YunkeCredential[] {
     last_login: null,
     created_at: null,
     updated_at: null,
+    notify_robot_id: null,
+    notify_robot_name: null,
   }))
 }
 
@@ -175,6 +182,7 @@ export function YunkeCredentialsPage() {
       company_code: '',
       company_name: '',
       domain: '',
+      notify_robot_id: '',
     },
   })
 
@@ -192,6 +200,13 @@ export function YunkeCredentialsPage() {
       return yunkeCredentialsApi.getCredentials(params)
     },
   })
+
+  // 查询钉钉机器人列表
+  const { data: robotsData } = useQuery({
+    queryKey: ['dingtalk-robots-active'],
+    queryFn: () => dingtalkRobotsApi.getActive(),
+  })
+  const robots = robotsData || []
 
   const credentials = data?.items || []
   const total = data?.total || 0
@@ -219,6 +234,7 @@ export function YunkeCredentialsPage() {
         company_code: data.company_code,
         company_name: data.company_name,
         domain: data.domain || undefined,
+        notify_robot_id: data.notify_robot_id,
       }),
     onSuccess: () => {
       toast.success('更新成功')
@@ -343,6 +359,27 @@ export function YunkeCredentialsPage() {
         },
       },
       {
+        accessorKey: 'notify_robot_name',
+        header: '失败通知',
+        size: 140,
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-5 w-20" />
+          }
+          if (!row.original.notify_robot_name) {
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+          return (
+            <div className="flex items-center gap-1 text-sm">
+              <Bell className="h-3 w-3 text-orange-500" />
+              <span className="truncate max-w-[100px]" title={row.original.notify_robot_name}>
+                {row.original.notify_robot_name}
+              </span>
+            </div>
+          )
+        },
+      },
+      {
         accessorKey: 'created_at',
         header: '创建时间',
         size: 160,
@@ -451,6 +488,7 @@ export function YunkeCredentialsPage() {
       company_code: credential.company_code || '',
       company_name: credential.company_name || '',
       domain: '',
+      notify_robot_id: credential.notify_robot_id || '',
     })
     setEditDrawerOpen(true)
   }
@@ -751,6 +789,31 @@ export function YunkeCredentialsPage() {
                     <FormControl>
                       <Input placeholder="请输入域名" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={updateForm.control}
+                name="notify_robot_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>登录失败通知机器人</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择通知机器人（可选）" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">不通知</SelectItem>
+                        {robots.map((robot) => (
+                          <SelectItem key={robot.id} value={robot.id}>
+                            {robot.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
