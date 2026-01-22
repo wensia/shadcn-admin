@@ -282,7 +282,7 @@ export function CalendarView() {
 
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <User className="w-3 h-3" />
-                    <span>{lead.advisor_name || '未分配'}</span>
+                    <span>{lead.advisor?.name || '未分配'}</span>
                     <span className="w-px h-3 bg-border mx-1" />
                     <LeadStatusBadge status={lead.status} showDot={false} className="text-[10px] py-0 h-4" />
                   </div>
