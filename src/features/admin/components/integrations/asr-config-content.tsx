@@ -68,25 +68,48 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { asrConfigApi, type ASRConfigCreate, type ASRConfigUpdate } from '../../api'
-import type { ASRConfigItem, ASRProvider } from '../../types'
-import { ASR_PROVIDER_OPTIONS } from '../../types'
+import { ASR_PROVIDER_OPTIONS, type ASRConfigItem, type ASRProvider } from '../../types'
 import { StatusBadge } from '../../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
 // 提供商字段配置
-const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, { required: string[]; optional: string[]; labels: Record<string, string> }> = {
+const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, {
+  required: string[]
+  optional: string[]
+  toggles: string[]  // 布尔开关类型的字段
+  labels: Record<string, string>
+  descriptions?: Record<string, string>
+}> = {
   volcengine: {
-    required: ['app_id', 'access_token'],
-    optional: ['cluster'],
+    // 按照火山引擎官方文档：https://www.volcengine.com/docs/6561/1354868
+    required: ['app_key', 'access_key'],
+    optional: ['resource_id'],
+    toggles: ['enable_emotion_detection', 'enable_channel_split', 'enable_speaker_info', 'enable_itn', 'enable_punc'],
     labels: {
-      app_id: 'App ID',
-      access_token: 'Access Token',
-      cluster: '集群 ID',
+      app_key: 'X-Api-App-Key',
+      access_key: 'X-Api-Access-Key',
+      resource_id: '资源 ID',
+      enable_emotion_detection: '启用情绪检测',
+      enable_channel_split: '启用双声道识别',
+      enable_speaker_info: '启用说话人分离',
+      enable_itn: '启用文本规范化',
+      enable_punc: '启用标点符号',
+    },
+    descriptions: {
+      app_key: '火山引擎控制台获取的应用 ID',
+      access_key: '火山引擎控制台获取的访问令牌',
+      resource_id: '仅支持 volc.seedasr.auc（豆包录音文件识别模型2.0）',
+      enable_emotion_detection: '识别说话人情绪（angry/happy/neutral/sad/surprise）',
+      enable_channel_split: '区分左右声道，适合双人对话录音',
+      enable_speaker_info: '说话人聚类分离（最多10人）',
+      enable_itn: '数字、时间等文本规范化',
+      enable_punc: '自动添加标点符号',
     }
   },
   tencent: {
     required: ['secret_id', 'secret_key', 'app_id'],
     optional: ['engine_type'],
+    toggles: [],
     labels: {
       secret_id: 'Secret ID',
       secret_key: 'Secret Key',
@@ -97,12 +120,23 @@ const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, { required: string[]; optional
   alibaba: {
     required: ['access_key_id', 'access_key_secret', 'app_key'],
     optional: [],
+    toggles: [],
     labels: {
       access_key_id: 'Access Key ID',
       access_key_secret: 'Access Key Secret',
       app_key: 'App Key',
     }
   },
+}
+
+// 火山引擎默认值
+const VOLCENGINE_DEFAULTS = {
+  resource_id: 'volc.seedasr.auc',
+  enable_emotion_detection: true,
+  enable_channel_split: true,
+  enable_speaker_info: false,
+  enable_itn: true,
+  enable_punc: true,
 }
 
 // 表单验证模式
@@ -112,13 +146,21 @@ const formSchema = z.object({
   notes: z.string().max(500, '备注最多500个字符').optional(),
   is_default: z.boolean().default(false),
   is_active: z.boolean().default(true),
-  volcengine_app_id: z.string().optional(),
-  volcengine_access_token: z.string().optional(),
-  volcengine_cluster: z.string().optional(),
+  // 火山引擎字段
+  volcengine_app_key: z.string().optional(),
+  volcengine_access_key: z.string().optional(),
+  volcengine_resource_id: z.string().optional(),
+  volcengine_enable_emotion_detection: z.boolean().optional(),
+  volcengine_enable_channel_split: z.boolean().optional(),
+  volcengine_enable_speaker_info: z.boolean().optional(),
+  volcengine_enable_itn: z.boolean().optional(),
+  volcengine_enable_punc: z.boolean().optional(),
+  // 腾讯云字段
   tencent_secret_id: z.string().optional(),
   tencent_secret_key: z.string().optional(),
   tencent_app_id: z.string().optional(),
   tencent_engine_type: z.string().optional(),
+  // 阿里云字段
   alibaba_access_key_id: z.string().optional(),
   alibaba_access_key_secret: z.string().optional(),
   alibaba_app_key: z.string().optional(),
@@ -378,6 +420,13 @@ export function ASRConfigContent() {
       notes: '',
       is_default: false,
       is_active: true,
+      // 火山引擎默认值
+      volcengine_resource_id: VOLCENGINE_DEFAULTS.resource_id,
+      volcengine_enable_emotion_detection: VOLCENGINE_DEFAULTS.enable_emotion_detection,
+      volcengine_enable_channel_split: VOLCENGINE_DEFAULTS.enable_channel_split,
+      volcengine_enable_speaker_info: VOLCENGINE_DEFAULTS.enable_speaker_info,
+      volcengine_enable_itn: VOLCENGINE_DEFAULTS.enable_itn,
+      volcengine_enable_punc: VOLCENGINE_DEFAULTS.enable_punc,
     })
     setTestStatus({ tested: false, success: false, message: '' })
     setDialogOpen(true)
@@ -396,9 +445,15 @@ export function ASRConfigContent() {
     }
 
     if (provider === 'volcengine') {
-      formValues.volcengine_app_id = item.credentials_masked.app_id || ''
-      formValues.volcengine_access_token = item.credentials_masked.access_token || ''
-      formValues.volcengine_cluster = item.credentials_masked.cluster || ''
+      formValues.volcengine_app_key = item.credentials_masked.app_key || ''
+      formValues.volcengine_access_key = item.credentials_masked.access_key || ''
+      formValues.volcengine_resource_id = item.credentials_masked.resource_id || VOLCENGINE_DEFAULTS.resource_id
+      // 布尔值字段
+      formValues.volcengine_enable_emotion_detection = item.credentials_masked.enable_emotion_detection === 'true' || item.credentials_masked.enable_emotion_detection === true as unknown as string
+      formValues.volcengine_enable_channel_split = item.credentials_masked.enable_channel_split === 'true' || item.credentials_masked.enable_channel_split === true as unknown as string
+      formValues.volcengine_enable_speaker_info = item.credentials_masked.enable_speaker_info === 'true' || item.credentials_masked.enable_speaker_info === true as unknown as string
+      formValues.volcengine_enable_itn = item.credentials_masked.enable_itn === 'true' || item.credentials_masked.enable_itn === true as unknown as string
+      formValues.volcengine_enable_punc = item.credentials_masked.enable_punc === 'true' || item.credentials_masked.enable_punc === true as unknown as string
     } else if (provider === 'tencent') {
       formValues.tencent_secret_id = item.credentials_masked.secret_id || ''
       formValues.tencent_secret_key = item.credentials_masked.secret_key || ''
@@ -434,12 +489,19 @@ export function ASRConfigContent() {
     const provider = formData.provider
     const config = PROVIDER_FIELD_CONFIGS[provider]
 
-    const credentials: Record<string, string> = {}
+    const credentials: Record<string, string | boolean> = {}
 
     if (provider === 'volcengine') {
-      if (formData.volcengine_app_id) credentials.app_id = formData.volcengine_app_id
-      if (formData.volcengine_access_token) credentials.access_token = formData.volcengine_access_token
-      if (formData.volcengine_cluster) credentials.cluster = formData.volcengine_cluster
+      if (formData.volcengine_app_key) credentials.app_key = formData.volcengine_app_key
+      if (formData.volcengine_access_key) credentials.access_key = formData.volcengine_access_key
+      // 资源 ID 固定为 volc.seedasr.auc
+      credentials.resource_id = VOLCENGINE_DEFAULTS.resource_id
+      // 布尔开关
+      credentials.enable_emotion_detection = formData.volcengine_enable_emotion_detection ?? VOLCENGINE_DEFAULTS.enable_emotion_detection
+      credentials.enable_channel_split = formData.volcengine_enable_channel_split ?? VOLCENGINE_DEFAULTS.enable_channel_split
+      credentials.enable_speaker_info = formData.volcengine_enable_speaker_info ?? VOLCENGINE_DEFAULTS.enable_speaker_info
+      credentials.enable_itn = formData.volcengine_enable_itn ?? VOLCENGINE_DEFAULTS.enable_itn
+      credentials.enable_punc = formData.volcengine_enable_punc ?? VOLCENGINE_DEFAULTS.enable_punc
     } else if (provider === 'tencent') {
       if (formData.tencent_secret_id) credentials.secret_id = formData.tencent_secret_id
       if (formData.tencent_secret_key) credentials.secret_key = formData.tencent_secret_key
@@ -451,6 +513,7 @@ export function ASRConfigContent() {
       if (formData.alibaba_app_key) credentials.app_key = formData.alibaba_app_key
     }
 
+    // 验证必填字段
     for (const field of config.required) {
       if (!credentials[field]) {
         toast.error(`请填写必填字段: ${config.labels[field]}`)
@@ -466,17 +529,17 @@ export function ASRConfigContent() {
         is_default: formData.is_default,
       }
 
-      const hasCredentialUpdate = Object.values(credentials).some(v => v && !v.includes('***'))
-      if (hasCredentialUpdate) {
-        const filteredCredentials: Record<string, string> = {}
-        for (const [key, value] of Object.entries(credentials)) {
-          if (value && !value.includes('***')) {
-            filteredCredentials[key] = value
-          }
+      // 过滤掉脱敏的凭证值
+      const filteredCredentials: Record<string, string | boolean> = {}
+      for (const [key, value] of Object.entries(credentials)) {
+        if (typeof value === 'boolean') {
+          filteredCredentials[key] = value
+        } else if (value && !String(value).includes('***')) {
+          filteredCredentials[key] = value
         }
-        if (Object.keys(filteredCredentials).length > 0) {
-          updateData.credentials = filteredCredentials
-        }
+      }
+      if (Object.keys(filteredCredentials).length > 0) {
+        updateData.credentials = filteredCredentials
       }
 
       updateMutation.mutate({ id: editingItem.id, data: updateData })
@@ -501,10 +564,12 @@ export function ASRConfigContent() {
     const config = PROVIDER_FIELD_CONFIGS[selectedProvider]
     const prefix = selectedProvider
 
-    const renderField = (fieldKey: string, required: boolean) => {
+    const renderTextField = (fieldKey: string, required: boolean) => {
       const formKey = `${prefix}_${fieldKey}` as keyof FormData
       const label = config.labels[fieldKey]
+      const description = config.descriptions?.[fieldKey]
       const isPasswordField = fieldKey.includes('secret') || fieldKey.includes('token') || fieldKey.includes('key')
+      const isDisabled = fieldKey === 'resource_id' && prefix === 'volcengine'  // 资源 ID 只读
 
       return (
         <FormField
@@ -521,11 +586,41 @@ export function ASRConfigContent() {
                 <Input
                   type={isPasswordField ? 'password' : 'text'}
                   placeholder={`请输入${label}`}
+                  disabled={isDisabled}
                   {...field}
                   value={field.value as string || ''}
                 />
               </FormControl>
+              {description && <FormDescription>{description}</FormDescription>}
               <FormMessage />
+            </FormItem>
+          )}
+        />
+      )
+    }
+
+    const renderToggleField = (fieldKey: string) => {
+      const formKey = `${prefix}_${fieldKey}` as keyof FormData
+      const label = config.labels[fieldKey]
+      const description = config.descriptions?.[fieldKey]
+
+      return (
+        <FormField
+          key={formKey}
+          control={form.control}
+          name={formKey}
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel className="text-sm">{label}</FormLabel>
+                {description && <FormDescription className="text-xs">{description}</FormDescription>}
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value as boolean}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
             </FormItem>
           )}
         />
@@ -535,8 +630,15 @@ export function ASRConfigContent() {
     return (
       <div className="space-y-4">
         <div className="text-sm font-medium text-muted-foreground">凭证信息</div>
-        {config.required.map(field => renderField(field, true))}
-        {config.optional.map(field => renderField(field, false))}
+        {config.required.map(field => renderTextField(field, true))}
+        {config.optional.map(field => renderTextField(field, false))}
+
+        {config.toggles.length > 0 && (
+          <>
+            <div className="text-sm font-medium text-muted-foreground pt-2">功能配置</div>
+            {config.toggles.map(field => renderToggleField(field))}
+          </>
+        )}
       </div>
     )
   }
