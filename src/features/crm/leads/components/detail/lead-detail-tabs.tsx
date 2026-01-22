@@ -58,6 +58,30 @@ import { FollowupMethodPie } from './charts/followup-method-pie'
 import { FollowupResultPie } from './charts/followup-result-pie'
 
 /**
+ * 兼容 HTTP 环境的复制函数
+ */
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+  }
+  return new Promise((resolve, reject) => {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy') ? resolve() : reject(new Error('复制失败'))
+    } catch (err) {
+      reject(err)
+    } finally {
+      document.body.removeChild(textarea)
+    }
+  })
+}
+
+/**
  * 跟进内容单元格组件 - 支持悬浮展示完整内容和复制
  */
 function FollowupContentCell({ content }: { content: string }) {
@@ -66,9 +90,9 @@ function FollowupContentCell({ content }: { content: string }) {
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
-      await navigator.clipboard.writeText(content)
+      await copyToClipboard(content)
       setCopied(true)
-      toast.success('已复制到剪贴板')
+      toast.success('已复制')
       setTimeout(() => setCopied(false), 2000)
     } catch {
       toast.error('复制失败')
@@ -80,29 +104,19 @@ function FollowupContentCell({ content }: { content: string }) {
       <TooltipTrigger asChild>
         <span className="truncate block cursor-pointer">{content}</span>
       </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        align="start"
-        className="max-w-[320px] bg-popover text-popover-foreground border shadow-md"
-      >
-        <div className="space-y-2">
-          <p className="text-xs whitespace-pre-wrap break-words">{content}</p>
+      <TooltipContent side="top" align="start" className="max-w-[300px]">
+        <div className="flex items-start gap-2">
+          <p className="text-xs whitespace-pre-wrap break-words flex-1">{content}</p>
           <Button
-            variant="outline"
-            size="sm"
-            className="h-6 text-xs w-full gap-1"
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 shrink-0 -mr-1 -mt-0.5"
             onClick={handleCopy}
           >
             {copied ? (
-              <>
-                <Check className="h-3 w-3" />
-                已复制
-              </>
+              <Check className="h-3 w-3 text-green-500" />
             ) : (
-              <>
-                <Copy className="h-3 w-3" />
-                复制内容
-              </>
+              <Copy className="h-3 w-3" />
             )}
           </Button>
         </div>

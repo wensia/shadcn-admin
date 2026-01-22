@@ -122,12 +122,16 @@ class ApiClient {
             return response.data
           }
 
-          // 普通模式：success: false 时不再抛出异常，而是返回数据让业务层处理
-          // 注意：只有HTTP状态码错误（如401、500等）才应该抛出异常
+          // 普通模式：success: false 时抛出异常，让 TanStack Query 的 onError 能正确处理
+          // 这样业务代码可以统一在 onError 中处理错误消息
           if (!response.data.success) {
-            // 业务错误不自动显示消息，由调用方根据需要处理
-            // 保持返回完整的响应数据，让业务层能够访问错误详情
-            return response.data
+            const error = new Error(response.data.message || '请求失败')
+            ;(error as any).response = {
+              data: response.data,
+              status: response.status,
+              statusText: response.statusText
+            }
+            throw error
           }
 
           // 普通模式：返回完整的API响应格式
