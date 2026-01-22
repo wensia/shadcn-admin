@@ -82,13 +82,14 @@ const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, {
 }> = {
   volcengine: {
     // 按照火山引擎官方文档：https://www.volcengine.com/docs/6561/1354868
-    required: ['app_key', 'access_key'],
+    // 控制台显示名称：APP ID, Access Token, Secret Key
+    required: ['app_id', 'access_token'],
     optional: ['resource_id'],
     toggles: ['enable_emotion_detection', 'enable_channel_split', 'enable_speaker_info', 'enable_itn', 'enable_punc'],
     labels: {
-      app_key: 'X-Api-App-Key',
-      access_key: 'X-Api-Access-Key',
-      resource_id: '资源 ID',
+      app_id: 'APP ID',
+      access_token: 'Access Token',
+      resource_id: '资源 ID (X-Api-Resource-Id)',
       enable_emotion_detection: '启用情绪检测',
       enable_channel_split: '启用双声道识别',
       enable_speaker_info: '启用说话人分离',
@@ -96,8 +97,8 @@ const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, {
       enable_punc: '启用标点符号',
     },
     descriptions: {
-      app_key: '火山引擎控制台获取的应用 ID',
-      access_key: '火山引擎控制台获取的访问令牌',
+      app_id: '火山引擎控制台获取，对应 HTTP 头 X-Api-App-Key',
+      access_token: '火山引擎控制台获取，对应 HTTP 头 X-Api-Access-Key',
       resource_id: '仅支持 volc.seedasr.auc（豆包录音文件识别模型2.0）',
       enable_emotion_detection: '识别说话人情绪（angry/happy/neutral/sad/surprise）',
       enable_channel_split: '区分左右声道，适合双人对话录音',
@@ -146,9 +147,9 @@ const formSchema = z.object({
   notes: z.string().max(500, '备注最多500个字符').optional(),
   is_default: z.boolean().default(false),
   is_active: z.boolean().default(true),
-  // 火山引擎字段
-  volcengine_app_key: z.string().optional(),
-  volcengine_access_key: z.string().optional(),
+  // 火山引擎字段（控制台显示名称：APP ID, Access Token）
+  volcengine_app_id: z.string().optional(),
+  volcengine_access_token: z.string().optional(),
   volcengine_resource_id: z.string().optional(),
   volcengine_enable_emotion_detection: z.boolean().optional(),
   volcengine_enable_channel_split: z.boolean().optional(),
@@ -445,8 +446,8 @@ export function ASRConfigContent() {
     }
 
     if (provider === 'volcengine') {
-      formValues.volcengine_app_key = item.credentials_masked.app_key || ''
-      formValues.volcengine_access_key = item.credentials_masked.access_key || ''
+      formValues.volcengine_app_id = item.credentials_masked.app_id || ''
+      formValues.volcengine_access_token = item.credentials_masked.access_token || ''
       formValues.volcengine_resource_id = item.credentials_masked.resource_id || VOLCENGINE_DEFAULTS.resource_id
       // 布尔值字段
       formValues.volcengine_enable_emotion_detection = item.credentials_masked.enable_emotion_detection === 'true' || item.credentials_masked.enable_emotion_detection === true as unknown as string
@@ -492,8 +493,8 @@ export function ASRConfigContent() {
     const credentials: Record<string, string | boolean> = {}
 
     if (provider === 'volcengine') {
-      if (formData.volcengine_app_key) credentials.app_key = formData.volcengine_app_key
-      if (formData.volcengine_access_key) credentials.access_key = formData.volcengine_access_key
+      if (formData.volcengine_app_id) credentials.app_id = formData.volcengine_app_id
+      if (formData.volcengine_access_token) credentials.access_token = formData.volcengine_access_token
       // 资源 ID 固定为 volc.seedasr.auc
       credentials.resource_id = VOLCENGINE_DEFAULTS.resource_id
       // 布尔开关
