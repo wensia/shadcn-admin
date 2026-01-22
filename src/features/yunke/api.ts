@@ -356,7 +356,7 @@ export const callRecordsApi = {
       total: number
       page: number
       size: number
-    }>>('/yunke/call-records/yunke/search', { params })
+    }>>('/yunke/call-records/search', { params })
     return response.data!
   },
 }
