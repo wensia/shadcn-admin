@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ColumnDef,
@@ -85,6 +86,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 export function CampusDepartmentsPage() {
+  useDocumentTitle('校区部门配置')
   const queryClient = useQueryClient()
 
   // 状态管理

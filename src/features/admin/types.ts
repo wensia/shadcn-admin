@@ -1267,7 +1267,7 @@ export interface ASRConfigItem {
   id: string
   provider: ASRProvider
   name: string
-  credentials_masked: Record<string, string>
+  credentials: Record<string, string | boolean>  // 原始凭证（用于编辑表单）
   is_active: boolean
   is_default: boolean
   last_verified_at: string | null
@@ -1295,6 +1295,7 @@ export interface ASRTaskParams {
 
 /** 时间范围预设选项 */
 export const TIME_RANGE_PRESETS = [
+  { label: '今天', value: 'today', start: '{{today_start}}', end: '{{now}}' },
   { label: '昨天', value: 'yesterday', start: '{{yesterday_start}}', end: '{{yesterday_end}}' },
   { label: '过去7天', value: 'last_7_days', start: '{{last_7_days_start}}', end: '{{last_7_days_end}}' },
   { label: '过去30天', value: 'last_30_days', start: '{{last_30_days_start}}', end: '{{last_30_days_end}}' },

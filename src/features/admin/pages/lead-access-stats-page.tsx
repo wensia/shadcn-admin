@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ColumnDef,
@@ -87,6 +88,7 @@ const SKELETON_DATA: AdvisorAccessStatistics[] = Array.from({ length: 10 }, (_, 
 }))
 
 export function LeadAccessStatsPage() {
+  useDocumentTitle('线索查看统计')
   const queryClient = useQueryClient()
 
   // 状态

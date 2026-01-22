@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   flexRender,
@@ -97,6 +98,7 @@ function createSkeletonData(count: number): PositionItem[] {
 }
 
 export function PositionsPage() {
+  useDocumentTitle('职位管理')
   const queryClient = useQueryClient()
 
   // 状态管理

@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ColumnDef,
@@ -96,6 +97,7 @@ interface IdentityFormData {
 }
 
 export function EmployeesPage() {
+  useDocumentTitle('员工管理')
   const queryClient = useQueryClient()
 
   // 状态管理

@@ -1273,10 +1273,11 @@ export const scheduledTasksApi = {
   async list(params?: {
     page?: number
     page_size?: number
+    size?: number
     enabled?: boolean
     search?: string
-  }): Promise<{ items: ScheduledTask[]; total: number }> {
-    const response = await apiClient.get<ApiResponse<{ items: ScheduledTask[]; total: number }>>('/scheduled-tasks/', { params })
+  }): Promise<{ items: ScheduledTask[]; total: number; page?: number; size?: number }> {
+    const response = await apiClient.get<ApiResponse<{ items: ScheduledTask[]; total: number; page?: number; size?: number }>>('/scheduled-tasks/', { params })
     return response.data || { items: [], total: 0 }
   },
 
@@ -1343,9 +1344,10 @@ export const scheduledTasksApi = {
   async getExecutionHistory(params?: {
     page?: number
     page_size?: number
+    size?: number
     task_name?: string
-  }): Promise<{ items: TaskExecutionHistory[]; total: number }> {
-    const response = await apiClient.get<ApiResponse<{ items: TaskExecutionHistory[]; total: number }>>('/scheduled-tasks/execution-history', { params })
+  }): Promise<{ items: TaskExecutionHistory[]; total: number; page?: number; size?: number }> {
+    const response = await apiClient.get<ApiResponse<{ items: TaskExecutionHistory[]; total: number; page?: number; size?: number }>>('/scheduled-tasks/execution-history', { params })
     return response.data || { items: [], total: 0 }
   },
 

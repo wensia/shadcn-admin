@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   flexRender,
@@ -94,6 +95,7 @@ function createSkeletonData(count: number): DepartmentItem[] {
 }
 
 export function DepartmentsPage() {
+  useDocumentTitle('部门管理')
   const queryClient = useQueryClient()
 
   // 状态管理

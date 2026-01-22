@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight, User, Users, RefreshCw, Search } from 'lucide-react'
 import { Main } from '@/components/layout/main'
@@ -198,6 +199,7 @@ function StatsCards({ nodes, totalEmployees }: { nodes: EmployeeHierarchyNode[];
 }
 
 export function OrganizationTreePage() {
+  useDocumentTitle('组织架构树')
   const [searchTerm, setSearchTerm] = useState('')
 
   // 获取员工层级树

@@ -136,7 +136,7 @@ function createSkeletonData(count: number): ASRConfigItem[] {
     id: `${SKELETON_PREFIX}${i}`,
     provider: 'volcengine' as ASRProvider,
     name: '',
-    credentials_masked: {},
+    credentials: {},
     is_active: true,
     is_default: false,
     last_verified_at: null,
@@ -433,20 +433,20 @@ export function ASRConfigPage() {
       is_active: item.is_active,
     }
 
-    // 根据提供商填充凭证字段（编辑时显示掩码值）
+    // 根据提供商填充凭证字段（编辑时显示原始值）
     if (provider === 'volcengine') {
-      formValues.volcengine_app_id = item.credentials_masked.app_id || ''
-      formValues.volcengine_access_token = item.credentials_masked.access_token || ''
-      formValues.volcengine_cluster = item.credentials_masked.cluster || ''
+      formValues.volcengine_app_id = String(item.credentials.app_id || '')
+      formValues.volcengine_access_token = String(item.credentials.access_token || '')
+      formValues.volcengine_cluster = String(item.credentials.cluster || '')
     } else if (provider === 'tencent') {
-      formValues.tencent_secret_id = item.credentials_masked.secret_id || ''
-      formValues.tencent_secret_key = item.credentials_masked.secret_key || ''
-      formValues.tencent_app_id = item.credentials_masked.app_id || ''
-      formValues.tencent_engine_type = item.credentials_masked.engine_type || ''
+      formValues.tencent_secret_id = String(item.credentials.secret_id || '')
+      formValues.tencent_secret_key = String(item.credentials.secret_key || '')
+      formValues.tencent_app_id = String(item.credentials.app_id || '')
+      formValues.tencent_engine_type = String(item.credentials.engine_type || '')
     } else if (provider === 'alibaba') {
-      formValues.alibaba_access_key_id = item.credentials_masked.access_key_id || ''
-      formValues.alibaba_access_key_secret = item.credentials_masked.access_key_secret || ''
-      formValues.alibaba_app_key = item.credentials_masked.app_key || ''
+      formValues.alibaba_access_key_id = String(item.credentials.access_key_id || '')
+      formValues.alibaba_access_key_secret = String(item.credentials.access_key_secret || '')
+      formValues.alibaba_app_key = String(item.credentials.app_key || '')
     }
 
     form.reset(formValues)

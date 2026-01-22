@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   flexRender,
@@ -46,6 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { SimplePagination } from '@/components/data-table/simple-pagination'
 import {
   Dialog,
   DialogContent,
@@ -85,7 +87,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { scheduledTasksApi } from '../api'
 import {
   INTERVAL_PERIOD_OPTIONS,
@@ -167,10 +168,15 @@ function getScheduleType(task: ScheduledTask): 'interval' | 'crontab' | null {
 }
 
 export function ScheduledTasksPage() {
+  useDocumentTitle('定时任务')
   const queryClient = useQueryClient()
 
   // 顶层 Tab 状态
   const [activeTab, setActiveTab] = useState<'tasks' | 'history'>('tasks')
+
+  // 分页状态
+  const [tasksPagination, setTasksPagination] = useState({ page: 1, size: 20 })
+  const [historyPagination, setHistoryPagination] = useState({ page: 1, size: 20 })
 
   // 状态管理
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -211,9 +217,12 @@ export function ScheduledTasksPage() {
 
   // 查询任务列表
   const { data, isLoading } = useQuery({
-    queryKey: ['scheduled-tasks'],
+    queryKey: ['scheduled-tasks', tasksPagination],
     queryFn: async () => {
-      const response = await scheduledTasksApi.list()
+      const response = await scheduledTasksApi.list({
+        page: tasksPagination.page,
+        page_size: tasksPagination.size,
+      })
       return response
     },
   })
@@ -229,9 +238,12 @@ export function ScheduledTasksPage() {
 
   // 查询执行历史
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
-    queryKey: ['execution-history'],
+    queryKey: ['execution-history', historyPagination],
     queryFn: async () => {
-      const response = await scheduledTasksApi.getExecutionHistory()
+      const response = await scheduledTasksApi.getExecutionHistory({
+        page: historyPagination.page,
+        page_size: historyPagination.size,
+      })
       return response
     },
     enabled: activeTab === 'history',
@@ -508,6 +520,8 @@ export function ScheduledTasksPage() {
   const handleCreate = () => {
     setEditingItem(null)
     setScheduleType('interval')
+    // 清空 ASR 任务参数
+    setAsrTaskKwargs({})
     form.reset({
       name: '',
       task: '',
@@ -534,6 +548,12 @@ export function ScheduledTasksPage() {
     setEditingItem(item)
     const type = getScheduleType(item) || 'interval'
     setScheduleType(type)
+    // 初始化 ASR 任务参数（如果是 ASR 任务）
+    if (item.task === ASR_TASK_NAME && item.kwargs) {
+      setAsrTaskKwargs(item.kwargs as Record<string, unknown>)
+    } else {
+      setAsrTaskKwargs({})
+    }
     form.reset({
       name: item.name,
       task: item.task,
@@ -666,8 +686,8 @@ export function ScheduledTasksPage() {
   }
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
+    <Main fixed className="min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
         {/* 标题栏 */}
         <div className="flex items-center justify-between">
           <div>
@@ -690,65 +710,49 @@ export function ScheduledTasksPage() {
           )}
         </div>
 
-        {/* 统计卡片 */}
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">今日执行</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-16" /> : statsData?.today?.total ?? 0}
+        {/* 统计卡片 - 紧凑单行展示 */}
+        {statsLoading ? (
+          <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card px-4 py-2.5">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-16" />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {statsData?.today?.running ?? 0} 个执行中
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">成功率</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {statsLoading ? <Skeleton className="h-8 w-16" /> : `${statsData?.today?.success_rate ?? 0}%`}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {statsData?.today?.success ?? 0} 成功 / {statsData?.today?.failure ?? 0} 失败
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">平均耗时</CardTitle>
-              <Timer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {statsLoading ? <Skeleton className="h-8 w-16" /> : `${statsData?.today?.avg_duration ?? 0}s`}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                今日任务平均执行时间
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">最近失败</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {statsLoading ? <Skeleton className="h-8 w-16" /> : statsData?.recent_failures?.length ?? 0}
-              </div>
-              <p className="text-xs text-muted-foreground truncate" title={statsData?.recent_failures?.[0]?.task_name}>
-                {statsData?.recent_failures?.[0]?.task_name || '暂无失败任务'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border bg-card px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-blue-500" />
+              <span className="text-sm text-muted-foreground">今日执行</span>
+              <span className="text-sm font-semibold">{statsData?.today?.total ?? 0}</span>
+              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-muted-foreground">成功率</span>
+              <span className="text-sm font-semibold">{statsData?.today?.success_rate ?? 0}%</span>
+              <span className="text-xs text-muted-foreground ml-1">({statsData?.today?.success ?? 0} 成功 / {statsData?.today?.failure ?? 0} 失败)</span>
+              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Timer className="h-4 w-4 text-purple-500" />
+              <span className="text-sm text-muted-foreground">平均耗时</span>
+              <span className="text-sm font-semibold">{statsData?.today?.avg_duration ?? 0}s</span>
+              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+            </div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <span className="text-sm text-muted-foreground">最近失败</span>
+              <span className="text-sm font-semibold">{statsData?.recent_failures?.length ?? 0}</span>
+              {statsData?.recent_failures?.[0]?.task_name && (
+                <span className="text-xs text-muted-foreground truncate max-w-32" title={statsData.recent_failures[0].task_name}>
+                  ({statsData.recent_failures[0].task_name})
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 顶层 Tab */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'history')} className="flex-1 flex flex-col min-h-0">
@@ -764,8 +768,8 @@ export function ScheduledTasksPage() {
           </TabsList>
 
           {/* 定时任务 Tab */}
-          <TabsContent value="tasks" className="flex-1 mt-4 min-h-0">
-            <div className="h-full overflow-auto rounded-md border">
+          <TabsContent value="tasks" className="flex-1 mt-4 min-h-0 flex flex-col gap-4">
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -825,11 +829,21 @@ export function ScheduledTasksPage() {
                 </TableBody>
               </Table>
             </div>
+            {/* 分页器 */}
+            <SimplePagination
+              page={tasksPagination.page}
+              pageSize={tasksPagination.size}
+              total={data?.total || 0}
+              onPageChange={(page) => setTasksPagination((prev) => ({ ...prev, page }))}
+              onPageSizeChange={(size) => setTasksPagination({ page: 1, size })}
+              className="flex-shrink-0"
+              isLoading={isLoading}
+            />
           </TabsContent>
 
           {/* 执行记录 Tab */}
-          <TabsContent value="history" className="flex-1 mt-4 min-h-0">
-            <div className="h-full overflow-auto rounded-md border">
+          <TabsContent value="history" className="flex-1 mt-4 min-h-0 flex flex-col gap-4">
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -927,6 +941,16 @@ export function ScheduledTasksPage() {
                 </TableBody>
               </Table>
             </div>
+            {/* 分页器 */}
+            <SimplePagination
+              page={historyPagination.page}
+              pageSize={historyPagination.size}
+              total={historyData?.total || 0}
+              onPageChange={(page) => setHistoryPagination((prev) => ({ ...prev, page }))}
+              onPageSizeChange={(size) => setHistoryPagination({ page: 1, size })}
+              className="flex-shrink-0"
+              isLoading={historyLoading}
+            />
           </TabsContent>
         </Tabs>
       </div>

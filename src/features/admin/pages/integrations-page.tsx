@@ -4,6 +4,7 @@
  */
 
 import { useSearch, useNavigate } from '@tanstack/react-router'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Mic, Bot, Webhook, CloudCog, KeyRound, Settings2 } from 'lucide-react'
 
 import { Main } from '@/components/layout/main'
@@ -28,6 +29,7 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 export function IntegrationsPage() {
+  useDocumentTitle('集成配置')
   const navigate = useNavigate()
   const search = useSearch({ from: '/_authenticated/admin/integrations' })
   const currentTab = (search.tab as TabId) || 'asr'

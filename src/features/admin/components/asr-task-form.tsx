@@ -49,7 +49,7 @@ import { TIME_RANGE_PRESETS, ASR_PROVIDER_OPTIONS } from '../types'
 // 表单验证模式
 const asrTaskFormSchema = z.object({
   asr_config_id: z.string().min(1, '请选择 ASR 配置'),
-  time_range_type: z.enum(['yesterday', 'last_7_days', 'last_30_days', 'custom']),
+  time_range_type: z.enum(['today', 'yesterday', 'last_7_days', 'last_30_days', 'custom']),
   custom_start_time: z.string().optional(),
   custom_end_time: z.string().optional(),
   skip_existing: z.boolean().default(true),
@@ -92,7 +92,7 @@ interface ASRTaskFormProps {
  * 从时间变量字符串推断预设类型
  */
 function inferTimeRangeType(startTime?: string, endTime?: string): ASRTaskFormData['time_range_type'] {
-  if (!startTime || !endTime) return 'yesterday'
+  if (!startTime || !endTime) return 'today'
 
   for (const preset of TIME_RANGE_PRESETS) {
     if (preset.start === startTime && preset.end === endTime) {
@@ -102,8 +102,8 @@ function inferTimeRangeType(startTime?: string, endTime?: string): ASRTaskFormDa
 
   // 如果不匹配任何预设，判断是否是动态变量
   if (startTime.includes('{{') || endTime.includes('{{')) {
-    // 可能是其他动态变量，默认返回 yesterday
-    return 'yesterday'
+    // 可能是其他动态变量，默认返回 today
+    return 'today'
   }
 
   return 'custom'
@@ -160,13 +160,13 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
         endTime = values.custom_end_time || ''
       } else {
         const preset = TIME_RANGE_PRESETS.find(p => p.value === values.time_range_type)
-        startTime = preset?.start || '{{yesterday_start}}'
-        endTime = preset?.end || '{{yesterday_end}}'
+        startTime = preset?.start || '{{today_start}}'
+        endTime = preset?.end || '{{now}}'
       }
 
       // 转换为 kwargs 格式
       const kwargs: Record<string, unknown> = {
-        asr_config_id: parseInt(values.asr_config_id || '0', 10),
+        asr_config_id: values.asr_config_id || null,
         start_time: startTime,
         end_time: endTime,
         skip_existing: values.skip_existing,
@@ -194,12 +194,12 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
         endTime = values.custom_end_time || ''
       } else {
         const preset = TIME_RANGE_PRESETS.find(p => p.value === values.time_range_type)
-        startTime = preset?.start || '{{yesterday_start}}'
-        endTime = preset?.end || '{{yesterday_end}}'
+        startTime = preset?.start || '{{today_start}}'
+        endTime = preset?.end || '{{now}}'
       }
 
       const kwargs: Record<string, unknown> = {
-        asr_config_id: parseInt(values.asr_config_id, 10),
+        asr_config_id: values.asr_config_id || null,
         start_time: startTime,
         end_time: endTime,
         skip_existing: values.skip_existing,

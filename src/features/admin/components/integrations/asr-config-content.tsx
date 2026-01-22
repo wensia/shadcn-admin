@@ -176,7 +176,7 @@ function createSkeletonData(count: number): ASRConfigItem[] {
     id: `${SKELETON_PREFIX}${i}`,
     provider: 'volcengine' as ASRProvider,
     name: '',
-    credentials_masked: {},
+    credentials: {},
     is_active: true,
     is_default: false,
     last_verified_at: null,
@@ -446,24 +446,24 @@ export function ASRConfigContent() {
     }
 
     if (provider === 'volcengine') {
-      formValues.volcengine_app_id = item.credentials_masked.app_id || ''
-      formValues.volcengine_access_token = item.credentials_masked.access_token || ''
-      formValues.volcengine_resource_id = item.credentials_masked.resource_id || VOLCENGINE_DEFAULTS.resource_id
-      // 布尔值字段
-      formValues.volcengine_enable_emotion_detection = item.credentials_masked.enable_emotion_detection === 'true' || item.credentials_masked.enable_emotion_detection === true as unknown as string
-      formValues.volcengine_enable_channel_split = item.credentials_masked.enable_channel_split === 'true' || item.credentials_masked.enable_channel_split === true as unknown as string
-      formValues.volcengine_enable_speaker_info = item.credentials_masked.enable_speaker_info === 'true' || item.credentials_masked.enable_speaker_info === true as unknown as string
-      formValues.volcengine_enable_itn = item.credentials_masked.enable_itn === 'true' || item.credentials_masked.enable_itn === true as unknown as string
-      formValues.volcengine_enable_punc = item.credentials_masked.enable_punc === 'true' || item.credentials_masked.enable_punc === true as unknown as string
+      formValues.volcengine_app_id = String(item.credentials.app_id || '')
+      formValues.volcengine_access_token = String(item.credentials.access_token || '')
+      formValues.volcengine_resource_id = String(item.credentials.resource_id || VOLCENGINE_DEFAULTS.resource_id)
+      // 布尔值字段（现在返回的是原始 boolean 类型）
+      formValues.volcengine_enable_emotion_detection = Boolean(item.credentials.enable_emotion_detection)
+      formValues.volcengine_enable_channel_split = Boolean(item.credentials.enable_channel_split)
+      formValues.volcengine_enable_speaker_info = Boolean(item.credentials.enable_speaker_info)
+      formValues.volcengine_enable_itn = Boolean(item.credentials.enable_itn)
+      formValues.volcengine_enable_punc = Boolean(item.credentials.enable_punc)
     } else if (provider === 'tencent') {
-      formValues.tencent_secret_id = item.credentials_masked.secret_id || ''
-      formValues.tencent_secret_key = item.credentials_masked.secret_key || ''
-      formValues.tencent_app_id = item.credentials_masked.app_id || ''
-      formValues.tencent_engine_type = item.credentials_masked.engine_type || ''
+      formValues.tencent_secret_id = String(item.credentials.secret_id || '')
+      formValues.tencent_secret_key = String(item.credentials.secret_key || '')
+      formValues.tencent_app_id = String(item.credentials.app_id || '')
+      formValues.tencent_engine_type = String(item.credentials.engine_type || '')
     } else if (provider === 'alibaba') {
-      formValues.alibaba_access_key_id = item.credentials_masked.access_key_id || ''
-      formValues.alibaba_access_key_secret = item.credentials_masked.access_key_secret || ''
-      formValues.alibaba_app_key = item.credentials_masked.app_key || ''
+      formValues.alibaba_access_key_id = String(item.credentials.access_key_id || '')
+      formValues.alibaba_access_key_secret = String(item.credentials.access_key_secret || '')
+      formValues.alibaba_app_key = String(item.credentials.app_key || '')
     }
 
     form.reset(formValues)

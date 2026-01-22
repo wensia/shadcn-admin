@@ -2,9 +2,11 @@
  * 员工身份管理页面
  */
 
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { AdminPlaceholderPage } from '../components/admin-placeholder-page'
 
 export function IdentitiesPage() {
+  useDocumentTitle('员工身份管理')
   return (
     <AdminPlaceholderPage
       title="员工身份管理"
