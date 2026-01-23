@@ -67,6 +67,17 @@ export const tabThemes = {
     border: 'border-[#e8e6dc]',
     ring: 'ring-[#b0aea5]/20',
   },
+  report: {
+    name: '报表',
+    color: '#7c3aed', // 紫色
+    dot: 'bg-[#7c3aed]',
+    text: 'text-[#7c3aed]',
+    textMuted: 'text-[#7c3aed]/70',
+    bgSubtle: 'bg-[#7c3aed]/5',
+    bgLight: 'bg-[#7c3aed]/10',
+    border: 'border-[#7c3aed]/20',
+    ring: 'ring-[#7c3aed]/20',
+  },
 } as const
 
 export type TabType = keyof typeof tabThemes

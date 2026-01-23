@@ -16,12 +16,14 @@ import {
   Wallet,
   Calendar,
   TrendingUp,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PromisedVisitTab } from './components/promised-visit-tab'
 import { ActualVisitTab } from './components/actual-visit-tab'
 import { PaymentTab } from './components/payment-tab'
 import { CalendarTab } from './components/calendar-tab'
+import { ReportTab } from './components/report-tab'
 import { getVisitSchedules, getPayments } from './api'
 import { tabThemes, brandColors, type TabType } from './theme'
 
@@ -95,6 +97,7 @@ export function DailyControlPage() {
     { id: 'visited' as const, icon: CalendarCheck, label: '到访', count: visitedStats },
     { id: 'payment' as const, icon: Wallet, label: '缴费', count: paymentStats },
     { id: 'calendar' as const, icon: Calendar, label: '日历', count: null },
+    { id: 'report' as const, icon: BarChart3, label: '报表', count: null },
   ]
 
   // 统计卡片配置
@@ -236,6 +239,10 @@ export function DailyControlPage() {
 
           <TabsContent value="calendar" className="mt-4 flex-1 overflow-hidden">
             <CalendarTab dateFrom={dateRange.from} dateTo={dateRange.to} />
+          </TabsContent>
+
+          <TabsContent value="report" className="mt-4 flex-1 overflow-auto">
+            <ReportTab dateFrom={dateRange.from} dateTo={dateRange.to} />
           </TabsContent>
         </Tabs>
       </div>

@@ -279,3 +279,45 @@ export async function deletePayment(id: string) {
   const response = await apiClient.delete<ApiResponse<null>>(`/payments/${id}`)
   return response
 }
+
+// ==================== 日控报表 ====================
+
+// 顾问日控统计数据
+export interface AdvisorDailyControlStats {
+  advisor_id: string
+  advisor_name: string
+  campus_id?: string
+  campus_name?: string
+  promised_count: number
+  visited_count: number
+  payment_count: number
+  payment_amount: number
+}
+
+// 日控报表响应
+export interface DailyControlReportResponse {
+  stats: AdvisorDailyControlStats[]
+  total_advisors: number
+  total_promised: number
+  total_visited: number
+  total_payment_count: number
+  total_payment_amount: number
+}
+
+// 日控报表查询参数
+export interface DailyControlReportParams {
+  campus_id?: string
+  date_from?: string
+  date_to?: string
+}
+
+/**
+ * 获取日控报表数据
+ */
+export async function getDailyControlReport(params: DailyControlReportParams = {}) {
+  const response = await apiClient.get<ApiResponse<DailyControlReportResponse>>(
+    '/daily-control-report',
+    { params }
+  )
+  return response.data
+}
