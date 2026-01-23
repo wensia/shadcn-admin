@@ -42,8 +42,8 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
   const { data: campusesData } = useQuery({
     queryKey: ['campuses-for-report'],
     queryFn: async () => {
-      const response = await apiClient.get('/campuses', { params: { page: 1, size: 100 } })
-      return response.data?.items || []
+      const response = await apiClient.get('/organization/campuses/simple')
+      return response.data || []
     },
   })
 
