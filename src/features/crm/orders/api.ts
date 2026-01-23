@@ -10,7 +10,11 @@ import type {
   OrderCreate,
   OrderUpdate,
   OrderStats,
-  OrderListParams
+  OrderListParams,
+  ApprovalRequest,
+  CancelRequest,
+  ApprovalLog,
+  PendingApprovalParams
 } from './types'
 
 export const orderApi = {
@@ -76,6 +80,68 @@ export const orderApi = {
    */
   async getLeadOrders(leadId: string): Promise<ApiResponse<Order[]>> {
     const response = await apiClient.get<ApiResponse<Order[]>>(`/orders/lead/${leadId}`)
+    return response
+  },
+
+  // ==================== 审批相关 API ====================
+
+  /**
+   * 提交订单审批
+   */
+  async submitForApproval(orderId: string): Promise<ApiResponse<Order>> {
+    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/submit`)
+    return response
+  },
+
+  /**
+   * 领导审批
+   */
+  async leaderApprove(orderId: string, data: ApprovalRequest): Promise<ApiResponse<Order>> {
+    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/leader-approve`, data)
+    return response
+  },
+
+  /**
+   * 财务确认
+   */
+  async financeApprove(orderId: string, data: ApprovalRequest): Promise<ApiResponse<Order>> {
+    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/finance-approve`, data)
+    return response
+  },
+
+  /**
+   * 取消订单
+   */
+  async cancelOrder(orderId: string, data?: CancelRequest): Promise<ApiResponse<Order>> {
+    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/cancel`, data || {})
+    return response
+  },
+
+  /**
+   * 获取待领导审批的订单列表
+   */
+  async getPendingLeaderApprovals(params?: PendingApprovalParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<OrderListItem>>>('/orders/pending/leader', {
+      params
+    })
+    return response
+  },
+
+  /**
+   * 获取待财务确认的订单列表
+   */
+  async getPendingFinanceApprovals(params?: PendingApprovalParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<OrderListItem>>>('/orders/pending/finance', {
+      params
+    })
+    return response
+  },
+
+  /**
+   * 获取订单审批历史
+   */
+  async getApprovalLogs(orderId: string): Promise<ApiResponse<ApprovalLog[]>> {
+    const response = await apiClient.get<ApiResponse<ApprovalLog[]>>(`/orders/${orderId}/approval-logs`)
     return response
   }
 }

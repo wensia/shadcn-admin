@@ -400,16 +400,6 @@ export function LeadsPoolPage() {
     <>
       <Main fixed className="min-h-0">
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-          {/* 页面标题 */}
-          <div className="flex flex-shrink-0 flex-wrap items-end justify-between gap-2">
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">公海线索</h1>
-              <p className={cn(s.text.xs, 'text-muted-foreground')}>
-                从公海池领取未分配的线索
-              </p>
-            </div>
-          </div>
-
           {/* 工具栏 */}
           <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
             {/* 搜索框 */}

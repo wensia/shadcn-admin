@@ -22,6 +22,16 @@ export enum OrderPaymentStatus {
   CANCELLED = 'cancelled'
 }
 
+export enum OrderApprovalStatus {
+  PENDING = 'pending',
+  LEADER_PENDING = 'leader_pending',
+  LEADER_REJECTED = 'leader_rejected',
+  FINANCE_PENDING = 'finance_pending',
+  FINANCE_REJECTED = 'finance_rejected',
+  APPROVED = 'approved',
+  CANCELLED = 'cancelled'
+}
+
 // ==================== 标签映射 ====================
 
 export const orderPaymentMethodLabels: Record<OrderPaymentMethod, string> = {
@@ -41,6 +51,16 @@ export const orderPaymentStatusLabels: Record<OrderPaymentStatus, string> = {
   [OrderPaymentStatus.CANCELLED]: '已取消'
 }
 
+export const orderApprovalStatusLabels: Record<OrderApprovalStatus, string> = {
+  [OrderApprovalStatus.PENDING]: '草稿',
+  [OrderApprovalStatus.LEADER_PENDING]: '领导审批中',
+  [OrderApprovalStatus.LEADER_REJECTED]: '领导已驳回',
+  [OrderApprovalStatus.FINANCE_PENDING]: '财务确认中',
+  [OrderApprovalStatus.FINANCE_REJECTED]: '财务已驳回',
+  [OrderApprovalStatus.APPROVED]: '已通过',
+  [OrderApprovalStatus.CANCELLED]: '已取消'
+}
+
 // ==================== 选项列表 ====================
 
 export const orderPaymentMethodOptions = Object.entries(orderPaymentMethodLabels).map(([value, label]) => ({
@@ -49,6 +69,11 @@ export const orderPaymentMethodOptions = Object.entries(orderPaymentMethodLabels
 }))
 
 export const orderPaymentStatusOptions = Object.entries(orderPaymentStatusLabels).map(([value, label]) => ({
+  value,
+  label
+}))
+
+export const orderApprovalStatusOptions = Object.entries(orderApprovalStatusLabels).map(([value, label]) => ({
   value,
   label
 }))
@@ -104,6 +129,23 @@ export interface Order {
   // 校区信息
   campus_id?: string
   campus_name?: string
+  // 审批信息
+  approval_status: string
+  approval_status_display: string
+  leader_approver_id?: string
+  leader_approver_name?: string
+  leader_approved_at?: string
+  leader_comment?: string
+  finance_approver_id?: string
+  finance_approver_name?: string
+  finance_approved_at?: string
+  finance_comment?: string
+  // 审批权限
+  can_submit?: boolean
+  can_leader_approve?: boolean
+  can_finance_approve?: boolean
+  can_cancel?: boolean
+  can_edit?: boolean
   // 其他
   remark?: string
   contract_no?: string
@@ -133,6 +175,15 @@ export interface OrderListItem {
   payment_at?: string
   collector_name?: string
   campus_name?: string
+  // 审批信息
+  approval_status: string
+  approval_status_display: string
+  // 审批权限
+  can_submit?: boolean
+  can_leader_approve?: boolean
+  can_finance_approve?: boolean
+  can_cancel?: boolean
+  can_edit?: boolean
   items_count: number
   created_at: string
   created_by_name?: string
@@ -184,7 +235,44 @@ export interface OrderListParams {
   campus_id?: string
   payment_method?: string
   payment_status?: string
+  approval_status?: string
   date_from?: string
   date_to?: string
   keyword?: string
+}
+
+// ==================== 审批相关接口 ====================
+
+export interface ApprovalRequest {
+  action: 'approve' | 'reject'
+  comment?: string
+}
+
+export interface CancelRequest {
+  reason?: string
+}
+
+export interface ApprovalLog {
+  id: string
+  order_id: string
+  approval_level: 'leader' | 'finance'
+  approval_level_display: string
+  action: string
+  action_display: string
+  from_status: string
+  from_status_display: string
+  to_status: string
+  to_status_display: string
+  operator_id: string
+  operator_name: string
+  comment?: string
+  operated_at: string
+}
+
+export interface PendingApprovalParams {
+  page?: number
+  size?: number
+  keyword?: string
+  date_from?: string
+  date_to?: string
 }

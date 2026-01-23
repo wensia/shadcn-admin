@@ -35,7 +35,8 @@ import { OrdersTable } from './components/orders-table'
 import type { Order, OrderListItem, OrderListParams } from './types'
 import {
   orderPaymentStatusOptions,
-  orderPaymentMethodOptions
+  orderPaymentMethodOptions,
+  orderApprovalStatusOptions
 } from './types'
 
 export function OrdersPage() {
@@ -269,6 +270,25 @@ export function OrdersPage() {
             <SelectContent>
               <SelectItem value="all">全部方式</SelectItem>
               {orderPaymentMethodOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filters.approval_status || 'all'}
+            onValueChange={(value) => {
+              setFilters({ ...filters, approval_status: value === 'all' ? undefined : value })
+              setPagination({ ...pagination, page: 1 })
+            }}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="审批状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部审批</SelectItem>
+              {orderApprovalStatusOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>

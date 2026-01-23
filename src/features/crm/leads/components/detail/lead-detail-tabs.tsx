@@ -466,10 +466,10 @@ export function LeadDetailTabs({
             )}
           </div>
 
-          {/* 云客通话记录区域 - 占50%高度 */}
+          {/* 云客通话记录区域 - 可折叠，默认折叠 */}
           {lead?.parent_phone && (
-            <div className="flex-1 min-h-0 flex flex-col">
-              <YunkeCallLogs phone={lead.parent_phone} showHeader />
+            <div className="flex-shrink-0 flex flex-col border-t">
+              <YunkeCallLogs phone={lead.parent_phone} showHeader collapsible defaultCollapsed />
             </div>
           )}
         </div>

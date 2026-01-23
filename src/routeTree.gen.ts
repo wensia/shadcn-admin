@@ -51,6 +51,7 @@ import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_auth
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authenticated/crm/workbench'
 import { Route as AuthenticatedCrmVisitScheduleRouteImport } from './routes/_authenticated/crm/visit-schedule'
+import { Route as AuthenticatedCrmPendingApprovalsRouteImport } from './routes/_authenticated/crm/pending-approvals'
 import { Route as AuthenticatedCrmOrdersRouteImport } from './routes/_authenticated/crm/orders'
 import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
@@ -307,6 +308,12 @@ const AuthenticatedCrmVisitScheduleRoute =
     path: '/crm/visit-schedule',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCrmPendingApprovalsRoute =
+  AuthenticatedCrmPendingApprovalsRouteImport.update({
+    id: '/crm/pending-approvals',
+    path: '/crm/pending-approvals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCrmOrdersRoute = AuthenticatedCrmOrdersRouteImport.update({
   id: '/crm/orders',
   path: '/crm/orders',
@@ -545,6 +552,7 @@ export interface FileRoutesByFullPath {
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
+  '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -615,6 +623,7 @@ export interface FileRoutesByTo {
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
+  '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -692,6 +701,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/_authenticated/crm/orders': typeof AuthenticatedCrmOrdersRoute
+  '/_authenticated/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/_authenticated/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/_authenticated/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -767,6 +777,7 @@ export interface FileRouteTypes {
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
     | '/crm/orders'
+    | '/crm/pending-approvals'
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/errors/$error'
@@ -837,6 +848,7 @@ export interface FileRouteTypes {
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
     | '/crm/orders'
+    | '/crm/pending-approvals'
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/errors/$error'
@@ -913,6 +925,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/crm/lead-conversion'
     | '/_authenticated/crm/orders'
+    | '/_authenticated/crm/pending-approvals'
     | '/_authenticated/crm/visit-schedule'
     | '/_authenticated/crm/workbench'
     | '/_authenticated/errors/$error'
@@ -1250,6 +1263,13 @@ declare module '@tanstack/react-router' {
       path: '/crm/visit-schedule'
       fullPath: '/crm/visit-schedule'
       preLoaderRoute: typeof AuthenticatedCrmVisitScheduleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crm/pending-approvals': {
+      id: '/_authenticated/crm/pending-approvals'
+      path: '/crm/pending-approvals'
+      fullPath: '/crm/pending-approvals'
+      preLoaderRoute: typeof AuthenticatedCrmPendingApprovalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/crm/orders': {
@@ -1609,6 +1629,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
   AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
+  AuthenticatedCrmPendingApprovalsRoute: typeof AuthenticatedCrmPendingApprovalsRoute
   AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
   AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
@@ -1630,6 +1651,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
   AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
+  AuthenticatedCrmPendingApprovalsRoute: AuthenticatedCrmPendingApprovalsRoute,
   AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
   AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,

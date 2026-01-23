@@ -31,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Phone,
   PhoneIncoming,
@@ -43,6 +44,7 @@ import {
   VolumeX,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
@@ -56,6 +58,10 @@ interface YunkeCallLogsProps {
   className?: string
   /** 是否显示标题栏（用于跟进记录Tab的50%布局） */
   showHeader?: boolean
+  /** 是否可折叠（仅在 showHeader 模式下有效） */
+  collapsible?: boolean
+  /** 默认是否折叠（仅在 collapsible 为 true 时有效） */
+  defaultCollapsed?: boolean
 }
 
 /**
@@ -352,7 +358,7 @@ function AudioPlayerDialog({ open, onOpenChange, item }: AudioPlayerDialogProps)
   )
 }
 
-export function YunkeCallLogs({ phone, className, showHeader = false }: YunkeCallLogsProps) {
+export function YunkeCallLogs({ phone, className, showHeader = false, collapsible = false, defaultCollapsed = false }: YunkeCallLogsProps) {
   const s = useStyleClasses()
   const [selectedItem, setSelectedItem] = useState<YunkeCallLogItem | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -421,11 +427,24 @@ export function YunkeCallLogs({ phone, className, showHeader = false }: YunkeCal
 
   // showHeader 模式下的完整布局
   if (showHeader) {
-    return (
-      <>
-        <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+    // 标题栏
+    const headerContent = (
+      <div className={cn(
+        "flex items-center justify-between px-4 py-2 bg-muted/30",
+        collapsible ? "cursor-pointer hover:bg-muted/50 transition-colors group" : "border-b"
+      )}>
+        <div className="flex items-center gap-2">
+          <Phone className="h-4 w-4 text-muted-foreground" />
           <h4 className={cn(s.text.sm, 'font-medium')}>云客通话记录</h4>
           {callStats.totalCalls > 0 && (
+            <span className={cn(s.text.xs, 'text-muted-foreground ml-2')}>
+              ({callStats.totalCalls} 条)
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {/* 统计信息 - 非折叠模式或展开时显示完整统计 */}
+          {!collapsible && callStats.totalCalls > 0 && (
             <div className={cn(s.text.xs, 'text-muted-foreground flex items-center gap-3')}>
               <span>
                 接通 <span className="text-green-600 font-medium">{callStats.connected}</span>
@@ -434,18 +453,45 @@ export function YunkeCallLogs({ phone, className, showHeader = false }: YunkeCal
                 未接通 <span className="text-red-500 font-medium">{callStats.notConnected}</span>
               </span>
               <span>
-                总通话 <span className="font-medium">{callStats.totalCalls}</span>
-              </span>
-              <span>
                 总通时 <span className="font-medium">{callStats.totalDuration}</span>
-              </span>
-              <span>
-                平均通时 <span className="font-medium">{callStats.avgDuration}</span>
               </span>
             </div>
           )}
+          {collapsible && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <span className={cn(s.text.xs, 'group-data-[state=open]:hidden')}>点击展开</span>
+              <span className={cn(s.text.xs, 'hidden group-data-[state=open]:inline')}>点击收起</span>
+              <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+            </div>
+          )}
         </div>
-        <ScrollArea className="flex-1">
+      </div>
+    )
+
+    // 内容区域
+    const mainContent = (
+      <>
+        {/* 展开后显示完整统计信息 */}
+        {collapsible && callStats.totalCalls > 0 && (
+          <div className={cn(s.text.xs, 'text-muted-foreground flex items-center gap-3 px-4 py-2 bg-muted/20 border-b')}>
+            <span>
+              接通 <span className="text-green-600 font-medium">{callStats.connected}</span>
+            </span>
+            <span>
+              未接通 <span className="text-red-500 font-medium">{callStats.notConnected}</span>
+            </span>
+            <span>
+              总通话 <span className="font-medium">{callStats.totalCalls}</span>
+            </span>
+            <span>
+              总通时 <span className="font-medium">{callStats.totalDuration}</span>
+            </span>
+            <span>
+              平均通时 <span className="font-medium">{callStats.avgDuration}</span>
+            </span>
+          </div>
+        )}
+        <ScrollArea className="flex-1 max-h-[300px]">
           <div className="p-4">
             {isLoading ? (
               <div className="space-y-2">
@@ -595,6 +641,37 @@ export function YunkeCallLogs({ phone, className, showHeader = false }: YunkeCal
             </div>
           </div>
         )}
+      </>
+    )
+
+    // 可折叠模式
+    if (collapsible) {
+      return (
+        <>
+          <Collapsible defaultOpen={!defaultCollapsed}>
+            <CollapsibleTrigger asChild>
+              {headerContent}
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              {mainContent}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* 音频播放弹窗 */}
+          <AudioPlayerDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            item={selectedItem}
+          />
+        </>
+      )
+    }
+
+    // 非折叠模式
+    return (
+      <>
+        {headerContent}
+        {mainContent}
 
         {/* 音频播放弹窗 */}
         <AudioPlayerDialog

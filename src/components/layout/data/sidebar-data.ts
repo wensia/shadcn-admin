@@ -123,6 +123,11 @@ export const crmNavGroups: NavGroup[] = [
         icon: ShoppingCart,
       },
       {
+        title: '待审批订单',
+        url: '/crm/pending-approvals',
+        icon: ClipboardList,
+      },
+      {
         title: '财务管理',
         url: '/crm/finance',
         icon: Wallet,

@@ -110,6 +110,20 @@ export function LeadsTable({
     return style === 'lyra' ? Math.ceil(baseSize * 1.1) : baseSize
   }
 
+  // 冻结列的宽度和 left 位置计算
+  const frozenColumnWidths = {
+    select: 50,
+    child_name: getColumnSize(120),
+    parent_phone: getColumnSize(110)
+  }
+  const frozenColumnLefts = {
+    select: 0,
+    child_name: frozenColumnWidths.select,
+    parent_phone: frozenColumnWidths.select + frozenColumnWidths.child_name
+  }
+  // 最后一个冻结列的右边界位置（用于添加分隔线）
+  const lastFrozenColumnRight = frozenColumnLefts.parent_phone + frozenColumnWidths.parent_phone
+
   // 决定显示的数据：加载时使用骨架屏数据
   const displayData = useMemo(() => {
     return isLoading ? createSkeletonData(pageSize) : data
@@ -440,16 +454,20 @@ export function LeadsTable({
         )}
       >
         <Table style={{ tableLayout: 'fixed' }}>
-          <TableHeader className="sticky top-0 z-10 bg-card">
+          <TableHeader className="sticky top-0 z-20 bg-card">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => {
                   const isSelectColumn = header.id === 'select'
                   const isChildNameColumn = header.id === 'child_name'
                   const isPhoneColumn = header.id === 'parent_phone'
                   const isFrozenColumn = isSelectColumn || isChildNameColumn || isPhoneColumn
-                  // 冻结列的 left 值：select(50) + child_name(120) = 170
-                  const frozenLeft = isSelectColumn ? 0 : isChildNameColumn ? 50 : 170
+                  const isLastFrozenColumn = isPhoneColumn
+                  const frozenLeft = isSelectColumn
+                    ? frozenColumnLefts.select
+                    : isChildNameColumn
+                      ? frozenColumnLefts.child_name
+                      : frozenColumnLefts.parent_phone
                   return (
                     <TableHead
                       key={header.id}
@@ -458,14 +476,15 @@ export function LeadsTable({
                         ...(isFrozenColumn && {
                           position: 'sticky',
                           left: frozenLeft,
-                          zIndex: 20,
+                          zIndex: 30,
                         })
                       }}
                       className={cn(
                         s.text.xs,
                         'font-semibold',
                         s.height.control,
-                        isFrozenColumn && 'bg-card'
+                        'bg-card',
+                        isLastFrozenColumn && 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]'
                       )}
                     >
                       {header.isPlaceholder
@@ -500,8 +519,12 @@ export function LeadsTable({
                     const isChildNameColumn = cell.column.id === 'child_name'
                     const isPhoneColumn = cell.column.id === 'parent_phone'
                     const isFrozenColumn = isSelectColumn || isChildNameColumn || isPhoneColumn
-                    // 冻结列的 left 值：select(50) + child_name(120) = 170
-                    const frozenLeft = isSelectColumn ? 0 : isChildNameColumn ? 50 : 170
+                    const isLastFrozenColumn = isPhoneColumn
+                    const frozenLeft = isSelectColumn
+                      ? frozenColumnLefts.select
+                      : isChildNameColumn
+                        ? frozenColumnLefts.child_name
+                        : frozenColumnLefts.parent_phone
                     const isSelected = row.getIsSelected()
                     return (
                       <TableCell
@@ -517,7 +540,8 @@ export function LeadsTable({
                         className={cn(
                           s.padding.cell,
                           s.text.xs,
-                          isFrozenColumn && (isSelected ? 'bg-muted' : 'bg-background')
+                          isFrozenColumn && (isSelected ? 'bg-muted' : 'bg-background'),
+                          isLastFrozenColumn && 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]'
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

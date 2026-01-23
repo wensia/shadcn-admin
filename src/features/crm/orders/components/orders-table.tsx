@@ -27,13 +27,24 @@ import type { OrderListItem } from '../types'
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
 
-// 状态颜色映射
-const statusColorMap: Record<string, string> = {
+// 支付状态颜色映射
+const paymentStatusColorMap: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   paid: 'bg-green-100 text-green-800',
   partial: 'bg-blue-100 text-blue-800',
   refunded: 'bg-gray-100 text-gray-800',
   cancelled: 'bg-red-100 text-red-800'
+}
+
+// 审批状态颜色映射
+const approvalStatusColorMap: Record<string, string> = {
+  pending: 'bg-gray-100 text-gray-800',
+  leader_pending: 'bg-blue-100 text-blue-800',
+  leader_rejected: 'bg-red-100 text-red-800',
+  finance_pending: 'bg-purple-100 text-purple-800',
+  finance_rejected: 'bg-red-100 text-red-800',
+  approved: 'bg-green-100 text-green-800',
+  cancelled: 'bg-gray-100 text-gray-600'
 }
 
 // 生成骨架屏占位数据
@@ -54,6 +65,8 @@ function createSkeletonData(count: number): OrderListItem[] {
     payment_at: '',
     collector_name: '',
     campus_name: '',
+    approval_status: 'pending',
+    approval_status_display: '',
     items_count: 0,
     created_at: '',
     created_by_name: ''
@@ -238,12 +251,28 @@ export function OrdersTable({
             return <Skeleton className={cn("h-5 w-14", s.rounded)} />
           }
           return (
-            <Badge className={cn('text-xs', statusColorMap[row.original.payment_status] || 'bg-gray-100', s.roundedBadge)}>
+            <Badge className={cn('text-xs', paymentStatusColorMap[row.original.payment_status] || 'bg-gray-100', s.roundedBadge)}>
               {row.original.payment_status_display}
             </Badge>
           )
         },
         size: getColumnSize(90)
+      },
+      // 审批状态
+      {
+        accessorKey: 'approval_status',
+        header: '审批状态',
+        cell: ({ row }) => {
+          if (isSkeletonRow(row.original.id)) {
+            return <Skeleton className={cn("h-5 w-16", s.rounded)} />
+          }
+          return (
+            <Badge className={cn('text-xs', approvalStatusColorMap[row.original.approval_status] || 'bg-gray-100', s.roundedBadge)}>
+              {row.original.approval_status_display}
+            </Badge>
+          )
+        },
+        size: getColumnSize(100)
       },
       // 课程数
       {
