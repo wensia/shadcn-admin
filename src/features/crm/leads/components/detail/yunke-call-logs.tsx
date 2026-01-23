@@ -45,6 +45,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
@@ -170,6 +171,7 @@ function AudioPlayerDialog({ open, onOpenChange, item }: AudioPlayerDialogProps)
   const [duration, setDuration] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // 重置状态
   const resetState = useCallback(() => {
@@ -261,6 +263,48 @@ function AudioPlayerDialog({ open, onOpenChange, item }: AudioPlayerDialogProps)
     setIsMuted(!isMuted)
   }
 
+  // 下载音频
+  const handleDownload = async () => {
+    if (!item?.recordFile) return
+
+    setIsDownloading(true)
+    try {
+      const audioUrl = getAudioUrl(item.recordFile)
+      const response = await fetch(audioUrl)
+      const blob = await response.blob()
+
+      // 生成文件名: 手机号_通话时长_通话开始时间.mp3
+      const phone = item.callNumber || 'unknown'
+      const durationStr = `${item.callSeconds}秒`
+      const timeStr = item.startCallTime
+        ? new Date(item.startCallTime).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }).replace(/[/:]/g, '-').replace(/\s/g, '_')
+        : 'unknown'
+      const fileName = `${phone}_${durationStr}_${timeStr}.mp3`
+
+      // 创建下载链接
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('下载失败:', err)
+      setError('下载失败，请稍后重试')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   if (!item) return null
 
   const typeInfo = getCallTypeInfo(item.incomingCall)
@@ -342,7 +386,20 @@ function AudioPlayerDialog({ open, onOpenChange, item }: AudioPlayerDialogProps)
                     )}
                   </Button>
 
-                  <div className="w-8" /> {/* 占位，保持居中 */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleDownload}
+                    disabled={isLoading || isDownloading}
+                    title="下载录音"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
               </>
             )}
