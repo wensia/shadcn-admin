@@ -359,6 +359,79 @@ export const callRecordsApi = {
     }>>('/yunke/call-records/search', { params })
     return response.data!
   },
+
+  /** 获取通话统计数据（从云客 API 实时获取） */
+  async getCallStatistics(params: {
+    department_id: string
+    flag?: 'department' | 'user'
+    period?: number
+    stat_type?: number
+    user_id?: string
+    start_date?: string
+    end_date?: string
+    incoming_call_type?: string
+    account_id?: string  // 云客账号ID，用于指定使用哪个账号的凭证
+  }): Promise<CallStatisticsData> {
+    const response = await apiClient.get<ApiResponse<CallStatisticsData>>(
+      '/yunke/call-records/statistics',
+      { params }
+    )
+    return response.data!
+  },
+
+  /** 获取员工-校区映射关系 */
+  async getEmployeeCampusMapping(): Promise<EmployeeCampusMapping> {
+    const response = await apiClient.get<ApiResponse<EmployeeCampusMapping>>(
+      '/yunke/call-records/employee-campus-mapping'
+    )
+    return response.data!
+  },
+}
+
+/** 通话统计数据类型 */
+export interface CallStatisticsData {
+  /** 总通话次数 */
+  totalCallCount?: number
+  /** 外呼次数 */
+  outboundCallCount?: number
+  /** 呼入次数 */
+  inboundCallCount?: number
+  /** 接通次数 */
+  connectedCount?: number
+  /** 接通率 */
+  connectRate?: number
+  /** 总通话时长（秒） */
+  totalDuration?: number
+  /** 平均通话时长（秒） */
+  avgDuration?: number
+  /** 员工统计列表 */
+  userList?: CallStatisticsUserItem[]
+  /** 其他原始字段 */
+  [key: string]: unknown
+}
+
+/** 员工通话统计项 */
+export interface CallStatisticsUserItem {
+  userId?: string
+  userName?: string
+  departmentId?: string
+  departmentName?: string
+  totalCallCount?: number
+  outboundCallCount?: number
+  inboundCallCount?: number
+  connectedCount?: number
+  connectRate?: number
+  totalDuration?: number
+  avgDuration?: number
+  [key: string]: unknown
+}
+
+/** 员工-校区映射关系 */
+export interface EmployeeCampusMapping {
+  [employeeName: string]: Array<{
+    campus_id: string
+    campus_name: string
+  }>
 }
 
 // 导出默认 API

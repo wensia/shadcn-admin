@@ -211,6 +211,7 @@ export interface YunkeCredential {
   company_id: string
   company_code: string | null
   company_name: string | null
+  root_dept_id: string | null  // 根部门ID
   user_id: string | null
   status: number  // 0=失效, 1=正常
   last_login: string | null
