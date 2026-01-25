@@ -101,13 +101,20 @@ export function LeadsToolbar({
 
     setIsLookingUp(true)
     try {
-      // 先通过手机号搜索线索
-      const searchResult = await leadsApi.searchLeadsByPhone(searchValue)
-      if (searchResult && searchResult.length > 0) {
-        // 获取完整的线索详情
-        const leadDetail = await leadsApi.getLead(searchResult[0].id)
-        setLookupLead(leadDetail)
-        setShowLeadDialog(true)
+      // 使用 checkPhoneDuplicate 查找所有匹配的线索（包含公海线索）
+      const checkResult = await leadsApi.checkPhoneDuplicate(searchValue)
+      if (checkResult?.duplicate_leads && checkResult.duplicate_leads.length > 0) {
+        // 找第一个有权限的线索
+        const accessibleLead = checkResult.duplicate_leads.find(l => !l.no_permission)
+        if (accessibleLead) {
+          // 获取完整的线索详情
+          const leadDetail = await leadsApi.getLead(accessibleLead.id)
+          setLookupLead(leadDetail)
+          setShowLeadDialog(true)
+        } else {
+          // 所有线索都没有权限
+          toast.warning('找到线索但您没有查看权限')
+        }
       } else {
         toast.info('未找到该手机号对应的线索')
       }
