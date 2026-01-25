@@ -249,7 +249,7 @@ export function LeadsToolbar({
 
       {/* 手机号查看线索详情弹窗 */}
       <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className={cn(s.text.base, 'font-semibold')}>
               线索详情 - {lookupLead?.child_name || lookupLead?.parent_phone || ''}
