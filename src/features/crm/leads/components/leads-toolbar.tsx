@@ -251,13 +251,8 @@ export function LeadsToolbar({
       <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
         <DialogContent className="!w-[90vw] !max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className={cn(s.text.base, 'font-semibold flex items-center gap-2')}>
-              <span>线索详情 - {lookupLead?.child_name || lookupLead?.parent_phone || ''}</span>
-              {lookupLead && !lookupLead.advisor_id && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
-                  公海 · {lookupLead.owner_campus_name || '未知校区'}
-                </span>
-              )}
+            <DialogTitle className={cn(s.text.base, 'font-semibold')}>
+              线索详情 - {lookupLead?.child_name || lookupLead?.parent_phone || ''}
             </DialogTitle>
           </DialogHeader>
           {lookupLead && (

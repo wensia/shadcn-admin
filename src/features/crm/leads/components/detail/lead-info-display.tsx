@@ -694,8 +694,24 @@ export function LeadInfoDisplay({
                 />
               ) : undefined}
             />
-            <InfoItem label="负责顾问" value={lead.advisor_name} />
-            <InfoItem label="归属校区" value={lead.owner_campus_name} />
+            <InfoItem
+              label="负责顾问"
+              value={lead.advisor_name ? lead.advisor_name : (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                  公海
+                </span>
+              )}
+            />
+            <InfoItem
+              label="归属校区"
+              value={!lead.advisor_id && lead.owner_campus_name ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                    {lead.owner_campus_name} 公海
+                  </span>
+                </span>
+              ) : lead.owner_campus_name}
+            />
             <InfoItem
               label="下次跟进"
               value={lead.next_followup_at ? formatTime(lead.next_followup_at) : undefined}
