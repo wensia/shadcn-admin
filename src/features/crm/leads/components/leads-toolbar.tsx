@@ -103,13 +103,14 @@ export function LeadsToolbar({
     try {
       // 使用 checkPhoneDuplicate 查找所有匹配的线索（包含公海线索）
       const checkResult = await leadsApi.checkPhoneDuplicate(searchValue)
-      if (checkResult?.duplicate_leads && checkResult.duplicate_leads.length > 0) {
+      const duplicateLeads = checkResult?.data?.duplicate_leads
+      if (duplicateLeads && duplicateLeads.length > 0) {
         // 找第一个有权限的线索
-        const accessibleLead = checkResult.duplicate_leads.find(l => !l.no_permission)
+        const accessibleLead = duplicateLeads.find(l => !l.no_permission)
         if (accessibleLead) {
           // 获取完整的线索详情
           const leadDetail = await leadsApi.getLead(accessibleLead.id)
-          setLookupLead(leadDetail)
+          setLookupLead(leadDetail.data)
           setShowLeadDialog(true)
         } else {
           // 所有线索都没有权限
