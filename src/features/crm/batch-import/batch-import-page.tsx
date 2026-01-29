@@ -24,6 +24,7 @@ import { format } from 'date-fns'
 import { Cross2Icon, MixerHorizontalIcon } from '@radix-ui/react-icons'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { HeaderActions } from '@/components/layout/header-actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -330,6 +331,7 @@ export function BatchImportPage() {
     <>
       <Header fixed>
         <h1 className="text-lg font-semibold">批量导入</h1>
+        <HeaderActions showSearch={false} />
       </Header>
 
       <Main fixed className="flex flex-1 flex-col gap-4">

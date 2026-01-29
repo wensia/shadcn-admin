@@ -50,6 +50,7 @@ import { brandColors } from '../theme'
 interface CalendarTabProps {
   dateFrom?: string
   dateTo?: string
+  creatorCampusId?: string
 }
 
 // 日历项类型
@@ -102,7 +103,7 @@ const typeConfig = {
   },
 }
 
-export function CalendarTab({ dateFrom, dateTo }: CalendarTabProps) {
+export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabProps) {
   const initialMonth = useMemo(() => {
     if (dateFrom) {
       return parseISO(dateFrom)
@@ -135,7 +136,7 @@ export function CalendarTab({ dateFrom, dateTo }: CalendarTabProps) {
 
   // 获取数据
   const { data: promisedData, isLoading: isLoadingPromised, error: promisedError } = useQuery({
-    queryKey: ['calendar-promised', monthRange.from, monthRange.to],
+    queryKey: ['calendar-promised', monthRange.from, monthRange.to, creatorCampusId],
     queryFn: async () => {
       const response = await getVisitSchedules({
         page: 1,
@@ -143,6 +144,7 @@ export function CalendarTab({ dateFrom, dateTo }: CalendarTabProps) {
         status: 'scheduled',
         visit_date_from: monthRange.from,
         visit_date_to: monthRange.to,
+        creator_campus_id: creatorCampusId,
       }) as any
       if (response && response.success === false) {
         throw new Error(response.message || '获取诺到数据失败')
@@ -153,7 +155,7 @@ export function CalendarTab({ dateFrom, dateTo }: CalendarTabProps) {
   })
 
   const { data: visitedData, isLoading: isLoadingVisited, error: visitedError } = useQuery({
-    queryKey: ['calendar-visited', monthRange.from, monthRange.to],
+    queryKey: ['calendar-visited', monthRange.from, monthRange.to, creatorCampusId],
     queryFn: async () => {
       const response = await getVisitSchedules({
         page: 1,
@@ -161,6 +163,7 @@ export function CalendarTab({ dateFrom, dateTo }: CalendarTabProps) {
         status: 'visited',
         visit_date_from: monthRange.from,
         visit_date_to: monthRange.to,
+        creator_campus_id: creatorCampusId,
       }) as any
       if (response && response.success === false) {
         throw new Error(response.message || '获取到访数据失败')
@@ -171,7 +174,7 @@ export function CalendarTab({ dateFrom, dateTo }: CalendarTabProps) {
   })
 
   const { data: paymentData, isLoading: isLoadingPayment, error: paymentError } = useQuery({
-    queryKey: ['calendar-payment', monthRange.from, monthRange.to],
+    queryKey: ['calendar-payment', monthRange.from, monthRange.to, creatorCampusId],
     queryFn: async () => {
       const response = await getPayments({
         page: 1,
@@ -179,6 +182,7 @@ export function CalendarTab({ dateFrom, dateTo }: CalendarTabProps) {
         date_from: monthRange.from,
         date_to: monthRange.to,
         status: 'confirmed',
+        creator_campus_id: creatorCampusId,
       }) as any
       if (response && response.success === false) {
         throw new Error(response.message || '获取缴费数据失败')

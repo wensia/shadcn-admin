@@ -466,7 +466,8 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
                   <FormFacetedFilter
                     placeholder="全部"
                     options={[
-                      { value: 'all_not_connected', label: '所有都未接通' }
+                      { value: 'all_not_connected', label: '所有都未接通' },
+                      { value: 'has_followable', label: '包含可跟进' }
                     ]}
                     value={localFilters.followup_result_filter ? [localFilters.followup_result_filter] : []}
                     onChange={(value) => updateFilter('followup_result_filter', value?.[0] || undefined)}

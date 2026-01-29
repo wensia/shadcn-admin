@@ -11,6 +11,13 @@ import { Main } from '@/components/layout/main'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { DateRangePickerSingle } from '@/components/date-picker'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   UserCheck,
   CalendarCheck,
   Wallet,
@@ -26,6 +33,7 @@ import { CalendarTab } from './components/calendar-tab'
 import { ReportTab } from './components/report-tab'
 import { getVisitSchedules, getPayments } from './api'
 import { tabThemes, brandColors, type TabType } from './theme'
+import { apiClient } from '@/lib/api/client'
 
 // 获取本月第一天
 const getMonthStartStr = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
@@ -39,10 +47,25 @@ export function DailyControlPage() {
     from: getMonthStartStr(),
     to: getMonthEndStr(),
   })
+  const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
+
+  // 获取校区列表
+  const { data: campusesData } = useQuery({
+    queryKey: ['campuses-for-daily-control'],
+    queryFn: async () => {
+      const response = await apiClient.get('/organization/campuses/simple')
+      return response.data || []
+    },
+  })
+
+  const campuses = campusesData || []
+
+  // 获取当前选中的校区ID（用于传递给子组件）
+  const creatorCampusId = selectedCampusId === 'all' ? undefined : selectedCampusId
 
   // 获取统计数据
   const { data: promisedStats } = useQuery({
-    queryKey: ['daily-control-stats-promised', dateRange.from, dateRange.to],
+    queryKey: ['daily-control-stats-promised', dateRange.from, dateRange.to, creatorCampusId],
     queryFn: async () => {
       const result = await getVisitSchedules({
         page: 1,
@@ -50,13 +73,14 @@ export function DailyControlPage() {
         status: 'scheduled',
         visit_date_from: dateRange.from,
         visit_date_to: dateRange.to,
+        creator_campus_id: creatorCampusId,
       }) as any
       return result?.total || 0
     },
   })
 
   const { data: visitedStats } = useQuery({
-    queryKey: ['daily-control-stats-visited', dateRange.from, dateRange.to],
+    queryKey: ['daily-control-stats-visited', dateRange.from, dateRange.to, creatorCampusId],
     queryFn: async () => {
       const result = await getVisitSchedules({
         page: 1,
@@ -64,13 +88,14 @@ export function DailyControlPage() {
         status: 'visited',
         visit_date_from: dateRange.from,
         visit_date_to: dateRange.to,
+        creator_campus_id: creatorCampusId,
       }) as any
       return result?.total || 0
     },
   })
 
   const { data: paymentStats } = useQuery({
-    queryKey: ['daily-control-stats-payment', dateRange.from, dateRange.to],
+    queryKey: ['daily-control-stats-payment', dateRange.from, dateRange.to, creatorCampusId],
     queryFn: async () => {
       const result = await getPayments({
         page: 1,
@@ -78,6 +103,7 @@ export function DailyControlPage() {
         status: 'confirmed',
         date_from: dateRange.from,
         date_to: dateRange.to,
+        creator_campus_id: creatorCampusId,
       }) as any
       return result?.total || 0
     },
@@ -214,31 +240,48 @@ export function DailyControlPage() {
               })}
             </div>
 
-            {/* 日期选择器 */}
+            {/* 筛选器：校区 + 日期 */}
             {activeTab !== 'calendar' && (
-              <DateRangePickerSingle
-                value={dateRange}
-                onChange={setDateRange}
-                placeholder="选择日期范围"
-              />
+              <div className="flex items-center gap-3">
+                {/* 校区筛选 */}
+                <Select value={selectedCampusId} onValueChange={setSelectedCampusId}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="选择校区" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部校区</SelectItem>
+                    {campuses.map((campus: { id: string; name: string }) => (
+                      <SelectItem key={campus.id} value={campus.id}>
+                        {campus.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* 日期选择器 */}
+                <DateRangePickerSingle
+                  value={dateRange}
+                  onChange={setDateRange}
+                  placeholder="选择日期范围"
+                />
+              </div>
             )}
           </div>
 
           {/* Tab 内容区域 */}
-          <TabsContent value="promised" className="mt-4 flex-1 overflow-auto">
-            <PromisedVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} />
+          <TabsContent value="promised" className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <PromisedVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
           </TabsContent>
 
-          <TabsContent value="visited" className="mt-4 flex-1 overflow-auto">
-            <ActualVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} />
+          <TabsContent value="visited" className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <ActualVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
           </TabsContent>
 
-          <TabsContent value="payment" className="mt-4 flex-1 overflow-auto">
-            <PaymentTab dateFrom={dateRange.from} dateTo={dateRange.to} />
+          <TabsContent value="payment" className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <PaymentTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4 flex-1 overflow-hidden">
-            <CalendarTab dateFrom={dateRange.from} dateTo={dateRange.to} />
+            <CalendarTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
           </TabsContent>
 
           <TabsContent value="report" className="mt-4 flex-1 overflow-auto">

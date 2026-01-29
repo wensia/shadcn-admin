@@ -23,6 +23,7 @@ import {
   Eye,
   MousePointer,
   Activity,
+  Bell,
 } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -55,6 +56,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { leadAccessStatsApi } from '../api'
+import { LeadAccessNotifyDialog } from '../components/lead-access-notify-dialog'
 import type {
   AdvisorAccessStatistics,
   AccessStatisticsSummary,
@@ -110,6 +112,9 @@ export function LeadAccessStatsPage() {
 
   // 导出状态
   const [exportLoading, setExportLoading] = useState(false)
+
+  // 通知设置弹窗状态
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false)
 
   // 自动刷新定时器
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -469,10 +474,16 @@ export function LeadAccessStatsPage() {
               监控和管理顾问访问线索的频次和限制
             </p>
           </div>
-          <Button onClick={handleExport} disabled={exportLoading}>
-            <Download className="mr-2 h-4 w-4" />
-            {exportLoading ? '导出中...' : '导出数据'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setNotifyDialogOpen(true)}>
+              <Bell className="mr-2 h-4 w-4" />
+              通知设置
+            </Button>
+            <Button onClick={handleExport} disabled={exportLoading}>
+              <Download className="mr-2 h-4 w-4" />
+              {exportLoading ? '导出中...' : '导出数据'}
+            </Button>
+          </div>
         </div>
 
         {/* 统计卡片 */}
@@ -725,6 +736,12 @@ export function LeadAccessStatsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 通知设置弹窗 */}
+      <LeadAccessNotifyDialog
+        open={notifyDialogOpen}
+        onOpenChange={setNotifyDialogOpen}
+      />
     </Main>
   )
 }

@@ -11,10 +11,14 @@ import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
 // 到访预约状态
 export type VisitScheduleStatus = 'scheduled' | 'visited' | 'noshow' | 'cancelled'
 
+// 审批状态
+export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected'
+
 // 到访预约记录（字段名与后端 VisitScheduleResponse 对应）
 export interface VisitScheduleItem {
   id: string
-  lead_id: string
+  lead_id?: string | null  // 线索删除后为 null
+  lead_deleted?: boolean   // 线索是否已删除
   student_name?: string  // 后端返回 student_name
   phone?: string         // 后端返回 phone
   grade?: string
@@ -39,6 +43,19 @@ export interface VisitScheduleItem {
   // 兼容旧字段名（前端使用）
   child_name?: string    // 映射自 student_name
   parent_phone?: string  // 映射自 phone
+  // 审批相关字段
+  is_counted?: boolean
+  approval_status?: ApprovalStatus
+  approval_status_display?: string
+  confirmed_at?: string
+  approver_id?: string
+  approver_name?: string
+  approved_at?: string
+  approval_comment?: string
+  // 权限标识
+  can_confirm?: boolean
+  can_approve?: boolean
+  can_withdraw?: boolean
 }
 
 // 到访预约查询参数
@@ -50,6 +67,7 @@ export interface VisitScheduleQueryParams {
   status?: VisitScheduleStatus
   visit_date_from?: string
   visit_date_to?: string
+  creator_campus_id?: string
 }
 
 // 缴费状态
@@ -64,7 +82,8 @@ export type PaymentType = 'deposit' | 'full_payment' | 'installment' | 'suppleme
 // 缴费记录
 export interface PaymentItem {
   id: string
-  lead_id: string
+  lead_id?: string | null  // 线索删除后为 null
+  lead_deleted?: boolean   // 线索是否已删除
   child_name?: string
   parent_name?: string
   parent_phone?: string
@@ -94,6 +113,19 @@ export interface PaymentItem {
   remark?: string
   created_at: string
   updated_at?: string
+  // 审批相关字段
+  is_counted?: boolean
+  approval_status?: ApprovalStatus
+  approval_status_display?: string
+  confirmed_at?: string
+  approver_id?: string
+  approver_name?: string
+  approved_at?: string
+  approval_comment?: string
+  // 权限标识
+  can_confirm?: boolean
+  can_approve?: boolean
+  can_withdraw?: boolean
 }
 
 // 缴费查询参数
@@ -109,6 +141,7 @@ export interface PaymentQueryParams {
   date_from?: string
   date_to?: string
   keyword?: string
+  creator_campus_id?: string
 }
 
 // ==================== 状态标签配置 ====================
@@ -125,6 +158,22 @@ export const visitScheduleStatusColors: Record<VisitScheduleStatus, string> = {
   visited: 'bg-green-100 text-green-800',
   noshow: 'bg-red-100 text-red-800',
   cancelled: 'bg-gray-100 text-gray-800'
+}
+
+// 审批状态标签
+export const approvalStatusLabels: Record<ApprovalStatus, string> = {
+  draft: '草稿',
+  pending: '待审批',
+  approved: '已通过',
+  rejected: '已驳回'
+}
+
+// 审批状态颜色
+export const approvalStatusColors: Record<ApprovalStatus, string> = {
+  draft: 'bg-gray-100 text-gray-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800'
 }
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
@@ -230,6 +279,37 @@ export async function deleteVisitSchedule(id: string) {
 }
 
 /**
+ * 确认诺到记录（提交审批）
+ */
+export async function confirmVisitSchedule(id: string) {
+  const response = await apiClient.post<ApiResponse<VisitScheduleItem>>(
+    `/visit-schedules/${id}/confirm`
+  )
+  return response
+}
+
+/**
+ * 审批诺到记录
+ */
+export async function approveVisitSchedule(id: string, action: 'approve' | 'reject', comment?: string) {
+  const response = await apiClient.post<ApiResponse<VisitScheduleItem>>(
+    `/visit-schedules/${id}/approve`,
+    { action, comment }
+  )
+  return response
+}
+
+/**
+ * 撤回诺到记录
+ */
+export async function withdrawVisitSchedule(id: string) {
+  const response = await apiClient.post<ApiResponse<VisitScheduleItem>>(
+    `/visit-schedules/${id}/withdraw`
+  )
+  return response
+}
+
+/**
  * 获取缴费记录列表
  */
 export async function getPayments(params: PaymentQueryParams = {}) {
@@ -278,6 +358,92 @@ export async function updatePayment(id: string, data: PaymentUpdateData) {
 export async function deletePayment(id: string) {
   const response = await apiClient.delete<ApiResponse<null>>(`/payments/${id}`)
   return response
+}
+
+/**
+ * 确认缴费记录（提交审批）
+ */
+export async function confirmPayment(id: string) {
+  const response = await apiClient.post<ApiResponse<PaymentItem>>(
+    `/payments/${id}/confirm`
+  )
+  return response
+}
+
+/**
+ * 审批缴费记录
+ */
+export async function approvePayment(id: string, action: 'approve' | 'reject', comment?: string) {
+  const response = await apiClient.post<ApiResponse<PaymentItem>>(
+    `/payments/${id}/approve`,
+    { action, comment }
+  )
+  return response
+}
+
+/**
+ * 撤回缴费记录
+ */
+export async function withdrawPayment(id: string) {
+  const response = await apiClient.post<ApiResponse<PaymentItem>>(
+    `/payments/${id}/withdraw`
+  )
+  return response
+}
+
+// ==================== 批量导入日控表 ====================
+
+// 批量导入响应
+export interface BatchImportResponse {
+  success_count: number
+  failed_records: Array<{
+    id: string
+    reason: string
+  }>
+}
+
+/**
+ * 批量导入诺到记录到日控表
+ */
+export async function batchImportVisitSchedules(recordIds: string[]) {
+  const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
+    '/visit-schedules/batch-import',
+    { record_ids: recordIds }
+  )
+  return response.data
+}
+
+/**
+ * 批量取消导入诺到记录
+ */
+export async function batchCancelImportVisitSchedules(recordIds: string[]) {
+  const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
+    '/visit-schedules/batch-cancel-import',
+    { record_ids: recordIds }
+  )
+  return response.data
+}
+
+/**
+ * 批量导入缴费记录到日控表
+ */
+export async function batchImportPayments(recordIds: string[]) {
+  const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
+    '/payments/batch-import',
+    { record_ids: recordIds }
+  )
+  return response.data
+}
+
+/**
+ * 批量取消导入缴费记录
+ */
+export async function batchCancelImportPayments(recordIds: string[]) {
+  const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
+    '/payments/batch-cancel-import',
+    { record_ids: recordIds }
+  )
+  return response.data
 }
 
 // ==================== 日控报表 ====================

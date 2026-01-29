@@ -947,6 +947,26 @@ export interface BatchUpdateLimit {
   daily_limit: number
 }
 
+/** 线索访问通知配置 */
+export interface LeadAccessNotifyConfig {
+  id: string | null
+  robot_id: string | null
+  robot_name: string | null
+  notify_at_80: boolean
+  notify_at_100: boolean
+  is_active: boolean
+  updated_by_name: string | null
+  updated_at: string | null
+}
+
+/** 更新通知配置请求 */
+export interface LeadAccessNotifyConfigUpdate {
+  robot_id?: string | null
+  notify_at_80?: boolean
+  notify_at_100?: boolean
+  is_active?: boolean
+}
+
 // ============================================================================
 // 云客管理员相关类型
 // ============================================================================

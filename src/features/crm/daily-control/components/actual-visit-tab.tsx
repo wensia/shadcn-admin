@@ -87,9 +87,10 @@ function isSkeletonRow(id: string): boolean {
 interface ActualVisitTabProps {
   dateFrom?: string
   dateTo?: string
+  creatorCampusId?: string
 }
 
-export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
+export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisitTabProps) {
   const [data, setData] = useState<VisitScheduleItem[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -114,6 +115,9 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
       if (dateTo) {
         params.visit_date_to = dateTo
       }
+      if (creatorCampusId) {
+        params.creator_campus_id = creatorCampusId
+      }
 
       const result = await getVisitSchedules(params)
       if (result) {
@@ -130,7 +134,7 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
 
   useEffect(() => {
     fetchData()
-  }, [page, pageSize, dateFrom, dateTo])
+  }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
 
   // 编辑
   const handleEdit = (item: VisitScheduleItem) => {
@@ -178,9 +182,19 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
           if (isSkeletonRow(row.original.id)) {
             return <Skeleton className="h-4 w-20" />
           }
-          return <span className="font-medium">{row.original.student_name || '-'}</span>
+          const item = row.original
+          return (
+            <div className="flex items-center gap-1">
+              <span className="font-medium">{item.student_name || '-'}</span>
+              {item.lead_deleted && (
+                <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-50 text-red-600 border-red-200">
+                  线索已删
+                </Badge>
+              )}
+            </div>
+          )
         },
-        size: 100,
+        size: 120,
       },
       {
         accessorKey: 'phone',
@@ -319,8 +333,8 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
   })
 
   return (
-    <Card className="flex flex-1 flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+    <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
+      <CardHeader className="flex flex-shrink-0 flex-row items-center justify-between space-y-0 px-4 py-3">
         <CardTitle className="text-base font-medium">到访列表</CardTitle>
         <div className="flex items-center gap-2">
           <Button size="sm" className="h-8 gap-1" onClick={handleCreate}>
@@ -333,9 +347,9 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4 pt-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4 pt-0">
         {/* 数据表 */}
-        <div className="flex-1 overflow-auto rounded-md border">
+        <div className="min-h-0 flex-1 overflow-auto rounded-md border">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-card">
               {table.getHeaderGroups().map((headerGroup) => (
@@ -362,25 +376,29 @@ export function ActualVisitTab({ dateFrom, dateTo }: ActualVisitTabProps) {
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => {
-                      const isActionsColumn = cell.column.id === 'actions'
-                      return (
-                        <TableCell
-                          key={cell.id}
-                          style={{ width: cell.column.getSize() }}
-                          className={cn(
-                            "py-2 text-xs",
-                            isActionsColumn && "sticky right-0 bg-card shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
-                          )}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      )
-                    })}
-                  </TableRow>
-                ))
+                table.getRowModel().rows.map((row) => {
+                  const isImported = row.original.is_counted
+                  return (
+                    <TableRow key={row.id} className={cn(isImported && "bg-green-50/50")}>
+                      {row.getVisibleCells().map((cell) => {
+                        const isActionsColumn = cell.column.id === 'actions'
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            style={{ width: cell.column.getSize() }}
+                            className={cn(
+                              "py-2 text-xs",
+                              isActionsColumn && "sticky right-0 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+                              isActionsColumn && (isImported ? "bg-green-50/50" : "bg-card")
+                            )}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        )
+                      })}
+                    </TableRow>
+                  )
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">

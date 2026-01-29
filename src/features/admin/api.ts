@@ -75,6 +75,8 @@ import type {
   AccessStatsFilters,
   AccessLogFilters,
   BatchUpdateLimit,
+  LeadAccessNotifyConfig,
+  LeadAccessNotifyConfigUpdate,
   YunkeAdminStatus,
   YunkeAdminLoginResponse,
   YunkeSubAccount,
@@ -950,6 +952,21 @@ export const leadAccessStatsApi = {
       page: number
       size: number
     }>>(url)
+    return response.data
+  },
+
+  /** 获取通知配置 */
+  async getNotifyConfig(): Promise<LeadAccessNotifyConfig> {
+    const response = await apiClient.get<ApiResponse<LeadAccessNotifyConfig>>('/lead-access-stats/notify-config')
+    return response.data
+  },
+
+  /** 更新通知配置 */
+  async updateNotifyConfig(data: LeadAccessNotifyConfigUpdate): Promise<LeadAccessNotifyConfig> {
+    const response = await apiClient.put<ApiResponse<LeadAccessNotifyConfig>>('/lead-access-stats/notify-config', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '更新失败')
+    }
     return response.data
   },
 }
