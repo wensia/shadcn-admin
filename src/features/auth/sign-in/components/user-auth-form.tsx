@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const formSchema = z.object({
   username: z.string().min(1, '请输入用户名'),
@@ -95,7 +96,7 @@ export function UserAuthForm({
 
       // 如果拦截器没有显示消息,则显示通用错误
       if (!error.messageShown) {
-        toast.error('登录失败，请检查用户名和密码')
+        showApiErrorToast(error, '登录失败')
       }
     } finally {
       setIsLoading(false)
@@ -158,7 +159,7 @@ export function UserAuthForm({
                 <PasswordInput
                   placeholder='请输入密码'
                   {...field}
-                  className='h-11 transition-all focus-visible:ring-2'
+                  inputClassName='h-11 transition-all focus-visible:ring-2'
                   style={{
                     borderRadius: '8px',
                     border: `1px solid ${anthropicColors.lightGray}`,

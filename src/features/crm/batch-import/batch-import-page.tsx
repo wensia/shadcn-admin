@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Cross2Icon, MixerHorizontalIcon } from '@radix-ui/react-icons'
 import { Header } from '@/components/layout/header'
@@ -250,7 +251,7 @@ export function BatchImportPage() {
       queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -266,7 +267,7 @@ export function BatchImportPage() {
       window.URL.revokeObjectURL(url)
       toast.success('模板下载成功')
     } catch (error: unknown) {
-      toast.error((error as Error).message || '下载失败')
+      showApiErrorToast(error, '下载失败')
     }
   }, [])
 
@@ -288,7 +289,7 @@ export function BatchImportPage() {
       setSelectedIds(new Set())
       queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
     } catch (error: unknown) {
-      toast.error((error as Error).message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     }
   }, [selectedIds, processingBatches, queryClient])
 

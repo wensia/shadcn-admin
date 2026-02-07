@@ -74,6 +74,7 @@ import {
   OrderPaymentMethod,
   OrderPaymentStatus
 } from '../types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 课程明细 schema
 const orderItemSchema = z.object({
@@ -470,7 +471,7 @@ export function OrderDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || error?.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     }
   })
 
@@ -486,7 +487,7 @@ export function OrderDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || error?.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     }
   })
 

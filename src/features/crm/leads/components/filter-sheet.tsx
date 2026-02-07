@@ -18,6 +18,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { DateRangePicker } from '@/components/date-picker'
 import {
   Command,
@@ -40,8 +47,8 @@ import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { leadsApi } from '../api'
 import { apiClient } from '@/lib/api/client'
-import type { LeadListParams, LeadStatus, IntentionLevel, SourceChannelExtraField, Grade } from '../types'
-import { leadStatusLabels, intentionLevelLabels, gradeLabels } from '../types'
+import type { LeadListParams, LeadStatus, IntentionLevel, SourceChannelExtraField, Grade, FollowupResult } from '../types'
+import { leadStatusLabels, intentionLevelLabels, gradeLabels, followupResultLabels } from '../types'
 
 // 来源渠道响应类型
 interface SourceChannelItem {
@@ -260,6 +267,19 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
     staleTime: 5 * 60 * 1000
   })
 
+  const followupResultOptions = useMemo(() => {
+    if (filterOptions?.followup_results && filterOptions.followup_results.length > 0) {
+      return filterOptions.followup_results.map((item) => ({
+        value: item.value,
+        label: item.label
+      }))
+    }
+    return Object.entries(followupResultLabels).map(([value, label]) => ({
+      value,
+      label
+    }))
+  }, [filterOptions])
+
   // 额外字段筛选状态
   const [sourceExtraFilters, setSourceExtraFilters] = useState<Record<string, string>>({})
 
@@ -301,7 +321,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
   // 应用筛选
   const handleApply = () => {
     // 分离已有独立参数的字段和需要放入 source_extra_filters 的字段
-    const { collector_name, collection_location, collection_method, collection_time, ...otherExtraFilters } = sourceExtraFilters
+    const { collector_name, collection_location, ...otherExtraFilters } = sourceExtraFilters
 
     const filtersToApply: LeadListParams = {
       ...localFilters,
@@ -462,15 +482,39 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
 
               {/* 回访状态筛选 - 占用1/2列 */}
               <div className="grid grid-cols-2 gap-3">
+                <FilterField label="回访筛选">
+                  <Select
+                    value={localFilters.followup_result_mode || ''}
+                    onValueChange={(value) => {
+                      updateFilter('followup_result_mode', value || undefined)
+                    }}
+                  >
+                    <SelectTrigger className={cn('w-full', s.height.control, s.text.xs, s.rounded)}>
+                      <SelectValue placeholder="筛选方式" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="include">包含</SelectItem>
+                      <SelectItem value="exclude">不包含</SelectItem>
+                      <SelectItem value="all">全部为</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FilterField>
                 <FilterField label="回访状态">
                   <FormFacetedFilter
-                    placeholder="全部"
-                    options={[
-                      { value: 'all_not_connected', label: '所有都未接通' },
-                      { value: 'has_followable', label: '包含可跟进' }
-                    ]}
-                    value={localFilters.followup_result_filter ? [localFilters.followup_result_filter] : []}
-                    onChange={(value) => updateFilter('followup_result_filter', value?.[0] || undefined)}
+                    placeholder="全部回访状态"
+                    options={followupResultOptions}
+                    value={localFilters.followup_results}
+                    onChange={(value) => {
+                      if (!value || value.length === 0) {
+                        updateFilter('followup_results', undefined)
+                        updateFilter('followup_result_mode', undefined)
+                        return
+                      }
+                      updateFilter('followup_results', value as FollowupResult[])
+                      if (!localFilters.followup_result_mode) {
+                        updateFilter('followup_result_mode', 'include')
+                      }
+                    }}
                   />
                 </FilterField>
               </div>

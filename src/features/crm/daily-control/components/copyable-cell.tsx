@@ -12,7 +12,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
+import { cn, copyToClipboard } from '@/lib/utils'
 
 interface CopyableCellProps {
   /** 显示的内容 */
@@ -28,12 +28,12 @@ export function CopyableCell({ content, maxWidthClass = 'max-w-[150px]', classNa
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    try {
-      await navigator.clipboard.writeText(content)
+    const success = await copyToClipboard(content)
+    if (success) {
       setCopied(true)
       toast.success('已复制到剪贴板')
       setTimeout(() => setCopied(false), 2000)
-    } catch {
+    } else {
       toast.error('复制失败')
     }
   }

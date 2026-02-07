@@ -113,6 +113,19 @@ export const yunkeApi = {
     return response.data!
   },
 
+  /** 为员工执行云客登录 */
+  async loginForEmployee(data: {
+    employee_id: string
+  }): Promise<{ success: boolean; message?: string; employee_name?: string; yunke_phone?: string }> {
+    const response = await apiClient.post<ApiResponse<{ employee_id: string; employee_name: string; yunke_phone: string; cookies_saved: boolean }>>('/yunke/admin/login-for-employee', data)
+    return {
+      success: true,
+      message: '登录成功',
+      employee_name: response.data?.employee_name,
+      yunke_phone: response.data?.yunke_phone,
+    }
+  },
+
   /** 自动同步绑定（根据姓名匹配） */
   async autoSyncBindings(): Promise<YunkeAutoSyncResult> {
     const response = await apiClient.post<ApiResponse<YunkeAutoSyncResult>>('/yunke/admin/auto-sync-bindings')

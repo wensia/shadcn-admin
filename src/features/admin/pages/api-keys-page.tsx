@@ -29,6 +29,7 @@ import {
   EyeOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -174,7 +175,7 @@ export function ApiKeysPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -187,7 +188,7 @@ export function ApiKeysPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '重新生成失败')
+      showApiErrorToast(error, '重新生成失败')
     },
   })
 
@@ -201,7 +202,7 @@ export function ApiKeysPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -216,7 +217,7 @@ export function ApiKeysPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新权限失败')
+      showApiErrorToast(error, '更新权限失败')
     },
   })
 

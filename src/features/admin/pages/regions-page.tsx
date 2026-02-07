@@ -16,6 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { MapPin, Plus, Pencil, Trash2, RefreshCw, Search } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -143,7 +144,7 @@ export function RegionsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-regions'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -159,7 +160,7 @@ export function RegionsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-regions'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -173,7 +174,7 @@ export function RegionsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-regions'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 

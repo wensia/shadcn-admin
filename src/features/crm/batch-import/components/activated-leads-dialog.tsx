@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Download, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import {
   Dialog,
@@ -90,7 +91,7 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
       window.URL.revokeObjectURL(url)
       toast.success('下载成功')
     } catch (error: unknown) {
-      toast.error((error as Error).message || '下载失败')
+      showApiErrorToast(error, '下载失败')
     }
   }, [batch])
 

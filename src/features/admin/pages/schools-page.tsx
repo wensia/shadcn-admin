@@ -58,6 +58,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { adminApi } from '../api'
 import type { SchoolItem } from '../types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 表单验证 schema
 const formSchema = z.object({
@@ -126,7 +127,7 @@ export function SchoolsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-schools'] })
     },
     onError: (error: Error) => {
-      toast.error(`创建失败: ${error.message}`)
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -142,7 +143,7 @@ export function SchoolsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-schools'] })
     },
     onError: (error: Error) => {
-      toast.error(`更新失败: ${error.message}`)
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -156,7 +157,7 @@ export function SchoolsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-schools'] })
     },
     onError: (error: Error) => {
-      toast.error(`删除失败: ${error.message}`)
+      showApiErrorToast(error, '删除失败')
     },
   })
 

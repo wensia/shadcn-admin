@@ -12,6 +12,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -37,7 +38,7 @@ export function YunkeLoginStatusPage() {
       toast.info(`检查完成：${data.logged_in}/${data.total} 个账号已登录`)
     },
     onError: (error: Error) => {
-      toast.error(error.message || '检查登录状态失败')
+      showApiErrorToast(error, '检查登录状态失败')
     },
   })
 
@@ -58,7 +59,7 @@ export function YunkeLoginStatusPage() {
       setTimeout(() => checkLoginStatusMutation.mutate(), 1000)
     },
     onError: (error: Error) => {
-      toast.error(error.message || '批量更新失败')
+      showApiErrorToast(error, '批量更新失败')
     },
   })
 

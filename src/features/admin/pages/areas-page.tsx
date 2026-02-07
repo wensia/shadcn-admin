@@ -66,6 +66,7 @@ import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { adminApi } from '../api'
 import type { AreaItem, AreaCreate, AreaUpdate } from '../types'
 import { StatusBadge } from '../components/status-badge'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 表单验证 schema
 const formSchema = z.object({
@@ -149,7 +150,7 @@ export function AreasPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-areas'] })
     },
     onError: (error: Error) => {
-      toast.error(`创建失败: ${error.message}`)
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -165,7 +166,7 @@ export function AreasPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-areas'] })
     },
     onError: (error: Error) => {
-      toast.error(`更新失败: ${error.message}`)
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -179,7 +180,7 @@ export function AreasPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-areas'] })
     },
     onError: (error: Error) => {
-      toast.error(`删除失败: ${error.message}`)
+      showApiErrorToast(error, '删除失败')
     },
   })
 

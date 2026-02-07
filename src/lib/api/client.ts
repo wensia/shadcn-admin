@@ -14,9 +14,10 @@ import axios, {
 import qs from 'qs'
 import { toast } from 'sonner'
 import type { ApiResponse, ApiError } from './types'
+import { ApiClientError, getErrorMessage, isApiResponse, normalizeAxiosError } from './response-handler'
 
-// 在开发环境使用代理路径，生产环境使用相对路径（由 Nginx 代理）
-const API_URL = import.meta.env.VITE_API_URL || ''
+// 在开发环境可用 VITE_API_URL，生产环境强制走相对路径（由 Nginx 代理）
+const API_URL = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || '') : ''
 const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1'
 
 /**
@@ -95,7 +96,7 @@ class ApiClient {
         const silentBusinessError = (response.config as ExtendedAxiosRequestConfig)._silentBusinessError
 
         // 检查统一响应格式中的success字段
-        if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+        if (isApiResponse(response.data)) {
           // 先检查云客登录失效（无论是否静默模式）
           if (response.data.code === 'YUNKE_AUTH_EXPIRED') {
             // 触发云客登录弹窗
@@ -108,7 +109,11 @@ class ApiClient {
               return response.data
             }
             // 非静默模式抛出错误
-            const error = new Error(response.data.message)
+            const error = new ApiClientError(response.data.message || '请求失败')
+            error.isBusinessError = true
+            error.status = response.status
+            error.code = response.data.code
+            error.messageShown = true
             ;(error as any).response = {
               data: response.data,
               status: response.status,
@@ -125,7 +130,10 @@ class ApiClient {
           // 普通模式：success: false 时抛出异常，让 TanStack Query 的 onError 能正确处理
           // 这样业务代码可以统一在 onError 中处理错误消息
           if (!response.data.success) {
-            const error = new Error(response.data.message || '请求失败')
+            const error = new ApiClientError(response.data.message || '请求失败')
+            error.isBusinessError = true
+            error.status = response.status
+            error.code = response.data.code
             ;(error as any).response = {
               data: response.data,
               status: response.status,
@@ -143,22 +151,20 @@ class ApiClient {
       },
       (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as ExtendedAxiosRequestConfig
+        const normalizedError = normalizeAxiosError(error)
+        if ((normalizedError as any).messageShown) {
+          return Promise.reject(normalizedError)
+        }
 
         // 处理401未授权错误
         if (error.response?.status === 401) {
           // 登录接口的401：检查是否有标准API响应格式
           if (originalRequest?.url?.includes('/auth/login')) {
-            // 如果有标准响应格式（success + message），显示消息
-            if (error.response?.data && typeof error.response.data === 'object' && 'success' in error.response.data) {
-              const apiResponse = error.response.data as any
-              const errorMsg = apiResponse.message || '登录失败'
-
-              toast.error(errorMsg)
-
-              // 标记错误已经显示过消息，避免业务代码重复显示
-              ;(error as any).messageShown = true
-            }
-            return Promise.reject(error)
+            const errorMsg = getErrorMessage(error, '登录失败')
+            toast.error(errorMsg)
+            normalizedError.message = errorMsg
+            normalizedError.messageShown = true
+            return Promise.reject(normalizedError)
           }
 
           // 如果当前在登录页面，也不自动处理401
@@ -166,7 +172,7 @@ class ApiClient {
             window.location.pathname.startsWith('/login') ||
             window.location.pathname.startsWith('/sign-in')
           )) {
-            return Promise.reject(error)
+            return Promise.reject(normalizedError)
           }
 
           // 其他401：清除认证状态并跳转登录页
@@ -174,6 +180,7 @@ class ApiClient {
 
           // 显示认证失败消息
           toast.warning('登录已过期，正在跳转到登录页面')
+          normalizedError.messageShown = true
 
           // 跳转到登录页
           if (typeof window !== 'undefined') {
@@ -183,70 +190,17 @@ class ApiClient {
             }
           }
 
-          const authError = new Error('认证失败，已跳转到登录页面')
-          ;(authError as any).isAuthError = true
-          return Promise.reject(authError)
+          normalizedError.message = '认证失败，已跳转到登录页面'
+          normalizedError.isAuthError = true
+          return Promise.reject(normalizedError)
         }
 
-        // 首先检查是否有后端返回的标准API响应格式
-        if (error.response?.data && typeof error.response.data === 'object' && 'success' in error.response.data) {
-          const apiResponse = error.response.data as any
-          const errorMsg = apiResponse.message || '请求失败'
+        const errorMessage = getErrorMessage(error)
+        toast.error(errorMessage)
+        normalizedError.message = errorMessage
+        normalizedError.messageShown = true
 
-          // 优先显示后端返回的具体错误消息
-          toast.error(errorMsg)
-
-          const customError = new Error(errorMsg)
-          ;(customError as any).response = {
-            data: apiResponse,
-            status: error.response.status,
-            statusText: error.response.statusText
-          }
-          return Promise.reject(customError)
-        }
-
-        // 如果没有标准API响应格式，则显示通用HTTP错误消息
-        if (error.response?.status) {
-          let errorMessage = '请求失败'
-
-          switch (error.response.status) {
-            case 403:
-              errorMessage = '权限不足，无法访问该资源'
-              break
-            case 404:
-              errorMessage = '请求的资源不存在'
-              break
-            case 422:
-              errorMessage = '请求参数验证失败'
-              break
-            case 500:
-              errorMessage = '服务器内部错误'
-              break
-            case 502:
-              errorMessage = '网关错误'
-              break
-            case 503:
-              errorMessage = '服务暂不可用'
-              break
-            default:
-              errorMessage = `请求失败 (${error.response.status})`
-          }
-
-          toast.error(errorMessage)
-        }
-
-        // 处理网络错误等其他错误
-        if (!error.response) {
-          if (error.code === 'ECONNABORTED') {
-            toast.error('请求超时，请检查网络连接')
-          } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-            toast.error('网络连接失败，请检查网络设置')
-          } else if (error.message?.includes('timeout')) {
-            toast.error('请求超时，请稍后重试')
-          }
-        }
-
-        return Promise.reject(error)
+        return Promise.reject(normalizedError)
       }
     )
   }

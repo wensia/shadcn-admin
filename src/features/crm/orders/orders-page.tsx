@@ -38,6 +38,7 @@ import {
   orderPaymentMethodOptions,
   orderApprovalStatusOptions
 } from './types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 export function OrdersPage() {
   useDocumentTitle('订单管理')
@@ -90,7 +91,7 @@ export function OrdersPage() {
       setDeletingOrderId(null)
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     }
   })
 

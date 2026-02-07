@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { BookOpen, Plus, Pencil, Trash2, Copy, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -127,7 +128,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -143,7 +144,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -157,7 +158,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -169,7 +170,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '复制失败')
+      showApiErrorToast(error, '复制失败')
     },
   })
 
@@ -182,7 +183,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '批量启用失败')
+      showApiErrorToast(error, '批量启用失败')
     },
   })
 
@@ -195,7 +196,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '批量停用失败')
+      showApiErrorToast(error, '批量停用失败')
     },
   })
 
@@ -209,7 +210,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '批量删除失败')
+      showApiErrorToast(error, '批量删除失败')
     },
   })
 
@@ -222,7 +223,7 @@ export function CoursesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '初始化预设失败')
+      showApiErrorToast(error, '初始化预设失败')
     },
   })
 

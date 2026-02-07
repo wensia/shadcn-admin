@@ -63,6 +63,7 @@ import type {
   AccessStatsFilters,
   BatchUpdateLimit,
 } from '../types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 时间范围选项
 const TIME_RANGE_OPTIONS = [
@@ -166,7 +167,7 @@ export function LeadAccessStatsPage() {
       queryClient.invalidateQueries({ queryKey: ['lead-access-stats'] })
     },
     onError: (error: Error) => {
-      toast.error(`更新失败: ${error.message}`)
+      showApiErrorToast(error, '更新失败')
     },
   })
 

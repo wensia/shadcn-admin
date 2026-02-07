@@ -35,6 +35,7 @@ import type { Table } from '@tanstack/react-table'
 import type { LeadListItem, Lead } from '../types'
 import { leadsApi } from '../api'
 import { LeadInfoDisplay } from './detail/lead-info-display'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 状态筛选选项
 const statusOptions = Object.entries(leadStatusLabels).map(([value, label]) => ({
@@ -120,7 +121,7 @@ export function LeadsToolbar({
         toast.info('未找到该手机号对应的线索')
       }
     } catch (error: any) {
-      toast.error(error?.message || '查询失败')
+      showApiErrorToast(error, '查询失败')
     } finally {
       setIsLookingUp(false)
     }

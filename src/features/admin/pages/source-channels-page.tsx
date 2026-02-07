@@ -71,6 +71,7 @@ import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { sourceChannelApi } from '../api'
 import type { SourceChannel } from '../types'
 import { StatusBadge, SourceChannelCategoryBadge } from '../components/status-badge'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 渠道分类选项
 const CHANNEL_CATEGORIES = [
@@ -186,7 +187,7 @@ export function SourceChannelsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
     },
     onError: (error: Error) => {
-      toast.error(`创建失败: ${error.message}`)
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -202,7 +203,7 @@ export function SourceChannelsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
     },
     onError: (error: Error) => {
-      toast.error(`更新失败: ${error.message}`)
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -216,7 +217,7 @@ export function SourceChannelsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
     },
     onError: (error: Error) => {
-      toast.error(`删除失败: ${error.message}`)
+      showApiErrorToast(error, '删除失败')
     },
   })
 

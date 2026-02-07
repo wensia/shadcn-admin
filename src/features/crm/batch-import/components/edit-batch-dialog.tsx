@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import {
   Dialog,
@@ -81,7 +82,7 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
       onSuccess?.()
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     },
   })
 

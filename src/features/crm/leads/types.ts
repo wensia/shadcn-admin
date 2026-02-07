@@ -401,6 +401,8 @@ export interface LeadListParams {
   tag?: string
   followup_result_filter?: string
   last_followup_result?: FollowupResult
+  followup_result_mode?: 'include' | 'exclude' | 'all'
+  followup_results?: FollowupResult[]
   import_batch_id?: string
   days_without_activity?: number  // X天内无活动（无跟进/创建/激活记录）
   include_styles?: boolean  // 是否包含样式配置

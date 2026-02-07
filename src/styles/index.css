@@ -111,3 +111,10 @@
   border-color: var(--primary);
   background-color: var(--primary);
 }
+
+/* Dialog content: keep horizontal padding on small screens */
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  width: min(100%, calc(100vw - 2rem)) !important;
+  box-sizing: border-box;
+}

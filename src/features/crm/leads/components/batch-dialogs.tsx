@@ -50,6 +50,7 @@ import { toast } from 'sonner'
 import { leadsApi, employeeApi, type EmployeeListItem, type Campus } from '../api'
 import type { LeadStatus } from '../types'
 import { leadStatusLabels } from '../types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // ==================== 批量分配Dialog ====================
 interface BatchAssignDialogProps {
@@ -128,7 +129,7 @@ export function BatchAssignDialog({
       onOpenChange(false)
     },
     onError: (error: any) => {
-      toast.error(error.message || '批量分配失败')
+      showApiErrorToast(error, '批量分配失败')
     }
   })
 
@@ -391,7 +392,7 @@ export function BatchReleaseDialog({
       setRemark('')
     },
     onError: (error: any) => {
-      toast.error(error.message || '批量释放失败')
+      showApiErrorToast(error, '批量释放失败')
     }
   })
 
@@ -504,7 +505,7 @@ export function BatchUpdateStatusDialog({
       setSelectedStatus('')
     },
     onError: (error: any) => {
-      toast.error(error.message || '批量修改状态失败')
+      showApiErrorToast(error, '批量修改状态失败')
     }
   })
 
@@ -601,7 +602,7 @@ export function BatchDeleteDialog({
       onOpenChange(false)
     },
     onError: (error: any) => {
-      toast.error(error.message || '批量删除失败')
+      showApiErrorToast(error, '批量删除失败')
     }
   })
 

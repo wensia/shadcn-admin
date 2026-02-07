@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner'
 import { format, addDays, setHours, setMinutes } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Calendar } from '@/components/ui/calendar'
 import { TimePickerWheel } from '@/components/ui/time-picker-wheel'
@@ -317,7 +318,7 @@ export function ContinuousCallPage() {
         toast.error(res.message || '外呼失败')
       }
     } catch (error: any) {
-      toast.error(error?.message || '外呼失败')
+      showApiErrorToast(error, '外呼失败')
     } finally {
       setDialing(false)
     }
@@ -340,7 +341,7 @@ export function ContinuousCallPage() {
         toast.error(res.message || '挂断失败')
       }
     } catch (error: any) {
-      toast.error(error?.message || '挂断失败')
+      showApiErrorToast(error, '挂断失败')
     } finally {
       setHangingUp(false)
     }
@@ -486,7 +487,7 @@ export function ContinuousCallPage() {
         toast.error(res.message || '保存失败')
       }
     } catch (error: any) {
-      toast.error(error.message || '保存失败')
+      showApiErrorToast(error, '保存失败')
     } finally {
       setSaving(false)
     }

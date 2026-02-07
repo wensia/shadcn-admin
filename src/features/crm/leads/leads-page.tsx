@@ -32,7 +32,7 @@ import { leadsApi } from './api'
 import { apiClient } from '@/lib/api/client'
 import type { LeadListParams, LeadListItem, Lead, LeadStatus, IntentionLevel, Grade } from './types'
 import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
-import { leadStatusLabels, intentionLevelLabels, gradeLabels } from './types'
+import { leadStatusLabels, intentionLevelLabels, gradeLabels, followupResultLabels } from './types'
 import { useMemo } from 'react'
 
 export function LeadsPage() {
@@ -144,7 +144,8 @@ export function LeadsPage() {
   const filterMaps = useMemo(() => {
     return {
       channels: new Map(sourceChannels?.map(c => [c.id, c.name]) || []),
-      campuses: new Map(filterOptions?.campuses?.map(c => [c.id, c.name]) || [])
+      campuses: new Map(filterOptions?.campuses?.map(c => [c.id, c.name]) || []),
+      followupResults: new Map(filterOptions?.followup_results?.map(r => [r.value, r.label]) || [])
     }
   }, [filterOptions, sourceChannels])
 
@@ -153,6 +154,21 @@ export function LeadsPage() {
     if (!ids || ids.length === 0) return null
     if (!map) return `${fieldName} (${ids.length})`
     const names = ids.map(id => map.get(id) || id).filter(Boolean)
+    if (names.length <= 2) return names.join(', ')
+    return `${names.slice(0, 2).join(', ')} 等${names.length}项`
+  }
+
+  const followupModeLabels: Record<string, string> = {
+    include: '包含',
+    exclude: '不包含',
+    all: '全部为'
+  }
+
+  const getFollowupResultLabel = (values: string[] | undefined) => {
+    if (!values || values.length === 0) return null
+    const names = values.map(value => {
+      return filterMaps.followupResults.get(value) || followupResultLabels[value as keyof typeof followupResultLabels] || value
+    })
     if (names.length <= 2) return names.join(', ')
     return `${names.slice(0, 2).join(', ')} 等${names.length}项`
   }
@@ -426,6 +442,29 @@ export function LeadsPage() {
                 onClick={(e) => {
                   e.stopPropagation()
                   const { grade, ...rest } = filters
+                  setFilters(rest)
+                }}
+              >
+                <X className="h-3 w-3 hover:text-destructive" />
+              </span>
+            </Badge>
+          )}
+
+          {/* 回访状态筛选标签 */}
+          {filters.followup_results && filters.followup_results.length > 0 && filters.followup_result_mode && (
+            <Badge
+              variant="secondary"
+              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+              onClick={() => setFilterSheetOpen(true)}
+            >
+              回访: {followupModeLabels[filters.followup_result_mode] || filters.followup_result_mode}{' '}
+              {getFollowupResultLabel(filters.followup_results)}
+              <span
+                role="button"
+                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const { followup_results, followup_result_mode, ...rest } = filters
                   setFilters(rest)
                 }}
               >

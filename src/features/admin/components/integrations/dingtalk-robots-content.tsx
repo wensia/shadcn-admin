@@ -15,6 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Bot, Plus, Pencil, Trash2, Search, Play, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -181,7 +182,7 @@ export function DingtalkRobotsContent() {
       queryClient.invalidateQueries({ queryKey: ['admin-dingtalk-robots'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -198,7 +199,7 @@ export function DingtalkRobotsContent() {
       queryClient.invalidateQueries({ queryKey: ['admin-dingtalk-robots'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -212,7 +213,7 @@ export function DingtalkRobotsContent() {
       queryClient.invalidateQueries({ queryKey: ['admin-dingtalk-robots'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -234,7 +235,7 @@ export function DingtalkRobotsContent() {
         success: false,
         message: error.message || '连接测试失败，请检查配置信息',
       })
-      toast.error(error.message || '测试连接失败')
+      showApiErrorToast(error, '测试连接失败')
     },
   })
 

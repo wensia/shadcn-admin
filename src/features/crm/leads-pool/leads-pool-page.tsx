@@ -13,7 +13,7 @@ import {
   useReactTable,
   type ColumnDef
 } from '@tanstack/react-table'
-import { Download, RefreshCw, Search, UserPlus, X, Loader2 } from 'lucide-react'
+import { Download, ListFilter, RefreshCw, Search, UserPlus, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
@@ -25,13 +25,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -42,19 +35,15 @@ import {
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
+import { FilterSheet } from '../leads/components/filter-sheet'
 import { leadsPoolApi, type ExportStatusResult } from './api'
 import type { LeadPoolItem, LeadPoolListParams } from './types'
-import type { IntentionLevel } from '../leads/types'
+import type { LeadListParams, IntentionLevel } from '../leads/types'
+import { leadStatusLabels, intentionLevelLabels, gradeLabels, followupResultLabels } from '../leads/types'
 import { useIsSuperUser } from '@/stores/auth-store'
-import { Progress } from '@/components/ui/progress'
-
-// 意向等级选项
-const intentionOptions = [
-  { value: 'all', label: '全部意向' },
-  { value: 'high', label: '高意向' },
-  { value: 'medium', label: '中意向' },
-  { value: 'low', label: '低意向' }
-]
+import { showApiErrorToast } from '@/lib/api/error-toast'
+import { leadsApi } from '../leads/api'
+import { apiClient } from '@/lib/api/client'
 
 export function LeadsPoolPage() {
   useDocumentTitle('公海线索')
@@ -73,12 +62,71 @@ export function LeadsPoolPage() {
 
   // 搜索和筛选
   const [searchValue, setSearchValue] = useState('')
-  const [intentionFilter, setIntentionFilter] = useState<string>('all')
   const [daysMin, setDaysMin] = useState<string>('')
   const [daysMax, setDaysMax] = useState<string>('')
 
+  // 高级筛选
+  const [filters, setFilters] = useState<LeadListParams>({})
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+
   // 搜索防抖
   const debouncedSearch = useDebouncedValue(searchValue, 500)
+
+  // 获取筛选选项（用于显示筛选标签的名称）
+  const { data: filterOptions } = useQuery({
+    queryKey: ['filter-options'],
+    queryFn: async () => {
+      const response = await leadsApi.getFilterOptions()
+      return response.data
+    },
+    staleTime: 5 * 60 * 1000
+  })
+
+  // 获取来源渠道列表（用于显示筛选标签的名称）
+  const { data: sourceChannels } = useQuery({
+    queryKey: ['source-channels-active'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ code: number; data: { items: Array<{ id: string; name: string; category: string }> } }>(
+        '/source-channels',
+        { params: { page: 1, size: 100, is_active: true } }
+      )
+      return response.data?.items || []
+    },
+    staleTime: 5 * 60 * 1000
+  })
+
+  // 构建 ID -> 名称 的映射
+  const filterMaps = useMemo(() => {
+    return {
+      channels: new Map(sourceChannels?.map(c => [c.id, c.name]) || []),
+      campuses: new Map(filterOptions?.campuses?.map(c => [c.id, c.name]) || []),
+      followupResults: new Map(filterOptions?.followup_results?.map(r => [r.value, r.label]) || [])
+    }
+  }, [filterOptions, sourceChannels])
+
+  const followupModeLabels: Record<string, string> = {
+    include: '包含',
+    exclude: '不包含',
+    all: '全部为'
+  }
+
+  // 辅助函数：将 ID 数组转换为名称显示
+  const getFilterLabel = (ids: string[] | undefined, map: Map<string, string> | undefined, fieldName: string) => {
+    if (!ids || ids.length === 0) return null
+    if (!map) return `${fieldName} (${ids.length})`
+    const names = ids.map(id => map.get(id) || id).filter(Boolean)
+    if (names.length <= 2) return names.join(', ')
+    return `${names.slice(0, 2).join(', ')} 等${names.length}项`
+  }
+
+  const getFollowupResultLabel = (values: string[] | undefined) => {
+    if (!values || values.length === 0) return null
+    const names = values.map(value => {
+      return filterMaps.followupResults.get(value) || followupResultLabels[value as keyof typeof followupResultLabels] || value
+    })
+    if (names.length <= 2) return names.join(', ')
+    return `${names.slice(0, 2).join(', ')} 等${names.length}项`
+  }
 
   // 选中的行
   const [selectedRows, setSelectedRows] = useState<LeadPoolItem[]>([])
@@ -95,8 +143,13 @@ export function LeadsPoolPage() {
       page: pagination.page,
       size: pagination.size
     }
+    // 搜索：toolbar 搜索优先，否则取 FilterSheet 中的 search
     if (debouncedSearch) params.search = debouncedSearch
-    if (intentionFilter !== 'all') params.intention_level = intentionFilter as IntentionLevel
+    else if (filters.search) params.search = filters.search
+    // 意向等级：从高级筛选取第一个值（pool API 为单选）
+    if (filters.intention_level && filters.intention_level.length > 0) {
+      params.intention_level = filters.intention_level[0] as IntentionLevel
+    }
     if (daysMin) params.days_in_pool_min = parseInt(daysMin)
     if (daysMax) params.days_in_pool_max = parseInt(daysMax)
     return params
@@ -104,7 +157,7 @@ export function LeadsPoolPage() {
 
   // 获取公海线索列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['pool-leads', pagination, debouncedSearch, intentionFilter, daysMin, daysMax],
+    queryKey: ['pool-leads', pagination, debouncedSearch, filters, daysMin, daysMax],
     queryFn: async () => {
       const response = await leadsPoolApi.getPoolLeads(buildParams())
       return response.data
@@ -130,7 +183,7 @@ export function LeadsPoolPage() {
       queryClient.invalidateQueries({ queryKey: ['pool-leads'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '领取失败')
+      showApiErrorToast(error, '领取失败')
     }
   })
 
@@ -281,10 +334,16 @@ export function LeadsPoolPage() {
     toast.success('已刷新')
   }
 
+  // 应用高级筛选
+  const handleApplyFilters = (newFilters: LeadListParams) => {
+    setFilters(newFilters)
+    setPagination(prev => ({ ...prev, page: 1 }))
+  }
+
   // 清除筛选
   const handleClearFilters = () => {
     setSearchValue('')
-    setIntentionFilter('all')
+    setFilters({})
     setDaysMin('')
     setDaysMax('')
     setPagination(prev => ({ ...prev, page: 1 }))
@@ -393,8 +452,15 @@ export function LeadsPoolPage() {
     poll()
   }
 
+  // 计算高级筛选活跃条件数
+  const advancedFiltersCount = Object.keys(filters).filter((key) => {
+    const value = filters[key as keyof LeadListParams]
+    if (Array.isArray(value)) return value.length > 0
+    return value !== undefined && value !== '' && value !== null
+  }).length
+
   // 计算是否有筛选条件
-  const hasFilters = searchValue || intentionFilter !== 'all' || daysMin || daysMax
+  const hasFilters = searchValue || advancedFiltersCount > 0 || daysMin || daysMax
 
   return (
     <>
@@ -416,25 +482,21 @@ export function LeadsPoolPage() {
               />
             </div>
 
-            {/* 意向等级筛选 */}
-            <Select
-              value={intentionFilter}
-              onValueChange={(value) => {
-                setIntentionFilter(value)
-                setPagination(prev => ({ ...prev, page: 1 }))
-              }}
+            {/* 高级筛选按钮 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilterSheetOpen(true)}
+              className="relative"
             >
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="意向等级" />
-              </SelectTrigger>
-              <SelectContent>
-                {intentionOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <ListFilter className="mr-1.5 h-4 w-4" />
+              高级筛选
+              {advancedFiltersCount > 0 && (
+                <Badge variant="default" className="ml-1.5 h-5 min-w-5 px-1 text-xs">
+                  {advancedFiltersCount}
+                </Badge>
+              )}
+            </Button>
 
             {/* 公海天数范围 */}
             <div className="flex items-center gap-1">
@@ -506,6 +568,266 @@ export function LeadsPoolPage() {
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* 筛选条件标签栏 */}
+          {(advancedFiltersCount > 0 || searchValue || daysMin || daysMax) && (
+            <div className={cn('flex flex-shrink-0 items-center flex-wrap', s.gap.tight)}>
+              <span className={cn(s.text.xs, 'text-muted-foreground')}>筛选条件:</span>
+
+              {/* 搜索关键词标签 */}
+              {searchValue && (
+                <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+                  搜索: {searchValue}
+                  <X
+                    className="h-3 w-3 cursor-pointer hover:text-destructive"
+                    onClick={() => { setSearchValue(''); setPagination(prev => ({ ...prev, page: 1 })) }}
+                  />
+                </Badge>
+              )}
+
+              {/* 公海天数标签 */}
+              {(daysMin || daysMax) && (
+                <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+                  公海天数: {daysMin || '0'} - {daysMax || '∞'}天
+                  <X
+                    className="h-3 w-3 cursor-pointer hover:text-destructive"
+                    onClick={() => { setDaysMin(''); setDaysMax(''); setPagination(prev => ({ ...prev, page: 1 })) }}
+                  />
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 意向等级 */}
+              {filters.intention_level && filters.intention_level.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  意向: {filters.intention_level.map(l => intentionLevelLabels[l]).join(', ')}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { intention_level, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 线索状态 */}
+              {filters.status && filters.status.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  状态: {filters.status.map(s => leadStatusLabels[s]).join(', ')}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { status, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 来源渠道 */}
+              {filters.source_channel_id && filters.source_channel_id.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  渠道: {getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道')}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { source_channel_id, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 负责顾问 */}
+              {filters.advisor_name && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  顾问: {filters.advisor_name}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { advisor_name, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 创建人 */}
+              {filters.created_by_name && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  创建人: {filters.created_by_name}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { created_by_name, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 归属校区 */}
+              {filters.owner_campus_id && filters.owner_campus_id.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  校区: {getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区')}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { owner_campus_id, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 年级 */}
+              {filters.grade && filters.grade.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  年级: {filters.grade.map(g => gradeLabels[g]).join(', ')}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { grade, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 回访状态 */}
+              {filters.followup_results && filters.followup_results.length > 0 && filters.followup_result_mode && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  回访: {followupModeLabels[filters.followup_result_mode] || filters.followup_result_mode}{' '}
+                  {getFollowupResultLabel(filters.followup_results)}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { followup_results, followup_result_mode, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 创建时间 */}
+              {(filters.created_from || filters.created_to) && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  时间: {filters.created_from || '...'} ~ {filters.created_to || '...'}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { created_from, created_to, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 高级筛选 - 标签 */}
+              {filters.tag && (
+                <Badge
+                  variant="secondary"
+                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
+                  onClick={() => setFilterSheetOpen(true)}
+                >
+                  标签: {filters.tag}
+                  <span
+                    role="button"
+                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const { tag, ...rest } = filters
+                      setFilters(rest)
+                    }}
+                  >
+                    <X className="h-3 w-3 hover:text-destructive" />
+                  </span>
+                </Badge>
+              )}
+
+              {/* 清除全部按钮 */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className={cn(s.height.badge, 'px-2', s.text.xs, 'text-muted-foreground hover:text-foreground')}
+              >
+                清除全部
+              </Button>
+            </div>
+          )}
 
           {/* 数据表格 */}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
@@ -621,6 +943,14 @@ export function LeadsPoolPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 高级筛选Sheet */}
+      <FilterSheet
+        open={filterSheetOpen}
+        onOpenChange={setFilterSheetOpen}
+        filters={filters}
+        onApplyFilters={handleApplyFilters}
+      />
 
       {/* 导出进度对话框 */}
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>

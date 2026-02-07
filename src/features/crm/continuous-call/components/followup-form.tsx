@@ -13,6 +13,7 @@ import {
   Clock, Ban, PhoneMissed, GraduationCap, ChevronDown,
   type LucideIcon
 } from 'lucide-react'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -344,7 +345,7 @@ export function FollowupForm({
         toast.error(res.message || '保存失败')
       }
     } catch (error: any) {
-      toast.error(error.message || '保存失败')
+      showApiErrorToast(error, '保存失败')
     } finally {
       setSaving(false)
     }

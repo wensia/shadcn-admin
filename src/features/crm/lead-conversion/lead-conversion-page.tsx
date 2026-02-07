@@ -26,6 +26,7 @@ import type {
   VisitScheduleListParams
 } from './types'
 import { VisitStatus, visitStatusLabels, paymentStatusLabels, paymentMethodLabels, paymentTypeLabels } from './types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // Tab 选项
 type TabValue = 'all' | 'scheduled' | 'visited' | 'payment'
@@ -241,7 +242,7 @@ export function LeadConversionPage() {
         queryClient.invalidateQueries({ queryKey: ['visit-stats'] })
       }
     } catch (error: any) {
-      toast.error(error?.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     }
   }
 

@@ -72,6 +72,7 @@ import { DataTableViewOptions } from '@/components/data-table/view-options'
 import { adminApi } from '../api'
 import type { EmployeeItem, EmployeeUpdate, EmployeeIdentityItem } from '../types'
 import { StatusBadge, EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 表单验证 schema
 const formSchema = z.object({
@@ -222,7 +223,7 @@ export function EmployeesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-employee-identities'] })
     },
     onError: (error: Error) => {
-      toast.error(`创建失败: ${error.message}`)
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -239,7 +240,7 @@ export function EmployeesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
     },
     onError: (error: Error) => {
-      toast.error(`更新失败: ${error.message}`)
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -253,7 +254,7 @@ export function EmployeesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
     },
     onError: (error: Error) => {
-      toast.error(`删除失败: ${error.message}`)
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -266,7 +267,7 @@ export function EmployeesPage() {
       setGeneratedPassword(response.data?.new_password || null)
     },
     onError: (error: Error) => {
-      toast.error(`密码重置失败: ${error.message}`)
+      showApiErrorToast(error, '密码重置失败')
     },
   })
 

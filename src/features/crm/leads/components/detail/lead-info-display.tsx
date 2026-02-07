@@ -25,6 +25,7 @@ import { InfoItem } from './info-item'
 import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
 import { leadStatusStyles, intentionLevelStyles } from '@/lib/status-styles'
 import { ChevronDown, Check } from 'lucide-react'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 /**
  * 家长关系映射
@@ -164,7 +165,7 @@ function EditableLeadStatus({ status, editable, onSave }: EditableLeadStatusProp
       setOpen(false)
       toast.success('线索状态已更新')
     } catch (error: any) {
-      toast.error(error?.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     } finally {
       setIsSaving(false)
     }
@@ -301,7 +302,7 @@ function EditableIntentionLevel({ level, editable, onSave }: EditableIntentionLe
       setOpen(false)
       toast.success('意向等级已更新')
     } catch (error: any) {
-      toast.error(error?.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     } finally {
       setIsSaving(false)
     }
@@ -418,7 +419,7 @@ function NotesCard({ notes, editable, onSave }: NotesCardProps) {
       setIsEditing(false)
       toast.success('备注已更新')
     } catch (error: any) {
-      toast.error(error?.message || '保存失败')
+      showApiErrorToast(error, '保存失败')
     } finally {
       setIsSaving(false)
     }

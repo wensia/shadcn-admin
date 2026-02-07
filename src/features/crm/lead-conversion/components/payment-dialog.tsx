@@ -46,6 +46,7 @@ import {
   PaymentType,
   PaymentStatus
 } from '../types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 表单验证 schema
 const paymentFormSchema = z.object({
@@ -163,7 +164,7 @@ export function PaymentDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     }
   })
 
@@ -179,7 +180,7 @@ export function PaymentDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     }
   })
 

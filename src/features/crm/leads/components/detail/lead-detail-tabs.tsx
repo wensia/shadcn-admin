@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
+import { cn, copyToClipboard } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { formatTime } from '@/lib/utils/time'
 import { Receipt, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -58,30 +58,6 @@ import { FollowupMethodPie } from './charts/followup-method-pie'
 import { FollowupResultPie } from './charts/followup-result-pie'
 
 /**
- * 兼容 HTTP 环境的复制函数
- */
-function copyToClipboard(text: string): Promise<void> {
-  if (navigator.clipboard && window.isSecureContext) {
-    return navigator.clipboard.writeText(text)
-  }
-  return new Promise((resolve, reject) => {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.style.position = 'fixed'
-    textarea.style.left = '-9999px'
-    document.body.appendChild(textarea)
-    textarea.select()
-    try {
-      document.execCommand('copy') ? resolve() : reject(new Error('复制失败'))
-    } catch (err) {
-      reject(err)
-    } finally {
-      document.body.removeChild(textarea)
-    }
-  })
-}
-
-/**
  * 跟进内容单元格组件 - 支持悬浮展示完整内容和复制
  */
 function FollowupContentCell({ content }: { content: string }) {
@@ -89,12 +65,12 @@ function FollowupContentCell({ content }: { content: string }) {
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    try {
-      await copyToClipboard(content)
+    const success = await copyToClipboard(content)
+    if (success) {
       setCopied(true)
       toast.success('已复制')
       setTimeout(() => setCopied(false), 2000)
-    } catch {
+    } else {
       toast.error('复制失败')
     }
   }

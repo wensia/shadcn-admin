@@ -44,6 +44,7 @@ import type {
   ManagerType,
 } from '../types'
 import { MANAGER_TYPE_OPTIONS } from '../types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 interface ManageManagersDialogProps {
   open: boolean
@@ -119,7 +120,7 @@ export function ManageManagersDialog({
       onSuccess?.()
     },
     onError: (error: Error) => {
-      toast.error(`添加负责人失败: ${error.message}`)
+      showApiErrorToast(error, '添加负责人失败')
     },
   })
 
@@ -138,7 +139,7 @@ export function ManageManagersDialog({
       onSuccess?.()
     },
     onError: (error: Error) => {
-      toast.error(`移除负责人失败: ${error.message}`)
+      showApiErrorToast(error, '移除负责人失败')
     },
   })
 

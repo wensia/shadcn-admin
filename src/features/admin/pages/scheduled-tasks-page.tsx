@@ -34,6 +34,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -293,7 +294,7 @@ export function ScheduledTasksPage() {
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -309,7 +310,7 @@ export function ScheduledTasksPage() {
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -323,7 +324,7 @@ export function ScheduledTasksPage() {
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -335,7 +336,7 @@ export function ScheduledTasksPage() {
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '操作失败')
+      showApiErrorToast(error, '操作失败')
     },
   })
 
@@ -354,7 +355,7 @@ export function ScheduledTasksPage() {
       queryClient.invalidateQueries({ queryKey: ['execution-history'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '执行失败')
+      showApiErrorToast(error, '执行失败')
     },
   })
 

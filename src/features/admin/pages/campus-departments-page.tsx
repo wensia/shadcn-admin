@@ -74,6 +74,7 @@ import {
 import { StatusBadge } from '../components/status-badge'
 import { ManageManagersDialog } from '../components/manage-managers-dialog'
 import { ViewDepartmentEmployeesDialog } from '../components/view-department-employees-dialog'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 表单验证 schema
 const formSchema = z.object({
@@ -167,7 +168,7 @@ export function CampusDepartmentsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-campus-departments'] })
     },
     onError: (error: Error) => {
-      toast.error(`配置失败: ${error.message}`)
+      showApiErrorToast(error, '配置失败')
     },
   })
 
@@ -181,7 +182,7 @@ export function CampusDepartmentsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-campus-departments'] })
     },
     onError: (error: Error) => {
-      toast.error(`删除失败: ${error.message}`)
+      showApiErrorToast(error, '删除失败')
     },
   })
 

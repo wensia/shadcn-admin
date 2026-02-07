@@ -56,7 +56,6 @@ const queryClient = new QueryClient({
         // 401 错误由 client.ts 统一处理，这里不重复处理
         // 避免与 client.ts 中的 401 处理逻辑冲突导致循环重定向
         if (error.response?.status === 500) {
-          toast.error('Internal Server Error!')
           // Only navigate to error page in production to avoid disrupting HMR in development
           if (import.meta.env.PROD) {
             router.navigate({ to: '/500' })

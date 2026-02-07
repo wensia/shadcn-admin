@@ -16,6 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Mic, Plus, Pencil, Trash2, Search, Play, CheckCircle, AlertCircle, RefreshCw, Star } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -241,7 +242,7 @@ export function ASRConfigContent() {
       queryClient.invalidateQueries({ queryKey: ['admin-asr-configs'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     },
   })
 
@@ -257,7 +258,7 @@ export function ASRConfigContent() {
       queryClient.invalidateQueries({ queryKey: ['admin-asr-configs'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -270,7 +271,7 @@ export function ASRConfigContent() {
       queryClient.invalidateQueries({ queryKey: ['admin-asr-configs'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -294,7 +295,7 @@ export function ASRConfigContent() {
         success: false,
         message: error.message || 'ASR 配置测试失败',
       })
-      toast.error(error.message || '测试失败')
+      showApiErrorToast(error, '测试失败')
     },
   })
 

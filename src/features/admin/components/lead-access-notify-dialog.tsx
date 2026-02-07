@@ -26,6 +26,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { leadAccessStatsApi, dingtalkRobotsApi } from '../api'
 import type { LeadAccessNotifyConfig, DingtalkRobot } from '../types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 interface LeadAccessNotifyDialogProps {
   open: boolean
@@ -77,7 +78,7 @@ export function LeadAccessNotifyDialog({
       onOpenChange(false)
     },
     onError: (error: Error) => {
-      toast.error(`更新失败: ${error.message}`)
+      showApiErrorToast(error, '更新失败')
     },
   })
 

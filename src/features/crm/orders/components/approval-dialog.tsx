@@ -31,6 +31,7 @@ import {
 import { orderApi } from '../api'
 import type { Order, OrderListItem } from '../types'
 import { formatTime } from '@/lib/utils/time'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 审批类型
 type ApprovalType = 'leader' | 'finance'
@@ -81,7 +82,7 @@ export function ApprovalDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || error?.message || '操作失败')
+      showApiErrorToast(error, '操作失败')
     }
   })
 
@@ -98,7 +99,7 @@ export function ApprovalDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || error?.message || '操作失败')
+      showApiErrorToast(error, '操作失败')
     }
   })
 
@@ -263,7 +264,7 @@ export function SubmitApprovalDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || error?.message || '提交失败')
+      showApiErrorToast(error, '提交失败')
     }
   })
 
@@ -358,7 +359,7 @@ export function CancelOrderDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || error?.message || '取消失败')
+      showApiErrorToast(error, '取消失败')
     }
   })
 

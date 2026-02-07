@@ -42,6 +42,7 @@ import { apiClient } from '@/lib/api/client'
 import type { Lead, LeadCreate, LeadUpdate, Gender, SourceChannelExtraField } from '../types'
 import { gradeLabels } from '../types'
 import type { SourceChannel } from '@/features/admin/types'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 interface LeadFormDialogProps {
   lead?: Lead | null
@@ -202,7 +203,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       form.reset()
     },
     onError: (error: any) => {
-      toast.error(error.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     }
   })
 
@@ -220,7 +221,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       onOpenChange(false)
     },
     onError: (error: any) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     }
   })
 

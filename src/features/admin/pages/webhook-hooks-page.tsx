@@ -28,6 +28,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -227,7 +228,7 @@ export function WebhookHooksPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-webhook-hooks'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -241,7 +242,7 @@ export function WebhookHooksPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-webhook-hooks'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '删除失败')
+      showApiErrorToast(error, '删除失败')
     },
   })
 
@@ -259,7 +260,7 @@ export function WebhookHooksPage() {
       setTestingItem(null)
     },
     onError: (error: Error) => {
-      toast.error(error.message || '测试失败')
+      showApiErrorToast(error, '测试失败')
     },
   })
 

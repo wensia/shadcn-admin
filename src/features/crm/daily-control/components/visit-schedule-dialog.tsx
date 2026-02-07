@@ -41,6 +41,7 @@ import { coursesApi } from '@/features/admin/api'
 import type { VisitScheduleCreate } from '@/features/crm/lead-conversion/types'
 import { LeadSelectDialog, type SelectedLead } from './lead-select-dialog'
 import { updateVisitSchedule, type VisitScheduleItem, type VisitScheduleUpdateData } from '../api'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 表单验证 schema
 const visitScheduleFormSchema = z.object({
@@ -153,7 +154,7 @@ export function VisitScheduleDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.message || '创建失败')
+      showApiErrorToast(error, '创建失败')
     }
   })
 
@@ -167,7 +168,7 @@ export function VisitScheduleDialog({
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error?.message || '更新失败')
+      showApiErrorToast(error, '更新失败')
     }
   })
 

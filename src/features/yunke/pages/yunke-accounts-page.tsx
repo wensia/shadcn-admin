@@ -27,8 +27,10 @@ import {
   PauseCircle,
   AlertCircle,
   Check,
+  LogIn,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -162,7 +164,7 @@ function SubAccountsTable({
       toast.success('密码重置成功')
     },
     onError: (error: Error) => {
-      toast.error(error.message || '密码重置失败')
+      showApiErrorToast(error, '密码重置失败')
     },
   })
 
@@ -179,7 +181,7 @@ function SubAccountsTable({
       queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '绑定失败')
+      showApiErrorToast(error, '绑定失败')
     },
   })
 
@@ -192,7 +194,19 @@ function SubAccountsTable({
       queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '解绑失败')
+      showApiErrorToast(error, '解绑失败')
+    },
+  })
+
+  // 为员工执行云客登录
+  const loginForEmployeeMutation = useMutation({
+    mutationFn: (data: { employee_id: string }) => yunkeApi.loginForEmployee(data),
+    onSuccess: (response) => {
+      toast.success(response.message || '登录成功')
+      queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '登录失败')
     },
   })
 
@@ -393,20 +407,47 @@ function SubAccountsTable({
       {
         id: 'actions',
         header: '操作',
-        size: 100,
+        size: 180,
         cell: ({ row }) => {
           if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-20" />
+            return <Skeleton className="h-8 w-28" />
           }
+          const bound = row.original.bound_employee
+          const loginStatus = row.original.login_status
+          const isLoggedIn = loginStatus?.is_logged_in
+          const canLogin = bound && loginStatus?.has_password
+          const loginDisabled =
+            !bound || !loginStatus?.has_password || loginForEmployeeMutation.isPending
+          const loginTitle = !bound
+            ? '请先绑定员工'
+            : !loginStatus?.has_password
+              ? '请先重置密码'
+              : undefined
           return (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleResetPasswordClick(row.original)}
-            >
-              <Key className="h-4 w-4 mr-1" />
-              重置密码
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant={isLoggedIn ? 'secondary' : 'outline'}
+                size="sm"
+                className="h-7 text-xs"
+                disabled={loginDisabled}
+                title={loginTitle}
+                onClick={() => {
+                  if (bound && canLogin) {
+                    loginForEmployeeMutation.mutate({ employee_id: bound.id })
+                  }
+                }}
+              >
+                {isLoggedIn ? '重新登录' : '登录'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => handleResetPasswordClick(row.original)}
+              >
+                重置密码
+              </Button>
+            </div>
           )
         },
       },
@@ -989,9 +1030,8 @@ export function YunkeAccountsPage() {
               <TabsTrigger key={cred.id} value={cred.id}>
                 <div className="flex items-center gap-2">
                   <div
-                    className={`h-2 w-2 rounded-full ${
-                      cred.status === 1 ? 'bg-green-500' : 'bg-red-500'
-                    }`}
+                    className={`h-2 w-2 rounded-full ${cred.status === 1 ? 'bg-green-500' : 'bg-red-500'
+                      }`}
                   />
                   <span className="max-w-[180px] truncate">
                     {cred.company_name || cred.phone}

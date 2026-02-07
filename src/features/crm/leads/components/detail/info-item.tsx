@@ -41,6 +41,7 @@ import { Button } from '@/components/ui/button'
 import { FormDatePicker } from '@/components/date-picker'
 import { DateTimePicker } from '@/components/date-time-picker'
 import { apiClient } from '@/lib/api/client'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 异步 Select 配置
 interface AsyncSelectConfig {
@@ -168,7 +169,7 @@ export function InfoItem({
       setIsEditing(false)
       toast.success('保存成功')
     } catch (error: any) {
-      toast.error(error?.message || '保存失败')
+      showApiErrorToast(error, '保存失败')
     } finally {
       setIsSaving(false)
     }

@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Download, Loader2 } from 'lucide-react'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import {
   Dialog,
@@ -116,7 +117,7 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
       window.URL.revokeObjectURL(url)
       toast.success('下载成功')
     } catch (error: unknown) {
-      toast.error((error as Error).message || '下载失败')
+      showApiErrorToast(error, '下载失败')
     }
   }, [batch])
 

@@ -31,6 +31,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -184,7 +185,7 @@ export function YunkeAccountsPage() {
       refetch()
     },
     onError: (error: Error) => {
-      toast.error(error.message || '登录失败')
+      showApiErrorToast(error, '登录失败')
     },
   })
 
@@ -197,7 +198,7 @@ export function YunkeAccountsPage() {
       toast.success('密码重置成功')
     },
     onError: (error: Error) => {
-      toast.error(error.message || '密码重置失败')
+      showApiErrorToast(error, '密码重置失败')
     },
   })
 
@@ -213,7 +214,7 @@ export function YunkeAccountsPage() {
       queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '绑定失败')
+      showApiErrorToast(error, '绑定失败')
     },
   })
 
@@ -226,7 +227,7 @@ export function YunkeAccountsPage() {
       queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '解绑失败')
+      showApiErrorToast(error, '解绑失败')
     },
   })
 
@@ -243,7 +244,7 @@ export function YunkeAccountsPage() {
       queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
     },
     onError: (error: Error) => {
-      toast.error(error.message || '同步失败')
+      showApiErrorToast(error, '同步失败')
     },
   })
 
@@ -262,7 +263,7 @@ export function YunkeAccountsPage() {
       toast.info(`检查完成：${response.logged_in}/${response.total} 个账号已登录`)
     },
     onError: (error: Error) => {
-      toast.error(error.message || '检查登录状态失败')
+      showApiErrorToast(error, '检查登录状态失败')
     },
   })
 
@@ -283,7 +284,7 @@ export function YunkeAccountsPage() {
       setTimeout(() => checkLoginStatusMutation.mutate(), 1000)
     },
     onError: (error: Error) => {
-      toast.error(error.message || '批量更新失败')
+      showApiErrorToast(error, '批量更新失败')
     },
   })
 
