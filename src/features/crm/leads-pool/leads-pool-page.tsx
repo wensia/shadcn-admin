@@ -146,12 +146,29 @@ export function LeadsPoolPage() {
     // 搜索：toolbar 搜索优先，否则取 FilterSheet 中的 search
     if (debouncedSearch) params.search = debouncedSearch
     else if (filters.search) params.search = filters.search
-    // 意向等级：从高级筛选取第一个值（pool API 为单选）
+    // 意向等级：从高级筛选取（pool API 支持单选，取第一个值）
     if (filters.intention_level && filters.intention_level.length > 0) {
       params.intention_level = filters.intention_level[0] as IntentionLevel
     }
     if (daysMin) params.days_in_pool_min = parseInt(daysMin)
     if (daysMax) params.days_in_pool_max = parseInt(daysMax)
+    // 高级筛选条件
+    if (filters.status && filters.status.length > 0) params.status = filters.status
+    if (filters.source_channel_id && filters.source_channel_id.length > 0) params.source_channel_id = filters.source_channel_id
+    if (filters.owner_campus_id && filters.owner_campus_id.length > 0) params.owner_campus_id = filters.owner_campus_id
+    if (filters.grade && filters.grade.length > 0) params.grade = filters.grade
+    if (filters.age_min != null) params.age_min = filters.age_min
+    if (filters.age_max != null) params.age_max = filters.age_max
+    if (filters.created_from) params.created_from = filters.created_from
+    if (filters.created_to) params.created_to = filters.created_to
+    if (filters.advisor_name) params.advisor_name = filters.advisor_name
+    if (filters.created_by_name) params.created_by_name = filters.created_by_name
+    if (filters.tag) params.tag = filters.tag
+    if (filters.followup_result_mode) params.followup_result_mode = filters.followup_result_mode
+    if (filters.followup_results && filters.followup_results.length > 0) params.followup_results = filters.followup_results
+    if (filters.days_without_activity != null) params.days_without_activity = filters.days_without_activity
+    if (filters.activated_from) params.activated_from = filters.activated_from
+    if (filters.activated_to) params.activated_to = filters.activated_to
     return params
   }
 

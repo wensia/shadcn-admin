@@ -113,6 +113,23 @@ export interface YunkeAutoSyncResult {
   }>
 }
 
+// ============ AI 分析 ============
+
+// AI 分析结果
+export interface AIAnalysisResult {
+  summary: string
+  customer_intent: 'high' | 'medium' | 'low' | 'none'
+  key_info: {
+    customer_needs: string[]
+    objections: string[]
+    follow_up_times: string[]
+    competitors_mentioned: string[]
+    decision_makers: string[]
+  }
+  quality_score: number
+  quality_feedback: string
+}
+
 // ============ 通话记录 ============
 
 // 转写文本段落
@@ -140,6 +157,9 @@ export interface CallRecord {
   has_recording: boolean
   transcript: TranscriptSegment[] | null
   transcript_status: string | null
+  ai_analysis: AIAnalysisResult | null
+  ai_analysis_status: string | null
+  ai_analyzed_at: string | null
   created_at: string
 }
 
@@ -154,6 +174,7 @@ export interface CallRecordListParams {
   call_type?: string
   call_result?: string
   has_recording?: boolean
+  transcript_status?: string
   search?: string
 }
 

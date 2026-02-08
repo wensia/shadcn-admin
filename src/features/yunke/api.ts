@@ -24,6 +24,7 @@ import type {
   CallRecordStats,
   RecordUrlResponse,
   YunkeCallLogItem,
+  AIAnalysisResult,
 } from './types'
 import type { PaginatedResponse } from '@/lib/api/types'
 
@@ -326,6 +327,26 @@ export const callRecordsApi = {
     const response = await apiClient.post<ApiResponse<RecordUrlResponse>>(
       '/yunke/call-records/record-url',
       { voice_id: voiceId }
+    )
+    return response.data!
+  },
+
+  /** AI 分析通话记录 */
+  async analyzeCallRecord(recordId: string): Promise<{
+    success: boolean
+    message: string
+    record_id?: string
+    analysis?: AIAnalysisResult
+    analyzed_at?: string
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      success: boolean
+      message: string
+      record_id?: string
+      analysis?: AIAnalysisResult
+      analyzed_at?: string
+    }>>(
+      `/yunke/call-records/${recordId}/analyze`
     )
     return response.data!
   },

@@ -1,4 +1,5 @@
 export { ASRConfigContent } from './asr-config-content'
+export { AIConfigContent } from './ai-config-content'
 export { DingtalkRobotsContent } from './dingtalk-robots-content'
 export { WebhookHooksContent } from './webhook-hooks-content'
 export { YunkeAccountsContent } from './yunke-accounts-content'

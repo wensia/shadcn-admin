@@ -697,15 +697,17 @@ export function LeadInfoDisplay({
             />
             <InfoItem
               label="负责顾问"
-              value={lead.advisor_name ? lead.advisor_name : (
+              value={lead.advisor_name ? lead.advisor_name : lead.is_in_pool ? (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
                   公海
                 </span>
+              ) : (
+                <span className="text-muted-foreground">待分配</span>
               )}
             />
             <InfoItem
               label="归属校区"
-              value={!lead.advisor_id && lead.owner_campus_name ? (
+              value={lead.is_in_pool && lead.owner_campus_name ? (
                 <span className="inline-flex items-center gap-1">
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
                     {lead.owner_campus_name} 公海

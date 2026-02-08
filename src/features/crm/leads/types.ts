@@ -187,6 +187,9 @@ export interface Lead {
   followup_count: number
   last_followup_at?: string
 
+  // 公海状态
+  is_in_pool?: boolean
+
   // 标签
   tag?: string
 

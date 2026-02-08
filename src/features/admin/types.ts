@@ -1328,3 +1328,37 @@ export const ASR_PROVIDER_OPTIONS = [
   { label: '腾讯云', value: 'tencent' },
   { label: '阿里云', value: 'alibaba' },
 ] as const
+
+// ============================================================================
+// AI 配置相关类型
+// ============================================================================
+
+/** AI 提供商 */
+export type AIProvider = 'doubao' | 'deepseek' | 'kimi'
+
+/** AI 配置 */
+export interface AIConfigItem {
+  id: string
+  provider: AIProvider
+  name: string
+  api_key_masked: string
+  base_url: string
+  default_model: string | null
+  endpoint_id: string | null
+  is_active: boolean
+  is_default: boolean
+  notes: string | null
+}
+
+/** AI 配置列表响应 */
+export interface AIConfigListResponse {
+  items: AIConfigItem[]
+  total: number
+}
+
+/** AI 提供商选项 */
+export const AI_PROVIDER_OPTIONS = [
+  { label: '豆包 (火山方舟)', value: 'doubao' },
+  { label: 'DeepSeek', value: 'deepseek' },
+  { label: 'Kimi (月之暗面)', value: 'kimi' },
+] as const

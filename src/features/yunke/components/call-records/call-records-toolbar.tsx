@@ -67,6 +67,7 @@ export function CallRecordsToolbar({
     filters.call_type ||
     filters.call_result ||
     filters.has_recording !== undefined ||
+    filters.transcript_status ||
     filters.search
   )
 
@@ -148,7 +149,7 @@ export function CallRecordsToolbar({
           <SelectValue placeholder="类型" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">全部</SelectItem>
+          <SelectItem value="all">全部类型</SelectItem>
           <SelectItem value="s">外呼</SelectItem>
           <SelectItem value="i">呼入</SelectItem>
         </SelectContent>
@@ -165,9 +166,27 @@ export function CallRecordsToolbar({
           <SelectValue placeholder="录音" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">全部</SelectItem>
+          <SelectItem value="all">全部录音</SelectItem>
           <SelectItem value="true">有录音</SelectItem>
           <SelectItem value="false">无录音</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* 转录状态 */}
+      <Select
+        value={filters.transcript_status || 'all'}
+        onValueChange={(v) => onFilterChange('transcript_status', v === 'all' ? undefined : v)}
+      >
+        <SelectTrigger className="w-[110px]">
+          <SelectValue placeholder="转录状态" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">全部转录</SelectItem>
+          <SelectItem value="completed">已转录</SelectItem>
+          <SelectItem value="failed">转录失败</SelectItem>
+          <SelectItem value="pending">待转录</SelectItem>
+          <SelectItem value="processing">转录中</SelectItem>
+          <SelectItem value="none">无转录</SelectItem>
         </SelectContent>
       </Select>
 

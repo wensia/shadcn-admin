@@ -91,6 +91,9 @@ import type {
   // ASR 配置相关
   ASRConfigItem,
   ASRConfigListResponse,
+  // AI 配置相关
+  AIConfigItem,
+  AIConfigListResponse,
 } from './types'
 
 const BASE_URL = '/admin'
@@ -1278,6 +1281,91 @@ export const asrConfigApi = {
   /** 测试 ASR 配置 */
   async test(id: string): Promise<{ success: boolean; message: string }> {
     const response = await apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/external/asr-config/${id}/test`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '测试失败')
+    }
+    return response.data
+  },
+}
+
+// ============================================================================
+// AI 配置 API
+// ============================================================================
+
+/** AI 配置创建请求 */
+export interface AIConfigCreate {
+  provider: string
+  name: string
+  api_key: string
+  base_url?: string
+  default_model?: string
+  endpoint_id?: string
+  is_default?: boolean
+  notes?: string
+}
+
+/** AI 配置更新请求 */
+export interface AIConfigUpdate {
+  name?: string
+  api_key?: string
+  base_url?: string
+  default_model?: string
+  endpoint_id?: string
+  is_active?: boolean
+  is_default?: boolean
+  notes?: string
+}
+
+export const aiConfigApi = {
+  /** 获取 AI 配置列表 */
+  async list(params?: {
+    provider?: string
+    is_active?: boolean
+    skip?: number
+    limit?: number
+  }): Promise<{ items: AIConfigItem[]; total: number }> {
+    const response = await apiClient.get<ApiResponse<AIConfigListResponse>>('/external/ai-config', { params })
+    return response.data || { items: [], total: 0 }
+  },
+
+  /** 获取 AI 配置详情 */
+  async get(id: string): Promise<AIConfigItem> {
+    const response = await apiClient.get<ApiResponse<AIConfigItem>>(`/external/ai-config/${id}`)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取配置失败')
+    }
+    return response.data
+  },
+
+  /** 创建 AI 配置 */
+  async create(data: AIConfigCreate): Promise<AIConfigItem> {
+    const response = await apiClient.post<ApiResponse<AIConfigItem>>('/external/ai-config', data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '创建失败')
+    }
+    return response.data
+  },
+
+  /** 更新 AI 配置 */
+  async update(id: string, data: AIConfigUpdate): Promise<AIConfigItem> {
+    const response = await apiClient.patch<ApiResponse<AIConfigItem>>(`/external/ai-config/${id}`, data)
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '更新失败')
+    }
+    return response.data
+  },
+
+  /** 删除 AI 配置 */
+  async delete(id: string): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<{ success: boolean }>>(`/external/ai-config/${id}`)
+    if (!response.success) {
+      throw new Error(response.message || '删除失败')
+    }
+  },
+
+  /** 测试 AI 配置 */
+  async test(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/external/ai-config/${id}/test`)
     if (!response.success || !response.data) {
       throw new Error(response.message || '测试失败')
     }

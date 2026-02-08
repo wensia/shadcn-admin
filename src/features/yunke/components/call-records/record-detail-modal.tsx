@@ -1,10 +1,10 @@
 /**
  * 录音详情弹窗
- * 顶部音频播放器 + 下方聊天气泡式转写文本
+ * 顶部音频播放器 + 下方 Tabs（转写文本 / AI 分析）
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Play, Pause, Volume2, VolumeX, Phone, SkipBack, SkipForward } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Play, Pause, Volume2, VolumeX, Phone, SkipBack, SkipForward, Download, FileText, BrainCircuit } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
 import { formatTime } from '@/lib/utils/time'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { callRecordsApi } from '../../api'
 import { TranscriptViewer } from './transcript-viewer'
+import { AIAnalysisPanel } from './ai-analysis-panel'
 import type { CallRecord } from '../../types'
 
 interface RecordDetailModalProps {
@@ -39,12 +42,14 @@ function formatPlayTime(seconds: number): string {
 }
 
 export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailModalProps) {
+  const queryClient = useQueryClient()
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
+  const [activeTab, setActiveTab] = useState('transcript')
 
   // 从录音 URL 中提取 voiceId（有转写文本说明有录音）
   const hasTranscript = record?.transcript && record.transcript.length > 0
@@ -62,12 +67,27 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
 
   const audioUrl = recordUrlData?.url || ''
 
+  // AI 分析 mutation
+  const analyzeMutation = useMutation({
+    mutationFn: () => callRecordsApi.analyzeCallRecord(record!.id),
+    onSuccess: () => {
+      toast.success('AI 分析完成')
+      // 刷新通话记录数据
+      queryClient.invalidateQueries({ queryKey: ['call-records'] })
+      queryClient.invalidateQueries({ queryKey: ['call-record', record?.id] })
+    },
+    onError: (error: Error) => {
+      toast.error(`分析失败: ${error.message}`)
+    },
+  })
+
   // 重置播放状态
   useEffect(() => {
     if (!open) {
       setIsPlaying(false)
       setCurrentTime(0)
       setDuration(0)
+      setActiveTab('transcript')
     }
   }, [open])
 
@@ -147,7 +167,7 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
             {record && (
               <>
                 <span>{record.staff_name || '未知员工'}</span>
-                <span className="text-muted-foreground">→</span>
+                <span className="text-muted-foreground">&rarr;</span>
                 <span className="font-mono">{record.callee || record.caller || '-'}</span>
                 <Badge variant="secondary">{formatTime(record.call_time)}</Badge>
               </>
@@ -255,6 +275,18 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
                       onValueChange={handleVolumeChange}
                       className="w-20 cursor-pointer"
                     />
+
+                    {/* 下载录音 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      asChild
+                    >
+                      <a href={audioUrl} download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}>
+                        <Download className="h-4 w-4" />
+                      </a>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -266,20 +298,52 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
           </div>
         )}
 
-        {/* 转写文本区域 - 聊天气泡样式 */}
-        <div className={cn('flex-1 min-h-0 overflow-hidden relative', !hasRecording && 'border-t')}>
-          {hasTranscript ? (
-            <TranscriptViewer
-              transcript={record?.transcript || []}
-              currentTime={currentTime}
-              onSeek={handleTranscriptSeek}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
-              {hasRecording ? '暂无转写文本' : '此通话无录音'}
-            </div>
-          )}
-        </div>
+        {/* Tabs 内容区域 */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className={cn('flex-1 min-h-0 flex flex-col', !hasRecording && 'border-t')}
+        >
+          <TabsList className="mx-6 mt-3 shrink-0">
+            <TabsTrigger value="transcript">
+              <FileText className="h-4 w-4 mr-1.5" />
+              转写文本
+            </TabsTrigger>
+            <TabsTrigger value="ai-analysis">
+              <BrainCircuit className="h-4 w-4 mr-1.5" />
+              AI 分析
+              {record?.ai_analysis_status === 'completed' && (
+                <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
+                  已分析
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="transcript" className="flex-1 min-h-0 overflow-hidden relative mt-0">
+            {hasTranscript ? (
+              <TranscriptViewer
+                transcript={record?.transcript || []}
+                currentTime={currentTime}
+                onSeek={handleTranscriptSeek}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
+                {hasRecording ? '暂无转写文本' : '此通话无录音'}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="ai-analysis" className="flex-1 min-h-0 overflow-hidden mt-0">
+            {record && (
+              <AIAnalysisPanel
+                record={record}
+                isAnalyzing={analyzeMutation.isPending}
+                onAnalyze={() => analyzeMutation.mutate()}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

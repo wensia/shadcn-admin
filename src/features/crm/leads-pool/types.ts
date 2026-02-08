@@ -66,6 +66,23 @@ export interface LeadPoolListParams {
   days_in_pool_max?: number
   sort_by?: string
   sort_desc?: boolean
+  // 高级筛选参数
+  status?: string[]
+  source_channel_id?: string[]
+  owner_campus_id?: string[]
+  grade?: string[]
+  age_min?: number
+  age_max?: number
+  created_from?: string
+  created_to?: string
+  advisor_name?: string
+  created_by_name?: string
+  tag?: string
+  followup_result_mode?: string
+  followup_results?: string[]
+  days_without_activity?: number
+  activated_from?: string
+  activated_to?: string
 }
 
 /**
