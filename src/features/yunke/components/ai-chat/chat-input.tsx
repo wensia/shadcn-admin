@@ -1,20 +1,11 @@
 import { useState, useRef, useCallback, type KeyboardEvent } from 'react'
-import { Send, Square } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { ArrowUp, Square } from 'lucide-react'
 
 interface ChatInputProps {
   onSend: (message: string) => void
   onStop: () => void
   isLoading: boolean
 }
-
-const QUICK_QUESTIONS = [
-  '今日通话统计',
-  '高意向线索列表',
-  '员工业绩排名',
-  '本周跟进情况',
-]
 
 export function ChatInput({ onSend, onStop, isLoading }: ChatInputProps) {
   const [input, setInput] = useState('')
@@ -24,7 +15,6 @@ export function ChatInput({ onSend, onStop, isLoading }: ChatInputProps) {
     if (!input.trim() || isLoading) return
     onSend(input)
     setInput('')
-    // 重置高度
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
     }
@@ -46,56 +36,41 @@ export function ChatInput({ onSend, onStop, isLoading }: ChatInputProps) {
     }
   }
 
-  return (
-    <div className="space-y-3">
-      {/* 快捷提问 */}
-      {!isLoading && (
-        <div className="flex flex-wrap gap-2">
-          {QUICK_QUESTIONS.map((q) => (
-            <Button
-              key={q}
-              variant="outline"
-              size="sm"
-              className="text-xs h-7"
-              onClick={() => onSend(q)}
-            >
-              {q}
-            </Button>
-          ))}
-        </div>
-      )}
+  const canSend = input.trim().length > 0
 
-      {/* 输入区域 */}
-      <div className="flex gap-2 items-end">
-        <Textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onInput={handleInput}
-          placeholder="输入你的问题..."
-          className="min-h-[40px] max-h-[150px] resize-none"
-          rows={1}
-          disabled={isLoading}
-        />
+  return (
+    <div className="border rounded-[16px] flex flex-col">
+      {/* 输入框 */}
+      <textarea
+        ref={textareaRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onInput={handleInput}
+        placeholder="输入你的问题..."
+        className="w-full resize-none border-0 bg-transparent px-4 py-3 text-sm placeholder:text-foreground/40 focus:outline-none"
+        style={{ maxHeight: '150px' }}
+        rows={1}
+        disabled={isLoading}
+      />
+
+      {/* 底部操作栏 */}
+      <div className="flex items-center justify-end px-3 pb-2">
         {isLoading ? (
-          <Button
-            size="icon"
-            variant="destructive"
+          <button
             onClick={onStop}
-            className="shrink-0"
+            className="bg-foreground text-background rounded-[8px] h-8 w-8 flex items-center justify-center hover:opacity-80 transition-opacity"
           >
-            <Square className="h-4 w-4" />
-          </Button>
+            <Square className="h-3.5 w-3.5" />
+          </button>
         ) : (
-          <Button
-            size="icon"
+          <button
             onClick={handleSend}
-            disabled={!input.trim()}
-            className="shrink-0"
+            disabled={!canSend}
+            className="bg-foreground text-background rounded-[8px] h-8 w-8 flex items-center justify-center transition-opacity disabled:opacity-30"
           >
-            <Send className="h-4 w-4" />
-          </Button>
+            <ArrowUp className="h-4 w-4" />
+          </button>
         )}
       </div>
     </div>

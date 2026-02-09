@@ -1,35 +1,41 @@
 import { useEffect, useRef } from 'react'
 import { Trash2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAIChat } from './use-ai-chat'
 import { ChatMessageItem } from './chat-message-item'
 import { ChatInput } from './chat-input'
 
+const QUICK_QUESTIONS = [
+  '今日通话统计',
+  '高意向线索列表',
+  '员工业绩排名',
+  '本周跟进情况',
+]
+
 export function AIChatContainer() {
   const { messages, isLoading, sendMessage, stopGeneration, clearMessages } = useAIChat()
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // 自动滚动到底部
   useEffect(() => {
-    const viewport = scrollAreaRef.current?.querySelector(
-      '[data-slot="scroll-area-viewport"]'
-    )
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight
+    const el = scrollRef.current
+    if (el) {
+      el.scrollTop = el.scrollHeight
     }
   }, [messages])
 
+  const hasMessages = messages.length > 0
+
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.16))]">
-      {/* 头部工具栏 */}
-      {messages.length > 0 && (
-        <div className="flex items-center justify-end px-4 py-2 border-b">
+      {/* 头部工具栏 - 仅有消息时显示 */}
+      {hasMessages && (
+        <div className="flex items-center justify-end px-4 py-2 shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={clearMessages}
-            className="text-muted-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
             <Trash2 className="h-4 w-4 mr-1" />
             清除对话
@@ -37,32 +43,58 @@ export function AIChatContainer() {
         </div>
       )}
 
-      {/* 消息区域 */}
-      <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
-        {messages.length === 0 ? (
-          /* 空状态欢迎页 */
-          <div className="flex flex-col items-center justify-center h-full py-20">
-            <div className="rounded-full bg-primary/10 p-4 mb-4">
-              <Sparkles className="h-8 w-8 text-primary" />
+      {/* 消息区域 - 带滚动渐变遮罩 */}
+      <div className="flex-1 min-h-0 relative">
+        <div
+          ref={scrollRef}
+          className="h-full overflow-y-auto"
+          style={{
+            maskImage: hasMessages
+              ? 'linear-gradient(to bottom, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%)'
+              : undefined,
+            WebkitMaskImage: hasMessages
+              ? 'linear-gradient(to bottom, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%)'
+              : undefined,
+          }}
+        >
+          {!hasMessages ? (
+            /* 空状态欢迎页 */
+            <div className="flex flex-col items-center justify-center h-full">
+              <div className="flex flex-col items-center max-w-[840px] mx-auto px-5">
+                <div className="rounded-full bg-foreground/5 p-4 mb-4">
+                  <Sparkles className="h-8 w-8 text-foreground/60" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2">AI 数据助手</h2>
+                <p className="text-foreground/50 text-center text-sm mb-8">
+                  我可以帮你查询通话记录、线索数据、员工业绩等信息。
+                </p>
+                {/* 快捷提问按钮 */}
+                <div className="flex flex-wrap justify-center gap-2">
+                  {QUICK_QUESTIONS.map((q) => (
+                    <button
+                      key={q}
+                      className="rounded-[8px] bg-foreground/5 hover:bg-foreground/[0.08] text-[13px] px-3 py-2 transition-colors text-foreground/80"
+                      onClick={() => sendMessage(q)}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <h2 className="text-xl font-semibold mb-2">AI 数据助手</h2>
-            <p className="text-muted-foreground text-center max-w-md mb-6">
-              我可以帮你查询通话记录、线索数据、员工业绩等信息。
-              试试下面的快捷提问，或直接输入你的问题。
-            </p>
-          </div>
-        ) : (
-          /* 消息列表 */
-          <div className="space-y-6 py-4">
-            {messages.map((msg) => (
-              <ChatMessageItem key={msg.id} message={msg} />
-            ))}
-          </div>
-        )}
-      </ScrollArea>
+          ) : (
+            /* 消息列表 */
+            <div className="max-w-[840px] mx-auto px-5 py-4 space-y-2.5">
+              {messages.map((msg) => (
+                <ChatMessageItem key={msg.id} message={msg} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* 输入区域 */}
-      <div className="border-t px-4 py-3">
+      <div className="shrink-0 max-w-[840px] w-full mx-auto px-5 pb-4 pt-2">
         <ChatInput
           onSend={sendMessage}
           onStop={stopGeneration}
