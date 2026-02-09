@@ -175,6 +175,8 @@ export interface CallRecordListParams {
   call_result?: string
   has_recording?: boolean
   transcript_status?: string
+  min_duration?: number
+  max_duration?: number
   search?: string
 }
 

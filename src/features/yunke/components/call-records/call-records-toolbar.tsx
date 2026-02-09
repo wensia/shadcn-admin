@@ -14,7 +14,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DateRangePicker } from '@/components/date-picker'
-import { Search, X, RefreshCw } from 'lucide-react'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Label } from '@/components/ui/label'
+import { Search, X, RefreshCw, Timer } from 'lucide-react'
 import { callRecordsApi } from '../../api'
 import type { CallRecordListParams } from '../../types'
 
@@ -59,6 +65,11 @@ export function CallRecordsToolbar({
     }
   }
 
+  const hasDurationFilter = filters.min_duration !== undefined || filters.max_duration !== undefined
+  const durationLabel = hasDurationFilter
+    ? `${filters.min_duration ?? 0}s${filters.max_duration !== undefined ? ` - ${filters.max_duration}s` : '+'}`
+    : ''
+
   const hasFilters = !!(
     filters.start_date ||
     filters.end_date ||
@@ -68,6 +79,7 @@ export function CallRecordsToolbar({
     filters.call_result ||
     filters.has_recording !== undefined ||
     filters.transcript_status ||
+    hasDurationFilter ||
     filters.search
   )
 
@@ -189,6 +201,69 @@ export function CallRecordsToolbar({
           <SelectItem value="none">无转录</SelectItem>
         </SelectContent>
       </Select>
+
+      {/* 通话时长筛选 */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={hasDurationFilter ? 'default' : 'outline'}
+            size="sm"
+            className="h-9 gap-1.5"
+          >
+            <Timer className="h-4 w-4" />
+            {hasDurationFilter ? durationLabel : '通话时长'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64" align="start">
+          <div className="space-y-3">
+            <p className="text-sm font-medium">通话时长筛选（秒）</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">最小</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={filters.min_duration ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    onFilterChange('min_duration', val === '' ? undefined : Number(val))
+                  }}
+                  className="h-8"
+                />
+              </div>
+              <span className="text-muted-foreground mt-5">—</span>
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">最大</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="不限"
+                  value={filters.max_duration ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    onFilterChange('max_duration', val === '' ? undefined : Number(val))
+                  }}
+                  className="h-8"
+                />
+              </div>
+            </div>
+            {hasDurationFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full h-7 text-xs"
+                onClick={() => {
+                  onFilterChange('min_duration', undefined)
+                  onFilterChange('max_duration', undefined)
+                }}
+              >
+                清除时长筛选
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
 
       {/* 操作按钮 */}
       <div className="flex items-center gap-2 ml-auto">

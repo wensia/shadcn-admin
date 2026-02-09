@@ -331,22 +331,36 @@ export const callRecordsApi = {
     return response.data!
   },
 
-  /** AI 分析通话记录 */
+  /** 提交 AI 分析任务（异步，立即返回） */
   async analyzeCallRecord(recordId: string): Promise<{
-    success: boolean
-    message: string
-    record_id?: string
-    analysis?: AIAnalysisResult
-    analyzed_at?: string
+    task_id: string
+    record_id: string
+    status: string
   }> {
     const response = await apiClient.post<ApiResponse<{
-      success: boolean
-      message: string
-      record_id?: string
-      analysis?: AIAnalysisResult
-      analyzed_at?: string
+      task_id: string
+      record_id: string
+      status: string
     }>>(
       `/yunke/call-records/${recordId}/analyze`
+    )
+    return response.data!
+  },
+
+  /** 查询 AI 分析状态（轻量级轮询） */
+  async getAnalysisStatus(recordId: string): Promise<{
+    status: string
+    analysis: AIAnalysisResult | null
+    error: string | null
+    analyzed_at: string | null
+  }> {
+    const response = await apiClient.get<ApiResponse<{
+      status: string
+      analysis: AIAnalysisResult | null
+      error: string | null
+      analyzed_at: string | null
+    }>>(
+      `/yunke/call-records/${recordId}/analysis-status`
     )
     return response.data!
   },

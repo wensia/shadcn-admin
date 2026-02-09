@@ -39,6 +39,7 @@ import {
   Key,
   Activity,
   Clock,
+  Bot,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -344,6 +345,16 @@ export const yunkeNavGroups: NavGroup[] = [
         title: '录音管理',
         url: '/yunke/recordings',
         icon: History,
+      },
+    ],
+  },
+  {
+    title: 'AI 工具',
+    items: [
+      {
+        title: 'AI 数据助手',
+        url: '/yunke/ai-assistant',
+        icon: Bot,
       },
     ],
   },

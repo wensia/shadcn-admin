@@ -3,7 +3,7 @@
  * 顶部音频播放器 + 下方 Tabs（转写文本 / AI 分析）
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
@@ -41,7 +41,7 @@ function formatPlayTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailModalProps) {
+export function RecordDetailModal({ record: recordProp, open, onOpenChange }: RecordDetailModalProps) {
   const queryClient = useQueryClient()
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -50,6 +50,50 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
   const [activeTab, setActiveTab] = useState('transcript')
+
+  // 本地 record 状态，分析完成后可更新
+  const [localRecord, setLocalRecord] = useState<CallRecord | null>(recordProp)
+  useEffect(() => {
+    setLocalRecord(recordProp)
+  }, [recordProp])
+
+  const record = localRecord
+
+  // 是否正在轮询分析状态
+  const isPolling = record?.ai_analysis_status === 'processing'
+
+  // 轮询 AI 分析状态（每 3 秒，仅在 processing 状态时启用）
+  useQuery({
+    queryKey: ['analysis-status', record?.id],
+    queryFn: () => callRecordsApi.getAnalysisStatus(record!.id),
+    enabled: !!record?.id && open && isPolling,
+    refetchInterval: 3000,
+    refetchIntervalInBackground: false,
+    select: useCallback((data: { status: string; analysis: any; error: string | null; analyzed_at: string | null }) => {
+      if (data.status === 'completed' && data.analysis) {
+        setLocalRecord((prev) =>
+          prev
+            ? {
+                ...prev,
+                ai_analysis: data.analysis,
+                ai_analysis_status: 'completed',
+                ai_analyzed_at: data.analyzed_at,
+              }
+            : prev
+        )
+        toast.success('AI 分析完成')
+        queryClient.invalidateQueries({ queryKey: ['call-records'] })
+      } else if (data.status === 'failed') {
+        setLocalRecord((prev) =>
+          prev
+            ? { ...prev, ai_analysis_status: 'failed' }
+            : prev
+        )
+        toast.error(`分析失败: ${data.error || '未知错误'}`)
+      }
+      return data
+    }, [queryClient]),
+  })
 
   // 从录音 URL 中提取 voiceId（有转写文本说明有录音）
   const hasTranscript = record?.transcript && record.transcript.length > 0
@@ -67,17 +111,19 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
 
   const audioUrl = recordUrlData?.url || ''
 
-  // AI 分析 mutation
+  // AI 分析 mutation（提交异步任务，立即返回）
   const analyzeMutation = useMutation({
     mutationFn: () => callRecordsApi.analyzeCallRecord(record!.id),
     onSuccess: () => {
-      toast.success('AI 分析完成')
-      // 刷新通话记录数据
-      queryClient.invalidateQueries({ queryKey: ['call-records'] })
-      queryClient.invalidateQueries({ queryKey: ['call-record', record?.id] })
+      // 立即将本地状态设为 processing，触发轮询
+      setLocalRecord((prev) =>
+        prev
+          ? { ...prev, ai_analysis_status: 'processing', ai_analysis_error: null }
+          : prev
+      )
     },
     onError: (error: Error) => {
-      toast.error(`分析失败: ${error.message}`)
+      toast.error(`提交分析失败: ${error.message}`)
     },
   })
 
@@ -338,7 +384,7 @@ export function RecordDetailModal({ record, open, onOpenChange }: RecordDetailMo
             {record && (
               <AIAnalysisPanel
                 record={record}
-                isAnalyzing={analyzeMutation.isPending}
+                isAnalyzing={analyzeMutation.isPending || isPolling}
                 onAnalyze={() => analyzeMutation.mutate()}
               />
             )}
