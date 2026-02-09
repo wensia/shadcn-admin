@@ -16,17 +16,26 @@ export interface ChatMessage {
   isStreaming?: boolean
   toolCalls?: ToolCallInfo[]
   thinking?: string
+  streamStartTime?: number
 }
 
-export function useAIChat() {
+export function useAIChat(options?: {
+  sessionId?: string | null
+  onTitleGenerated?: (title: string) => void
+}) {
+  const sessionId = options?.sessionId
+  const onTitleGenerated = options?.onTitleGenerated
+
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return
 
-    // 添加用户消息
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -34,16 +43,9 @@ export function useAIChat() {
       timestamp: new Date(),
     }
 
-    // 构建历史（从现有消息中提取）
-    const history = messages.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-    }))
-
     setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
 
-    // 创建 assistant 占位消息
     const assistantId = crypto.randomUUID()
     const assistantMessage: ChatMessage = {
       id: assistantId,
@@ -53,6 +55,7 @@ export function useAIChat() {
       isStreaming: true,
       toolCalls: [],
       thinking: '',
+      streamStartTime: Date.now(),
     }
     setMessages(prev => [...prev, assistantMessage])
 
@@ -61,13 +64,23 @@ export function useAIChat() {
 
     try {
       const token = localStorage.getItem('access_token') || ''
-      const response = await fetch('/api/v1/yunke/ai-chat', {
+
+      // 无 sessionId 时构建历史（向后兼容）
+      const url = sessionId
+        ? `/api/v1/yunke/ai-chat/sessions/${sessionId}/chat`
+        : '/api/v1/yunke/ai-chat'
+
+      const body = sessionId
+        ? { message: content.trim() }
+        : { message: content.trim(), history: messagesRef.current.map(msg => ({ role: msg.role, content: msg.content })) }
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ message: content.trim(), history }),
+        body: JSON.stringify(body),
         signal: abortController.signal,
       })
 
@@ -156,6 +169,9 @@ export function useAIChat() {
                 break
 
               case 'done':
+                if (data.title && onTitleGenerated) {
+                  onTitleGenerated(data.title)
+                }
                 setMessages(prev => prev.map(msg =>
                   msg.id === assistantId
                     ? { ...msg, isStreaming: false }
@@ -186,7 +202,7 @@ export function useAIChat() {
       setIsLoading(false)
       abortControllerRef.current = null
     }
-  }, [messages, isLoading])
+  }, [isLoading, sessionId, onTitleGenerated])
 
   const stopGeneration = useCallback(() => {
     abortControllerRef.current?.abort()
@@ -196,5 +212,29 @@ export function useAIChat() {
     setMessages([])
   }, [])
 
-  return { messages, isLoading, sendMessage, stopGeneration, clearMessages }
+  const loadMessages = useCallback(async (sid: string) => {
+    try {
+      const token = localStorage.getItem('access_token') || ''
+      const res = await fetch(`/api/v1/yunke/ai-chat/sessions/${sid}/messages`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+      const json = await res.json()
+      if (json.code === 200 && Array.isArray(json.data)) {
+        const loaded: ChatMessage[] = json.data.map((m: any) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          timestamp: new Date(m.created_at),
+          isStreaming: false,
+        }))
+        setMessages(loaded)
+      }
+    } catch (e) {
+      console.error('加载消息失败', e)
+    }
+  }, [])
+
+  return { messages, isLoading, sendMessage, stopGeneration, clearMessages, loadMessages }
 }

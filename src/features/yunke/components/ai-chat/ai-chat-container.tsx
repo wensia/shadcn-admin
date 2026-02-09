@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { Trash2, Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useRef, useCallback } from 'react'
+import { Sparkles } from 'lucide-react'
 import { useAIChat } from './use-ai-chat'
 import { ChatMessageItem } from './chat-message-item'
 import { ChatInput } from './chat-input'
@@ -12,9 +11,34 @@ const QUICK_QUESTIONS = [
   '本周跟进情况',
 ]
 
-export function AIChatContainer() {
-  const { messages, isLoading, sendMessage, stopGeneration, clearMessages } = useAIChat()
+interface AIChatContainerProps {
+  sessionId: string | null
+  onTitleGenerated?: (sessionId: string, title: string) => void
+}
+
+export function AIChatContainer({ sessionId, onTitleGenerated }: AIChatContainerProps) {
+  const handleTitleGenerated = useCallback((title: string) => {
+    if (sessionId && onTitleGenerated) {
+      onTitleGenerated(sessionId, title)
+    }
+  }, [sessionId, onTitleGenerated])
+
+  const { messages, isLoading, sendMessage, stopGeneration, clearMessages, loadMessages } = useAIChat({
+    sessionId,
+    onTitleGenerated: handleTitleGenerated,
+  })
+
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // sessionId 变化时加载消息
+  useEffect(() => {
+    if (sessionId) {
+      loadMessages(sessionId)
+    } else {
+      clearMessages()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId])
 
   // 自动滚动到底部
   useEffect(() => {
@@ -28,21 +52,6 @@ export function AIChatContainer() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.16))]">
-      {/* 头部工具栏 - 仅有消息时显示 */}
-      {hasMessages && (
-        <div className="flex items-center justify-end px-4 py-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearMessages}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            清除对话
-          </Button>
-        </div>
-      )}
-
       {/* 消息区域 - 带滚动渐变遮罩 */}
       <div className="flex-1 min-h-0 relative">
         <div

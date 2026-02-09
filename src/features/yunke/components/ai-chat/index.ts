@@ -1,3 +1,6 @@
 export { AIChatContainer } from './ai-chat-container'
+export { ChatSessionSidebar } from './chat-session-sidebar'
 export { useAIChat } from './use-ai-chat'
+export { useChatSessions } from './use-chat-sessions'
 export type { ChatMessage, ToolCallInfo } from './use-ai-chat'
+export type { ChatSession } from './use-chat-sessions'
