@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, PanelLeft } from 'lucide-react'
 import { useAIChat } from './use-ai-chat'
 import { ChatMessageItem } from './chat-message-item'
 import { ChatInput } from './chat-input'
@@ -15,9 +15,10 @@ interface AIChatContainerProps {
   sessionId: string | null
   onTitleGenerated?: (sessionId: string, title: string) => void
   ensureSession?: () => Promise<string>
+  onOpenSidebar?: () => void
 }
 
-export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession }: AIChatContainerProps) {
+export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession, onOpenSidebar }: AIChatContainerProps) {
   const handleTitleGenerated = useCallback((title: string) => {
     if (sessionId && onTitleGenerated) {
       onTitleGenerated(sessionId, title)
@@ -65,7 +66,17 @@ export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession }: 
   const hasMessages = messages.length > 0
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))]">
+    <div className="flex flex-col h-[calc(100dvh-theme(spacing.16))]">
+      {/* 移动端顶栏 */}
+      {onOpenSidebar && (
+        <div className="shrink-0 flex items-center h-12 px-3 border-b md:hidden">
+          <button onClick={onOpenSidebar} className="p-1.5 -ml-1 rounded-md hover:bg-accent">
+            <PanelLeft className="h-5 w-5" />
+          </button>
+          <span className="ml-2 text-sm font-medium truncate">AI 数据助手</span>
+        </div>
+      )}
+
       {/* 消息区域 - 带滚动渐变遮罩 */}
       <div className="flex-1 min-h-0 relative">
         <div
@@ -83,7 +94,7 @@ export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession }: 
           {!hasMessages ? (
             /* 空状态欢迎页 */
             <div className="flex flex-col items-center justify-center h-full">
-              <div className="flex flex-col items-center max-w-[840px] mx-auto px-5">
+              <div className="flex flex-col items-center max-w-[840px] mx-auto px-3 md:px-5">
                 <div className="rounded-full bg-foreground/5 p-4 mb-4">
                   <Sparkles className="h-8 w-8 text-foreground/60" />
                 </div>
@@ -107,7 +118,7 @@ export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession }: 
             </div>
           ) : (
             /* 消息列表 */
-            <div className="max-w-[840px] mx-auto px-5 py-4 space-y-2.5">
+            <div className="max-w-[840px] mx-auto px-3 md:px-5 py-4 space-y-2.5">
               {messages.map((msg) => (
                 <ChatMessageItem key={msg.id} message={msg} />
               ))}
@@ -117,7 +128,7 @@ export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession }: 
       </div>
 
       {/* 输入区域 */}
-      <div className="shrink-0 max-w-[840px] w-full mx-auto px-5 pb-4 pt-2">
+      <div className="shrink-0 max-w-[840px] w-full mx-auto px-3 md:px-5 pb-4 pt-2">
         <ChatInput
           onSend={sendMessage}
           onStop={stopGeneration}

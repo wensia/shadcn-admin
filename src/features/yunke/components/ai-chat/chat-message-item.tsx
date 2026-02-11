@@ -122,8 +122,7 @@ function ResponseCard({
     <div className="bg-background shadow-minimal rounded-[8px] overflow-hidden">
       {/* Content area */}
       <div
-        className="pl-[22px] pr-[16px] py-3 text-sm overflow-y-auto prose prose-sm dark:prose-invert max-w-none"
-        style={{ maxHeight: 540 }}
+        className="pl-[22px] pr-[16px] py-3 text-sm overflow-y-auto prose prose-sm dark:prose-invert max-w-none max-h-[70vh] md:max-h-[540px]"
       >
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
@@ -235,7 +234,7 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
         transition={{ duration: 0.15 }}
       >
         <div className="flex flex-col items-end w-full">
-          <div className="max-w-[80%] bg-foreground/5 rounded-[16px] px-5 py-3.5">
+          <div className="max-w-[90%] md:max-w-[80%] bg-foreground/5 rounded-[16px] px-4 md:px-5 py-3 md:py-3.5">
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
           </div>
         </div>

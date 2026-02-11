@@ -166,7 +166,7 @@ export function ChatSessionSidebar({
   }, [sessions])
 
   return (
-    <div className="w-[260px] border-r flex flex-col h-full bg-muted/30">
+    <div className="w-full md:w-[260px] md:border-r flex flex-col h-full bg-muted/30">
       <div className="p-3">
         <Button
           variant="outline"
