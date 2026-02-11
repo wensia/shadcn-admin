@@ -1,5 +1,16 @@
 import { useState, useRef, useCallback } from 'react'
 
+/** 生成 UUID，兼容非 HTTPS 环境 */
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return generateUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 export interface ToolCallInfo {
   name: string
   displayName: string
@@ -45,7 +56,7 @@ export function useAIChat(options?: {
     if (!content.trim() || isLoading) return
 
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       role: 'user',
       content: content.trim(),
       timestamp: new Date(),
@@ -54,7 +65,7 @@ export function useAIChat(options?: {
     setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
 
-    const assistantId = crypto.randomUUID()
+    const assistantId = generateUUID()
     const assistantMessage: ChatMessage = {
       id: assistantId,
       role: 'assistant',
