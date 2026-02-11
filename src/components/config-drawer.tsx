@@ -225,6 +225,7 @@ function ThemeConfig() {
 
 function AccentColorConfig() {
   const { defaultAccentColor, accentColor, setAccentColor } = useAccentColor()
+  const currentColor = ACCENT_COLORS.find(c => c.value === accentColor)
   return (
     <div>
       <SectionTitle
@@ -259,10 +260,10 @@ function AccentColorConfig() {
         ))}
       </div>
       <div className='mt-2 text-xs text-muted-foreground'>
-        {ACCENT_COLORS.find(c => c.value === accentColor)?.label}
-        {ACCENT_COLORS.find(c => c.value === accentColor)?.description && (
+        {currentColor?.label}
+        {currentColor?.description && (
           <span className='ml-1 text-muted-foreground/70'>
-            - {ACCENT_COLORS.find(c => c.value === accentColor)?.description}
+            - {currentColor.description}
           </span>
         )}
       </div>

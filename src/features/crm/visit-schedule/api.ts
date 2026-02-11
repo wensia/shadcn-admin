@@ -34,18 +34,13 @@ export interface VisitScheduleResponse {
 }
 
 export const visitScheduleApi = {
-  /**
-   * 创建到访预约记录
-   */
-  async createVisitSchedule(data: VisitScheduleCreate): Promise<ApiResponse<VisitScheduleResponse>> {
-    const response = await apiClient.post<ApiResponse<VisitScheduleResponse>>('/visit-schedules', data)
-    return response
+  /** 创建到访预约记录 */
+  createVisitSchedule(data: VisitScheduleCreate): Promise<ApiResponse<VisitScheduleResponse>> {
+    return apiClient.post('/visit-schedules', data)
   },
 
-  /**
-   * 获取到访预约记录列表
-   */
-  async getVisitSchedules(params?: {
+  /** 获取到访预约记录列表 */
+  getVisitSchedules(params?: {
     page?: number
     size?: number
     lead_id?: string
@@ -54,25 +49,16 @@ export const visitScheduleApi = {
     visit_date_from?: string
     visit_date_to?: string
   }): Promise<ApiResponse<{ items: VisitScheduleResponse[]; total: number }>> {
-    const response = await apiClient.get<ApiResponse<{ items: VisitScheduleResponse[]; total: number }>>('/visit-schedules', {
-      params: params || {}
-    })
-    return response
+    return apiClient.get('/visit-schedules', { params })
   },
 
-  /**
-   * 更新到访预约记录状态
-   */
-  async updateVisitSchedule(id: string, data: Partial<VisitScheduleCreate>): Promise<ApiResponse<VisitScheduleResponse>> {
-    const response = await apiClient.put<ApiResponse<VisitScheduleResponse>>(`/visit-schedules/${id}`, data)
-    return response
+  /** 更新到访预约记录状态 */
+  updateVisitSchedule(id: string, data: Partial<VisitScheduleCreate>): Promise<ApiResponse<VisitScheduleResponse>> {
+    return apiClient.put(`/visit-schedules/${id}`, data)
   },
 
-  /**
-   * 删除到访预约记录
-   */
-  async deleteVisitSchedule(id: string): Promise<ApiResponse<void>> {
-    const response = await apiClient.delete<ApiResponse<void>>(`/visit-schedules/${id}`)
-    return response
+  /** 删除到访预约记录 */
+  deleteVisitSchedule(id: string): Promise<ApiResponse<void>> {
+    return apiClient.delete(`/visit-schedules/${id}`)
   },
 }

@@ -3,7 +3,7 @@
  */
 
 import { apiClient } from '@/lib/api/client'
-import type { ApiResponse } from '@/lib/api/types'
+import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
 import type {
   YunkeAdminStatus,
   YunkeAdminLoginResponse,
@@ -26,7 +26,6 @@ import type {
   YunkeCallLogItem,
   AIAnalysisResult,
 } from './types'
-import type { PaginatedResponse } from '@/lib/api/types'
 
 /**
  * 云客管理 API
@@ -482,5 +481,3 @@ export interface EmployeeCampusMapping {
   }>
 }
 
-// 导出默认 API
-export default yunkeApi

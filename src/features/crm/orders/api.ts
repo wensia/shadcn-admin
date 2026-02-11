@@ -18,132 +18,80 @@ import type {
 } from './types'
 
 export const orderApi = {
-  /**
-   * 获取订单列表
-   */
-  async getOrders(params?: OrderListParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<OrderListItem>>>('/orders', {
-      params
-    })
-    return response
+  /** 获取订单列表 */
+  getOrders(params?: OrderListParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
+    return apiClient.get('/orders', { params })
   },
 
-  /**
-   * 获取单个订单详情
-   */
-  async getOrder(id: string): Promise<ApiResponse<Order>> {
-    const response = await apiClient.get<ApiResponse<Order>>(`/orders/${id}`)
-    return response
+  /** 获取单个订单详情 */
+  getOrder(id: string): Promise<ApiResponse<Order>> {
+    return apiClient.get(`/orders/${id}`)
   },
 
-  /**
-   * 创建订单
-   */
-  async createOrder(data: OrderCreate): Promise<ApiResponse<Order>> {
-    const response = await apiClient.post<ApiResponse<Order>>('/orders', data)
-    return response
+  /** 创建订单 */
+  createOrder(data: OrderCreate): Promise<ApiResponse<Order>> {
+    return apiClient.post('/orders', data)
   },
 
-  /**
-   * 更新订单
-   */
-  async updateOrder(id: string, data: OrderUpdate): Promise<ApiResponse<Order>> {
-    const response = await apiClient.put<ApiResponse<Order>>(`/orders/${id}`, data)
-    return response
+  /** 更新订单 */
+  updateOrder(id: string, data: OrderUpdate): Promise<ApiResponse<Order>> {
+    return apiClient.put(`/orders/${id}`, data)
   },
 
-  /**
-   * 删除订单
-   */
-  async deleteOrder(id: string): Promise<ApiResponse<boolean>> {
-    const response = await apiClient.delete<ApiResponse<boolean>>(`/orders/${id}`)
-    return response
+  /** 删除订单 */
+  deleteOrder(id: string): Promise<ApiResponse<boolean>> {
+    return apiClient.delete(`/orders/${id}`)
   },
 
-  /**
-   * 获取订单统计
-   */
-  async getStats(params?: {
+  /** 获取订单统计 */
+  getStats(params?: {
     date_from?: string
     date_to?: string
     campus_id?: string
     collector_id?: string
   }): Promise<ApiResponse<OrderStats>> {
-    const response = await apiClient.get<ApiResponse<OrderStats>>('/orders/stats', {
-      params
-    })
-    return response
+    return apiClient.get('/orders/stats', { params })
   },
 
-  /**
-   * 获取指定学员的订单列表
-   */
-  async getLeadOrders(leadId: string): Promise<ApiResponse<Order[]>> {
-    const response = await apiClient.get<ApiResponse<Order[]>>(`/orders/lead/${leadId}`)
-    return response
+  /** 获取指定学员的订单列表 */
+  getLeadOrders(leadId: string): Promise<ApiResponse<Order[]>> {
+    return apiClient.get(`/orders/lead/${leadId}`)
   },
 
   // ==================== 审批相关 API ====================
 
-  /**
-   * 提交订单审批
-   */
-  async submitForApproval(orderId: string): Promise<ApiResponse<Order>> {
-    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/submit`)
-    return response
+  /** 提交订单审批 */
+  submitForApproval(orderId: string): Promise<ApiResponse<Order>> {
+    return apiClient.post(`/orders/${orderId}/submit`)
   },
 
-  /**
-   * 领导审批
-   */
-  async leaderApprove(orderId: string, data: ApprovalRequest): Promise<ApiResponse<Order>> {
-    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/leader-approve`, data)
-    return response
+  /** 领导审批 */
+  leaderApprove(orderId: string, data: ApprovalRequest): Promise<ApiResponse<Order>> {
+    return apiClient.post(`/orders/${orderId}/leader-approve`, data)
   },
 
-  /**
-   * 财务确认
-   */
-  async financeApprove(orderId: string, data: ApprovalRequest): Promise<ApiResponse<Order>> {
-    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/finance-approve`, data)
-    return response
+  /** 财务确认 */
+  financeApprove(orderId: string, data: ApprovalRequest): Promise<ApiResponse<Order>> {
+    return apiClient.post(`/orders/${orderId}/finance-approve`, data)
   },
 
-  /**
-   * 取消订单
-   */
-  async cancelOrder(orderId: string, data?: CancelRequest): Promise<ApiResponse<Order>> {
-    const response = await apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/cancel`, data || {})
-    return response
+  /** 取消订单 */
+  cancelOrder(orderId: string, data?: CancelRequest): Promise<ApiResponse<Order>> {
+    return apiClient.post(`/orders/${orderId}/cancel`, data || {})
   },
 
-  /**
-   * 获取待领导审批的订单列表
-   */
-  async getPendingLeaderApprovals(params?: PendingApprovalParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<OrderListItem>>>('/orders/pending/leader', {
-      params
-    })
-    return response
+  /** 获取待领导审批的订单列表 */
+  getPendingLeaderApprovals(params?: PendingApprovalParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
+    return apiClient.get('/orders/pending/leader', { params })
   },
 
-  /**
-   * 获取待财务确认的订单列表
-   */
-  async getPendingFinanceApprovals(params?: PendingApprovalParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<OrderListItem>>>('/orders/pending/finance', {
-      params
-    })
-    return response
+  /** 获取待财务确认的订单列表 */
+  getPendingFinanceApprovals(params?: PendingApprovalParams): Promise<ApiResponse<PaginatedResponse<OrderListItem>>> {
+    return apiClient.get('/orders/pending/finance', { params })
   },
 
-  /**
-   * 获取订单审批历史
-   */
-  async getApprovalLogs(orderId: string): Promise<ApiResponse<ApprovalLog[]>> {
-    const response = await apiClient.get<ApiResponse<ApprovalLog[]>>(`/orders/${orderId}/approval-logs`)
-    return response
+  /** 获取订单审批历史 */
+  getApprovalLogs(orderId: string): Promise<ApiResponse<ApprovalLog[]>> {
+    return apiClient.get(`/orders/${orderId}/approval-logs`)
   }
 }
-
-export default orderApi

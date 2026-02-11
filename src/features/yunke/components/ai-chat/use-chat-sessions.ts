@@ -28,7 +28,7 @@ export function useChatSessions() {
     try {
       const res = await fetch(`${API_BASE}/sessions`, { headers: getAuthHeaders() })
       const json = await res.json()
-      if (json.code === 200 && Array.isArray(json.data)) {
+      if (json.success && Array.isArray(json.data)) {
         setSessions(json.data)
       }
     } catch (e) {
@@ -49,7 +49,7 @@ export function useChatSessions() {
       body: JSON.stringify({ title: '新对话' }),
     })
     const json = await res.json()
-    if (json.code === 200 && json.data) {
+    if (json.success && json.data) {
       const newSession = json.data as ChatSession
       setSessions(prev => [newSession, ...prev])
       setCurrentSessionId(newSession.id)
@@ -64,7 +64,7 @@ export function useChatSessions() {
       headers: getAuthHeaders(),
     })
     const json = await res.json()
-    if (json.code === 200) {
+    if (json.success) {
       setSessions(prev => prev.filter(s => s.id !== id))
       if (currentSessionId === id) {
         setCurrentSessionId(null)
@@ -79,7 +79,7 @@ export function useChatSessions() {
       body: JSON.stringify({ title }),
     })
     const json = await res.json()
-    if (json.code === 200) {
+    if (json.success) {
       setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s))
     }
   }, [])

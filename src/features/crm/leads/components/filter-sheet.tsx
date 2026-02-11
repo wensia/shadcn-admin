@@ -394,7 +394,7 @@ export function FilterSheet({ open, onOpenChange, filters, onApplyFilters, onCle
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className={cn('shrink-0', s.size.button, s.size.button)}
+              className={cn('shrink-0', s.size.button)}
             >
               <X className={s.size.icon} />
               <span className="sr-only">关闭</span>

@@ -4,7 +4,7 @@
  * 支持 Mira/Lyra/Maia 风格切换
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
 import { useDocumentTitle } from '@/hooks/use-document-title'
@@ -15,7 +15,6 @@ import { Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
-// Header is available if needed from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { LeadsTable } from './components/leads-table'
 import { LeadsToolbar } from './components/leads-toolbar'
@@ -33,7 +32,6 @@ import { apiClient } from '@/lib/api/client'
 import type { LeadListParams, LeadListItem, Lead, LeadStatus, IntentionLevel, Grade } from './types'
 import { getLeadStatusStyle, getIntentionLevelStyle } from '@/lib/status-styles'
 import { leadStatusLabels, intentionLevelLabels, gradeLabels, followupResultLabels } from './types'
-import { useMemo } from 'react'
 
 export function LeadsPage() {
   useDocumentTitle('线索管理')
@@ -244,41 +242,19 @@ export function LeadsPage() {
     queryClient.invalidateQueries({ queryKey: ['leads'] })
   }
 
-  // 批量分配
-  const handleBatchAssign = () => {
+  // 批量操作通用守卫
+  const requireSelection = (action: () => void) => {
     if (selectedRows.length === 0) {
       toast.warning('请先选择线索')
       return
     }
-    setBatchAssignDialogOpen(true)
+    action()
   }
 
-  // 批量释放
-  const handleBatchRelease = () => {
-    if (selectedRows.length === 0) {
-      toast.warning('请先选择线索')
-      return
-    }
-    setBatchReleaseDialogOpen(true)
-  }
-
-  // 批量修改状态
-  const handleBatchUpdateStatus = () => {
-    if (selectedRows.length === 0) {
-      toast.warning('请先选择线索')
-      return
-    }
-    setBatchUpdateStatusDialogOpen(true)
-  }
-
-  // 批量删除
-  const handleBatchDelete = () => {
-    if (selectedRows.length === 0) {
-      toast.warning('请先选择线索')
-      return
-    }
-    setBatchDeleteDialogOpen(true)
-  }
+  const handleBatchAssign = () => requireSelection(() => setBatchAssignDialogOpen(true))
+  const handleBatchRelease = () => requireSelection(() => setBatchReleaseDialogOpen(true))
+  const handleBatchUpdateStatus = () => requireSelection(() => setBatchUpdateStatusDialogOpen(true))
+  const handleBatchDelete = () => requireSelection(() => setBatchDeleteDialogOpen(true))
 
   // 行点击 - 打开详情
   const handleRowClick = (lead: LeadListItem) => {
@@ -292,41 +268,27 @@ export function LeadsPage() {
     // TODO: 实现跟进记录Dialog
   }
 
-  // 搜索变化
+  // 重置分页到第一页的通用辅助
+  const resetToFirstPage = () => setPagination((prev) => ({ ...prev, page: 1 }))
+
   const handleSearchChange = (value: string) => {
     setSearchValue(value)
-    setPagination((prev) => ({ ...prev, page: 1 })) // 重置到第一页
+    resetToFirstPage()
   }
 
-  // 状态筛选变化（支持多选）
   const handleStatusFilterChange = (values: LeadStatus[]) => {
     setStatusFilter(values)
-    setPagination((prev) => ({ ...prev, page: 1 })) // 重置到第一页
+    resetToFirstPage()
   }
 
-  // 意向等级筛选变化（支持多选）
   const handleIntentionFilterChange = (values: IntentionLevel[]) => {
     setIntentionFilter(values)
-    setPagination((prev) => ({ ...prev, page: 1 })) // 重置到第一页
+    resetToFirstPage()
   }
 
-  // 移除搜索筛选
-  const handleRemoveSearch = () => {
-    setSearchValue('')
-    setPagination((prev) => ({ ...prev, page: 1 }))
-  }
-
-  // 移除状态筛选
-  const handleRemoveStatus = () => {
-    setStatusFilter([])
-    setPagination((prev) => ({ ...prev, page: 1 }))
-  }
-
-  // 移除意向筛选
-  const handleRemoveIntention = () => {
-    setIntentionFilter([])
-    setPagination((prev) => ({ ...prev, page: 1 }))
-  }
+  const handleRemoveSearch = () => { setSearchValue(''); resetToFirstPage() }
+  const handleRemoveStatus = () => { setStatusFilter([]); resetToFirstPage() }
+  const handleRemoveIntention = () => { setIntentionFilter([]); resetToFirstPage() }
 
   // 清空快捷筛选（供 FilterSheet 调用）
   const handleClearQuickFilters = () => {
@@ -357,12 +319,47 @@ export function LeadsPage() {
       return value !== undefined && value !== '' && value !== null
     }).length
 
+  // 可移除的高级筛选标签组件
+  const badgeClasses = cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)
+  const editableBadgeClasses = cn(badgeClasses, 'cursor-pointer hover:bg-secondary/80')
+  const removeBtnClasses = "ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
+
+  function FilterBadge({ label, filterKeys, children }: {
+    label: string
+    filterKeys: (keyof LeadListParams)[]
+    children?: React.ReactNode
+  }) {
+    return (
+      <Badge
+        variant="secondary"
+        className={editableBadgeClasses}
+        onClick={() => setFilterSheetOpen(true)}
+      >
+        {label}: {children}
+        <span
+          role="button"
+          className={removeBtnClasses}
+          onClick={(e) => {
+            e.stopPropagation()
+            const updated = { ...filters }
+            for (const key of filterKeys) {
+              delete updated[key]
+            }
+            setFilters(updated)
+          }}
+        >
+          <X className="h-3 w-3 hover:text-destructive" />
+        </span>
+      </Badge>
+    )
+  }
+
   return (
     <>
       {/* 主内容区 - fixed 使其填充剩余高度 */}
       <Main fixed className="min-h-0">
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-          {/* 新建按钮 - flex-shrink-0 防止收缩 */}
+          {/* 新建按钮 */}
           <div className="flex flex-shrink-0 justify-end">
             <Button onClick={handleCreate} size="sm" className="h-8">
               <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -370,7 +367,7 @@ export function LeadsPage() {
             </Button>
           </div>
 
-          {/* 工具栏 - flex-shrink-0 */}
+          {/* 工具栏 */}
           <div className="flex-shrink-0">
             <LeadsToolbar
               selectedCount={selectedRows.length}
@@ -390,280 +387,99 @@ export function LeadsPage() {
             />
           </div>
 
-          {/* 筛选条件标签栏 - flex-shrink-0 */}
+          {/* 筛选条件标签栏 */}
           {activeFiltersCount > 0 && (
             <div className={cn('flex flex-shrink-0 items-center flex-wrap', s.gap.tight)}>
           <span className={cn(s.text.xs, 'text-muted-foreground')}>筛选条件:</span>
 
-          {/* 搜索关键词标签 */}
           {searchValue && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+            <Badge variant="secondary" className={badgeClasses}>
               搜索: {searchValue}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={handleRemoveSearch}
-              />
+              <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={handleRemoveSearch} />
             </Badge>
           )}
 
-          {/* 状态筛选标签 */}
           {statusFilter.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+            <Badge variant="secondary" className={badgeClasses}>
               状态: {statusFilter.map(status => getLeadStatusStyle(status).label).join(', ')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={handleRemoveStatus}
-              />
+              <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={handleRemoveStatus} />
             </Badge>
           )}
 
-          {/* 意向等级筛选标签 */}
           {intentionFilter.length > 0 && (
-            <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
+            <Badge variant="secondary" className={badgeClasses}>
               意向: {intentionFilter.map(level => getIntentionLevelStyle(level).label).join(', ')}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={handleRemoveIntention}
-              />
+              <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={handleRemoveIntention} />
             </Badge>
           )}
 
-          {/* 年级筛选标签 */}
           {filters.grade && filters.grade.length > 0 && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              年级: {filters.grade.map(g => gradeLabels[g]).join(', ')}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { grade, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="年级" filterKeys={['grade']}>
+              {filters.grade.map(g => gradeLabels[g]).join(', ')}
+            </FilterBadge>
           )}
 
-          {/* 回访状态筛选标签 */}
           {filters.followup_results && filters.followup_results.length > 0 && filters.followup_result_mode && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              回访: {followupModeLabels[filters.followup_result_mode] || filters.followup_result_mode}{' '}
+            <FilterBadge label="回访" filterKeys={['followup_results', 'followup_result_mode']}>
+              {followupModeLabels[filters.followup_result_mode] || filters.followup_result_mode}{' '}
               {getFollowupResultLabel(filters.followup_results)}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { followup_results, followup_result_mode, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            </FilterBadge>
           )}
 
-          {/* 高级筛选条件标签（显示具体值，点击可编辑） */}
           {filters.status && filters.status.length > 0 && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              状态: {filters.status.map(s => leadStatusLabels[s]).join(', ')}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { status, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="状态" filterKeys={['status']}>
+              {filters.status.map(s => leadStatusLabels[s]).join(', ')}
+            </FilterBadge>
           )}
 
           {filters.source_channel_id && filters.source_channel_id.length > 0 && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              渠道: {getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道')}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { source_channel_id, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="渠道" filterKeys={['source_channel_id']}>
+              {getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道')}
+            </FilterBadge>
           )}
 
           {filters.advisor_name && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              顾问: {filters.advisor_name}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { advisor_name, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="顾问" filterKeys={['advisor_name']}>
+              {filters.advisor_name}
+            </FilterBadge>
           )}
 
           {filters.created_by_name && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              创建人: {filters.created_by_name}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { created_by_name, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="创建人" filterKeys={['created_by_name']}>
+              {filters.created_by_name}
+            </FilterBadge>
           )}
 
           {filters.owner_campus_id && filters.owner_campus_id.length > 0 && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              校区: {getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区')}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { owner_campus_id, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="校区" filterKeys={['owner_campus_id']}>
+              {getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区')}
+            </FilterBadge>
           )}
 
           {filters.intention_level && filters.intention_level.length > 0 && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              意向: {filters.intention_level.map(l => intentionLevelLabels[l]).join(', ')}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { intention_level, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="意向" filterKeys={['intention_level']}>
+              {filters.intention_level.map(l => intentionLevelLabels[l]).join(', ')}
+            </FilterBadge>
           )}
 
           {(filters.created_from || filters.created_to) && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              时间: {filters.created_from || '...'} ~ {filters.created_to || '...'}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { created_from, created_to, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="时间" filterKeys={['created_from', 'created_to']}>
+              {filters.created_from || '...'} ~ {filters.created_to || '...'}
+            </FilterBadge>
           )}
 
           {filters.tag && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              标签: {filters.tag}
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { tag, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="标签" filterKeys={['tag']}>
+              {filters.tag}
+            </FilterBadge>
           )}
 
           {filters.days_without_activity && (
-            <Badge
-              variant="secondary"
-              className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-              onClick={() => setFilterSheetOpen(true)}
-            >
-              无活动: {filters.days_without_activity}天
-              <span
-                role="button"
-                className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const { days_without_activity, ...rest } = filters
-                  setFilters(rest)
-                }}
-              >
-                <X className="h-3 w-3 hover:text-destructive" />
-              </span>
-            </Badge>
+            <FilterBadge label="无活动" filterKeys={['days_without_activity']}>
+              {filters.days_without_activity}天
+            </FilterBadge>
           )}
 
-          {/* 清除全部按钮 */}
               <Button
                 variant="ghost"
                 size="sm"

@@ -18,6 +18,19 @@ import {
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 
+/** 将字符串日期转换为 Date 对象 */
+function parseDate(dateStr: string | undefined): Date | undefined {
+  if (!dateStr) return undefined
+  const date = new Date(dateStr)
+  return isNaN(date.getTime()) ? undefined : date
+}
+
+/** 将 Date 对象转换为 YYYY-MM-DD 格式字符串 */
+function formatDateString(date: Date | undefined): string | undefined {
+  if (!date) return undefined
+  return format(date, 'yyyy-MM-dd')
+}
+
 interface DatePickerProps {
   /** 选中的日期 */
   selected: Date | undefined
@@ -145,20 +158,6 @@ export function DateRangePicker({
   disabled = false,
 }: DateRangePickerProps) {
   const s = useStyleClasses()
-
-  // 将字符串日期转换为 Date 对象
-  const parseDate = (dateStr: string | undefined): Date | undefined => {
-    if (!dateStr) return undefined
-    const date = new Date(dateStr)
-    return isNaN(date.getTime()) ? undefined : date
-  }
-
-  // 将 Date 对象转换为 YYYY-MM-DD 格式字符串
-  const formatDateString = (date: Date | undefined): string | undefined => {
-    if (!date) return undefined
-    return format(date, 'yyyy-MM-dd')
-  }
-
   const startDateObj = parseDate(startDate)
   const endDateObj = parseDate(endDate)
 
@@ -213,20 +212,6 @@ export function DateRangePickerSingle({
 }: DateRangePickerSingleProps) {
   const s = useStyleClasses()
   const [open, setOpen] = React.useState(false)
-
-  // 将字符串日期转换为 Date 对象
-  const parseDate = (dateStr: string | undefined): Date | undefined => {
-    if (!dateStr) return undefined
-    const date = new Date(dateStr)
-    return isNaN(date.getTime()) ? undefined : date
-  }
-
-  // 将 Date 对象转换为 YYYY-MM-DD 格式字符串
-  const formatDateString = (date: Date | undefined): string | undefined => {
-    if (!date) return undefined
-    return format(date, 'yyyy-MM-dd')
-  }
-
   const fromDate = parseDate(value.from)
   const toDate = parseDate(value.to)
 
@@ -315,19 +300,6 @@ export function FormDatePicker({
   minDate,
   maxDate,
 }: FormDatePickerProps) {
-  // 将字符串日期转换为 Date 对象
-  const parseDate = (dateStr: string | undefined): Date | undefined => {
-    if (!dateStr) return undefined
-    const date = new Date(dateStr)
-    return isNaN(date.getTime()) ? undefined : date
-  }
-
-  // 将 Date 对象转换为 YYYY-MM-DD 格式字符串
-  const formatDateString = (date: Date | undefined): string | undefined => {
-    if (!date) return undefined
-    return format(date, 'yyyy-MM-dd')
-  }
-
   const dateObj = parseDate(value)
 
   return (

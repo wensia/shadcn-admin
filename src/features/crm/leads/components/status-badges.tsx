@@ -10,7 +10,6 @@ import {
   getIntentionLevelStyle
 } from '@/lib/status-styles'
 import { LeadStatus, FollowupResult, IntentionLevel } from '../types'
-import { cn } from '@/lib/utils'
 
 interface LeadStatusBadgeProps {
   status: LeadStatus

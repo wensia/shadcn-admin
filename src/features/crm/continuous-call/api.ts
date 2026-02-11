@@ -10,31 +10,15 @@ import type {
   ContinuousCallLeadsParams,
 } from './types'
 
-/**
- * 快捷外呼 API
- */
 export const continuousCallApi = {
-  /**
-   * 获取快捷外呼统计
-   */
-  async getStats(): Promise<ApiResponse<ContinuousCallStats>> {
-    const response = await apiClient.get<ApiResponse<ContinuousCallStats>>(
-      '/crm/continuous-call/stats'
-    )
-    return response
+  /** 获取快捷外呼统计 */
+  getStats(): Promise<ApiResponse<ContinuousCallStats>> {
+    return apiClient.get('/crm/continuous-call/stats')
   },
 
-  /**
-   * 获取快捷外呼线索列表
-   */
-  async getLeads(
-    params?: ContinuousCallLeadsParams
-  ): Promise<ApiResponse<ContinuousCallLeadsResponse>> {
-    const response = await apiClient.get<ApiResponse<ContinuousCallLeadsResponse>>(
-      '/crm/continuous-call/leads',
-      { params }
-    )
-    return response
+  /** 获取快捷外呼线索列表 */
+  getLeads(params?: ContinuousCallLeadsParams): Promise<ApiResponse<ContinuousCallLeadsResponse>> {
+    return apiClient.get('/crm/continuous-call/leads', { params })
   },
 }
 

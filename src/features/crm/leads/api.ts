@@ -56,170 +56,118 @@ const leadsApi = {
     return response
   },
 
-  /**
-   * 获取线索详情
-   */
-  async getLead(id: string, includeStyles = false): Promise<ApiResponse<Lead>> {
-    const response = await apiClient.get<ApiResponse<Lead>>(`/leads/${id}`, {
+  /** 获取线索详情 */
+  getLead(id: string, includeStyles = false): Promise<ApiResponse<Lead>> {
+    return apiClient.get<ApiResponse<Lead>>(`/leads/${id}`, {
       params: { include_styles: includeStyles }
     })
-    return response
   },
 
-  /**
-   * 创建线索
-   */
-  async createLead(data: LeadCreate): Promise<ApiResponse<Lead>> {
-    const response = await apiClient.post<ApiResponse<Lead>>('/leads', data)
-    return response
+  /** 创建线索 */
+  createLead(data: LeadCreate): Promise<ApiResponse<Lead>> {
+    return apiClient.post<ApiResponse<Lead>>('/leads', data)
   },
 
-  /**
-   * 更新线索
-   */
-  async updateLead(id: string, data: Partial<LeadUpdate>): Promise<ApiResponse<Lead>> {
-    const response = await apiClient.put<ApiResponse<Lead>>(`/leads/${id}`, data)
-    return response
+  /** 更新线索 */
+  updateLead(id: string, data: Partial<LeadUpdate>): Promise<ApiResponse<Lead>> {
+    return apiClient.put<ApiResponse<Lead>>(`/leads/${id}`, data)
   },
 
-  /**
-   * 删除线索
-   */
-  async deleteLead(id: string): Promise<ApiResponse<void>> {
-    const response = await apiClient.delete<ApiResponse<void>>(`/leads/${id}`)
-    return response
+  /** 删除线索 */
+  deleteLead(id: string): Promise<ApiResponse<void>> {
+    return apiClient.delete<ApiResponse<void>>(`/leads/${id}`)
   },
 
   // ==================== 导出功能 ====================
 
-  /**
-   * 导出线索
-   */
-  async exportLeads(params?: LeadListParams): Promise<any> {
-    const response = await apiClient.get('/leads/export', {
-      params,
-      responseType: 'blob'
-    })
-    return response
+  /** 导出线索 */
+  exportLeads(params?: LeadListParams): Promise<any> {
+    return apiClient.get('/leads/export', { params, responseType: 'blob' })
   },
 
   // ==================== 跟进记录 ====================
 
-  /**
-   * 获取跟进记录
-   */
-  async getLeadFollowups(
+  /** 获取跟进记录 */
+  getLeadFollowups(
     leadId: string,
     params?: { page?: number; size?: number }
   ): Promise<ApiResponse<LeadFollowup[]>> {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.size) queryParams.append('size', params.size.toString())
-
-    const url = `/leads/${leadId}/followups${queryParams.toString() ? '?' + queryParams.toString() : ''}`
-    const response = await apiClient.get<ApiResponse<LeadFollowup[]>>(url)
-    return response
+    return apiClient.get<ApiResponse<LeadFollowup[]>>(
+      `/leads/${leadId}/followups`,
+      { params }
+    )
   },
 
-  /**
-   * 添加跟进记录
-   */
-  async addLeadFollowup(
+  /** 添加跟进记录 */
+  addLeadFollowup(
     leadId: string,
     data: LeadFollowupCreate
   ): Promise<ApiResponse<LeadFollowup>> {
-    const response = await apiClient.post<ApiResponse<LeadFollowup>>(
+    return apiClient.post<ApiResponse<LeadFollowup>>(
       `/leads/${leadId}/followups`,
       data
     )
-    return response
   },
 
   // ==================== 变更记录 ====================
 
-  /**
-   * 获取线索信息变更记录
-   */
-  async getLeadInfoChangeLogs(
+  /** 获取线索信息变更记录 */
+  getLeadInfoChangeLogs(
     leadId: string,
     params?: { page?: number; size?: number }
   ): Promise<ApiResponse<LeadInfoChangeLog[]>> {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.size) queryParams.append('size', params.size.toString())
-
-    const url = `/leads/${leadId}/info-change-logs${queryParams.toString() ? '?' + queryParams.toString() : ''}`
-    const response = await apiClient.get<ApiResponse<LeadInfoChangeLog[]>>(url)
-    return response
+    return apiClient.get<ApiResponse<LeadInfoChangeLog[]>>(
+      `/leads/${leadId}/info-change-logs`,
+      { params }
+    )
   },
 
-  /**
-   * 获取线索归属变更记录
-   */
-  async getLeadOwnershipChangeLogs(
+  /** 获取线索归属变更记录 */
+  getLeadOwnershipChangeLogs(
     leadId: string,
     params?: { page?: number; size?: number }
   ): Promise<ApiResponse<LeadOwnershipChangeLog[]>> {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.size) queryParams.append('size', params.size.toString())
-
-    const url = `/leads/${leadId}/ownership-change-logs${queryParams.toString() ? '?' + queryParams.toString() : ''}`
-    const response = await apiClient.get<ApiResponse<LeadOwnershipChangeLog[]>>(url)
-    return response
+    return apiClient.get<ApiResponse<LeadOwnershipChangeLog[]>>(
+      `/leads/${leadId}/ownership-change-logs`,
+      { params }
+    )
   },
 
   // ==================== 批量操作 ====================
 
-  /**
-   * 批量分配线索
-   */
-  async batchAssignLeads(data: {
+  /** 批量分配线索 */
+  batchAssignLeads(data: {
     lead_ids: string[]
     advisor_id: string
     status?: LeadStatus
   }): Promise<ApiResponse<void>> {
-    const response = await apiClient.post<ApiResponse<void>>('/leads/batch-assign', data)
-    return response
+    return apiClient.post<ApiResponse<void>>('/leads/batch-assign', data)
   },
 
-  /**
-   * 批量释放到公海（使用新的统一API）
-   */
-  async batchReleaseLeads(data: {
+  /** 批量释放到公海 */
+  batchReleaseLeads(data: {
     lead_ids: string[]
     reason: string
     remark?: string
   }): Promise<ApiResponse<void>> {
-    const response = await apiClient.post<ApiResponse<void>>('/lead-pool/release', data)
-    return response
+    return apiClient.post<ApiResponse<void>>('/lead-pool/release', data)
   },
 
-  /**
-   * 批量删除线索
-   */
-  async batchDeleteLeads(leadIds: string[]): Promise<ApiResponse<void>> {
-    const response = await apiClient.post<ApiResponse<void>>('/leads/batch-delete', {
-      lead_ids: leadIds
-    })
-    return response
+  /** 批量删除线索 */
+  batchDeleteLeads(leadIds: string[]): Promise<ApiResponse<void>> {
+    return apiClient.post<ApiResponse<void>>('/leads/batch-delete', { lead_ids: leadIds })
   },
 
-  /**
-   * 批量修改状态
-   */
-  async batchUpdateStatus(data: {
+  /** 批量修改状态 */
+  batchUpdateStatus(data: {
     lead_ids: string[]
     status: LeadStatus
   }): Promise<ApiResponse<void>> {
-    const response = await apiClient.post<ApiResponse<void>>('/leads/batch-status-update', data)
-    return response
+    return apiClient.post<ApiResponse<void>>('/leads/batch-status-update', data)
   },
 
-  /**
-   * 批量标记为待回访
-   */
-  async batchMarkFollowup(data: {
+  /** 批量标记为待回访 */
+  batchMarkFollowup(data: {
     lead_ids: string[]
     priority?: number
     next_followup_at?: string
@@ -229,67 +177,37 @@ const leadsApi = {
     failed_count: number
     total: number
   }>> {
-    const response = await apiClient.post<ApiResponse<{
-      success_count: number
-      failed_count: number
-      total: number
-    }>>('/leads/batch-mark-followup', data)
-    return response
+    return apiClient.post('/leads/batch-mark-followup', data)
   },
 
-  /**
-   * 批量删除线索（仅超级管理员）
-   */
-  async batchDelete(data: {
+  /** 批量删除线索（仅超级管理员） */
+  batchDelete(data: {
     lead_ids: string[]
     delete_reason?: string
   }): Promise<ApiResponse<{
     success_count: number
     failed_count: number
     total: number
-    failed_leads?: Array<{
-      id: string
-      reason: string
-    }>
+    failed_leads?: Array<{ id: string; reason: string }>
   }>> {
-    const response = await apiClient.post<ApiResponse<{
-      success_count: number
-      failed_count: number
-      total: number
-      failed_leads?: Array<{
-        id: string
-        reason: string
-      }>
-    }>>('/leads/batch-delete', data)
-    return response
+    return apiClient.post('/leads/batch-delete', data)
   },
 
   // ==================== 辅助功能 ====================
 
-  /**
-   * 获取筛选选项
-   */
-  async getFilterOptions(): Promise<ApiResponse<{
+  /** 获取筛选选项 */
+  getFilterOptions(): Promise<ApiResponse<{
     source_channels: Array<{ id: string; name: string; category: string }>
     creators: Array<{ id: string; name: string; username: string }>
     advisors: Array<{ id: string; name: string; username: string }>
     campuses?: Array<{ id: string; name: string }>
     followup_results?: Array<{ value: string; label: string }>
   }>> {
-    const response = await apiClient.get<ApiResponse<{
-      source_channels: Array<{ id: string; name: string; category: string }>
-      creators: Array<{ id: string; name: string; username: string }>
-      advisors: Array<{ id: string; name: string; username: string }>
-      campuses?: Array<{ id: string; name: string }>
-      followup_results?: Array<{ value: string; label: string }>
-    }>>('/leads/filter-options')
-    return response
+    return apiClient.get('/leads/filter-options')
   },
 
-  /**
-   * 检查手机号重复
-   */
-  async checkPhoneDuplicate(
+  /** 检查手机号重复 */
+  checkPhoneDuplicate(
     phone: string,
     excludeLeadId?: string
   ): Promise<ApiResponse<{
@@ -308,35 +226,13 @@ const leadsApi = {
     }>
     message: string
   }>> {
-    const params = new URLSearchParams()
-    params.append('phone', phone)
-    if (excludeLeadId) {
-      params.append('exclude_lead_id', excludeLeadId)
-    }
-
-    const response = await apiClient.get<ApiResponse<{
-      is_duplicate: boolean
-      duplicate_count: number
-      duplicate_leads: Array<{
-        id: string
-        child_name: string
-        parent_name: string
-        created_at: string
-        status: string
-        advisor_name?: string
-        owner_campus_name?: string
-        created_by_name?: string
-        no_permission?: boolean
-      }>
-      message: string
-    }>>(`/leads/check-phone-duplicate?${params.toString()}`)
-    return response
+    const params: Record<string, string> = { phone }
+    if (excludeLeadId) params.exclude_lead_id = excludeLeadId
+    return apiClient.get('/leads/check-phone-duplicate', { params })
   },
 
-  /**
-   * 通过手机号搜索线索（用于到访预约等场景）
-   */
-  async searchLeadsByPhone(phone: string): Promise<ApiResponse<{
+  /** 通过手机号搜索线索（用于到访预约等场景） */
+  searchLeadsByPhone(phone: string): Promise<ApiResponse<{
     items: Array<{
       id: string
       child_name: string
@@ -348,24 +244,13 @@ const leadsApi = {
     }>
     total: number
   }>> {
-    const params = new URLSearchParams()
-    params.append('search', phone)
-    params.append('page', '1')
-    params.append('size', '10')
-
-    const response = await apiClient.get<ApiResponse<{
-      items: any[]
-      total: number
-    }>>(`/leads?${params.toString()}`)
-    return response
+    return apiClient.get('/leads', { params: { search: phone, page: 1, size: 10 } })
   },
 
   // ==================== 待回访管理 ====================
 
-  /**
-   * 获取待回访线索列表
-   */
-  async getPendingFollowupLeads(params?: {
+  /** 获取待回访线索列表 */
+  getPendingFollowupLeads(params?: {
     page?: number
     size?: number
     priority_min?: number
@@ -378,19 +263,11 @@ const leadsApi = {
     page: number
     size: number
   }>> {
-    const response = await apiClient.get<ApiResponse<{
-      items: any[]
-      total: number
-      page: number
-      size: number
-    }>>('/leads/pending-followup', { params })
-    return response
+    return apiClient.get('/leads/pending-followup', { params })
   },
 
-  /**
-   * 更新线索回访信息
-   */
-  async updateFollowupInfo(
+  /** 更新线索回访信息 */
+  updateFollowupInfo(
     leadId: string,
     data: {
       priority?: number
@@ -403,36 +280,23 @@ const leadsApi = {
     next_followup_at?: string
     followup_remark?: string
   }>> {
-    const response = await apiClient.put<ApiResponse<{
-      id: string
-      followup_priority?: number
-      next_followup_at?: string
-      followup_remark?: string
-    }>>(`/leads/${leadId}/followup-info`, data)
-    return response
+    return apiClient.put(`/leads/${leadId}/followup-info`, data)
   },
 
   // ==================== 统计功能 ====================
 
-  /**
-   * 获取市场数据统计
-   */
-  async getMarketStatistics(params?: {
+  /** 获取市场数据统计 */
+  getMarketStatistics(params?: {
     date_from?: string
     date_to?: string
     staff_id?: string
+    campus_id?: string
   }): Promise<ApiResponse<MarketStatisticsResponse>> {
-    const response = await apiClient.get<ApiResponse<MarketStatisticsResponse>>(
-      '/leads/statistics/market',
-      { params }
-    )
-    return response
+    return apiClient.get('/leads/statistics/market', { params })
   },
 
-  /**
-   * 获取地推采单人统计
-   */
-  async getDituiCollectorStats(params?: {
+  /** 获取地推采单人统计 */
+  getDituiCollectorStats(params?: {
     start_date?: string
     end_date?: string
     marketer_id?: string
@@ -441,18 +305,11 @@ const leadsApi = {
     count: number
     percentage: string
   }>>> {
-    const response = await apiClient.get<ApiResponse<Array<{
-      collector_name: string
-      count: number
-      percentage: string
-    }>>>('/leads/statistics/ditui-collectors', { params })
-    return response
+    return apiClient.get('/leads/statistics/ditui-collectors', { params })
   },
 
-  /**
-   * 获取地推采单地点统计
-   */
-  async getDituiLocationStats(params?: {
+  /** 获取地推采单地点统计 */
+  getDituiLocationStats(params?: {
     start_date?: string
     end_date?: string
   }): Promise<ApiResponse<Array<{
@@ -460,87 +317,49 @@ const leadsApi = {
     count: number
     percentage: string
   }>>> {
-    const response = await apiClient.get<ApiResponse<Array<{
-      location: string
-      count: number
-      percentage: string
-    }>>>('/leads/statistics/ditui-locations', { params })
-    return response
+    return apiClient.get('/leads/statistics/ditui-locations', { params })
   },
 
-  /**
-   * 获取地推首次回访状态统计
-   */
-  async getDituiFirstFollowupStats(params?: {
+  /** 获取地推首次回访状态统计 */
+  getDituiFirstFollowupStats(params?: {
     start_date?: string
     end_date?: string
     marketer_id?: string
   }): Promise<ApiResponse<DituiFirstFollowupStats>> {
-    const response = await apiClient.get<ApiResponse<DituiFirstFollowupStats>>(
-      '/leads/statistics/ditui-first-followup',
-      { params }
-    )
-    return response
+    return apiClient.get('/leads/statistics/ditui-first-followup', { params })
   },
 
-  /**
-   * 获取地推待处理统计
-   */
-  async getDituiPendingStats(params?: {
+  /** 获取地推待处理统计 */
+  getDituiPendingStats(params?: {
     start_date?: string
     end_date?: string
     marketer_id?: string
   }): Promise<ApiResponse<DituiPendingStats>> {
-    const response = await apiClient.get<ApiResponse<DituiPendingStats>>(
-      '/leads/statistics/ditui-pending',
-      { params }
-    )
-    return response
+    return apiClient.get('/leads/statistics/ditui-pending', { params })
   },
 
-  /**
-   * 获取地推采单时间统计
-   */
-  async getDituiCollectionTimeStats(params?: {
+  /** 获取地推采单时间统计 */
+  getDituiCollectionTimeStats(params?: {
     start_date?: string
     end_date?: string
     marketer_id?: string
   }): Promise<ApiResponse<{ items: DituiCollectionTimeStat[]; total: number }>> {
-    const response = await apiClient.get<ApiResponse<{
-      items: DituiCollectionTimeStat[]
-      total: number
-    }>>('/leads/statistics/ditui-collection-time', { params })
-    return response
+    return apiClient.get('/leads/statistics/ditui-collection-time', { params })
   },
 
-  /**
-   * 获取顾问今日活动统计
-   */
-  async getAdvisorTodayActivity(): Promise<ApiResponse<AdvisorTodayActivityResponse>> {
-    const response = await apiClient.get<ApiResponse<AdvisorTodayActivityResponse>>(
-      '/leads/statistics/advisor-today-activity'
-    )
-    return response
+  /** 获取顾问今日活动统计 */
+  getAdvisorTodayActivity(): Promise<ApiResponse<AdvisorTodayActivityResponse>> {
+    return apiClient.get('/leads/statistics/advisor-today-activity')
   },
 
-  /**
-   * 获取顾问线索汇总
-   */
-  async getAdvisorLeadSummary(): Promise<ApiResponse<AdvisorLeadSummaryResponse>> {
-    const response = await apiClient.get<ApiResponse<AdvisorLeadSummaryResponse>>(
-      '/leads/statistics/advisor-lead-summary'
-    )
-    return response
+  /** 获取顾问线索汇总 */
+  getAdvisorLeadSummary(): Promise<ApiResponse<AdvisorLeadSummaryResponse>> {
+    return apiClient.get('/leads/statistics/advisor-lead-summary')
   },
 
-  /**
-   * 获取顾问待回访线索按渠道分组统计
-   */
-  async getAdvisorPendingByChannel(): Promise<ApiResponse<AdvisorPendingByChannelResponse>> {
-    const response = await apiClient.get<ApiResponse<AdvisorPendingByChannelResponse>>(
-      '/leads/statistics/advisor-pending-by-channel'
-    )
-    return response
+  /** 获取顾问待回访线索按渠道分组统计 */
+  getAdvisorPendingByChannel(): Promise<ApiResponse<AdvisorPendingByChannelResponse>> {
+    return apiClient.get('/leads/statistics/advisor-pending-by-channel')
   }
 }
 
@@ -612,87 +431,60 @@ export interface Campus {
 /**
  * 员工 API
  */
+/** 过滤掉 undefined 值 */
+function filterUndefined(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, value]) => value !== undefined)
+  )
+}
+
+type EmployeeListResponse = ApiResponse<{
+  items: EmployeeListItem[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}>
+
 export const employeeApi = {
-  /**
-   * 获取员工列表（通用）
-   */
-  async getEmployees(params?: {
+  /** 获取员工列表（通用） */
+  getEmployees(params?: {
     page?: number
     size?: number
     search?: string
     campus_name?: string
     is_active?: boolean
-  }): Promise<ApiResponse<{
-    items: EmployeeListItem[]
-    total: number
-    page: number
-    size: number
-    pages: number
-  }>> {
-    const queryParams = {
-      ...params,
-      is_active: params?.is_active !== false,
-      include_identities: true,
-      use_cache: false
-    }
-
-    // 过滤掉 undefined 值
-    const filteredParams = Object.fromEntries(
-      Object.entries(queryParams).filter(([_, value]) => value !== undefined)
-    )
-
-    const response = await apiClient.get<ApiResponse<{
-      items: EmployeeListItem[]
-      total: number
-      page: number
-      size: number
-      pages: number
-    }>>('/employees', { params: filteredParams })
-    return response
+  }): Promise<EmployeeListResponse> {
+    return apiClient.get<EmployeeListResponse>('/employees', {
+      params: filterUndefined({
+        ...params,
+        is_active: params?.is_active !== false,
+        include_identities: true,
+        use_cache: false
+      })
+    })
   },
 
-  /**
-   * 获取课程顾问列表（用于线索分配）
-   */
-  async getCourseAdvisors(params?: {
+  /** 获取课程顾问列表（用于线索分配） */
+  getCourseAdvisors(params?: {
     page?: number
     size?: number
     search?: string
     campus_name?: string
     is_active?: boolean
-  }): Promise<ApiResponse<{
-    items: EmployeeListItem[]
-    total: number
-    page: number
-    size: number
-    pages: number
-  }>> {
-    const advisorParams = {
-      ...params,
-      position_names: '顾问,销售顾问,课程顾问,课程销售',
-      is_active: params?.is_active !== false,
-      include_identities: true,
-      use_cache: false
-    }
-
-    // 过滤掉 undefined 值
-    const filteredParams = Object.fromEntries(
-      Object.entries(advisorParams).filter(([_, value]) => value !== undefined)
-    )
-
-    const response = await apiClient.get<ApiResponse<{
-      items: EmployeeListItem[]
-      total: number
-      page: number
-      size: number
-      pages: number
-    }>>('/employees', { params: filteredParams })
-    return response
+  }): Promise<EmployeeListResponse> {
+    return apiClient.get<EmployeeListResponse>('/employees', {
+      params: filterUndefined({
+        ...params,
+        position_names: '顾问,销售顾问,课程顾问,课程销售',
+        is_active: params?.is_active !== false,
+        include_identities: true,
+        use_cache: false
+      })
+    })
   },
 
-  /**
-   * 获取当前用户可访问的校区列表
-   */
+  /** 获取当前用户可访问的校区列表 */
   async getCurrentUserCampuses(): Promise<Campus[]> {
     const response = await apiClient.get<ApiResponse<Campus[]>>('/auth/me/campuses')
     return response.data || []
@@ -704,25 +496,13 @@ export const employeeApi = {
  * 用于拨打电话和挂断通话
  */
 export const yunkeApi = {
-  /**
-   * 拨打电话
-   */
-  async dialPhone(phone: string): Promise<ApiResponse<{ call_id: string; status: string; message?: string }>> {
-    const response = await apiClient.post<ApiResponse<{ call_id: string; status: string; message?: string }>>(
-      '/yunke/call/dial',
-      { phone }
-    )
-    return response
+  /** 拨打电话 */
+  dialPhone(phone: string): Promise<ApiResponse<{ call_id: string; status: string; message?: string }>> {
+    return apiClient.post('/yunke/call/dial', { phone })
   },
 
-  /**
-   * 挂断通话
-   */
-  async hangUpCall(callId: string): Promise<ApiResponse<{ success: boolean; message?: string }>> {
-    const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>(
-      '/yunke/call/hangup',
-      { call_id: callId }
-    )
-    return response
+  /** 挂断通话 */
+  hangUpCall(callId: string): Promise<ApiResponse<{ success: boolean; message?: string }>> {
+    return apiClient.post('/yunke/call/hangup', { call_id: callId })
   }
 }

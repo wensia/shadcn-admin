@@ -40,6 +40,7 @@ export function YunkeAIAssistantPage() {
           <AIChatContainer
             sessionId={currentSessionId}
             onTitleGenerated={handleTitleGenerated}
+            ensureSession={createSession}
           />
         </div>
       </div>

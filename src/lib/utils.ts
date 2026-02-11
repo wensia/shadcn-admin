@@ -46,18 +46,6 @@ export function formatDate(
 }
 
 /**
- * Generates page numbers for pagination with ellipsis
- * @param currentPage - Current page number (1-based)
- * @param totalPages - Total number of pages
- * @returns Array of page numbers and ellipsis strings
- *
- * Examples:
- * - Small dataset (≤5 pages): [1, 2, 3, 4, 5]
- * - Near beginning: [1, 2, 3, 4, '...', 10]
- * - In middle: [1, '...', 4, 5, 6, '...', 10]
- * - Near end: [1, '...', 7, 8, 9, 10]
- */
-/**
  * 复制文本到剪贴板（兼容HTTP环境）
  * 优先使用 navigator.clipboard API，不可用时降级到 execCommand
  * @param text - 要复制的文本
@@ -92,40 +80,32 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+/**
+ * 生成分页页码数组（含省略号）
+ * @param currentPage - 当前页码 (1-based)
+ * @param totalPages - 总页数
+ * @returns 页码和省略号数组
+ *
+ * 示例:
+ * - 少页 (<=5): [1, 2, 3, 4, 5]
+ * - 靠前: [1, 2, 3, 4, '...', 10]
+ * - 居中: [1, '...', 4, 5, 6, '...', 10]
+ * - 靠后: [1, '...', 7, 8, 9, 10]
+ */
 export function getPageNumbers(currentPage: number, totalPages: number) {
-  const maxVisiblePages = 5 // Maximum number of page buttons to show
-  const rangeWithDots = []
+  const maxVisiblePages = 5
 
   if (totalPages <= maxVisiblePages) {
-    // If total pages is 5 or less, show all pages
-    for (let i = 1; i <= totalPages; i++) {
-      rangeWithDots.push(i)
-    }
-  } else {
-    // Always show first page
-    rangeWithDots.push(1)
-
-    if (currentPage <= 3) {
-      // Near the beginning: [1] [2] [3] [4] ... [10]
-      for (let i = 2; i <= 4; i++) {
-        rangeWithDots.push(i)
-      }
-      rangeWithDots.push('...', totalPages)
-    } else if (currentPage >= totalPages - 2) {
-      // Near the end: [1] ... [7] [8] [9] [10]
-      rangeWithDots.push('...')
-      for (let i = totalPages - 3; i <= totalPages; i++) {
-        rangeWithDots.push(i)
-      }
-    } else {
-      // In the middle: [1] ... [4] [5] [6] ... [10]
-      rangeWithDots.push('...')
-      for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-        rangeWithDots.push(i)
-      }
-      rangeWithDots.push('...', totalPages)
-    }
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
   }
 
-  return rangeWithDots
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, '...', totalPages]
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+  }
+
+  return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]
 }

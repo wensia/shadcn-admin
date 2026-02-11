@@ -444,17 +444,26 @@ export interface ChannelStatItem {
   channel_id: string
   channel_name: string
   lead_count: number
+  category?: string
 }
 
 export interface MarketStaffStatItem {
   staff_id: string
   staff_name: string
+  campus_name?: string
   total_count: number
   channels: ChannelStatItem[]
 }
 
+export interface ChannelTotalItem {
+  channel_name: string
+  category: string
+  total: number
+}
+
 export interface MarketStatisticsResponse {
   staff_statistics: MarketStaffStatItem[]
+  channel_totals: ChannelTotalItem[]
   total_leads: number
   total_staff: number
   date_from?: string

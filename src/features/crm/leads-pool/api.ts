@@ -12,57 +12,36 @@ import type {
   BatchClaimFromPoolRequest
 } from './types'
 
-/**
- * 公海线索 API 对象
- */
 export const leadsPoolApi = {
-  /**
-   * 获取公海线索列表
-   */
-  async getPoolLeads(params?: LeadPoolListParams): Promise<ApiResponse<LeadPoolListResponse>> {
-    const response = await apiClient.get<ApiResponse<LeadPoolListResponse>>(
-      '/lead-pool',
-      { params }
-    )
-    return response
+  /** 获取公海线索列表 */
+  getPoolLeads(params?: LeadPoolListParams): Promise<ApiResponse<LeadPoolListResponse>> {
+    return apiClient.get('/lead-pool', { params })
   },
 
-  /**
-   * 从公海领取单个线索
-   */
-  async claimLead(leadId: string, claimReason?: string): Promise<ApiResponse<unknown>> {
-    const response = await apiClient.post<ApiResponse<unknown>>('/lead-pool/claim', {
+  /** 从公海领取单个线索 */
+  claimLead(leadId: string, claimReason?: string): Promise<ApiResponse<unknown>> {
+    return apiClient.post('/lead-pool/claim', {
       lead_ids: [leadId],
       claim_reason: claimReason || '从公海领取线索'
     })
-    return response
   },
 
-  /**
-   * 批量从公海领取线索
-   */
-  async batchClaimLeads(data: BatchClaimFromPoolRequest): Promise<ApiResponse<unknown>> {
-    const response = await apiClient.post<ApiResponse<unknown>>('/lead-pool/claim', data)
-    return response
+  /** 批量从公海领取线索 */
+  batchClaimLeads(data: BatchClaimFromPoolRequest): Promise<ApiResponse<unknown>> {
+    return apiClient.post('/lead-pool/claim', data)
   },
 
-  /**
-   * 获取线索公海信息
-   */
-  async getLeadPoolInfo(leadId: string): Promise<ApiResponse<LeadPoolItem>> {
-    const response = await apiClient.get<ApiResponse<LeadPoolItem>>(`/lead-pool/${leadId}`)
-    return response
+  /** 获取线索公海信息 */
+  getLeadPoolInfo(leadId: string): Promise<ApiResponse<LeadPoolItem>> {
+    return apiClient.get(`/lead-pool/${leadId}`)
   },
 
-  /**
-   * 导出公海线索
-   * 返回可能是文件流（同步导出）或任务信息（异步导出）
-   */
+  /** 导出公海线索（返回文件流或任务信息） */
   async exportPoolLeads(params?: LeadPoolListParams): Promise<ApiResponse<ExportResult> | Blob> {
     const response = await apiClient.post('/lead-pool/export', null, {
       params,
       responseType: 'blob',
-      validateStatus: () => true  // 允许所有状态码
+      validateStatus: () => true
     })
 
     // 检查是否是 JSON 响应（异步导出或错误）
@@ -71,28 +50,19 @@ export const leadsPoolApi = {
       return JSON.parse(text) as ApiResponse<ExportResult>
     }
 
-    // 是文件流（同步导出成功）
     return response as Blob
   },
 
-  /**
-   * 获取导出任务状态
-   */
-  async getExportStatus(taskId: string): Promise<ApiResponse<ExportStatusResult>> {
-    const response = await apiClient.get<ApiResponse<ExportStatusResult>>(
-      `/lead-pool/export/status/${taskId}`
-    )
-    return response
+  /** 获取导出任务状态 */
+  getExportStatus(taskId: string): Promise<ApiResponse<ExportStatusResult>> {
+    return apiClient.get(`/lead-pool/export/status/${taskId}`)
   },
 
-  /**
-   * 下载导出文件
-   */
-  async downloadExportFile(taskId: string): Promise<Blob> {
-    const response = await apiClient.get(`/lead-pool/export/download/${taskId}`, {
+  /** 下载导出文件 */
+  downloadExportFile(taskId: string): Promise<Blob> {
+    return apiClient.get(`/lead-pool/export/download/${taskId}`, {
       responseType: 'blob'
-    })
-    return response as unknown as Blob
+    }) as unknown as Promise<Blob>
   }
 }
 
@@ -114,4 +84,3 @@ export interface ExportStatusResult {
   file_name?: string
 }
 
-export default leadsPoolApi

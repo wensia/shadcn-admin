@@ -31,6 +31,6 @@ export interface PaginatedResponse<T> {
   page: number
   size: number
   pages: number
-  cached?: any
-  query_time?: any
+  cached?: boolean
+  query_time?: number
 }

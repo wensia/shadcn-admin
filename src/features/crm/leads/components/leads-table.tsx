@@ -110,19 +110,28 @@ export function LeadsTable({
     return style === 'lyra' ? Math.ceil(baseSize * 1.1) : baseSize
   }
 
-  // 冻结列的宽度和 left 位置计算
-  const frozenColumnWidths = {
-    select: 50,
-    child_name: getColumnSize(120),
-    parent_phone: getColumnSize(110)
+  // 冻结列配置
+  const frozenColumns = {
+    select: { width: 50, left: 0 },
+    child_name: { width: getColumnSize(120), left: 50 },
+    parent_phone: { width: getColumnSize(110), left: 50 + getColumnSize(120) }
+  } as const
+
+  type FrozenColumnId = keyof typeof frozenColumns
+
+  function getFrozenStyle(columnId: string): React.CSSProperties | undefined {
+    if (!(columnId in frozenColumns)) return undefined
+    const config = frozenColumns[columnId as FrozenColumnId]
+    return { position: 'sticky', left: config.left, zIndex: columnId === 'select' ? 30 : 10 }
   }
-  const frozenColumnLefts = {
-    select: 0,
-    child_name: frozenColumnWidths.select,
-    parent_phone: frozenColumnWidths.select + frozenColumnWidths.child_name
+
+  function isFrozen(columnId: string): boolean {
+    return columnId in frozenColumns
   }
-  // 最后一个冻结列的右边界位置（用于添加分隔线）
-  const lastFrozenColumnRight = frozenColumnLefts.parent_phone + frozenColumnWidths.parent_phone
+
+  function isLastFrozen(columnId: string): boolean {
+    return columnId === 'parent_phone'
+  }
 
   // 决定显示的数据：加载时使用骨架屏数据
   const displayData = useMemo(() => {
@@ -457,42 +466,27 @@ export function LeadsTable({
           <TableHeader className="sticky top-0 z-20 bg-card">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                {headerGroup.headers.map((header) => {
-                  const isSelectColumn = header.id === 'select'
-                  const isChildNameColumn = header.id === 'child_name'
-                  const isPhoneColumn = header.id === 'parent_phone'
-                  const isFrozenColumn = isSelectColumn || isChildNameColumn || isPhoneColumn
-                  const isLastFrozenColumn = isPhoneColumn
-                  const frozenLeft = isSelectColumn
-                    ? frozenColumnLefts.select
-                    : isChildNameColumn
-                      ? frozenColumnLefts.child_name
-                      : frozenColumnLefts.parent_phone
-                  return (
+                {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
                       style={{
                         width: header.getSize(),
-                        ...(isFrozenColumn && {
-                          position: 'sticky',
-                          left: frozenLeft,
-                          zIndex: 30,
-                        })
+                        ...getFrozenStyle(header.id),
+                        ...(isFrozen(header.id) && { zIndex: 30 }),
                       }}
                       className={cn(
                         s.text.xs,
                         'font-semibold',
                         s.height.control,
                         'bg-card',
-                        isLastFrozenColumn && 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]'
+                        isLastFrozen(header.id) && 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]'
                       )}
                     >
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
-                  )
-                })}
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -514,40 +508,23 @@ export function LeadsTable({
                   )}
                   onClick={() => !isSkeleton && onRowClick?.(row.original)}
                 >
-                  {row.getVisibleCells().map((cell) => {
-                    const isSelectColumn = cell.column.id === 'select'
-                    const isChildNameColumn = cell.column.id === 'child_name'
-                    const isPhoneColumn = cell.column.id === 'parent_phone'
-                    const isFrozenColumn = isSelectColumn || isChildNameColumn || isPhoneColumn
-                    const isLastFrozenColumn = isPhoneColumn
-                    const frozenLeft = isSelectColumn
-                      ? frozenColumnLefts.select
-                      : isChildNameColumn
-                        ? frozenColumnLefts.child_name
-                        : frozenColumnLefts.parent_phone
-                    const isSelected = row.getIsSelected()
-                    return (
+                  {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
                         style={{
                           width: cell.column.getSize(),
-                          ...(isFrozenColumn && {
-                            position: 'sticky',
-                            left: frozenLeft,
-                            zIndex: 10,
-                          })
+                          ...getFrozenStyle(cell.column.id),
                         }}
                         className={cn(
                           s.padding.cell,
                           s.text.xs,
-                          isFrozenColumn && (isSelected ? 'bg-muted' : 'bg-background'),
-                          isLastFrozenColumn && 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]'
+                          isFrozen(cell.column.id) && (row.getIsSelected() ? 'bg-muted' : 'bg-background'),
+                          isLastFrozen(cell.column.id) && 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]'
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
-                    )
-                  })}
+                  ))}
                 </TableRow>
               )
             })}

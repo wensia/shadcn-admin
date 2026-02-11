@@ -103,16 +103,11 @@ export function TabsManager() {
   const {
     tabs,
     activeTabId,
-    addTab,
     removeTab,
     removeOtherTabs,
     removeAllTabs,
     setActiveTab,
-    getTabByPath,
   } = useTabsStore()
-
-  // 获取当前激活的tab
-  const activeTab = tabs.find((t) => t.id === activeTabId)
 
   // 监听URL变化，同步tab状态（只处理外部导航，如侧边栏点击）
   useEffect(() => {

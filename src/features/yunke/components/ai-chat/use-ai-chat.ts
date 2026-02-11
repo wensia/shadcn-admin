@@ -22,9 +22,11 @@ export interface ChatMessage {
 export function useAIChat(options?: {
   sessionId?: string | null
   onTitleGenerated?: (title: string) => void
+  ensureSession?: () => Promise<string>
 }) {
   const sessionId = options?.sessionId
   const onTitleGenerated = options?.onTitleGenerated
+  const ensureSession = options?.ensureSession
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -32,6 +34,12 @@ export function useAIChat(options?: {
 
   const messagesRef = useRef(messages)
   messagesRef.current = messages
+
+  // 用 ref 保存回调，避免 sendMessage 中的闭包过期
+  const onTitleGeneratedRef = useRef(onTitleGenerated)
+  onTitleGeneratedRef.current = onTitleGenerated
+  const ensureSessionRef = useRef(ensureSession)
+  ensureSessionRef.current = ensureSession
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return
@@ -65,12 +73,21 @@ export function useAIChat(options?: {
     try {
       const token = localStorage.getItem('access_token') || ''
 
-      // 无 sessionId 时构建历史（向后兼容）
-      const url = sessionId
-        ? `/api/v1/yunke/ai-chat/sessions/${sessionId}/chat`
+      // 没有会话时自动创建
+      let activeSessionId = sessionId
+      if (!activeSessionId && ensureSessionRef.current) {
+        try {
+          activeSessionId = await ensureSessionRef.current()
+        } catch {
+          // 创建失败，回退到无会话模式
+        }
+      }
+
+      const url = activeSessionId
+        ? `/api/v1/yunke/ai-chat/sessions/${activeSessionId}/chat`
         : '/api/v1/yunke/ai-chat'
 
-      const body = sessionId
+      const body = activeSessionId
         ? { message: content.trim() }
         : { message: content.trim(), history: messagesRef.current.map(msg => ({ role: msg.role, content: msg.content })) }
 
@@ -169,8 +186,8 @@ export function useAIChat(options?: {
                 break
 
               case 'done':
-                if (data.title && onTitleGenerated) {
-                  onTitleGenerated(data.title)
+                if (data.title && onTitleGeneratedRef.current) {
+                  onTitleGeneratedRef.current(data.title)
                 }
                 setMessages(prev => prev.map(msg =>
                   msg.id === assistantId
@@ -202,7 +219,7 @@ export function useAIChat(options?: {
       setIsLoading(false)
       abortControllerRef.current = null
     }
-  }, [isLoading, sessionId, onTitleGenerated])
+  }, [isLoading, sessionId])
 
   const stopGeneration = useCallback(() => {
     abortControllerRef.current?.abort()
@@ -221,7 +238,7 @@ export function useAIChat(options?: {
         },
       })
       const json = await res.json()
-      if (json.code === 200 && Array.isArray(json.data)) {
+      if (json.success && Array.isArray(json.data)) {
         const loaded: ChatMessage[] = json.data.map((m: any) => ({
           id: m.id,
           role: m.role,

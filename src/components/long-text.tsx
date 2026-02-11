@@ -73,12 +73,7 @@ export function LongText({
   )
 }
 
-const checkOverflow = (textContainer: HTMLDivElement | null) => {
-  if (textContainer) {
-    return (
-      textContainer.offsetHeight < textContainer.scrollHeight ||
-      textContainer.offsetWidth < textContainer.scrollWidth
-    )
-  }
-  return false
+function checkOverflow(el: HTMLDivElement | null): boolean {
+  if (!el) return false
+  return el.offsetHeight < el.scrollHeight || el.offsetWidth < el.scrollWidth
 }

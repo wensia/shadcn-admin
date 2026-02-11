@@ -14,26 +14,40 @@ const QUICK_QUESTIONS = [
 interface AIChatContainerProps {
   sessionId: string | null
   onTitleGenerated?: (sessionId: string, title: string) => void
+  ensureSession?: () => Promise<string>
 }
 
-export function AIChatContainer({ sessionId, onTitleGenerated }: AIChatContainerProps) {
+export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession }: AIChatContainerProps) {
   const handleTitleGenerated = useCallback((title: string) => {
     if (sessionId && onTitleGenerated) {
       onTitleGenerated(sessionId, title)
     }
   }, [sessionId, onTitleGenerated])
 
+  // 自动创建会话时跳过 loadMessages（避免覆盖正在进行的消息）
+  const skipNextLoadRef = useRef(false)
+  const wrappedEnsureSession = useCallback(async () => {
+    if (!ensureSession) throw new Error('no ensureSession')
+    skipNextLoadRef.current = true
+    return ensureSession()
+  }, [ensureSession])
+
   const { messages, isLoading, sendMessage, stopGeneration, clearMessages, loadMessages } = useAIChat({
     sessionId,
     onTitleGenerated: handleTitleGenerated,
+    ensureSession: ensureSession ? wrappedEnsureSession : undefined,
   })
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // sessionId 变化时加载消息
+  // sessionId 变化时加载消息（跳过自动创建的情况）
   useEffect(() => {
     if (sessionId) {
-      loadMessages(sessionId)
+      if (skipNextLoadRef.current) {
+        skipNextLoadRef.current = false
+      } else {
+        loadMessages(sessionId)
+      }
     } else {
       clearMessages()
     }

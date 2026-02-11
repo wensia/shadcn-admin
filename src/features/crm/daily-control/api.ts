@@ -209,9 +209,7 @@ export const paymentTypeLabels: Record<PaymentType, string> = {
 
 // ==================== API 函数 ====================
 
-/**
- * 获取到访预约列表
- */
+/** 获取到访预约列表 */
 export async function getVisitSchedules(params: VisitScheduleQueryParams = {}) {
   const response = await apiClient.get<ApiResponse<PaginatedResponse<VisitScheduleItem>>>(
     '/visit-schedules',
@@ -220,15 +218,12 @@ export async function getVisitSchedules(params: VisitScheduleQueryParams = {}) {
   return response.data
 }
 
-/**
- * 更新到访预约状态
- */
-export async function updateVisitScheduleStatus(id: string, status: VisitScheduleStatus) {
-  const response = await apiClient.put<ApiResponse<VisitScheduleItem>>(
+/** 更新到访预约状态 */
+export function updateVisitScheduleStatus(id: string, status: VisitScheduleStatus) {
+  return apiClient.put<ApiResponse<VisitScheduleItem>>(
     `/visit-schedules/${id}`,
     { status }
   )
-  return response
 }
 
 /**
@@ -242,15 +237,14 @@ export interface VisitScheduleUpdateData {
   status?: VisitScheduleStatus
 }
 
-export async function updateVisitSchedule(id: string, data: VisitScheduleUpdateData) {
+export function updateVisitSchedule(id: string, data: VisitScheduleUpdateData) {
   // 转换数据格式以匹配后端 API
   const apiData: Record<string, unknown> = {}
 
   if (data.scheduled_at) {
-    // 解析 scheduled_at 为 visit_date 和 visit_time
     const dateTime = new Date(data.scheduled_at)
-    apiData.visit_date = dateTime.toISOString().split('T')[0] // YYYY-MM-DD
-    apiData.visit_time = dateTime.toTimeString().split(' ')[0] // HH:MM:SS
+    apiData.visit_date = dateTime.toISOString().split('T')[0]
+    apiData.visit_time = dateTime.toTimeString().split(' ')[0]
   }
 
   if (data.remark !== undefined) {
@@ -261,57 +255,40 @@ export async function updateVisitSchedule(id: string, data: VisitScheduleUpdateD
     apiData.status = data.status
   }
 
-  // trial_course 和 trial_teacher 暂不支持更新
-
-  const response = await apiClient.put<ApiResponse<VisitScheduleItem>>(
+  return apiClient.put<ApiResponse<VisitScheduleItem>>(
     `/visit-schedules/${id}`,
     apiData
   )
-  return response
 }
 
-/**
- * 删除到访预约
- */
-export async function deleteVisitSchedule(id: string) {
-  const response = await apiClient.delete<ApiResponse<null>>(`/visit-schedules/${id}`)
-  return response
+/** 删除到访预约 */
+export function deleteVisitSchedule(id: string) {
+  return apiClient.delete<ApiResponse<null>>(`/visit-schedules/${id}`)
 }
 
-/**
- * 确认诺到记录（提交审批）
- */
-export async function confirmVisitSchedule(id: string) {
-  const response = await apiClient.post<ApiResponse<VisitScheduleItem>>(
+/** 确认诺到记录（提交审批） */
+export function confirmVisitSchedule(id: string) {
+  return apiClient.post<ApiResponse<VisitScheduleItem>>(
     `/visit-schedules/${id}/confirm`
   )
-  return response
 }
 
-/**
- * 审批诺到记录
- */
-export async function approveVisitSchedule(id: string, action: 'approve' | 'reject', comment?: string) {
-  const response = await apiClient.post<ApiResponse<VisitScheduleItem>>(
+/** 审批诺到记录 */
+export function approveVisitSchedule(id: string, action: 'approve' | 'reject', comment?: string) {
+  return apiClient.post<ApiResponse<VisitScheduleItem>>(
     `/visit-schedules/${id}/approve`,
     { action, comment }
   )
-  return response
 }
 
-/**
- * 撤回诺到记录
- */
-export async function withdrawVisitSchedule(id: string) {
-  const response = await apiClient.post<ApiResponse<VisitScheduleItem>>(
+/** 撤回诺到记录 */
+export function withdrawVisitSchedule(id: string) {
+  return apiClient.post<ApiResponse<VisitScheduleItem>>(
     `/visit-schedules/${id}/withdraw`
   )
-  return response
 }
 
-/**
- * 获取缴费记录列表
- */
+/** 获取缴费记录列表 */
 export async function getPayments(params: PaymentQueryParams = {}) {
   const response = await apiClient.get<ApiResponse<PaginatedResponse<PaymentItem>>>(
     '/payments',
@@ -320,20 +297,15 @@ export async function getPayments(params: PaymentQueryParams = {}) {
   return response.data
 }
 
-/**
- * 更新缴费状态
- */
-export async function updatePaymentStatus(id: string, status: PaymentStatus) {
-  const response = await apiClient.put<ApiResponse<PaymentItem>>(
+/** 更新缴费状态 */
+export function updatePaymentStatus(id: string, status: PaymentStatus) {
+  return apiClient.put<ApiResponse<PaymentItem>>(
     `/payments/${id}`,
     { status }
   )
-  return response
 }
 
-/**
- * 更新缴费记录信息
- */
+/** 更新缴费记录信息 */
 export interface PaymentUpdateData {
   amount?: number
   payment_method?: PaymentMethod
@@ -344,51 +316,31 @@ export interface PaymentUpdateData {
   status?: PaymentStatus
 }
 
-export async function updatePayment(id: string, data: PaymentUpdateData) {
-  const response = await apiClient.put<ApiResponse<PaymentItem>>(
-    `/payments/${id}`,
-    data
-  )
-  return response
+export function updatePayment(id: string, data: PaymentUpdateData) {
+  return apiClient.put<ApiResponse<PaymentItem>>(`/payments/${id}`, data)
 }
 
-/**
- * 删除缴费记录
- */
-export async function deletePayment(id: string) {
-  const response = await apiClient.delete<ApiResponse<null>>(`/payments/${id}`)
-  return response
+/** 删除缴费记录 */
+export function deletePayment(id: string) {
+  return apiClient.delete<ApiResponse<null>>(`/payments/${id}`)
 }
 
-/**
- * 确认缴费记录（提交审批）
- */
-export async function confirmPayment(id: string) {
-  const response = await apiClient.post<ApiResponse<PaymentItem>>(
-    `/payments/${id}/confirm`
-  )
-  return response
+/** 确认缴费记录（提交审批） */
+export function confirmPayment(id: string) {
+  return apiClient.post<ApiResponse<PaymentItem>>(`/payments/${id}/confirm`)
 }
 
-/**
- * 审批缴费记录
- */
-export async function approvePayment(id: string, action: 'approve' | 'reject', comment?: string) {
-  const response = await apiClient.post<ApiResponse<PaymentItem>>(
+/** 审批缴费记录 */
+export function approvePayment(id: string, action: 'approve' | 'reject', comment?: string) {
+  return apiClient.post<ApiResponse<PaymentItem>>(
     `/payments/${id}/approve`,
     { action, comment }
   )
-  return response
 }
 
-/**
- * 撤回缴费记录
- */
-export async function withdrawPayment(id: string) {
-  const response = await apiClient.post<ApiResponse<PaymentItem>>(
-    `/payments/${id}/withdraw`
-  )
-  return response
+/** 撤回缴费记录 */
+export function withdrawPayment(id: string) {
+  return apiClient.post<ApiResponse<PaymentItem>>(`/payments/${id}/withdraw`)
 }
 
 // ==================== 批量导入日控表 ====================
@@ -402,9 +354,7 @@ export interface BatchImportResponse {
   }>
 }
 
-/**
- * 批量导入诺到记录到日控表
- */
+/** 批量导入诺到记录到日控表 */
 export async function batchImportVisitSchedules(recordIds: string[]) {
   const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
     '/visit-schedules/batch-import',
@@ -413,9 +363,7 @@ export async function batchImportVisitSchedules(recordIds: string[]) {
   return response.data
 }
 
-/**
- * 批量取消导入诺到记录
- */
+/** 批量取消导入诺到记录 */
 export async function batchCancelImportVisitSchedules(recordIds: string[]) {
   const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
     '/visit-schedules/batch-cancel-import',
@@ -424,9 +372,7 @@ export async function batchCancelImportVisitSchedules(recordIds: string[]) {
   return response.data
 }
 
-/**
- * 批量导入缴费记录到日控表
- */
+/** 批量导入缴费记录到日控表 */
 export async function batchImportPayments(recordIds: string[]) {
   const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
     '/payments/batch-import',
@@ -435,9 +381,7 @@ export async function batchImportPayments(recordIds: string[]) {
   return response.data
 }
 
-/**
- * 批量取消导入缴费记录
- */
+/** 批量取消导入缴费记录 */
 export async function batchCancelImportPayments(recordIds: string[]) {
   const response = await apiClient.post<ApiResponse<BatchImportResponse>>(
     '/payments/batch-cancel-import',
@@ -477,9 +421,7 @@ export interface DailyControlReportParams {
   date_to?: string
 }
 
-/**
- * 获取日控报表数据
- */
+/** 获取日控报表数据 */
 export async function getDailyControlReport(params: DailyControlReportParams = {}) {
   const response = await apiClient.get<ApiResponse<DailyControlReportResponse>>(
     '/daily-control-report',

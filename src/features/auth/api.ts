@@ -28,51 +28,26 @@ export interface LoginResponse {
  * 认证API对象
  */
 export const authApi = {
-  /**
-   * 用户登录
-   */
-  async login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
-    const response = await apiClient.post<ApiResponse<LoginResponse>>(
-      '/auth/login',
-      {
-        username: data.username,
-        password: data.password
-      }
-    )
-    return response
+  /** 用户登录 */
+  login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
+    return apiClient.post<ApiResponse<LoginResponse>>('/auth/login', data)
   },
 
-  /**
-   * 用户登出
-   */
-  async logout(): Promise<ApiResponse<void>> {
-    const response = await apiClient.post<ApiResponse<void>>('/auth/logout')
-    return response
+  /** 用户登出 */
+  logout(): Promise<ApiResponse<void>> {
+    return apiClient.post<ApiResponse<void>>('/auth/logout')
   },
 
-  /**
-   * 刷新token
-   */
-  async refreshToken(refreshToken: string): Promise<ApiResponse<{
+  /** 刷新token */
+  refreshToken(refreshToken: string): Promise<ApiResponse<{
     access_token: string
     token_type: string
   }>> {
-    const response = await apiClient.post<ApiResponse<{
-      access_token: string
-      token_type: string
-    }>>('/auth/refresh', {
-      refresh_token: refreshToken
-    })
-    return response
+    return apiClient.post('/auth/refresh', { refresh_token: refreshToken })
   },
 
-  /**
-   * 获取当前用户信息
-   */
-  async getCurrentUser(): Promise<ApiResponse<UserInfo>> {
-    const response = await apiClient.get<ApiResponse<UserInfo>>('/auth/me')
-    return response
+  /** 获取当前用户信息 */
+  getCurrentUser(): Promise<ApiResponse<UserInfo>> {
+    return apiClient.get<ApiResponse<UserInfo>>('/auth/me')
   }
 }
-
-export default authApi
