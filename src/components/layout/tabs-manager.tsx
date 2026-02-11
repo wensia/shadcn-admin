@@ -91,6 +91,15 @@ function TabItem({
 /**
  * TabsManager主组件
  */
+/**
+ * 获取路径所属的模块前缀
+ * /yunke/* -> "yunke", 其他 -> "main"
+ */
+function getModuleGroup(path: string): string {
+  if (path.startsWith('/yunke')) return 'yunke'
+  return 'main'
+}
+
 export function TabsManager() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -108,6 +117,10 @@ export function TabsManager() {
     removeAllTabs,
     setActiveTab,
   } = useTabsStore()
+
+  // 根据当前路径过滤同模块的 tabs
+  const currentGroup = getModuleGroup(location.pathname)
+  const visibleTabs = tabs.filter(tab => getModuleGroup(tab.path) === currentGroup)
 
   // 监听URL变化，同步tab状态（只处理外部导航，如侧边栏点击）
   useEffect(() => {
@@ -200,7 +213,7 @@ export function TabsManager() {
             ref={tabsContainerRef}
             className='flex h-10 items-end'
           >
-            {tabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <div key={tab.id} data-tab-id={tab.id}>
                 <TabItem
                   tab={tab}
