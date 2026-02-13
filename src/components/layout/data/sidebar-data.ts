@@ -40,6 +40,7 @@ import {
   Activity,
   Clock,
   Bot,
+  BrainCircuit,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -291,6 +292,11 @@ export const adminNavGroups: NavGroup[] = [
         title: '定时任务',
         url: '/admin/scheduled-tasks',
         icon: Clock,
+      },
+      {
+        title: 'AI 配置',
+        url: '/admin/ai-config',
+        icon: BrainCircuit,
       },
       {
         title: '集成配置',

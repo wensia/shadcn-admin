@@ -86,11 +86,15 @@ const PROVIDER_DEFAULTS: Record<AIProvider, { base_url: string; default_model: s
     base_url: 'https://api.moonshot.cn/v1',
     default_model: 'moonshot-v1-8k',
   },
+  openai: {
+    base_url: '',
+    default_model: 'gemini-2.5-flash',
+  },
 }
 
 // 表单验证模式
 const formSchema = z.object({
-  provider: z.enum(['doubao', 'deepseek', 'kimi']),
+  provider: z.enum(['doubao', 'deepseek', 'kimi', 'openai']),
   name: z.string().min(1, '请输入配置名称').max(100, '名称最多100个字符'),
   api_key: z.string().min(1, '请输入 API 密钥'),
   base_url: z.string().optional(),
@@ -179,6 +183,7 @@ export function AIConfigContent() {
       form.reset()
       setTestStatus({ tested: false, success: false, message: '' })
       queryClient.invalidateQueries({ queryKey: ['admin-ai-configs'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-configs-all'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '创建失败')
@@ -195,6 +200,7 @@ export function AIConfigContent() {
       form.reset()
       setTestStatus({ tested: false, success: false, message: '' })
       queryClient.invalidateQueries({ queryKey: ['admin-ai-configs'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-configs-all'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '更新失败')
@@ -208,6 +214,7 @@ export function AIConfigContent() {
       setDeleteDialogOpen(false)
       setDeletingItem(null)
       queryClient.invalidateQueries({ queryKey: ['admin-ai-configs'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-configs-all'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '删除失败')
@@ -248,6 +255,7 @@ export function AIConfigContent() {
       case 'doubao': return 'default'
       case 'deepseek': return 'secondary'
       case 'kimi': return 'outline'
+      case 'openai': return 'secondary'
       default: return 'secondary'
     }
   }
@@ -618,7 +626,9 @@ export function AIConfigContent() {
                           ? '火山引擎方舟平台 API Key'
                           : selectedProvider === 'deepseek'
                             ? 'DeepSeek 平台 API Key'
-                            : 'Moonshot 平台 API Key'}
+                            : selectedProvider === 'openai'
+                              ? 'OpenAI 兼容 API Key（如 Antigravity Manager）'
+                              : 'Moonshot 平台 API Key'}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -653,7 +663,9 @@ export function AIConfigContent() {
                           placeholder={
                             selectedProvider === 'doubao'
                               ? '例如: doubao-seed-1-8-251228'
-                              : '模型名称'
+                              : selectedProvider === 'openai'
+                                ? '例如: gemini-2.5-flash'
+                                : '模型名称'
                           }
                           {...field}
                         />
@@ -661,7 +673,9 @@ export function AIConfigContent() {
                       <FormDescription>
                         {selectedProvider === 'doubao'
                           ? '可直接使用模型名称（如 doubao-seed-1-8-251228），也可使用端点 ID'
-                          : '调用时使用的模型名称'}
+                          : selectedProvider === 'openai'
+                            ? '反向代理中配置的模型名称（如 gemini-2.5-flash）'
+                            : '调用时使用的模型名称'}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

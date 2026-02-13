@@ -94,6 +94,14 @@ import type {
   // AI 配置相关
   AIConfigItem,
   AIConfigListResponse,
+  AISceneConfig,
+  AIPromptItem,
+  AIPromptCreate,
+  AIPromptUpdate,
+  // AI 资料库文档相关
+  AIDocumentItem,
+  AIDocumentCreate,
+  AIDocumentUpdate,
 } from './types'
 
 const BASE_URL = '/admin'
@@ -1361,6 +1369,92 @@ export const aiConfigApi = {
     // test 返回 {success, message} 格式
     const response = await apiClient.post<{ success: boolean; message: string }>(`/external/ai-config/${id}/test`)
     return response as unknown as { success: boolean; message: string }
+  },
+
+  /** 获取场景配置映射 */
+  async getSceneMapping(): Promise<Record<string, AISceneConfig>> {
+    const response = await apiClient.get<Record<string, AISceneConfig>>('/external/ai-config/scenes')
+    return response as unknown as Record<string, AISceneConfig>
+  },
+
+  /** 设置场景配置 */
+  async setSceneConfig(sceneKey: string, configId: string | null): Promise<AISceneConfig> {
+    const response = await apiClient.put<AISceneConfig>(`/external/ai-config/scenes/${sceneKey}`, { config_id: configId })
+    return response as unknown as AISceneConfig
+  },
+
+  // ============ Prompt 版本管理 ============
+
+  /** 获取 Prompt 列表 */
+  async listPrompts(params?: { scene_key?: string; skip?: number; limit?: number }): Promise<{ items: AIPromptItem[]; total: number }> {
+    const response = await apiClient.get<{ items: AIPromptItem[]; total: number }>('/external/ai-config/prompts', { params })
+    return response as unknown as { items: AIPromptItem[]; total: number }
+  },
+
+  /** 获取 Prompt 详情 */
+  async getPrompt(id: string): Promise<AIPromptItem> {
+    const response = await apiClient.get<AIPromptItem>(`/external/ai-config/prompts/${id}`)
+    return response as unknown as AIPromptItem
+  },
+
+  /** 创建 Prompt */
+  async createPrompt(data: AIPromptCreate): Promise<AIPromptItem> {
+    const response = await apiClient.post<AIPromptItem>('/external/ai-config/prompts', data)
+    return response as unknown as AIPromptItem
+  },
+
+  /** 更新 Prompt 元信息 */
+  async updatePrompt(id: string, data: AIPromptUpdate): Promise<AIPromptItem> {
+    const response = await apiClient.put<AIPromptItem>(`/external/ai-config/prompts/${id}`, data)
+    return response as unknown as AIPromptItem
+  },
+
+  /** 激活 Prompt */
+  async activatePrompt(id: string): Promise<AIPromptItem> {
+    const response = await apiClient.put<AIPromptItem>(`/external/ai-config/prompts/${id}/activate`)
+    return response as unknown as AIPromptItem
+  },
+
+  /** 初始化默认 Prompt */
+  async seedDefaultPrompts(): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>('/external/ai-config/prompts/seed-defaults')
+    return response as unknown as { message: string }
+  },
+
+  // ============ 资料库文档管理 ============
+
+  /** 获取资料库文档列表 */
+  async listDocuments(params?: {
+    category?: string
+    is_active?: boolean
+    skip?: number
+    limit?: number
+  }): Promise<{ items: AIDocumentItem[]; total: number }> {
+    const response = await apiClient.get<{ items: AIDocumentItem[]; total: number }>('/external/ai-config/documents', { params })
+    return response as unknown as { items: AIDocumentItem[]; total: number }
+  },
+
+  /** 获取资料库文档详情 */
+  async getDocument(id: string): Promise<AIDocumentItem> {
+    const response = await apiClient.get<AIDocumentItem>(`/external/ai-config/documents/${id}`)
+    return response as unknown as AIDocumentItem
+  },
+
+  /** 创建资料库文档 */
+  async createDocument(data: AIDocumentCreate): Promise<AIDocumentItem> {
+    const response = await apiClient.post<AIDocumentItem>('/external/ai-config/documents', data)
+    return response as unknown as AIDocumentItem
+  },
+
+  /** 更新资料库文档 */
+  async updateDocument(id: string, data: AIDocumentUpdate): Promise<AIDocumentItem> {
+    const response = await apiClient.put<AIDocumentItem>(`/external/ai-config/documents/${id}`, data)
+    return response as unknown as AIDocumentItem
+  },
+
+  /** 删除资料库文档 */
+  async deleteDocument(id: string): Promise<void> {
+    await apiClient.delete(`/external/ai-config/documents/${id}`)
   },
 }
 

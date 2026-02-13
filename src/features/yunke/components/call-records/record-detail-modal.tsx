@@ -1,6 +1,6 @@
 /**
  * 录音详情弹窗
- * 顶部音频播放器 + 下方 Tabs（转写文本 / AI 分析）
+ * 顶部音频播放器 + 下方左右分栏（转写文本 / AI 分析）
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -15,11 +15,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Play, Pause, Volume2, VolumeX, Phone, SkipBack, SkipForward, Download, FileText, BrainCircuit } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
 import { formatTime } from '@/lib/utils/time'
-import { cn } from '@/lib/utils'
+
 import { toast } from 'sonner'
 import { callRecordsApi } from '../../api'
 import { TranscriptViewer } from './transcript-viewer'
@@ -49,7 +48,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
-  const [activeTab, setActiveTab] = useState('transcript')
 
   // 本地 record 状态，分析完成后可更新
   const [localRecord, setLocalRecord] = useState<CallRecord | null>(recordProp)
@@ -133,7 +131,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
       setIsPlaying(false)
       setCurrentTime(0)
       setDuration(0)
-      setActiveTab('transcript')
     }
   }, [open])
 
@@ -202,194 +199,193 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl h-[85vh] p-0 flex flex-col gap-0">
-        {/* 头部信息 */}
-        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            通话详情
-          </DialogTitle>
-          <DialogDescription className="flex items-center gap-3 pt-2">
-            {record && (
-              <>
-                <span>{record.staff_name || '未知员工'}</span>
-                <span className="text-muted-foreground">&rarr;</span>
-                <span className="font-mono">{record.callee || record.caller || '-'}</span>
-                <Badge variant="secondary">{formatTime(record.call_time)}</Badge>
-              </>
-            )}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-5xl h-[85vh] p-0 flex flex-col gap-0">
+        {/* 头部：通话信息 + 紧凑播放器 */}
+        <div className="shrink-0 border-b">
+          {/* 通话信息行 */}
+          <DialogHeader className="px-5 pr-12 pt-4 pb-2">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Phone className="h-4 w-4" />
+                通话详情
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-2 mt-0">
+                {record && (
+                  <>
+                    <span className="text-xs">{record.staff_name || '未知员工'}</span>
+                    <span className="text-muted-foreground text-xs">&rarr;</span>
+                    <span className="font-mono text-xs">{record.callee || record.caller || '-'}</span>
+                    <Badge variant="secondary" className="h-5 text-[11px]">{formatTime(record.call_time)}</Badge>
+                  </>
+                )}
+              </DialogDescription>
+            </div>
+          </DialogHeader>
 
-        {/* 音频播放器 - 固定在顶部 */}
-        {hasRecording && (
-          <div className="px-6 py-4 border-y bg-muted/30 shrink-0">
-            {isLoadingUrl ? (
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1">
-                  <Skeleton className="h-2 w-full rounded" />
-                  <div className="flex justify-between mt-2">
-                    <Skeleton className="h-3 w-12" />
-                    <Skeleton className="h-3 w-12" />
-                  </div>
+          {/* 紧凑播放器 - 单行布局 */}
+          {hasRecording && (
+            <div className="px-5 pb-3 pt-1">
+              {isLoadingUrl ? (
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <Skeleton className="h-1.5 flex-1 rounded" />
+                  <Skeleton className="h-4 w-16" />
                 </div>
-              </div>
-            ) : audioUrl ? (
-              <div className="space-y-3">
-                <audio
-                  ref={audioRef}
-                  src={audioUrl}
-                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                  onDurationChange={(e) => setDuration(e.currentTarget.duration)}
-                  onEnded={() => setIsPlaying(false)}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                />
+              ) : audioUrl ? (
+                <div className="flex items-center gap-2">
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl}
+                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                    onDurationChange={(e) => setDuration(e.currentTarget.duration)}
+                    onEnded={() => setIsPlaying(false)}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                  />
 
-                {/* 进度条 */}
-                <div>
+                  {/* 快退 */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={skipBackward}
+                  >
+                    <SkipBack className="h-3.5 w-3.5" />
+                  </Button>
+
+                  {/* 播放/暂停 */}
+                  <Button
+                    variant="default"
+                    size="icon"
+                    className="h-8 w-8 rounded-full shrink-0"
+                    onClick={togglePlay}
+                  >
+                    {isPlaying ? (
+                      <Pause className="h-3.5 w-3.5" />
+                    ) : (
+                      <Play className="h-3.5 w-3.5 ml-0.5" />
+                    )}
+                  </Button>
+
+                  {/* 快进 */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={skipForward}
+                  >
+                    <SkipForward className="h-3.5 w-3.5" />
+                  </Button>
+
+                  {/* 时间 */}
+                  <span className="text-[11px] tabular-nums text-muted-foreground shrink-0 w-[34px] text-right">
+                    {formatPlayTime(currentTime)}
+                  </span>
+
+                  {/* 进度条 */}
                   <Slider
                     value={[currentTime]}
                     max={duration || 100}
                     step={0.1}
                     onValueChange={handleSeek}
-                    className="cursor-pointer"
+                    className="flex-1 cursor-pointer min-w-0"
                   />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
-                    <span>{formatPlayTime(currentTime)}</span>
-                    <span>{formatPlayTime(duration)}</span>
-                  </div>
+
+                  {/* 总时长 */}
+                  <span className="text-[11px] tabular-nums text-muted-foreground shrink-0 w-[34px]">
+                    {formatPlayTime(duration)}
+                  </span>
+
+                  {/* 分隔线 */}
+                  <div className="h-4 w-px bg-border shrink-0" />
+
+                  {/* 音量 */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={toggleMute}
+                  >
+                    {isMuted || volume === 0 ? (
+                      <VolumeX className="h-3.5 w-3.5" />
+                    ) : (
+                      <Volume2 className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                  <Slider
+                    value={[isMuted ? 0 : volume]}
+                    max={1}
+                    step={0.1}
+                    onValueChange={handleVolumeChange}
+                    className="w-16 cursor-pointer shrink-0"
+                  />
+
+                  {/* 下载 */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    asChild
+                  >
+                    <a href={audioUrl} download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}>
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  </Button>
                 </div>
-
-                {/* 控制按钮 */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    {/* 快退 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={skipBackward}
-                    >
-                      <SkipBack className="h-4 w-4" />
-                    </Button>
-
-                    {/* 播放/暂停 */}
-                    <Button
-                      variant="default"
-                      size="icon"
-                      className="h-11 w-11 rounded-full"
-                      onClick={togglePlay}
-                    >
-                      {isPlaying ? (
-                        <Pause className="h-5 w-5" />
-                      ) : (
-                        <Play className="h-5 w-5 ml-0.5" />
-                      )}
-                    </Button>
-
-                    {/* 快进 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={skipForward}
-                    >
-                      <SkipForward className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* 音量控制 */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={toggleMute}
-                    >
-                      {isMuted || volume === 0 ? (
-                        <VolumeX className="h-4 w-4" />
-                      ) : (
-                        <Volume2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Slider
-                      value={[isMuted ? 0 : volume]}
-                      max={1}
-                      step={0.1}
-                      onValueChange={handleVolumeChange}
-                      className="w-20 cursor-pointer"
-                    />
-
-                    {/* 下载录音 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      asChild
-                    >
-                      <a href={audioUrl} download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}>
-                        <Download className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
+              ) : (
+                <div className="text-center text-muted-foreground text-xs py-1">
+                  无法获取录音地址
                 </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-2">
-                无法获取录音地址
-              </div>
-            )}
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 左右分栏内容区域 */}
+        <div className="flex-1 min-h-0 flex">
+          {/* 左栏: 转写文本 */}
+          <div className="flex-1 min-h-0 flex flex-col border-r">
+            <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">转写文本</span>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden relative">
+              {hasTranscript ? (
+                <TranscriptViewer
+                  transcript={record?.transcript || []}
+                  currentTime={currentTime}
+                  onSeek={handleTranscriptSeek}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
+                  {hasRecording ? '暂无转写文本' : '此通话无录音'}
+                </div>
+              )}
+            </div>
           </div>
-        )}
 
-        {/* Tabs 内容区域 */}
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className={cn('flex-1 min-h-0 flex flex-col', !hasRecording && 'border-t')}
-        >
-          <TabsList className="mx-6 mt-3 shrink-0">
-            <TabsTrigger value="transcript">
-              <FileText className="h-4 w-4 mr-1.5" />
-              转写文本
-            </TabsTrigger>
-            <TabsTrigger value="ai-analysis">
-              <BrainCircuit className="h-4 w-4 mr-1.5" />
-              AI 分析
+          {/* 右栏: AI 分析 */}
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
+              <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">AI 分析</span>
               {record?.ai_analysis_status === 'completed' && (
-                <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
+                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
                   已分析
                 </Badge>
               )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="transcript" className="flex-1 min-h-0 overflow-hidden relative mt-0">
-            {hasTranscript ? (
-              <TranscriptViewer
-                transcript={record?.transcript || []}
-                currentTime={currentTime}
-                onSeek={handleTranscriptSeek}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
-                {hasRecording ? '暂无转写文本' : '此通话无录音'}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="ai-analysis" className="flex-1 min-h-0 overflow-hidden mt-0">
-            {record && (
-              <AIAnalysisPanel
-                record={record}
-                isAnalyzing={analyzeMutation.isPending || isPolling}
-                onAnalyze={() => analyzeMutation.mutate()}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {record && (
+                <AIAnalysisPanel
+                  record={record}
+                  isAnalyzing={analyzeMutation.isPending || isPolling}
+                  onAnalyze={() => analyzeMutation.mutate()}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )

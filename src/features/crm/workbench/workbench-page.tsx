@@ -19,45 +19,43 @@ export function WorkbenchPage() {
 
   return (
     <Main fixed className="min-h-0">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-        {/* 页面标题 */}
-        <div className="flex flex-shrink-0 items-end justify-between">
-          <div>
-            <h1 className="text-lg font-bold">咨询工作台</h1>
-            <p className="text-xs text-muted-foreground">管理您的日常跟进任务</p>
-          </div>
-        </div>
-
-        {/* Tabs */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as WorkbenchTab)}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <TabsList className="w-fit">
-            <TabsTrigger value="calendar" className="gap-1.5">
-              <Calendar className="h-4 w-4" />
-              日历
-            </TabsTrigger>
-            <TabsTrigger value="today" className="gap-1.5">
-              <ClipboardList className="h-4 w-4" />
-              今日待办
-            </TabsTrigger>
-            <TabsTrigger value="statistics" className="gap-1.5">
-              <BarChart3 className="h-4 w-4" />
-              统计
-            </TabsTrigger>
-          </TabsList>
+          {/* 标题 + Tabs 同行，固定不滚动 */}
+          <div className="flex flex-shrink-0 items-center gap-6 pb-4">
+            <div className="flex items-baseline gap-2">
+              <h1 className="text-lg font-bold">咨询工作台</h1>
+              <p className="text-xs text-muted-foreground">管理您的日常跟进任务</p>
+            </div>
+            <TabsList className="w-fit">
+              <TabsTrigger value="calendar" className="gap-1.5">
+                <Calendar className="h-4 w-4" />
+                日历
+              </TabsTrigger>
+              <TabsTrigger value="today" className="gap-1.5">
+                <ClipboardList className="h-4 w-4" />
+                今日待办
+              </TabsTrigger>
+              <TabsTrigger value="statistics" className="gap-1.5">
+                <BarChart3 className="h-4 w-4" />
+                统计
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="calendar" className="mt-4 flex-1 overflow-auto">
+          <TabsContent value="calendar" className="mt-0 flex-1 min-h-0 overflow-hidden">
             <CalendarView />
           </TabsContent>
 
-          <TabsContent value="today" className="mt-4 flex-1 overflow-auto">
+          <TabsContent value="today" className="flex-1 overflow-auto">
             <TodayLeadsView />
           </TabsContent>
 
-          <TabsContent value="statistics" className="mt-4 flex-1 overflow-auto">
+          <TabsContent value="statistics" className="flex-1 overflow-auto">
             <StatisticsView />
           </TabsContent>
         </Tabs>

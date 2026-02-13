@@ -83,6 +83,7 @@ import { Route as AuthenticatedAdminCallConfigRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminAsrConfigRouteImport } from './routes/_authenticated/admin/asr-config'
 import { Route as AuthenticatedAdminAreasRouteImport } from './routes/_authenticated/admin/areas'
 import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin/api-keys'
+import { Route as AuthenticatedAdminAiConfigRouteImport } from './routes/_authenticated/admin/ai-config'
 import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
 import { Route as AuthenticatedCrmDataStatisticsMarketingRouteImport } from './routes/_authenticated/crm/data-statistics/marketing'
@@ -501,6 +502,12 @@ const AuthenticatedAdminApiKeysRoute =
     path: '/api-keys',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminAiConfigRoute =
+  AuthenticatedAdminAiConfigRouteImport.update({
+    id: '/ai-config',
+    path: '/ai-config',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedCrmLeadsIndexRoute =
   AuthenticatedCrmLeadsIndexRouteImport.update({
     id: '/crm/leads/',
@@ -543,6 +550,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/areas': typeof AuthenticatedAdminAreasRoute
   '/admin/asr-config': typeof AuthenticatedAdminAsrConfigRoute
@@ -617,6 +625,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/areas': typeof AuthenticatedAdminAreasRoute
   '/admin/asr-config': typeof AuthenticatedAdminAsrConfigRoute
@@ -698,6 +707,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/_authenticated/admin/areas': typeof AuthenticatedAdminAreasRoute
   '/_authenticated/admin/asr-config': typeof AuthenticatedAdminAsrConfigRoute
@@ -777,6 +787,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/admin/ai-config'
     | '/admin/api-keys'
     | '/admin/areas'
     | '/admin/asr-config'
@@ -851,6 +862,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/admin/ai-config'
     | '/admin/api-keys'
     | '/admin/areas'
     | '/admin/asr-config'
@@ -931,6 +943,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
+    | '/_authenticated/admin/ai-config'
     | '/_authenticated/admin/api-keys'
     | '/_authenticated/admin/areas'
     | '/_authenticated/admin/asr-config'
@@ -1528,6 +1541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/ai-config': {
+      id: '/_authenticated/admin/ai-config'
+      path: '/ai-config'
+      fullPath: '/admin/ai-config'
+      preLoaderRoute: typeof AuthenticatedAdminAiConfigRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/crm/leads/': {
       id: '/_authenticated/crm/leads/'
       path: '/crm/leads'
@@ -1560,6 +1580,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminAiConfigRoute: typeof AuthenticatedAdminAiConfigRoute
   AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
   AuthenticatedAdminAreasRoute: typeof AuthenticatedAdminAreasRoute
   AuthenticatedAdminAsrConfigRoute: typeof AuthenticatedAdminAsrConfigRoute
@@ -1591,6 +1612,7 @@ interface AuthenticatedAdminRouteRouteChildren {
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminAiConfigRoute: AuthenticatedAdminAiConfigRoute,
     AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
     AuthenticatedAdminAreasRoute: AuthenticatedAdminAreasRoute,
     AuthenticatedAdminAsrConfigRoute: AuthenticatedAdminAsrConfigRoute,

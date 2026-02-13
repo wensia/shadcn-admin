@@ -1,0 +1,651 @@
+/**
+ * AI Prompt 版本管理组件
+ * 使用数据表展示，支持按场景管理 prompt 模板，版本控制
+ */
+
+import { useState, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+} from '@tanstack/react-table'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import {
+  FileText,
+  Plus,
+  CheckCircle,
+  Copy,
+  Pencil,
+  Zap,
+  Database,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
+
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from '@/components/ui/form'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Skeleton } from '@/components/ui/skeleton'
+import { aiConfigApi } from '../../api'
+import { AI_SCENES, type AIPromptItem } from '../../types'
+
+// 表单验证
+const createFormSchema = z.object({
+  scene_key: z.string().min(1, '请选择场景'),
+  name: z.string().min(1, '请输入名称').max(200, '名称最多200字'),
+  content: z.string().min(10, 'Prompt 内容至少10个字符'),
+  description: z.string().max(500, '说明最多500字').optional(),
+})
+
+const editFormSchema = z.object({
+  name: z.string().min(1, '请输入名称').max(200, '名称最多200字'),
+  content: z.string().min(10, 'Prompt 内容至少10个字符'),
+  description: z.string().max(500, '说明最多500字').optional(),
+})
+
+type CreateFormData = z.infer<typeof createFormSchema>
+type EditFormData = z.infer<typeof editFormSchema>
+
+const SKELETON_PREFIX = 'skeleton-'
+function createSkeletonData(count: number): AIPromptItem[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${SKELETON_PREFIX}${i}`,
+    scene_key: '',
+    name: '',
+    content: '',
+    version: 0,
+    is_active: false,
+    description: null,
+    created_at: '',
+    updated_at: '',
+  }))
+}
+
+export function AIPromptManager() {
+  const queryClient = useQueryClient()
+  const [sceneFilter, setSceneFilter] = useState<string>('all')
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingPrompt, setEditingPrompt] = useState<AIPromptItem | null>(null)
+  const [copyFrom, setCopyFrom] = useState<AIPromptItem | null>(null)
+
+  const createForm = useForm<CreateFormData>({
+    resolver: zodResolver(createFormSchema),
+    defaultValues: { scene_key: '', name: '', content: '', description: '' },
+  })
+
+  const editForm = useForm<EditFormData>({
+    resolver: zodResolver(editFormSchema),
+    defaultValues: { name: '', content: '', description: '' },
+  })
+
+  // 查询 prompt 列表
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-ai-prompts', sceneFilter],
+    queryFn: () =>
+      aiConfigApi.listPrompts({
+        scene_key: sceneFilter === 'all' ? undefined : sceneFilter,
+        limit: 100,
+      }),
+  })
+
+  // 创建 prompt
+  const createMutation = useMutation({
+    mutationFn: (data: CreateFormData) => aiConfigApi.createPrompt(data),
+    onSuccess: () => {
+      toast.success('Prompt 创建成功')
+      setCreateDialogOpen(false)
+      setCopyFrom(null)
+      createForm.reset()
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '创建失败'),
+  })
+
+  // 激活 prompt
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => aiConfigApi.activatePrompt(id),
+    onSuccess: (result) => {
+      toast.success(`已激活 v${result.version}`)
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '激活失败'),
+  })
+
+  // 更新 prompt
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: EditFormData }) =>
+      aiConfigApi.updatePrompt(id, data),
+    onSuccess: () => {
+      toast.success('更新成功')
+      setEditDialogOpen(false)
+      setEditingPrompt(null)
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '更新失败'),
+  })
+
+  // 初始化默认 prompt
+  const seedMutation = useMutation({
+    mutationFn: () => aiConfigApi.seedDefaultPrompts(),
+    onSuccess: (result) => {
+      toast.success(result.message || '默认 Prompt 初始化完成')
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '初始化失败'),
+  })
+
+  const getSceneLabel = (key: string) => {
+    return AI_SCENES.find((s) => s.key === key)?.label || key
+  }
+
+  const handleCreate = () => {
+    setCopyFrom(null)
+    createForm.reset({ scene_key: sceneFilter === 'all' ? '' : sceneFilter, name: '', content: '', description: '' })
+    setCreateDialogOpen(true)
+  }
+
+  const handleCopyAndCreate = (prompt: AIPromptItem) => {
+    setCopyFrom(prompt)
+    createForm.reset({
+      scene_key: prompt.scene_key,
+      name: `${prompt.name} (改进版)`,
+      content: prompt.content,
+      description: '',
+    })
+    setCreateDialogOpen(true)
+  }
+
+  const handleEdit = (prompt: AIPromptItem) => {
+    setEditingPrompt(prompt)
+    editForm.reset({ name: prompt.name, content: prompt.content, description: prompt.description || '' })
+    setEditDialogOpen(true)
+  }
+
+  const handleCreateSubmit = (formData: CreateFormData) => {
+    createMutation.mutate(formData)
+  }
+
+  const handleEditSubmit = (formData: EditFormData) => {
+    if (editingPrompt) {
+      updateMutation.mutate({ id: editingPrompt.id, data: formData })
+    }
+  }
+
+  // 表格列定义
+  const columns: ColumnDef<AIPromptItem>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'scene_key',
+        header: '场景',
+        size: 100,
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-5 w-16" />
+          }
+          return (
+            <Badge variant="outline" className="text-xs">
+              {getSceneLabel(row.original.scene_key)}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: 'version',
+        header: '版本',
+        size: 60,
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-5 w-10" />
+          }
+          return (
+            <Badge
+              variant={row.original.is_active ? 'default' : 'secondary'}
+              className="text-xs"
+            >
+              v{row.original.version}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: 'name',
+        header: '名称',
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-5 w-32" />
+          }
+          return (
+            <div className="flex flex-col">
+              <span className="font-medium text-sm">{row.original.name}</span>
+              {row.original.description && (
+                <span className="text-xs text-muted-foreground line-clamp-1">
+                  {row.original.description}
+                </span>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'is_active',
+        header: '状态',
+        size: 100,
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-5 w-16 rounded-full" />
+          }
+          return row.original.is_active ? (
+            <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+              <CheckCircle className="mr-1 h-3 w-3" />
+              当前使用
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">未激活</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'created_at',
+        header: '创建时间',
+        size: 110,
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-5 w-20" />
+          }
+          return (
+            <span className="text-xs text-muted-foreground">
+              {new Date(row.original.created_at).toLocaleString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: '操作',
+        size: 140,
+        cell: ({ row }) => {
+          if (row.original.id.startsWith(SKELETON_PREFIX)) {
+            return <Skeleton className="h-8 w-24" />
+          }
+          const prompt = row.original
+          return (
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(prompt)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>编辑</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyAndCreate(prompt)}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>复制并新建</TooltipContent>
+              </Tooltip>
+              {!prompt.is_active && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      onClick={() => activateMutation.mutate(prompt.id)}
+                      disabled={activateMutation.isPending}
+                    >
+                      <Zap className="h-3 w-3" />
+                      激活
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>设为当前使用版本</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          )
+        },
+      },
+    ],
+    [activateMutation.isPending]
+  )
+
+  const tableData = isLoading ? createSkeletonData(3) : (data?.items || [])
+
+  const table = useReactTable({
+    data: tableData,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  return (
+    <>
+      <div className="flex flex-col gap-4">
+        {/* 工具栏 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">Prompt 版本管理</h3>
+            <Select value={sceneFilter} onValueChange={setSceneFilter}>
+              <SelectTrigger className="h-8 w-40 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部场景</SelectItem>
+                {AI_SCENES.map((s) => (
+                  <SelectItem key={s.key} value={s.key}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => seedMutation.mutate()}
+                  disabled={seedMutation.isPending}
+                >
+                  <Database className="mr-1 h-3.5 w-3.5" />
+                  初始化默认
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                将代码中硬编码的默认 Prompt 写入数据库（已有则跳过）
+              </TooltipContent>
+            </Tooltip>
+            <Button size="sm" onClick={handleCreate}>
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              新建版本
+            </Button>
+          </div>
+        </div>
+
+        {/* 数据表 */}
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} style={{ width: header.getSize() }}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <div className="flex flex-col items-center text-muted-foreground">
+                      <FileText className="mb-2 h-8 w-8" />
+                      <p>暂无 Prompt 配置</p>
+                      <p className="text-xs mt-1">
+                        点击"初始化默认"导入系统默认 Prompt，或"新建版本"创建
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* 创建对话框 */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+            <DialogTitle>
+              {copyFrom ? `基于 v${copyFrom.version} 创建新版本` : '新建 Prompt'}
+            </DialogTitle>
+            <DialogDescription>
+              创建后可通过"激活"切换使用的版本。
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...createForm}>
+            <form
+              onSubmit={createForm.handleSubmit(handleCreateSubmit)}
+              className="flex flex-col flex-1 min-h-0"
+            >
+              <div className="flex-1 overflow-y-auto px-6 space-y-4">
+                <FormField
+                  control={createForm.control}
+                  name="scene_key"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>场景</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!!copyFrom}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="选择场景" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {AI_SCENES.map((s) => (
+                            <SelectItem key={s.key} value={s.key}>
+                              {s.label} - {s.description}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={createForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>名称</FormLabel>
+                      <FormControl>
+                        <Input placeholder="如：通话分析-强化需求挖掘" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={createForm.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prompt 内容</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="输入系统提示词..."
+                          className="min-h-[300px] font-mono text-sm"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={createForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>版本说明</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="如：调整了异议处理的评分标准"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        简要描述本次修改内容，便于日后对比
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCreateDialogOpen(false)}
+                >
+                  取消
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? '创建中...' : '创建'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 编辑对话框 */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+            <DialogTitle>
+              编辑 Prompt{editingPrompt ? ` (v${editingPrompt.version})` : ''}
+            </DialogTitle>
+            <DialogDescription>
+              修改 Prompt 名称、内容和版本说明
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form
+              onSubmit={editForm.handleSubmit(handleEditSubmit)}
+              className="flex flex-col flex-1 min-h-0"
+            >
+              <div className="flex-1 overflow-y-auto px-6 space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>名称</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prompt 内容</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="min-h-[300px] font-mono text-sm"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>版本说明</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
+                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  取消
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? '保存中...' : '保存'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}

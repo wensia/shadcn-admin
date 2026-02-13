@@ -5,7 +5,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { BrainCircuit, Loader2, AlertCircle } from 'lucide-react'
+import { BrainCircuit, Loader2, AlertCircle, Lightbulb } from 'lucide-react'
 import type { AIAnalysisResult, CallRecord } from '../../types'
 
 interface AIAnalysisPanelProps {
@@ -22,11 +22,11 @@ const intentConfig = {
 }
 
 function ScoreDisplay({ score }: { score: number }) {
-  const color = score >= 8 ? 'text-green-600' : score >= 6 ? 'text-yellow-600' : score >= 4 ? 'text-orange-600' : 'text-red-600'
+  const color = score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : score >= 40 ? 'text-orange-600' : 'text-red-600'
   return (
     <span className={`text-2xl font-bold ${color}`}>
-      {score.toFixed(1)}
-      <span className="text-sm font-normal text-muted-foreground">/10</span>
+      {Math.round(score)}
+      <span className="text-sm font-normal text-muted-foreground">/100</span>
     </span>
   )
 }
@@ -74,11 +74,26 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
         </div>
       </div>
 
-      {/* 质量反馈 */}
+      {/* 质量评价 */}
       {analysis.quality_feedback && (
         <div className="space-y-1.5">
           <p className="text-sm font-medium text-muted-foreground">质量评价</p>
           <p className="text-sm text-muted-foreground leading-relaxed">{analysis.quality_feedback}</p>
+        </div>
+      )}
+
+      {/* 改进建议 */}
+      {analysis.improvements && analysis.improvements.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-muted-foreground">改进建议</p>
+          <div className="space-y-1.5">
+            {analysis.improvements.map((item, i) => (
+              <div key={i} className="flex gap-2 rounded-md bg-amber-50 px-3 py-2 dark:bg-amber-950/30">
+                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                <p className="text-sm leading-relaxed">{item}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

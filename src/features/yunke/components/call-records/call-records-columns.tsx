@@ -6,7 +6,7 @@ import { type ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Play, FileText, Phone, PhoneOff } from 'lucide-react'
+import { Play, FileText, Phone, PhoneOff, BrainCircuit } from 'lucide-react'
 import { isSkeletonRow } from '@/components/ui/table-skeleton'
 import { formatTime } from '@/lib/utils/time'
 import type { CallRecord } from '../../types'
@@ -204,6 +204,40 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
           <span className="text-sm text-muted-foreground">
             {row.original.department || '-'}
           </span>
+        )
+      },
+    },
+    {
+      id: 'ai_score',
+      header: 'AI 评分',
+      size: 90,
+      cell: ({ row }) => {
+        if (isSkeletonRow(row.original.id)) {
+          return <Skeleton className="h-4 w-14" />
+        }
+        const analysis = row.original.ai_analysis
+        if (!analysis) {
+          return <span className="text-xs text-muted-foreground">-</span>
+        }
+        const score = analysis.quality_score
+        const color =
+          score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : score >= 40 ? 'text-orange-600' : 'text-red-600'
+        const intentMap = {
+          high: { label: '高', cls: 'bg-green-100 text-green-700' },
+          medium: { label: '中', cls: 'bg-yellow-100 text-yellow-700' },
+          low: { label: '低', cls: 'bg-orange-100 text-orange-700' },
+          none: { label: '无', cls: 'bg-gray-100 text-gray-500' },
+        }
+        const intent = intentMap[analysis.customer_intent] || intentMap.none
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className={`text-sm font-semibold tabular-nums ${color}`}>
+              {Math.round(score)}
+            </span>
+            <span className={`text-[10px] px-1 py-0.5 rounded ${intent.cls}`}>
+              {intent.label}
+            </span>
+          </div>
         )
       },
     },

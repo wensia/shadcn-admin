@@ -1334,7 +1334,7 @@ export const ASR_PROVIDER_OPTIONS = [
 // ============================================================================
 
 /** AI 提供商 */
-export type AIProvider = 'doubao' | 'deepseek' | 'kimi'
+export type AIProvider = 'doubao' | 'deepseek' | 'kimi' | 'openai'
 
 /** AI 配置 */
 export interface AIConfigItem {
@@ -1361,4 +1361,94 @@ export const AI_PROVIDER_OPTIONS = [
   { label: '豆包 (火山方舟)', value: 'doubao' },
   { label: 'DeepSeek', value: 'deepseek' },
   { label: 'Kimi (月之暗面)', value: 'kimi' },
+  { label: 'OpenAI 兼容 (Antigravity等)', value: 'openai' },
 ] as const
+
+// ============================================================================
+// AI 场景配置相关类型
+// ============================================================================
+
+/** AI 使用场景 */
+export const AI_SCENES = [
+  { key: 'ai_chat', label: 'AI 数据助手', description: '对话式AI助手，支持Function Calling', needsPrompt: false },
+  { key: 'call_analysis', label: '通话分析', description: '通话录音AI质检分析', needsPrompt: true },
+] as const
+
+export type AISceneKey = typeof AI_SCENES[number]['key']
+
+/** 场景配置映射 */
+export interface AISceneConfig {
+  config_id: string | null
+  config_name: string | null
+}
+
+/** AI Prompt 版本 */
+export interface AIPromptItem {
+  id: string
+  scene_key: string
+  name: string
+  content: string
+  version: number
+  is_active: boolean
+  description: string | null
+  created_at: string
+}
+
+/** 创建 AI Prompt */
+export interface AIPromptCreate {
+  scene_key: string
+  name: string
+  content: string
+  description?: string
+}
+
+/** 更新 AI Prompt */
+export interface AIPromptUpdate {
+  name?: string
+  content?: string
+  description?: string
+}
+
+// ============================================================================
+// AI 资料库文档相关类型
+// ============================================================================
+
+/** 文档分类选项 */
+export const AI_DOCUMENT_CATEGORIES = [
+  { label: '产品资料', value: 'product_info' },
+  { label: '常见问题', value: 'faq' },
+  { label: '销售指南', value: 'sales_guide' },
+  { label: '政策制度', value: 'policy' },
+  { label: '其他', value: 'other' },
+] as const
+
+export type AIDocumentCategory = typeof AI_DOCUMENT_CATEGORIES[number]['value']
+
+/** AI 资料库文档 */
+export interface AIDocumentItem {
+  id: string
+  name: string
+  content: string
+  description: string | null
+  category: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** 创建 AI 资料库文档 */
+export interface AIDocumentCreate {
+  name: string
+  content: string
+  description?: string
+  category?: string
+}
+
+/** 更新 AI 资料库文档 */
+export interface AIDocumentUpdate {
+  name?: string
+  content?: string
+  description?: string
+  category?: string
+  is_active?: boolean
+}

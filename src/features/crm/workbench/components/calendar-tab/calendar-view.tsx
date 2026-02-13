@@ -152,7 +152,7 @@ export function CalendarView() {
         {/* 日历网格 */}
         <div className="flex-1 flex flex-col min-h-0 border rounded-md overflow-hidden text-sm">
           {/* 星期表头 */}
-          <div className="grid grid-cols-7 border-b bg-muted/40">
+          <div className="grid grid-cols-7 border-b bg-muted/40 flex-shrink-0">
             {weekDays.map((day) => (
               <div
                 key={day}
@@ -177,7 +177,7 @@ export function CalendarView() {
                   key={day.toISOString()}
                   onClick={() => setSelectedDate(day)}
                   className={cn(
-                    "relative flex flex-col p-2 transition-all cursor-pointer min-h-[100px]",
+                    "relative flex flex-col p-2 transition-all cursor-pointer overflow-hidden",
                     "border-b border-r hover:bg-accent/5",
                     !isCurrentMonth && "bg-muted/10 text-muted-foreground/50",
                     isSelected && "bg-primary/5 ring-1 ring-inset ring-primary z-10",

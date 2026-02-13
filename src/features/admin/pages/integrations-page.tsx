@@ -5,7 +5,7 @@
 
 import { useSearch, useNavigate } from '@tanstack/react-router'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Mic, Bot, Webhook, CloudCog, KeyRound, Settings2, BrainCircuit } from 'lucide-react'
+import { Mic, Bot, Webhook, CloudCog, KeyRound, Settings2 } from 'lucide-react'
 
 import { Main } from '@/components/layout/main'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -16,12 +16,10 @@ import { DingtalkRobotsContent } from '../components/integrations/dingtalk-robot
 import { WebhookHooksContent } from '../components/integrations/webhook-hooks-content'
 import { YunkeAccountsContent } from '../components/integrations/yunke-accounts-content'
 import { ApiKeysContent } from '../components/integrations/api-keys-content'
-import { AIConfigContent } from '../components/integrations/ai-config-content'
 
 // Tab 配置
 const TABS = [
   { id: 'asr', label: 'ASR 配置', icon: Mic, description: '语音识别服务' },
-  { id: 'ai', label: 'AI 配置', icon: BrainCircuit, description: 'AI 大模型服务' },
   { id: 'dingtalk', label: '钉钉机器人', icon: Bot, description: '钉钉群通知' },
   { id: 'webhook', label: 'Webhook', icon: Webhook, description: '外部回调钩子' },
   { id: 'yunke', label: '云客账号', icon: CloudCog, description: '外呼系统' },
@@ -78,9 +76,6 @@ export function IntegrationsPage() {
           <div className="flex-1 overflow-hidden pt-4">
             <TabsContent value="asr" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
               <ASRConfigContent />
-            </TabsContent>
-            <TabsContent value="ai" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <AIConfigContent />
             </TabsContent>
             <TabsContent value="dingtalk" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
               <DingtalkRobotsContent />

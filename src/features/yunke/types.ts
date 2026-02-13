@@ -128,6 +128,7 @@ export interface AIAnalysisResult {
   }
   quality_score: number
   quality_feedback: string
+  improvements?: string[]
 }
 
 // ============ 通话记录 ============

@@ -3,7 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 /** 生成 UUID，兼容非 HTTPS 环境 */
 function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return generateUUID()
+    return crypto.randomUUID()
   }
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
