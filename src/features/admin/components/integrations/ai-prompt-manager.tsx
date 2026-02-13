@@ -14,21 +14,12 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  FileText,
-  Plus,
-  CheckCircle,
-  Copy,
-  Pencil,
-  Zap,
-  Database,
-} from 'lucide-react'
+import { FileText, Plus, CheckCircle, Copy, Pencil, Zap, Database } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import {
@@ -72,22 +63,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { aiConfigApi } from '../../api'
 import { AI_SCENES, type AIPromptItem } from '../../types'
 
-// 表单验证
-const createFormSchema = z.object({
-  scene_key: z.string().min(1, '请选择场景'),
+// 表单验证（创建和编辑共用，scene_key 仅创建时校验）
+const promptFormSchema = z.object({
+  scene_key: z.string().optional(),
   name: z.string().min(1, '请输入名称').max(200, '名称最多200字'),
   content: z.string().min(10, 'Prompt 内容至少10个字符'),
   description: z.string().max(500, '说明最多500字').optional(),
 })
 
-const editFormSchema = z.object({
-  name: z.string().min(1, '请输入名称').max(200, '名称最多200字'),
-  content: z.string().min(10, 'Prompt 内容至少10个字符'),
-  description: z.string().max(500, '说明最多500字').optional(),
-})
-
-type CreateFormData = z.infer<typeof createFormSchema>
-type EditFormData = z.infer<typeof editFormSchema>
+type PromptFormData = z.infer<typeof promptFormSchema>
 
 const SKELETON_PREFIX = 'skeleton-'
 function createSkeletonData(count: number): AIPromptItem[] {
@@ -100,27 +84,22 @@ function createSkeletonData(count: number): AIPromptItem[] {
     is_active: false,
     description: null,
     created_at: '',
-    updated_at: '',
   }))
 }
 
 export function AIPromptManager() {
   const queryClient = useQueryClient()
   const [sceneFilter, setSceneFilter] = useState<string>('all')
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<AIPromptItem | null>(null)
   const [copyFrom, setCopyFrom] = useState<AIPromptItem | null>(null)
 
-  const createForm = useForm<CreateFormData>({
-    resolver: zodResolver(createFormSchema),
+  const form = useForm<PromptFormData>({
+    resolver: zodResolver(promptFormSchema),
     defaultValues: { scene_key: '', name: '', content: '', description: '' },
   })
 
-  const editForm = useForm<EditFormData>({
-    resolver: zodResolver(editFormSchema),
-    defaultValues: { name: '', content: '', description: '' },
-  })
+  const isEditing = !!editingPrompt && !copyFrom
 
   // 查询 prompt 列表
   const { data, isLoading } = useQuery({
@@ -134,12 +113,15 @@ export function AIPromptManager() {
 
   // 创建 prompt
   const createMutation = useMutation({
-    mutationFn: (data: CreateFormData) => aiConfigApi.createPrompt(data),
+    mutationFn: (data: PromptFormData) => aiConfigApi.createPrompt({
+      scene_key: data.scene_key!,
+      name: data.name,
+      content: data.content,
+      description: data.description,
+    }),
     onSuccess: () => {
       toast.success('Prompt 创建成功')
-      setCreateDialogOpen(false)
-      setCopyFrom(null)
-      createForm.reset()
+      closeDialog()
       queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '创建失败'),
@@ -157,12 +139,11 @@ export function AIPromptManager() {
 
   // 更新 prompt
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: EditFormData }) =>
-      aiConfigApi.updatePrompt(id, data),
+    mutationFn: ({ id, data }: { id: string; data: PromptFormData }) =>
+      aiConfigApi.updatePrompt(id, { name: data.name, content: data.content, description: data.description }),
     onSuccess: () => {
       toast.success('更新成功')
-      setEditDialogOpen(false)
-      setEditingPrompt(null)
+      closeDialog()
       queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '更新失败'),
@@ -178,40 +159,42 @@ export function AIPromptManager() {
     onError: (error: Error) => showApiErrorToast(error, '初始化失败'),
   })
 
-  const getSceneLabel = (key: string) => {
-    return AI_SCENES.find((s) => s.key === key)?.label || key
+  const getSceneLabel = (key: string) =>
+    AI_SCENES.find((s) => s.key === key)?.label || key
+
+  const closeDialog = () => {
+    setDialogOpen(false)
+    setEditingPrompt(null)
+    setCopyFrom(null)
+    form.reset({ scene_key: '', name: '', content: '', description: '' })
   }
 
   const handleCreate = () => {
     setCopyFrom(null)
-    createForm.reset({ scene_key: sceneFilter === 'all' ? '' : sceneFilter, name: '', content: '', description: '' })
-    setCreateDialogOpen(true)
+    setEditingPrompt(null)
+    form.reset({ scene_key: sceneFilter === 'all' ? '' : sceneFilter, name: '', content: '', description: '' })
+    setDialogOpen(true)
   }
 
   const handleCopyAndCreate = (prompt: AIPromptItem) => {
     setCopyFrom(prompt)
-    createForm.reset({
-      scene_key: prompt.scene_key,
-      name: `${prompt.name} (改进版)`,
-      content: prompt.content,
-      description: '',
-    })
-    setCreateDialogOpen(true)
+    setEditingPrompt(null)
+    form.reset({ scene_key: prompt.scene_key, name: `${prompt.name} (改进版)`, content: prompt.content, description: '' })
+    setDialogOpen(true)
   }
 
   const handleEdit = (prompt: AIPromptItem) => {
     setEditingPrompt(prompt)
-    editForm.reset({ name: prompt.name, content: prompt.content, description: prompt.description || '' })
-    setEditDialogOpen(true)
+    setCopyFrom(null)
+    form.reset({ scene_key: prompt.scene_key, name: prompt.name, content: prompt.content, description: prompt.description || '' })
+    setDialogOpen(true)
   }
 
-  const handleCreateSubmit = (formData: CreateFormData) => {
-    createMutation.mutate(formData)
-  }
-
-  const handleEditSubmit = (formData: EditFormData) => {
-    if (editingPrompt) {
-      updateMutation.mutate({ id: editingPrompt.id, data: formData })
+  const handleSubmit = (formData: PromptFormData) => {
+    if (isEditing) {
+      updateMutation.mutate({ id: editingPrompt!.id, data: formData })
+    } else {
+      createMutation.mutate(formData)
     }
   }
 
@@ -459,54 +442,53 @@ export function AIPromptManager() {
         </div>
       </div>
 
-      {/* 创建对话框 */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      {/* 创建/编辑对话框 */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>
-              {copyFrom ? `基于 v${copyFrom.version} 创建新版本` : '新建 Prompt'}
+              {isEditing
+                ? `编辑 Prompt (v${editingPrompt!.version})`
+                : copyFrom
+                  ? `基于 v${copyFrom.version} 创建新版本`
+                  : '新建 Prompt'}
             </DialogTitle>
             <DialogDescription>
-              创建后可通过"激活"切换使用的版本。
+              {isEditing ? '修改 Prompt 名称、内容和版本说明' : '创建后可通过"激活"切换使用的版本。'}
             </DialogDescription>
           </DialogHeader>
-          <Form {...createForm}>
-            <form
-              onSubmit={createForm.handleSubmit(handleCreateSubmit)}
-              className="flex flex-col flex-1 min-h-0"
-            >
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                <FormField
-                  control={createForm.control}
-                  name="scene_key"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>场景</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={!!copyFrom}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="选择场景" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {AI_SCENES.map((s) => (
-                            <SelectItem key={s.key} value={s.key}>
-                              {s.label} - {s.description}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!isEditing && (
+                  <FormField
+                    control={form.control}
+                    name="scene_key"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>场景</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!!copyFrom}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择场景" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {AI_SCENES.map((s) => (
+                              <SelectItem key={s.key} value={s.key}>
+                                {s.label} - {s.description}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
-                  control={createForm.control}
+                  control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
@@ -520,17 +502,13 @@ export function AIPromptManager() {
                 />
 
                 <FormField
-                  control={createForm.control}
+                  control={form.control}
                   name="content"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Prompt 内容</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="输入系统提示词..."
-                          className="min-h-[300px] font-mono text-sm"
-                          {...field}
-                        />
+                        <Textarea placeholder="输入系统提示词..." className="min-h-[300px] font-mono text-sm" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -538,108 +516,24 @@ export function AIPromptManager() {
                 />
 
                 <FormField
-                  control={createForm.control}
+                  control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>版本说明</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="如：调整了异议处理的评分标准"
-                          {...field}
-                        />
+                        <Input placeholder="如：调整了异议处理的评分标准" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        简要描述本次修改内容，便于日后对比
-                      </FormDescription>
+                      {!isEditing && <FormDescription>简要描述本次修改内容，便于日后对比</FormDescription>}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
               <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCreateDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? '创建中...' : '创建'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* 编辑对话框 */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>
-              编辑 Prompt{editingPrompt ? ` (v${editingPrompt.version})` : ''}
-            </DialogTitle>
-            <DialogDescription>
-              修改 Prompt 名称、内容和版本说明
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form
-              onSubmit={editForm.handleSubmit(handleEditSubmit)}
-              className="flex flex-col flex-1 min-h-0"
-            >
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                <FormField
-                  control={editForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>名称</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prompt 内容</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          className="min-h-[300px] font-mono text-sm"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>版本说明</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                  取消
-                </Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? '保存中...' : '保存'}
+                <Button type="button" variant="outline" onClick={closeDialog}>取消</Button>
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {(createMutation.isPending || updateMutation.isPending) ? (isEditing ? '保存中...' : '创建中...') : (isEditing ? '保存' : '创建')}
                 </Button>
               </DialogFooter>
             </form>

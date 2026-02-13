@@ -137,74 +137,41 @@ export function useAIChat(options?: {
           try {
             const data = JSON.parse(trimmed.slice(6))
 
+            const updateAssistant = (updater: (msg: ChatMessage) => Partial<ChatMessage>) =>
+              setMessages(prev => prev.map(msg =>
+                msg.id === assistantId ? { ...msg, ...updater(msg) } : msg
+              ))
+
             switch (data.type) {
               case 'thinking':
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantId
-                    ? { ...msg, thinking: (msg.thinking || '') + data.content }
-                    : msg
-                ))
+                updateAssistant(msg => ({ thinking: (msg.thinking || '') + data.content }))
                 break
-
               case 'text':
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantId
-                    ? { ...msg, content: msg.content + data.content }
-                    : msg
-                ))
+                updateAssistant(msg => ({ content: msg.content + data.content }))
                 break
-
               case 'tool_start':
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantId
-                    ? {
-                        ...msg,
-                        toolCalls: [
-                          ...(msg.toolCalls || []),
-                          {
-                            name: data.name,
-                            displayName: data.display_name,
-                            status: 'running' as const,
-                            argsSummary: data.args_summary,
-                          },
-                        ],
-                      }
-                    : msg
-                ))
+                updateAssistant(msg => ({
+                  toolCalls: [...(msg.toolCalls || []), {
+                    name: data.name, displayName: data.display_name,
+                    status: 'running' as const, argsSummary: data.args_summary,
+                  }],
+                }))
                 break
-
               case 'tool_result':
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantId
-                    ? {
-                        ...msg,
-                        toolCalls: (msg.toolCalls || []).map(tc =>
-                          tc.name === data.name
-                            ? { ...tc, status: 'done' as const, summary: data.summary }
-                            : tc
-                        ),
-                      }
-                    : msg
-                ))
+                updateAssistant(msg => ({
+                  toolCalls: (msg.toolCalls || []).map(tc =>
+                    tc.name === data.name ? { ...tc, status: 'done' as const, summary: data.summary } : tc
+                  ),
+                }))
                 break
-
               case 'error':
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantId
-                    ? { ...msg, content: msg.content + `\n\n> ${data.message}`, isStreaming: false }
-                    : msg
-                ))
+                updateAssistant(msg => ({ content: msg.content + `\n\n> ${data.message}`, isStreaming: false }))
                 break
-
               case 'done':
                 if (data.title && onTitleGeneratedRef.current) {
                   onTitleGeneratedRef.current(data.title)
                 }
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantId
-                    ? { ...msg, isStreaming: false }
-                    : msg
-                ))
+                updateAssistant(() => ({ isStreaming: false }))
                 break
             }
           } catch {

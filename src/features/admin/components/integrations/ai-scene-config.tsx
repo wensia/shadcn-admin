@@ -22,9 +22,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { aiConfigApi } from '../../api'
 import { AI_PROVIDER_OPTIONS, AI_SCENES, type AISceneConfig, type AIPromptItem } from '../../types'
 
-const getProviderLabel = (provider: string) => {
-  return AI_PROVIDER_OPTIONS.find((p) => p.value === provider)?.label || provider
-}
+const getProviderLabel = (provider: string) =>
+  AI_PROVIDER_OPTIONS.find((p) => p.value === provider)?.label || provider
 
 export function AISceneConfigContent() {
   const queryClient = useQueryClient()

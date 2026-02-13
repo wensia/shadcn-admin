@@ -1324,135 +1324,99 @@ export interface AIConfigUpdate {
   notes?: string
 }
 
+// AI 配置 API 后端返回裸数据（非 ApiResponse 包装），需要 cast
+function rawResult<T>(response: unknown): T {
+  return response as T
+}
+
 export const aiConfigApi = {
-  /** 获取 AI 配置列表
-   * 注意: 后端 AI config API 返回裸数据（非 ApiResponse 包装）
-   */
+  /** 获取 AI 配置列表 */
   async list(params?: {
     provider?: string
     is_active?: boolean
     skip?: number
     limit?: number
   }): Promise<{ items: AIConfigItem[]; total: number }> {
-    const response = await apiClient.get<AIConfigListResponse>('/external/ai-config', { params })
-    // 后端返回裸数据 {items, total}，apiClient 直接透传
-    const result = response as unknown as AIConfigListResponse
-    return result || { items: [], total: 0 }
+    return rawResult(await apiClient.get<AIConfigListResponse>('/external/ai-config', { params })) || { items: [], total: 0 }
   },
 
-  /** 获取 AI 配置详情 */
   async get(id: string): Promise<AIConfigItem> {
-    const response = await apiClient.get<AIConfigItem>(`/external/ai-config/${id}`)
-    return response as unknown as AIConfigItem
+    return rawResult(await apiClient.get(`/external/ai-config/${id}`))
   },
 
-  /** 创建 AI 配置 */
   async create(data: AIConfigCreate): Promise<AIConfigItem> {
-    const response = await apiClient.post<AIConfigItem>('/external/ai-config', data)
-    return response as unknown as AIConfigItem
+    return rawResult(await apiClient.post('/external/ai-config', data))
   },
 
-  /** 更新 AI 配置 */
   async update(id: string, data: AIConfigUpdate): Promise<AIConfigItem> {
-    const response = await apiClient.patch<AIConfigItem>(`/external/ai-config/${id}`, data)
-    return response as unknown as AIConfigItem
+    return rawResult(await apiClient.patch(`/external/ai-config/${id}`, data))
   },
 
-  /** 删除 AI 配置 */
   async delete(id: string): Promise<void> {
-    // delete 返回 {success, message} 格式，符合 ApiResponse
     await apiClient.delete(`/external/ai-config/${id}`)
   },
 
-  /** 测试 AI 配置 */
   async test(id: string): Promise<{ success: boolean; message: string }> {
-    // test 返回 {success, message} 格式
-    const response = await apiClient.post<{ success: boolean; message: string }>(`/external/ai-config/${id}/test`)
-    return response as unknown as { success: boolean; message: string }
+    return rawResult(await apiClient.post(`/external/ai-config/${id}/test`))
   },
 
-  /** 获取场景配置映射 */
   async getSceneMapping(): Promise<Record<string, AISceneConfig>> {
-    const response = await apiClient.get<Record<string, AISceneConfig>>('/external/ai-config/scenes')
-    return response as unknown as Record<string, AISceneConfig>
+    return rawResult(await apiClient.get('/external/ai-config/scenes'))
   },
 
-  /** 设置场景配置 */
   async setSceneConfig(sceneKey: string, configId: string | null): Promise<AISceneConfig> {
-    const response = await apiClient.put<AISceneConfig>(`/external/ai-config/scenes/${sceneKey}`, { config_id: configId })
-    return response as unknown as AISceneConfig
+    return rawResult(await apiClient.put(`/external/ai-config/scenes/${sceneKey}`, { config_id: configId }))
   },
 
   // ============ Prompt 版本管理 ============
 
-  /** 获取 Prompt 列表 */
   async listPrompts(params?: { scene_key?: string; skip?: number; limit?: number }): Promise<{ items: AIPromptItem[]; total: number }> {
-    const response = await apiClient.get<{ items: AIPromptItem[]; total: number }>('/external/ai-config/prompts', { params })
-    return response as unknown as { items: AIPromptItem[]; total: number }
+    return rawResult(await apiClient.get('/external/ai-config/prompts', { params }))
   },
 
-  /** 获取 Prompt 详情 */
   async getPrompt(id: string): Promise<AIPromptItem> {
-    const response = await apiClient.get<AIPromptItem>(`/external/ai-config/prompts/${id}`)
-    return response as unknown as AIPromptItem
+    return rawResult(await apiClient.get(`/external/ai-config/prompts/${id}`))
   },
 
-  /** 创建 Prompt */
   async createPrompt(data: AIPromptCreate): Promise<AIPromptItem> {
-    const response = await apiClient.post<AIPromptItem>('/external/ai-config/prompts', data)
-    return response as unknown as AIPromptItem
+    return rawResult(await apiClient.post('/external/ai-config/prompts', data))
   },
 
-  /** 更新 Prompt 元信息 */
   async updatePrompt(id: string, data: AIPromptUpdate): Promise<AIPromptItem> {
-    const response = await apiClient.put<AIPromptItem>(`/external/ai-config/prompts/${id}`, data)
-    return response as unknown as AIPromptItem
+    return rawResult(await apiClient.put(`/external/ai-config/prompts/${id}`, data))
   },
 
-  /** 激活 Prompt */
   async activatePrompt(id: string): Promise<AIPromptItem> {
-    const response = await apiClient.put<AIPromptItem>(`/external/ai-config/prompts/${id}/activate`)
-    return response as unknown as AIPromptItem
+    return rawResult(await apiClient.put(`/external/ai-config/prompts/${id}/activate`))
   },
 
-  /** 初始化默认 Prompt */
   async seedDefaultPrompts(): Promise<{ message: string }> {
-    const response = await apiClient.post<{ message: string }>('/external/ai-config/prompts/seed-defaults')
-    return response as unknown as { message: string }
+    return rawResult(await apiClient.post('/external/ai-config/prompts/seed-defaults'))
   },
 
   // ============ 资料库文档管理 ============
 
-  /** 获取资料库文档列表 */
   async listDocuments(params?: {
     category?: string
     is_active?: boolean
     skip?: number
     limit?: number
   }): Promise<{ items: AIDocumentItem[]; total: number }> {
-    const response = await apiClient.get<{ items: AIDocumentItem[]; total: number }>('/external/ai-config/documents', { params })
-    return response as unknown as { items: AIDocumentItem[]; total: number }
+    return rawResult(await apiClient.get('/external/ai-config/documents', { params }))
   },
 
-  /** 获取资料库文档详情 */
   async getDocument(id: string): Promise<AIDocumentItem> {
-    const response = await apiClient.get<AIDocumentItem>(`/external/ai-config/documents/${id}`)
-    return response as unknown as AIDocumentItem
+    return rawResult(await apiClient.get(`/external/ai-config/documents/${id}`))
   },
 
-  /** 创建资料库文档 */
   async createDocument(data: AIDocumentCreate): Promise<AIDocumentItem> {
-    const response = await apiClient.post<AIDocumentItem>('/external/ai-config/documents', data)
-    return response as unknown as AIDocumentItem
+    return rawResult(await apiClient.post('/external/ai-config/documents', data))
   },
 
-  /** 更新资料库文档 */
   async updateDocument(id: string, data: AIDocumentUpdate): Promise<AIDocumentItem> {
-    const response = await apiClient.put<AIDocumentItem>(`/external/ai-config/documents/${id}`, data)
-    return response as unknown as AIDocumentItem
+    return rawResult(await apiClient.put(`/external/ai-config/documents/${id}`, data))
   },
 
-  /** 删除资料库文档 */
   async deleteDocument(id: string): Promise<void> {
     await apiClient.delete(`/external/ai-config/documents/${id}`)
   },

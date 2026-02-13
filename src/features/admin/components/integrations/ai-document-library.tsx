@@ -197,9 +197,7 @@ export function AIDocumentLibrary() {
   }
 
   const handleCreate = () => {
-    setEditingDoc(null)
-    form.reset({ name: '', content: '', description: '', category: '' })
-    setPreviewTab('edit')
+    closeDialog()
     setDialogOpen(true)
   }
 

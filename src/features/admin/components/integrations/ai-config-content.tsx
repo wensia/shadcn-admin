@@ -245,20 +245,11 @@ export function AIConfigContent() {
     },
   })
 
-  const getProviderLabel = (provider: string) => {
-    const option = AI_PROVIDER_OPTIONS.find(opt => opt.value === provider)
-    return option?.label || provider
-  }
+  const getProviderLabel = (provider: string) =>
+    AI_PROVIDER_OPTIONS.find(opt => opt.value === provider)?.label || provider
 
-  const getProviderBadgeVariant = (provider: string): 'default' | 'secondary' | 'outline' => {
-    switch (provider) {
-      case 'doubao': return 'default'
-      case 'deepseek': return 'secondary'
-      case 'kimi': return 'outline'
-      case 'openai': return 'secondary'
-      default: return 'secondary'
-    }
-  }
+  const getProviderBadgeVariant = (provider: string): 'default' | 'secondary' | 'outline' =>
+    provider === 'doubao' ? 'default' : provider === 'kimi' ? 'outline' : 'secondary'
 
   const columns: ColumnDef<AIConfigItem>[] = useMemo(
     () => [
@@ -470,10 +461,7 @@ export function AIConfigContent() {
     }
   }
 
-  const handleSearch = () => {
-    setPage(1)
-    refetch()
-  }
+  const handleSearch = () => { setPage(1); refetch() }
 
   return (
     <>
