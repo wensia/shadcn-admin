@@ -526,7 +526,7 @@ export function DiscTestPage() {
                           </TableCell>
                         </TableRow>
                         )
-                      }))
+                      })
                     )}
                   </TableBody>
                 </Table>
