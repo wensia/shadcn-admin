@@ -215,20 +215,19 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
         if (isSkeletonRow(row.original.id)) {
           return <Skeleton className="h-4 w-14" />
         }
-        const analysis = row.original.ai_analysis
-        if (!analysis) {
+        const score = row.original.ai_quality_score
+        if (score == null) {
           return <span className="text-xs text-muted-foreground">-</span>
         }
-        const score = analysis.quality_score
         const color =
           score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : score >= 40 ? 'text-orange-600' : 'text-red-600'
-        const intentMap = {
+        const intentMap: Record<string, { label: string; cls: string }> = {
           high: { label: '高', cls: 'bg-green-100 text-green-700' },
           medium: { label: '中', cls: 'bg-yellow-100 text-yellow-700' },
           low: { label: '低', cls: 'bg-orange-100 text-orange-700' },
           none: { label: '无', cls: 'bg-gray-100 text-gray-500' },
         }
-        const intent = intentMap[analysis.customer_intent] || intentMap.none
+        const intent = intentMap[row.original.ai_customer_intent || 'none'] || intentMap.none
         return (
           <div className="flex items-center gap-1.5">
             <span className={`text-sm font-semibold tabular-nums ${color}`}>
@@ -252,7 +251,7 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
 
         const record = row.original
         const hasRecording = record.has_recording
-        const hasTranscript = record.transcript && record.transcript.length > 0
+        const hasTranscript = record.has_transcript
 
         return (
           <div className="flex items-center gap-1">

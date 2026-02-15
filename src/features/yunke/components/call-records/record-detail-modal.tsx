@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatTime } from '@/lib/utils/time'
 
 import { toast } from 'sonner'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 import { callRecordsApi } from '../../api'
 import { TranscriptViewer } from './transcript-viewer'
 import { AIAnalysisPanel } from './ai-analysis-panel'
@@ -73,16 +74,27 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
 
-  // 本地 record 状态，分析完成后可更新
-  const [localRecord, setLocalRecord] = useState<CallRecord | null>(recordProp)
-  useEffect(() => {
-    setLocalRecord(recordProp)
-  }, [recordProp])
+  // 懒加载完整记录（含 transcript 和 ai_analysis）
+  const [fullRecord, setFullRecord] = useState<CallRecord | null>(null)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
 
-  const record = localRecord
+  useEffect(() => {
+    if (open && recordProp) {
+      setIsDetailLoading(true)
+      callRecordsApi.getCallRecord(recordProp.id)
+        .then(data => setFullRecord(data))
+        .catch(err => showApiErrorToast(err, '加载详情失败'))
+        .finally(() => setIsDetailLoading(false))
+    } else {
+      setFullRecord(null)
+    }
+  }, [open, recordProp?.id])
+
+  // 头部信息使用列表数据（recordProp），内容面板使用完整数据（fullRecord）
+  const record = recordProp
 
   // 是否正在轮询分析状态
-  const isPolling = record?.ai_analysis_status === 'processing'
+  const isPolling = (fullRecord?.ai_analysis_status ?? record?.ai_analysis_status) === 'processing'
 
   // 轮询 AI 分析状态（每 3 秒，仅在 processing 状态时启用）
   useQuery({
@@ -93,7 +105,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     refetchIntervalInBackground: false,
     select: useCallback((data: { status: string; analysis: any; error: string | null; analyzed_at: string | null }) => {
       if (data.status === 'completed' && data.analysis) {
-        setLocalRecord((prev) =>
+        setFullRecord((prev) =>
           prev
             ? {
                 ...prev,
@@ -106,7 +118,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
         toast.success('AI 分析完成')
         queryClient.invalidateQueries({ queryKey: ['call-records'] })
       } else if (data.status === 'failed') {
-        setLocalRecord((prev) =>
+        setFullRecord((prev) =>
           prev
             ? { ...prev, ai_analysis_status: 'failed' }
             : prev
@@ -118,7 +130,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   })
 
   // 从录音 URL 中提取 voiceId（有转写文本说明有录音）
-  const hasTranscript = record?.transcript && record.transcript.length > 0
+  const hasTranscript = record?.has_transcript || (fullRecord?.transcript && fullRecord.transcript.length > 0)
   const voiceId = (record?.has_recording || hasTranscript)
     ? record?.record_id || ''
     : ''
@@ -138,9 +150,9 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     mutationFn: () => callRecordsApi.analyzeCallRecord(record!.id),
     onSuccess: () => {
       // 立即将本地状态设为 processing，触发轮询
-      setLocalRecord((prev) =>
+      setFullRecord((prev) =>
         prev
-          ? { ...prev, ai_analysis_status: 'processing', ai_analysis_error: null }
+          ? { ...prev, ai_analysis_status: 'processing' }
           : prev
       )
     },
@@ -221,12 +233,15 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   // 有转写文本说明有录音，或者 has_recording 为 true
   const hasRecording = record?.has_recording || hasTranscript
 
+  const fullTranscript = fullRecord?.transcript
+  const hasFullTranscript = fullTranscript && fullTranscript.length > 0
+
   const renderTranscriptPanel = (withRightBorder: boolean) => (
     <div className={`flex-1 min-h-0 flex flex-col ${withRightBorder ? 'border-r' : ''}`}>
       <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
         <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         <span className="text-sm font-medium text-muted-foreground">转写文本</span>
-        {hasTranscript && (
+        {hasFullTranscript && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="ml-auto h-6 px-2 text-xs">
@@ -237,7 +252,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={() => {
-                  const text = formatTranscriptText(record?.transcript || [])
+                  const text = formatTranscriptText(fullTranscript || [])
                   navigator.clipboard.writeText(text)
                   toast.success('已复制格式化对话文本')
                 }}
@@ -247,7 +262,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  const json = JSON.stringify(record?.transcript || [], null, 2)
+                  const json = JSON.stringify(fullTranscript || [], null, 2)
                   navigator.clipboard.writeText(json)
                   toast.success('已复制原始 JSON')
                 }}
@@ -260,9 +275,14 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
         )}
       </div>
       <div className="flex-1 min-h-0 overflow-hidden relative">
-        {hasTranscript ? (
+        {isDetailLoading ? (
+          <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" aria-hidden="true" />
+            加载转写文本...
+          </div>
+        ) : hasFullTranscript ? (
           <TranscriptViewer
-            transcript={record?.transcript || []}
+            transcript={fullTranscript || []}
             currentTime={currentTime}
             onSeek={handleTranscriptSeek}
           />
@@ -275,23 +295,26 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     </div>
   )
 
+  // 使用 fullRecord 的分析状态（如果已加载），否则回退到列表数据
+  const analysisStatus = fullRecord?.ai_analysis_status ?? record?.ai_analysis_status
+
   const renderAnalysisPanel = () => (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
         <BrainCircuit className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         <span className="text-sm font-medium text-muted-foreground">AI 分析</span>
-        {record?.ai_analysis_status === 'completed' && (
+        {analysisStatus === 'completed' && (
           <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
             已分析
           </Badge>
         )}
-        {record?.ai_analysis_status === 'completed' && (
+        {analysisStatus === 'completed' && (
           <Button
             variant="outline"
             size="sm"
             className="ml-auto h-6 px-2 text-xs"
             onClick={() => analyzeMutation.mutate()}
-            disabled={analyzeMutation.isPending || isPolling}
+            disabled={analyzeMutation.isPending || isPolling || isDetailLoading}
           >
             {analyzeMutation.isPending || isPolling ? (
               <>
@@ -305,13 +328,24 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
         )}
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
-        {record && (
+        {isDetailLoading ? (
+          <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" aria-hidden="true" />
+            加载 AI 分析...
+          </div>
+        ) : fullRecord ? (
+          <AIAnalysisPanel
+            record={fullRecord}
+            isAnalyzing={analyzeMutation.isPending || isPolling}
+            onAnalyze={() => analyzeMutation.mutate()}
+          />
+        ) : record ? (
           <AIAnalysisPanel
             record={record}
             isAnalyzing={analyzeMutation.isPending || isPolling}
             onAnalyze={() => analyzeMutation.mutate()}
           />
-        )}
+        ) : null}
       </div>
     </div>
   )

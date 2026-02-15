@@ -207,12 +207,16 @@ export interface CallRecord {
   staff_name: string | null
   department: string | null
   has_recording: boolean
-  transcript: TranscriptSegment[] | null
+  transcript?: TranscriptSegment[] | null
   transcript_status: string | null
-  ai_analysis: AIAnalysisResult | null
+  ai_analysis?: AIAnalysisResult | null
   ai_analysis_status: string | null
   ai_analyzed_at: string | null
   created_at: string
+  // 列表汇总字段（列表 API 返回，避免传输大字段）
+  has_transcript?: boolean
+  ai_quality_score?: number | null
+  ai_customer_intent?: string | null
 }
 
 // 通话记录查询参数
