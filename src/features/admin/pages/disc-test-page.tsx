@@ -71,6 +71,18 @@ function formatTime(time: string) {
   })
 }
 
+/**
+ * 根据链接数据动态构建测试 URL（使用当前 origin，避免存储的 localhost 问题）
+ */
+function buildTestUrl(link: DiscTestLink): string {
+  const params = new URLSearchParams({
+    appointment_id: link.appointment_id,
+    name: link.name,
+  })
+  if (link.phone) params.set('phone', link.phone)
+  return `${window.location.origin}/disc-test?${params.toString()}`
+}
+
 function DiscTypeBadge({ type }: { type?: string }) {
   if (!type) return <span className="text-muted-foreground">-</span>
   const dim = type as DISCDimension
@@ -204,8 +216,10 @@ export function DiscTestPage() {
       setCreateDialogOpen(false)
       setCreateName('')
       setCreatePhone('')
-      const link = res.data?.test_url || ''
-      setGeneratedLink(link)
+      const linkData = res.data
+      if (linkData) {
+        setGeneratedLink(buildTestUrl(linkData))
+      }
       setLinkDialogOpen(true)
       queryClient.invalidateQueries({ queryKey: ['disc-pending-links'] })
     },
@@ -470,14 +484,16 @@ export function DiscTestPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      pendingLinks.map((link) => (
+                      pendingLinks.map((link) => {
+                        const testUrl = buildTestUrl(link)
+                        return (
                         <TableRow key={link.id}>
                           <TableCell className="font-medium">{link.name}</TableCell>
                           <TableCell>{link.phone || '-'}</TableCell>
                           <TableCell>{formatTime(link.created_at)}</TableCell>
                           <TableCell>
                             <span className="text-xs text-muted-foreground truncate max-w-[300px] inline-block">
-                              {link.test_url}
+                              {testUrl}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -485,7 +501,7 @@ export function DiscTestPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleShowQrCode(link.test_url, link.name)}
+                                onClick={() => handleShowQrCode(testUrl, link.name)}
                                 title="二维码"
                               >
                                 <QrCode className="h-4 w-4" />
@@ -493,7 +509,7 @@ export function DiscTestPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleCopyLink(link.test_url)}
+                                onClick={() => handleCopyLink(testUrl)}
                                 title="复制链接"
                               >
                                 <Copy className="h-4 w-4" />
@@ -509,7 +525,8 @@ export function DiscTestPage() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
+                        )
+                      }))
                     )}
                   </TableBody>
                 </Table>
