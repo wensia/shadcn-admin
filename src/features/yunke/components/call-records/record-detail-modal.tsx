@@ -15,20 +15,44 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Play, Pause, Volume2, VolumeX, Phone, SkipBack, SkipForward, Download, FileText, BrainCircuit } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Phone, SkipBack, SkipForward, Download, FileText, BrainCircuit, Loader2, Copy, FileJson, FileType } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatTime } from '@/lib/utils/time'
 
 import { toast } from 'sonner'
 import { callRecordsApi } from '../../api'
 import { TranscriptViewer } from './transcript-viewer'
 import { AIAnalysisPanel } from './ai-analysis-panel'
-import type { CallRecord } from '../../types'
+import type { CallRecord, TranscriptSegment } from '../../types'
 
 interface RecordDetailModalProps {
   record: CallRecord | null
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+/**
+ * 将转写文本格式化为可读对话文本
+ */
+function formatTranscriptText(transcript: TranscriptSegment[]): string {
+  return transcript.map((seg) => {
+    const speaker = seg.speaker.toLowerCase()
+    const role =
+      speaker.includes('agent') || speaker.includes('员工') || speaker.includes('staff') || speaker === '0'
+        ? '员工'
+        : '客户'
+    const mins = Math.floor(seg.start_time / 60)
+    const secs = Math.floor(seg.start_time % 60)
+    const time = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    return `${role} [${time}]: ${seg.text}`
+  }).join('\n')
 }
 
 /**
@@ -197,24 +221,119 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   // 有转写文本说明有录音，或者 has_recording 为 true
   const hasRecording = record?.has_recording || hasTranscript
 
+  const renderTranscriptPanel = (withRightBorder: boolean) => (
+    <div className={`flex-1 min-h-0 flex flex-col ${withRightBorder ? 'border-r' : ''}`}>
+      <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
+        <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <span className="text-sm font-medium text-muted-foreground">转写文本</span>
+        {hasTranscript && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="ml-auto h-6 px-2 text-xs">
+                <Copy className="mr-1 h-3 w-3" aria-hidden="true" />
+                复制
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  const text = formatTranscriptText(record?.transcript || [])
+                  navigator.clipboard.writeText(text)
+                  toast.success('已复制格式化对话文本')
+                }}
+              >
+                <FileType className="mr-2 h-4 w-4" aria-hidden="true" />
+                复制对话文本
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const json = JSON.stringify(record?.transcript || [], null, 2)
+                  navigator.clipboard.writeText(json)
+                  toast.success('已复制原始 JSON')
+                }}
+              >
+                <FileJson className="mr-2 h-4 w-4" aria-hidden="true" />
+                复制原始 JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        {hasTranscript ? (
+          <TranscriptViewer
+            transcript={record?.transcript || []}
+            currentTime={currentTime}
+            onSeek={handleTranscriptSeek}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
+            {hasRecording ? '暂无转写文本' : '此通话无录音'}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const renderAnalysisPanel = () => (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
+        <BrainCircuit className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <span className="text-sm font-medium text-muted-foreground">AI 分析</span>
+        {record?.ai_analysis_status === 'completed' && (
+          <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+            已分析
+          </Badge>
+        )}
+        {record?.ai_analysis_status === 'completed' && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto h-6 px-2 text-xs"
+            onClick={() => analyzeMutation.mutate()}
+            disabled={analyzeMutation.isPending || isPolling}
+          >
+            {analyzeMutation.isPending || isPolling ? (
+              <>
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                分析中…
+              </>
+            ) : (
+              '重新分析'
+            )}
+          </Button>
+        )}
+      </div>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {record && (
+          <AIAnalysisPanel
+            record={record}
+            isAnalyzing={analyzeMutation.isPending || isPolling}
+            onAnalyze={() => analyzeMutation.mutate()}
+          />
+        )}
+      </div>
+    </div>
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl h-[85vh] p-0 flex flex-col gap-0">
+      <DialogContent className="h-[94vh] !w-[calc(100vw-12px)] !max-w-[1280px] sm:!max-w-[1280px] overflow-hidden p-0 flex flex-col gap-0">
         {/* 头部：通话信息 + 紧凑播放器 */}
         <div className="shrink-0 border-b">
           {/* 通话信息行 */}
           <DialogHeader className="px-5 pr-12 pt-4 pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <DialogTitle className="flex items-center gap-2 text-base">
-                <Phone className="h-4 w-4" />
+                <Phone className="h-4 w-4" aria-hidden="true" />
                 通话详情
               </DialogTitle>
-              <DialogDescription className="flex items-center gap-2 mt-0">
+              <DialogDescription className="mt-0 flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
                 {record && (
                   <>
-                    <span className="text-xs">{record.staff_name || '未知员工'}</span>
+                    <span className="max-w-[120px] truncate text-xs sm:max-w-[160px]">{record.staff_name || '未知员工'}</span>
                     <span className="text-muted-foreground text-xs">&rarr;</span>
-                    <span className="font-mono text-xs">{record.callee || record.caller || '-'}</span>
+                    <span className="max-w-[140px] truncate font-mono text-xs sm:max-w-[180px]">{record.callee || record.caller || '-'}</span>
                     <Badge variant="secondary" className="h-5 text-[11px]">{formatTime(record.call_time)}</Badge>
                   </>
                 )}
@@ -232,7 +351,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                   <Skeleton className="h-4 w-16" />
                 </div>
               ) : audioUrl ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <audio
                     ref={audioRef}
                     src={audioUrl}
@@ -243,94 +362,107 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                     onPause={() => setIsPlaying(false)}
                   />
 
-                  {/* 快退 */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    onClick={skipBackward}
-                  >
-                    <SkipBack className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* 快退 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={skipBackward}
+                      aria-label="快退 10 秒"
+                    >
+                      <SkipBack className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
 
-                  {/* 播放/暂停 */}
-                  <Button
-                    variant="default"
-                    size="icon"
-                    className="h-8 w-8 rounded-full shrink-0"
-                    onClick={togglePlay}
-                  >
-                    {isPlaying ? (
-                      <Pause className="h-3.5 w-3.5" />
-                    ) : (
-                      <Play className="h-3.5 w-3.5 ml-0.5" />
-                    )}
-                  </Button>
+                    {/* 播放/暂停 */}
+                    <Button
+                      variant="default"
+                      size="icon"
+                      className="h-8 w-8 rounded-full shrink-0"
+                      onClick={togglePlay}
+                      aria-label={isPlaying ? '暂停播放' : '开始播放'}
+                    >
+                      {isPlaying ? (
+                        <Pause className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : (
+                        <Play className="h-3.5 w-3.5 ml-0.5" aria-hidden="true" />
+                      )}
+                    </Button>
 
-                  {/* 快进 */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    onClick={skipForward}
-                  >
-                    <SkipForward className="h-3.5 w-3.5" />
-                  </Button>
+                    {/* 快进 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={skipForward}
+                      aria-label="快进 10 秒"
+                    >
+                      <SkipForward className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
 
-                  {/* 时间 */}
-                  <span className="text-[11px] tabular-nums text-muted-foreground shrink-0 w-[34px] text-right">
-                    {formatPlayTime(currentTime)}
-                  </span>
+                    {/* 当前时间 */}
+                    <span className="w-[34px] shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                      {formatPlayTime(currentTime)}
+                    </span>
+                  </div>
 
-                  {/* 进度条 */}
-                  <Slider
-                    value={[currentTime]}
-                    max={duration || 100}
-                    step={0.1}
-                    onValueChange={handleSeek}
-                    className="flex-1 cursor-pointer min-w-0"
-                  />
+                  <div className="flex min-w-[140px] flex-1 items-center gap-2">
+                    {/* 进度条 */}
+                    <Slider
+                      value={[currentTime]}
+                      max={duration || 100}
+                      step={0.1}
+                      onValueChange={handleSeek}
+                      className="min-w-0 flex-1 cursor-pointer"
+                    />
 
-                  {/* 总时长 */}
-                  <span className="text-[11px] tabular-nums text-muted-foreground shrink-0 w-[34px]">
-                    {formatPlayTime(duration)}
-                  </span>
+                    {/* 总时长 */}
+                    <span className="w-[34px] shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                      {formatPlayTime(duration)}
+                    </span>
+                  </div>
 
-                  {/* 分隔线 */}
-                  <div className="h-4 w-px bg-border shrink-0" />
+                  <div className="ml-auto flex shrink-0 items-center gap-2">
+                    <div className="hidden h-4 w-px bg-border sm:block" />
 
-                  {/* 音量 */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    onClick={toggleMute}
-                  >
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="h-3.5 w-3.5" />
-                    ) : (
-                      <Volume2 className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                  <Slider
-                    value={[isMuted ? 0 : volume]}
-                    max={1}
-                    step={0.1}
-                    onValueChange={handleVolumeChange}
-                    className="w-16 cursor-pointer shrink-0"
-                  />
+                    {/* 音量 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={toggleMute}
+                      aria-label={isMuted || volume === 0 ? '取消静音' : '静音'}
+                    >
+                      {isMuted || volume === 0 ? (
+                        <VolumeX className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : (
+                        <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </Button>
+                    <Slider
+                      value={[isMuted ? 0 : volume]}
+                      max={1}
+                      step={0.1}
+                      onValueChange={handleVolumeChange}
+                      className="w-14 cursor-pointer shrink-0 sm:w-16"
+                    />
 
-                  {/* 下载 */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    asChild
-                  >
-                    <a href={audioUrl} download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}>
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
+                    {/* 下载 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      asChild
+                    >
+                      <a
+                        href={audioUrl}
+                        download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}
+                        aria-label="下载录音"
+                      >
+                        <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground text-xs py-1">
@@ -341,50 +473,35 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
           )}
         </div>
 
-        {/* 左右分栏内容区域 */}
-        <div className="flex-1 min-h-0 flex">
-          {/* 左栏: 转写文本 */}
-          <div className="flex-1 min-h-0 flex flex-col border-r">
-            <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">转写文本</span>
+        {/* 内容区：大屏双栏，小屏分页签 */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="hidden lg:flex h-full min-h-0">
+            <div className="basis-1/3 min-h-0 flex">
+              {renderTranscriptPanel(true)}
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden relative">
-              {hasTranscript ? (
-                <TranscriptViewer
-                  transcript={record?.transcript || []}
-                  currentTime={currentTime}
-                  onSeek={handleTranscriptSeek}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
-                  {hasRecording ? '暂无转写文本' : '此通话无录音'}
-                </div>
-              )}
+            <div className="basis-2/3 min-h-0 flex">
+              {renderAnalysisPanel()}
             </div>
           </div>
 
-          {/* 右栏: AI 分析 */}
-          <div className="flex-1 min-h-0 flex flex-col">
-            <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
-              <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">AI 分析</span>
-              {record?.ai_analysis_status === 'completed' && (
-                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
-                  已分析
-                </Badge>
-              )}
+          <Tabs defaultValue="transcript" className="flex h-full min-h-0 flex-col gap-0 lg:hidden">
+            <div className="shrink-0 border-b px-3 py-2">
+              <TabsList className="grid h-8 w-full grid-cols-2">
+                <TabsTrigger value="transcript" className="text-xs">
+                  转写文本
+                </TabsTrigger>
+                <TabsTrigger value="analysis" className="text-xs">
+                  AI 分析
+                </TabsTrigger>
+              </TabsList>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              {record && (
-                <AIAnalysisPanel
-                  record={record}
-                  isAnalyzing={analyzeMutation.isPending || isPolling}
-                  onAnalyze={() => analyzeMutation.mutate()}
-                />
-              )}
-            </div>
-          </div>
+            <TabsContent value="transcript" className="m-0 flex-1 min-h-0 overflow-hidden">
+              {renderTranscriptPanel(false)}
+            </TabsContent>
+            <TabsContent value="analysis" className="m-0 flex-1 min-h-0 overflow-hidden">
+              {renderAnalysisPanel()}
+            </TabsContent>
+          </Tabs>
         </div>
       </DialogContent>
     </Dialog>

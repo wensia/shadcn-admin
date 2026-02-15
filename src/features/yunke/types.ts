@@ -115,8 +115,38 @@ export interface YunkeAutoSyncResult {
 
 // ============ AI 分析 ============
 
+export interface AIAnalysisSupport {
+  id: string
+  turn_index: number
+  speaker: string
+  time_range: string
+  quote: string
+}
+
+export interface AIAnalysisEvidence {
+  claim: string
+  support_ids: string[]
+}
+
+export interface AIAnalysisRiskFlag {
+  type: string
+  severity: 'high' | 'medium' | 'low' | string
+  detail: string
+  support_ids: string[]
+  deduction?: number
+}
+
+export interface AIAnalysisComplianceAdjustment {
+  base_score: number
+  auto_deduction: number
+  final_score: number
+  reasons: string[]
+  ignored_without_evidence?: number
+}
+
 // AI 分析结果
 export interface AIAnalysisResult {
+  version?: number
   summary: string
   customer_intent: 'high' | 'medium' | 'low' | 'none'
   key_info: {
@@ -129,6 +159,27 @@ export interface AIAnalysisResult {
   quality_score: number
   quality_feedback: string
   improvements?: string[]
+  scores?: {
+    opening?: number
+    needs_discovery?: number
+    product_intro?: number
+    objection_handling?: number
+    closing?: number
+    communication?: number
+    compliance?: number
+    ending?: number
+  }
+  label?: {
+    primary?: string
+    secondary?: string
+  }
+  supports?: AIAnalysisSupport[]
+  evidence?: AIAnalysisEvidence[]
+  risk_flags?: AIAnalysisRiskFlag[]
+  compliance_adjustment?: AIAnalysisComplianceAdjustment
+  prompt_name?: string
+  prompt_version?: number
+  model_config?: string
 }
 
 // ============ 通话记录 ============
@@ -179,6 +230,9 @@ export interface CallRecordListParams {
   min_duration?: number
   max_duration?: number
   search?: string
+  ai_analysis_status?: string
+  min_score?: number
+  max_score?: number
 }
 
 // 通话统计数据

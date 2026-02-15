@@ -85,7 +85,7 @@ export function TasksMutateDrawer({
           <form
             id='tasks-form'
             onSubmit={form.handleSubmit(onSubmit)}
-            className='flex-1 space-y-6 overflow-y-auto px-4'
+            className='flex-1 space-y-6 overflow-y-auto'
           >
             <FormField
               control={form.control}

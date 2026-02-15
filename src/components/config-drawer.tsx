@@ -71,7 +71,7 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
             Adjust the appearance and layout to suit your preferences.
           </SheetDescription>
         </SheetHeader>
-        <div className='space-y-6 overflow-y-auto px-4'>
+        <div className='space-y-6 overflow-y-auto'>
           <ThemeConfig />
           <AccentColorConfig />
           <SidebarConfig />

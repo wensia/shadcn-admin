@@ -1,6 +1,6 @@
 /**
  * AI Prompt 版本管理组件
- * 使用数据表展示，支持按场景管理 prompt 模板，版本控制
+ * 管理 prompt 模板内容和版本，场景关联在"场景配置"中完成
  */
 
 import { useState, useMemo } from 'react'
@@ -14,7 +14,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { FileText, Plus, CheckCircle, Copy, Pencil, Zap, Database } from 'lucide-react'
+import { FileText, Plus, Copy, Pencil, Database } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -48,13 +48,6 @@ import {
   FormDescription,
 } from '@/components/ui/form'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -63,9 +56,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { aiConfigApi } from '../../api'
 import { AI_SCENES, type AIPromptItem } from '../../types'
 
-// 表单验证（创建和编辑共用，scene_key 仅创建时校验）
+// 表单验证
 const promptFormSchema = z.object({
-  scene_key: z.string().optional(),
   name: z.string().min(1, '请输入名称').max(200, '名称最多200字'),
   content: z.string().min(10, 'Prompt 内容至少10个字符'),
   description: z.string().max(500, '说明最多500字').optional(),
@@ -87,54 +79,46 @@ function createSkeletonData(count: number): AIPromptItem[] {
   }))
 }
 
+// 获取默认场景 key（需要 prompt 的第一个场景）
+const DEFAULT_SCENE_KEY = AI_SCENES.find((s) => s.needsPrompt)?.key || AI_SCENES[0].key
+
 export function AIPromptManager() {
   const queryClient = useQueryClient()
-  const [sceneFilter, setSceneFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<AIPromptItem | null>(null)
   const [copyFrom, setCopyFrom] = useState<AIPromptItem | null>(null)
+  // 记录创建/复制时的 scene_key（不在 UI 中展示）
+  const [currentSceneKey, setCurrentSceneKey] = useState(DEFAULT_SCENE_KEY)
 
   const form = useForm<PromptFormData>({
     resolver: zodResolver(promptFormSchema),
-    defaultValues: { scene_key: '', name: '', content: '', description: '' },
+    defaultValues: { name: '', content: '', description: '' },
   })
 
   const isEditing = !!editingPrompt && !copyFrom
 
-  // 查询 prompt 列表
+  // 查询所有 prompt
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-ai-prompts', sceneFilter],
-    queryFn: () =>
-      aiConfigApi.listPrompts({
-        scene_key: sceneFilter === 'all' ? undefined : sceneFilter,
-        limit: 100,
-      }),
+    queryKey: ['admin-ai-prompts'],
+    queryFn: () => aiConfigApi.listPrompts({ limit: 100 }),
   })
 
   // 创建 prompt
   const createMutation = useMutation({
-    mutationFn: (data: PromptFormData) => aiConfigApi.createPrompt({
-      scene_key: data.scene_key!,
-      name: data.name,
-      content: data.content,
-      description: data.description,
-    }),
+    mutationFn: (data: PromptFormData & { scene_key: string }) =>
+      aiConfigApi.createPrompt({
+        scene_key: data.scene_key,
+        name: data.name,
+        content: data.content,
+        description: data.description,
+      }),
     onSuccess: () => {
       toast.success('Prompt 创建成功')
       closeDialog()
       queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts-all'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '创建失败'),
-  })
-
-  // 激活 prompt
-  const activateMutation = useMutation({
-    mutationFn: (id: string) => aiConfigApi.activatePrompt(id),
-    onSuccess: (result) => {
-      toast.success(`已激活 v${result.version}`)
-      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
-    },
-    onError: (error: Error) => showApiErrorToast(error, '激活失败'),
   })
 
   // 更新 prompt
@@ -145,6 +129,7 @@ export function AIPromptManager() {
       toast.success('更新成功')
       closeDialog()
       queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts-all'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '更新失败'),
   })
@@ -155,38 +140,39 @@ export function AIPromptManager() {
     onSuccess: (result) => {
       toast.success(result.message || '默认 Prompt 初始化完成')
       queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts-all'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '初始化失败'),
   })
-
-  const getSceneLabel = (key: string) =>
-    AI_SCENES.find((s) => s.key === key)?.label || key
 
   const closeDialog = () => {
     setDialogOpen(false)
     setEditingPrompt(null)
     setCopyFrom(null)
-    form.reset({ scene_key: '', name: '', content: '', description: '' })
+    form.reset({ name: '', content: '', description: '' })
   }
 
   const handleCreate = () => {
     setCopyFrom(null)
     setEditingPrompt(null)
-    form.reset({ scene_key: sceneFilter === 'all' ? '' : sceneFilter, name: '', content: '', description: '' })
+    setCurrentSceneKey(DEFAULT_SCENE_KEY)
+    form.reset({ name: '', content: '', description: '' })
     setDialogOpen(true)
   }
 
   const handleCopyAndCreate = (prompt: AIPromptItem) => {
     setCopyFrom(prompt)
     setEditingPrompt(null)
-    form.reset({ scene_key: prompt.scene_key, name: `${prompt.name} (改进版)`, content: prompt.content, description: '' })
+    setCurrentSceneKey(prompt.scene_key)
+    form.reset({ name: `${prompt.name} (改进版)`, content: prompt.content, description: '' })
     setDialogOpen(true)
   }
 
   const handleEdit = (prompt: AIPromptItem) => {
     setEditingPrompt(prompt)
     setCopyFrom(null)
-    form.reset({ scene_key: prompt.scene_key, name: prompt.name, content: prompt.content, description: prompt.description || '' })
+    setCurrentSceneKey(prompt.scene_key)
+    form.reset({ name: prompt.name, content: prompt.content, description: prompt.description || '' })
     setDialogOpen(true)
   }
 
@@ -194,28 +180,13 @@ export function AIPromptManager() {
     if (isEditing) {
       updateMutation.mutate({ id: editingPrompt!.id, data: formData })
     } else {
-      createMutation.mutate(formData)
+      createMutation.mutate({ ...formData, scene_key: currentSceneKey })
     }
   }
 
-  // 表格列定义
+  // 表格列定义（无场景列）
   const columns: ColumnDef<AIPromptItem>[] = useMemo(
     () => [
-      {
-        accessorKey: 'scene_key',
-        header: '场景',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
-          }
-          return (
-            <Badge variant="outline" className="text-xs">
-              {getSceneLabel(row.original.scene_key)}
-            </Badge>
-          )
-        },
-      },
       {
         accessorKey: 'version',
         header: '版本',
@@ -225,10 +196,7 @@ export function AIPromptManager() {
             return <Skeleton className="h-5 w-10" />
           }
           return (
-            <Badge
-              variant={row.original.is_active ? 'default' : 'secondary'}
-              className="text-xs"
-            >
+            <Badge variant="secondary" className="text-xs">
               v{row.original.version}
             </Badge>
           )
@@ -250,24 +218,6 @@ export function AIPromptManager() {
                 </span>
               )}
             </div>
-          )
-        },
-      },
-      {
-        accessorKey: 'is_active',
-        header: '状态',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16 rounded-full" />
-          }
-          return row.original.is_active ? (
-            <Badge variant="outline" className="text-xs text-green-600 border-green-300">
-              <CheckCircle className="mr-1 h-3 w-3" />
-              当前使用
-            </Badge>
-          ) : (
-            <span className="text-xs text-muted-foreground">未激活</span>
           )
         },
       },
@@ -294,10 +244,10 @@ export function AIPromptManager() {
       {
         id: 'actions',
         header: '操作',
-        size: 140,
+        size: 100,
         cell: ({ row }) => {
           if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-24" />
+            return <Skeleton className="h-8 w-16" />
           }
           const prompt = row.original
           return (
@@ -318,29 +268,12 @@ export function AIPromptManager() {
                 </TooltipTrigger>
                 <TooltipContent>复制并新建</TooltipContent>
               </Tooltip>
-              {!prompt.is_active && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs gap-1"
-                      onClick={() => activateMutation.mutate(prompt.id)}
-                      disabled={activateMutation.isPending}
-                    >
-                      <Zap className="h-3 w-3" />
-                      激活
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>设为当前使用版本</TooltipContent>
-                </Tooltip>
-              )}
             </div>
           )
         },
       },
     ],
-    [activateMutation.isPending]
+    []
   )
 
   const tableData = isLoading ? createSkeletonData(3) : (data?.items || [])
@@ -359,19 +292,7 @@ export function AIPromptManager() {
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-medium">Prompt 版本管理</h3>
-            <Select value={sceneFilter} onValueChange={setSceneFilter}>
-              <SelectTrigger className="h-8 w-40 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部场景</SelectItem>
-                {AI_SCENES.map((s) => (
-                  <SelectItem key={s.key} value={s.key}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <span className="text-xs text-muted-foreground">管理 Prompt 内容和版本，场景关联请在"场景配置"中设置</span>
           </div>
           <div className="flex items-center gap-2">
             <Tooltip>
@@ -442,7 +363,7 @@ export function AIPromptManager() {
         </div>
       </div>
 
-      {/* 创建/编辑对话框 */}
+      {/* 创建/编辑对话框（不含场景选择） */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
@@ -454,39 +375,12 @@ export function AIPromptManager() {
                   : '新建 Prompt'}
             </DialogTitle>
             <DialogDescription>
-              {isEditing ? '修改 Prompt 名称、内容和版本说明' : '创建后可通过"激活"切换使用的版本。'}
+              {isEditing ? '修改 Prompt 名称、内容和版本说明' : '创建后可在"场景配置"中为场景指定使用的 Prompt 版本'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                {!isEditing && (
-                  <FormField
-                    control={form.control}
-                    name="scene_key"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>场景</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!!copyFrom}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="选择场景" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {AI_SCENES.map((s) => (
-                              <SelectItem key={s.key} value={s.key}>
-                                {s.label} - {s.description}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
                 <FormField
                   control={form.control}
                   name="name"

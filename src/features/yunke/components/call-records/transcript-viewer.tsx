@@ -65,7 +65,7 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 overflow-y-auto"
+      className="absolute inset-0 overflow-y-auto overscroll-contain"
     >
       <div className="flex flex-col gap-3 p-4">
         {transcript.map((segment, index) => {
@@ -73,14 +73,16 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
           const isStaff = isStaffMessage(segment.speaker)
 
           return (
-            <div
+            <button
               key={index}
+              type="button"
               ref={isActive ? activeRef : undefined}
               className={cn(
-                'flex flex-col max-w-[85%] cursor-pointer transition-all',
+                'flex flex-col max-w-[85%] cursor-pointer transition-all text-left',
                 isStaff ? 'self-end items-end' : 'self-start items-start'
               )}
               onClick={() => onSeek?.(segment.start_time)}
+              aria-label={`跳转到 ${formatTimeDisplay(segment.start_time)}，${isStaff ? '员工' : '客户'}发言`}
             >
               {/* 说话人标签和时间 */}
               <div
@@ -107,7 +109,7 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
               >
                 {segment.text}
               </div>
-            </div>
+            </button>
           )
         })}
       </div>

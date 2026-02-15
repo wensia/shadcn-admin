@@ -20,7 +20,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
-import { Search, X, RefreshCw, Timer } from 'lucide-react'
+import { Search, X, RefreshCw, Timer, BrainCircuit } from 'lucide-react'
 import { callRecordsApi } from '../../api'
 import type { CallRecordListParams } from '../../types'
 
@@ -70,6 +70,11 @@ export function CallRecordsToolbar({
     ? `${filters.min_duration ?? 0}s${filters.max_duration !== undefined ? ` - ${filters.max_duration}s` : '+'}`
     : ''
 
+  const hasScoreFilter = filters.min_score !== undefined || filters.max_score !== undefined
+  const scoreLabel = hasScoreFilter
+    ? `${filters.min_score ?? 0}${filters.max_score !== undefined ? ` - ${filters.max_score}` : '+'}`
+    : ''
+
   const hasFilters = !!(
     filters.start_date ||
     filters.end_date ||
@@ -80,7 +85,9 @@ export function CallRecordsToolbar({
     filters.has_recording !== undefined ||
     filters.transcript_status ||
     hasDurationFilter ||
-    filters.search
+    filters.search ||
+    filters.ai_analysis_status ||
+    hasScoreFilter
   )
 
   return (
@@ -259,6 +266,88 @@ export function CallRecordsToolbar({
                 }}
               >
                 清除时长筛选
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* AI 分析状态 */}
+      <Select
+        value={filters.ai_analysis_status || 'all'}
+        onValueChange={(v) => onFilterChange('ai_analysis_status', v === 'all' ? undefined : v)}
+      >
+        <SelectTrigger className="w-[120px]">
+          <SelectValue placeholder="AI分析" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">全部分析</SelectItem>
+          <SelectItem value="completed">已分析</SelectItem>
+          <SelectItem value="none">未分析</SelectItem>
+          <SelectItem value="processing">分析中</SelectItem>
+          <SelectItem value="failed">分析失败</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* AI 分析评分筛选 */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={hasScoreFilter ? 'default' : 'outline'}
+            size="sm"
+            className="h-9 gap-1.5"
+          >
+            <BrainCircuit className="h-4 w-4" />
+            {hasScoreFilter ? scoreLabel : 'AI评分'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64" align="start">
+          <div className="space-y-3">
+            <p className="text-sm font-medium">AI 分析评分筛选</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">最低分</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="0"
+                  value={filters.min_score ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    onFilterChange('min_score', val === '' ? undefined : Number(val))
+                  }}
+                  className="h-8"
+                />
+              </div>
+              <span className="text-muted-foreground mt-5">—</span>
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs text-muted-foreground">最高分</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="100"
+                  value={filters.max_score ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    onFilterChange('max_score', val === '' ? undefined : Number(val))
+                  }}
+                  className="h-8"
+                />
+              </div>
+            </div>
+            {hasScoreFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full h-7 text-xs"
+                onClick={() => {
+                  onFilterChange('min_score', undefined)
+                  onFilterChange('max_score', undefined)
+                }}
+              >
+                清除评分筛选
               </Button>
             )}
           </div>
