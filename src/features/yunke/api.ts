@@ -433,6 +433,66 @@ export const callRecordsApi = {
     )
     return response.data!
   },
+
+  /** 获取转录纠错词库 */
+  async getTranscriptDictionary(): Promise<{
+    corrections: Record<string, string>
+    total: number
+  }> {
+    const response = await apiClient.get<ApiResponse<{
+      corrections: Record<string, string>
+      total: number
+    }>>('/yunke/call-records/transcript-correction/dictionary')
+    return response.data!
+  },
+
+  /** 预览转录纠错结果 */
+  async previewTranscriptCorrection(corrections: Record<string, string>): Promise<{
+    total_records_affected: number
+    total_replacements: number
+    details: Array<{ wrong: string; correct: string; count: number }>
+    sample_records: Array<{
+      record_id: string
+      staff_name: string
+      call_time: string
+      original_text: string
+      corrected_text: string
+    }>
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      total_records_affected: number
+      total_replacements: number
+      details: Array<{ wrong: string; correct: string; count: number }>
+      sample_records: Array<{
+        record_id: string
+        staff_name: string
+        call_time: string
+        original_text: string
+        corrected_text: string
+      }>
+    }>>(
+      '/yunke/call-records/transcript-correction/preview',
+      { corrections }
+    )
+    return response.data!
+  },
+
+  /** 执行转录纠错 */
+  async applyTranscriptCorrection(corrections: Record<string, string>): Promise<{
+    total_records_updated: number
+    total_replacements: number
+    details: Array<{ wrong: string; correct: string; replaced: number }>
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      total_records_updated: number
+      total_replacements: number
+      details: Array<{ wrong: string; correct: string; replaced: number }>
+    }>>(
+      '/yunke/call-records/transcript-correction/apply',
+      { corrections }
+    )
+    return response.data!
+  },
 }
 
 /** 通话统计数据类型 */

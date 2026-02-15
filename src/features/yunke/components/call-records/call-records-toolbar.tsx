@@ -20,8 +20,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
-import { Search, X, RefreshCw, Timer, BrainCircuit } from 'lucide-react'
+import { Search, X, RefreshCw, Timer, BrainCircuit, SpellCheck } from 'lucide-react'
 import { callRecordsApi } from '../../api'
+import { TranscriptCorrectionDialog } from './transcript-correction-dialog'
 import type { CallRecordListParams } from '../../types'
 
 interface CallRecordsToolbarProps {
@@ -40,6 +41,7 @@ export function CallRecordsToolbar({
   isLoading,
 }: CallRecordsToolbarProps) {
   const [searchInput, setSearchInput] = useState(filters.search || '')
+  const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false)
 
   // 获取部门列表
   const { data: departments = [] } = useQuery({
@@ -362,11 +364,24 @@ export function CallRecordsToolbar({
             清除筛选
           </Button>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCorrectionDialogOpen(true)}
+        >
+          <SpellCheck className="h-4 w-4 mr-1" />
+          文本纠错
+        </Button>
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
           刷新
         </Button>
       </div>
+
+      <TranscriptCorrectionDialog
+        open={correctionDialogOpen}
+        onOpenChange={setCorrectionDialogOpen}
+      />
     </div>
   )
 }
