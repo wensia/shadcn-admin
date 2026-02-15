@@ -60,6 +60,7 @@ import type {
 import { DISC_TYPE_CONFIG } from '@/features/disc/types'
 import { DiscResultCharts } from '@/features/disc/components/disc-result-charts'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import { copyToClipboard } from '@/lib/utils'
 
 function formatTime(time: string) {
   return new Date(time).toLocaleString('zh-CN', {
@@ -386,10 +387,10 @@ export function DiscTestPage() {
 
   // 复制链接
   const handleCopyLink = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url)
+    const ok = await copyToClipboard(url)
+    if (ok) {
       toast.success('链接已复制到剪贴板')
-    } catch {
+    } else {
       toast.error('复制失败')
     }
   }
