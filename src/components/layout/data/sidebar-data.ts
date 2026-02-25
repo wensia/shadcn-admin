@@ -41,6 +41,7 @@ import {
   Clock,
   Bot,
   BrainCircuit,
+  Bell,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -284,6 +285,11 @@ export const adminNavGroups: NavGroup[] = [
     title: '系统配置',
     items: [
       {
+        title: '页面访问权限',
+        url: '/admin/page-access',
+        icon: Shield,
+      },
+      {
         title: '连续外呼配置',
         url: '/admin/call-config',
         icon: PhoneCall,
@@ -292,6 +298,11 @@ export const adminNavGroups: NavGroup[] = [
         title: '定时任务',
         url: '/admin/scheduled-tasks',
         icon: Clock,
+      },
+      {
+        title: '每日通知',
+        url: '/admin/daily-notices',
+        icon: Bell,
       },
       {
         title: 'AI 配置',

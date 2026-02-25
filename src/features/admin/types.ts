@@ -557,6 +557,8 @@ export interface EmployeeIdentityCreate {
   is_primary?: boolean
   is_active?: boolean
   effective_date?: string
+  can_manage_leads?: boolean
+  can_access_pool?: boolean
 }
 
 /** 更新员工身份 */
@@ -567,6 +569,8 @@ export interface EmployeeIdentityUpdate {
   is_primary?: boolean
   is_active?: boolean
   effective_date?: string
+  can_manage_leads?: boolean
+  can_access_pool?: boolean
 }
 
 /** 创建校区部门关联 */
@@ -1451,4 +1455,66 @@ export interface AIDocumentUpdate {
   description?: string
   category?: string
   is_active?: boolean
+}
+
+// ========================================================================
+// 页面访问权限配置
+// ========================================================================
+
+/** 页面访问配置项 */
+export interface PageAccessConfigItem {
+  id: string
+  page_key: string
+  page_name: string
+  allowed_employee_ids: string[]
+  employees: { id: string; name: string; username: string }[]
+  is_enabled: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** 更新页面访问配置 */
+export interface PageAccessConfigUpdate {
+  page_name?: string
+  allowed_employee_ids: string[]
+  is_enabled: boolean
+}
+
+// ============================================================================
+// 每日通知配置
+// ============================================================================
+
+/** 每日通知 */
+export interface DailyNoticeItem {
+  id: string
+  title: string
+  content: string
+  is_active: boolean
+  created_by?: string
+  updated_by?: string
+  created_by_name?: string
+  updated_by_name?: string
+  created_at?: string
+  updated_at?: string
+}
+
+/** 创建每日通知 */
+export interface DailyNoticeCreate {
+  title: string
+  content: string
+  is_active?: boolean
+}
+
+/** 更新每日通知 */
+export interface DailyNoticeUpdate {
+  title?: string
+  content?: string
+}
+
+/** 当前生效的通知（用户端） */
+export interface DailyNoticeActive {
+  id: string
+  title: string
+  content: string
+  updated_at?: string
 }

@@ -102,6 +102,13 @@ import type {
   AIDocumentItem,
   AIDocumentCreate,
   AIDocumentUpdate,
+  // 页面访问权限配置
+  PageAccessConfigItem,
+  PageAccessConfigUpdate,
+  // 每日通知
+  DailyNoticeItem,
+  DailyNoticeCreate,
+  DailyNoticeUpdate,
 } from './types'
 
 const BASE_URL = '/admin'
@@ -1543,5 +1550,58 @@ export const scheduledTasksApi = {
       throw new Error(response.message || '获取执行时间失败')
     }
     return response.data
+  },
+
+  // ========================================================================
+  // 页面访问权限配置
+  // ========================================================================
+
+  /** 获取所有页面访问配置 */
+  async getPageAccessConfigs(): Promise<ApiResponse<PageAccessConfigItem[]>> {
+    return apiClient.get<ApiResponse<PageAccessConfigItem[]>>(`${BASE_URL}/page-access-configs`)
+  },
+
+  /** 获取指定页面访问配置 */
+  async getPageAccessConfig(pageKey: string): Promise<ApiResponse<PageAccessConfigItem>> {
+    return apiClient.get<ApiResponse<PageAccessConfigItem>>(`${BASE_URL}/page-access-configs/${pageKey}`)
+  },
+
+  /** 更新页面访问配置 (upsert) */
+  async updatePageAccessConfig(pageKey: string, data: PageAccessConfigUpdate): Promise<ApiResponse<PageAccessConfigItem>> {
+    return apiClient.put<ApiResponse<PageAccessConfigItem>>(`${BASE_URL}/page-access-configs/${pageKey}`, data)
+  },
+
+  // ========================================================================
+  // 每日通知管理
+  // ========================================================================
+
+  /** 获取每日通知列表 */
+  async getDailyNotices(page = 1, size = 20): Promise<ApiResponse<PaginatedResponse<DailyNoticeItem>>> {
+    return apiClient.get<ApiResponse<PaginatedResponse<DailyNoticeItem>>>(`${BASE_URL}/daily-notices`, { params: { page, size } })
+  },
+
+  /** 创建每日通知 */
+  async createDailyNotice(data: DailyNoticeCreate): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.post<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices`, data)
+  },
+
+  /** 更新每日通知 */
+  async updateDailyNotice(id: string, data: DailyNoticeUpdate): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.put<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices/${id}`, data)
+  },
+
+  /** 删除每日通知 */
+  async deleteDailyNotice(id: string): Promise<ApiResponse<void>> {
+    return apiClient.delete<ApiResponse<void>>(`${BASE_URL}/daily-notices/${id}`)
+  },
+
+  /** 激活每日通知 */
+  async activateDailyNotice(id: string): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.put<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices/${id}/activate`)
+  },
+
+  /** 停用每日通知 */
+  async deactivateDailyNotice(id: string): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.put<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices/${id}/deactivate`)
   },
 }

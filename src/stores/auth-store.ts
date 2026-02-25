@@ -35,6 +35,7 @@ export interface UserInfo {
   is_active: boolean
   employee_type?: string
   roles?: string[]
+  accessible_pages?: string[]
   created_at: string
   updated_at: string
 }

@@ -37,6 +37,7 @@ export interface DISCTypeInfo {
   code: DISCDimension
   label: string
   description: string
+  score?: number
 }
 
 // DISC 图表数据（单张图）
@@ -53,6 +54,7 @@ export interface DISCGraphData {
 export interface DISCResult {
   scores: Record<DISCDimension, number>
   primaryType: DISCTypeInfo
+  secondaryType?: DISCTypeInfo
   graphs?: {
     external: DISCGraphData   // 现实中的我（外在行为）
     internal: DISCGraphData   // 本我（内在核心）
@@ -61,13 +63,33 @@ export interface DISCResult {
   rawData?: {
     mostCounts: Record<DISCDimension, number>
     leastCounts: Record<DISCDimension, number>
+    rawScores?: Record<DISCDimension, number>
   }
+  interpretation?: Record<DISCDimension, string>
   characteristics?: {
     primary: string[]
     secondary: string[]
   }
   communicationAdvice?: string[]
   potentialChallenges?: string[]
+  confidence?: {
+    level: 'high' | 'medium' | 'low' | string
+    score: number
+    gap: number
+    primaryScore: number
+    secondaryScore: number
+    reason: string
+  }
+  mixedType?: {
+    code: string
+    label: string
+    tendency: 'strong' | 'moderate' | 'light' | string
+    tendencyLabel: string
+    gap: number
+    description: string
+  } | null
+  testDate?: string
+  calculationMethod?: string
 }
 
 // 临时 DISC 记录列表项
@@ -81,6 +103,10 @@ export interface TempDISCRecordListItem {
   s_score?: number
   c_score?: number
   primary_type?: string
+  confidence_level?: 'high' | 'medium' | 'low' | string
+  confidence_score?: number
+  mixed_type_code?: string
+  has_mixed_type?: boolean
   submitted_at: string
   is_migrated: boolean
   created_at: string

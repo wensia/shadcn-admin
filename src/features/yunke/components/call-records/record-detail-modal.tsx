@@ -1,6 +1,6 @@
 /**
  * 录音详情弹窗
- * 顶部音频播放器 + 下方左右分栏（转写文本 / AI 分析）
+ * 顶部音频播放器 + 下方标签页（转写文本 / AI 分析）
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -236,42 +236,105 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const fullTranscript = fullRecord?.transcript
   const hasFullTranscript = fullTranscript && fullTranscript.length > 0
 
-  const renderTranscriptPanel = (withRightBorder: boolean) => (
-    <div className={`flex-1 min-h-0 flex flex-col ${withRightBorder ? 'border-r' : ''}`}>
-      <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
-        <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <span className="text-sm font-medium text-muted-foreground">转写文本</span>
+  const renderTranscriptPanel = () => (
+    <div className="flex-1 min-h-0 flex flex-col">
+      {/* 播放器 + 工具栏 */}
+      <div className="shrink-0 border-b px-4 py-2 space-y-2">
+        {hasRecording && (
+          <>
+            {isLoadingUrl ? (
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                <Skeleton className="h-1.5 flex-1 rounded" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ) : audioUrl ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <audio
+                  ref={audioRef}
+                  src={audioUrl}
+                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                  onDurationChange={(e) => setDuration(e.currentTarget.duration)}
+                  onEnded={() => setIsPlaying(false)}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                />
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={skipBackward} aria-label="快退 10 秒">
+                    <SkipBack className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                  <Button variant="default" size="icon" className="h-8 w-8 rounded-full shrink-0" onClick={togglePlay} aria-label={isPlaying ? '暂停播放' : '开始播放'}>
+                    {isPlaying ? <Pause className="h-3.5 w-3.5" aria-hidden="true" /> : <Play className="h-3.5 w-3.5 ml-0.5" aria-hidden="true" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={skipForward} aria-label="快进 10 秒">
+                    <SkipForward className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                  <span className="w-[34px] shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                    {formatPlayTime(currentTime)}
+                  </span>
+                </div>
+
+                <div className="flex min-w-[140px] flex-1 items-center gap-2">
+                  <Slider value={[currentTime]} max={duration || 100} step={0.1} onValueChange={handleSeek} className="min-w-0 flex-1 cursor-pointer" />
+                  <span className="w-[34px] shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                    {formatPlayTime(duration)}
+                  </span>
+                </div>
+
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  <div className="hidden h-4 w-px bg-border sm:block" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={toggleMute} aria-label={isMuted || volume === 0 ? '取消静音' : '静音'}>
+                    {isMuted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" aria-hidden="true" /> : <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                  </Button>
+                  <Slider value={[isMuted ? 0 : volume]} max={1} step={0.1} onValueChange={handleVolumeChange} className="w-14 cursor-pointer shrink-0 sm:w-16" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" asChild>
+                    <a href={audioUrl} download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`} aria-label="下载录音">
+                      <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground text-xs py-1">
+                无法获取录音地址
+              </div>
+            )}
+          </>
+        )}
         {hasFullTranscript && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="ml-auto h-6 px-2 text-xs">
-                <Copy className="mr-1 h-3 w-3" aria-hidden="true" />
-                复制
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  const text = formatTranscriptText(fullTranscript || [])
-                  navigator.clipboard.writeText(text)
-                  toast.success('已复制格式化对话文本')
-                }}
-              >
-                <FileType className="mr-2 h-4 w-4" aria-hidden="true" />
-                复制对话文本
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  const json = JSON.stringify(fullTranscript || [], null, 2)
-                  navigator.clipboard.writeText(json)
-                  toast.success('已复制原始 JSON')
-                }}
-              >
-                <FileJson className="mr-2 h-4 w-4" aria-hidden="true" />
-                复制原始 JSON
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+                  <Copy className="mr-1 h-3 w-3" aria-hidden="true" />
+                  复制
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    const text = formatTranscriptText(fullTranscript || [])
+                    navigator.clipboard.writeText(text)
+                    toast.success('已复制格式化对话文本')
+                  }}
+                >
+                  <FileType className="mr-2 h-4 w-4" aria-hidden="true" />
+                  复制对话文本
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const json = JSON.stringify(fullTranscript || [], null, 2)
+                    navigator.clipboard.writeText(json)
+                    toast.success('已复制原始 JSON')
+                  }}
+                >
+                  <FileJson className="mr-2 h-4 w-4" aria-hidden="true" />
+                  复制原始 JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </div>
       <div className="flex-1 min-h-0 overflow-hidden relative">
@@ -300,19 +363,15 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
 
   const renderAnalysisPanel = () => (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="px-4 py-2.5 shrink-0 border-b bg-muted/30 flex items-center gap-1.5">
-        <BrainCircuit className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <span className="text-sm font-medium text-muted-foreground">AI 分析</span>
-        {analysisStatus === 'completed' && (
-          <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+      {analysisStatus === 'completed' && (
+        <div className="px-4 py-1.5 shrink-0 border-b flex items-center justify-end gap-2">
+          <Badge variant="secondary" className="h-4 px-1 text-[10px]">
             已分析
           </Badge>
-        )}
-        {analysisStatus === 'completed' && (
           <Button
             variant="outline"
             size="sm"
-            className="ml-auto h-6 px-2 text-xs"
+            className="h-6 px-2 text-xs"
             onClick={() => analyzeMutation.mutate()}
             disabled={analyzeMutation.isPending || isPolling || isDetailLoading}
           >
@@ -325,8 +384,8 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               '重新分析'
             )}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
       <div className="flex-1 min-h-0 overflow-hidden">
         {isDetailLoading ? (
           <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
@@ -352,11 +411,10 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[94vh] !w-[calc(100vw-12px)] !max-w-[1280px] sm:!max-w-[1280px] overflow-hidden p-0 flex flex-col gap-0">
-        {/* 头部：通话信息 + 紧凑播放器 */}
+      <DialogContent className="!fixed !inset-0 !translate-x-0 !translate-y-0 !top-0 !left-0 !h-screen !w-screen !max-w-none !rounded-none overflow-hidden p-0 flex flex-col gap-0">
+        {/* 头部：通话信息 */}
         <div className="shrink-0 border-b">
-          {/* 通话信息行 */}
-          <DialogHeader className="px-5 pr-12 pt-4 pb-2">
+          <DialogHeader className="px-5 pr-12 pt-4 pb-3">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <DialogTitle className="flex items-center gap-2 text-base">
                 <Phone className="h-4 w-4" aria-hidden="true" />
@@ -374,165 +432,27 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               </DialogDescription>
             </div>
           </DialogHeader>
-
-          {/* 紧凑播放器 - 单行布局 */}
-          {hasRecording && (
-            <div className="px-5 pb-3 pt-1">
-              {isLoadingUrl ? (
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                  <Skeleton className="h-1.5 flex-1 rounded" />
-                  <Skeleton className="h-4 w-16" />
-                </div>
-              ) : audioUrl ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <audio
-                    ref={audioRef}
-                    src={audioUrl}
-                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                    onDurationChange={(e) => setDuration(e.currentTarget.duration)}
-                    onEnded={() => setIsPlaying(false)}
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                  />
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* 快退 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={skipBackward}
-                      aria-label="快退 10 秒"
-                    >
-                      <SkipBack className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
-
-                    {/* 播放/暂停 */}
-                    <Button
-                      variant="default"
-                      size="icon"
-                      className="h-8 w-8 rounded-full shrink-0"
-                      onClick={togglePlay}
-                      aria-label={isPlaying ? '暂停播放' : '开始播放'}
-                    >
-                      {isPlaying ? (
-                        <Pause className="h-3.5 w-3.5" aria-hidden="true" />
-                      ) : (
-                        <Play className="h-3.5 w-3.5 ml-0.5" aria-hidden="true" />
-                      )}
-                    </Button>
-
-                    {/* 快进 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={skipForward}
-                      aria-label="快进 10 秒"
-                    >
-                      <SkipForward className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
-
-                    {/* 当前时间 */}
-                    <span className="w-[34px] shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
-                      {formatPlayTime(currentTime)}
-                    </span>
-                  </div>
-
-                  <div className="flex min-w-[140px] flex-1 items-center gap-2">
-                    {/* 进度条 */}
-                    <Slider
-                      value={[currentTime]}
-                      max={duration || 100}
-                      step={0.1}
-                      onValueChange={handleSeek}
-                      className="min-w-0 flex-1 cursor-pointer"
-                    />
-
-                    {/* 总时长 */}
-                    <span className="w-[34px] shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                      {formatPlayTime(duration)}
-                    </span>
-                  </div>
-
-                  <div className="ml-auto flex shrink-0 items-center gap-2">
-                    <div className="hidden h-4 w-px bg-border sm:block" />
-
-                    {/* 音量 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={toggleMute}
-                      aria-label={isMuted || volume === 0 ? '取消静音' : '静音'}
-                    >
-                      {isMuted || volume === 0 ? (
-                        <VolumeX className="h-3.5 w-3.5" aria-hidden="true" />
-                      ) : (
-                        <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      )}
-                    </Button>
-                    <Slider
-                      value={[isMuted ? 0 : volume]}
-                      max={1}
-                      step={0.1}
-                      onValueChange={handleVolumeChange}
-                      className="w-14 cursor-pointer shrink-0 sm:w-16"
-                    />
-
-                    {/* 下载 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      asChild
-                    >
-                      <a
-                        href={audioUrl}
-                        download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}
-                        aria-label="下载录音"
-                      >
-                        <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground text-xs py-1">
-                  无法获取录音地址
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* 内容区：大屏双栏，小屏分页签 */}
+        {/* 内容区：标签页切换 */}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <div className="hidden lg:flex h-full min-h-0">
-            <div className="basis-1/3 min-h-0 flex">
-              {renderTranscriptPanel(true)}
-            </div>
-            <div className="basis-2/3 min-h-0 flex">
-              {renderAnalysisPanel()}
-            </div>
-          </div>
-
-          <Tabs defaultValue="transcript" className="flex h-full min-h-0 flex-col gap-0 lg:hidden">
+          <Tabs defaultValue="transcript" className="flex h-full min-h-0 flex-col gap-0">
             <div className="shrink-0 border-b px-3 py-2">
               <TabsList className="grid h-8 w-full grid-cols-2">
-                <TabsTrigger value="transcript" className="text-xs">
+                <TabsTrigger value="transcript" className="gap-1.5 text-xs">
+                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
                   转写文本
                 </TabsTrigger>
-                <TabsTrigger value="analysis" className="text-xs">
+                <TabsTrigger value="analysis" className="gap-1.5 text-xs">
+                  <BrainCircuit className="h-3.5 w-3.5" aria-hidden="true" />
                   AI 分析
                 </TabsTrigger>
               </TabsList>
             </div>
-            <TabsContent value="transcript" className="m-0 flex-1 min-h-0 overflow-hidden">
-              {renderTranscriptPanel(false)}
+            <TabsContent value="transcript" className="m-0 flex flex-1 min-h-0 flex-col overflow-hidden">
+              {renderTranscriptPanel()}
             </TabsContent>
-            <TabsContent value="analysis" className="m-0 flex-1 min-h-0 overflow-hidden">
+            <TabsContent value="analysis" className="m-0 flex flex-1 min-h-0 flex-col overflow-hidden">
               {renderAnalysisPanel()}
             </TabsContent>
           </Tabs>

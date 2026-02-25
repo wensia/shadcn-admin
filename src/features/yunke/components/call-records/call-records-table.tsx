@@ -97,17 +97,24 @@ export function CallRecordsTable({
           <TableHeader className="sticky top-0 z-10 bg-background">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="bg-muted/50">
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.column.columnDef.size }}
-                    className="whitespace-nowrap"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const sticky = (header.column.columnDef.meta as any)?.sticky as string | undefined
+                  return (
+                    <TableHead
+                      key={header.id}
+                      style={{ width: header.column.columnDef.size }}
+                      className={cn(
+                        'whitespace-nowrap',
+                        sticky === 'left' && 'sticky left-0 z-20 bg-muted/50 after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border',
+                        sticky === 'right' && 'sticky right-0 z-20 bg-muted/50 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-border',
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -115,14 +122,21 @@ export function CallRecordsTable({
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} className="hover:bg-muted/30">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.columnDef.size }}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const sticky = (cell.column.columnDef.meta as any)?.sticky as string | undefined
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width: cell.column.columnDef.size }}
+                        className={cn(
+                          sticky === 'left' && 'sticky left-0 z-[1] bg-background after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border',
+                          sticky === 'right' && 'sticky right-0 z-[1] bg-background before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-border',
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (

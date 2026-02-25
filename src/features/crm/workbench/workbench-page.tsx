@@ -11,6 +11,7 @@ import { Calendar, ClipboardList, BarChart3 } from 'lucide-react'
 import { CalendarView } from './components/calendar-tab/calendar-view'
 import { TodayLeadsView } from './components/today-tab/today-leads-view'
 import { StatisticsView } from './components/statistics-tab/statistics-view'
+import { DailyNoticeDialog } from '../components/daily-notice-dialog'
 import type { WorkbenchTab } from './types'
 
 export function WorkbenchPage() {
@@ -60,6 +61,7 @@ export function WorkbenchPage() {
           </TabsContent>
         </Tabs>
       </div>
+      <DailyNoticeDialog />
     </Main>
   )
 }

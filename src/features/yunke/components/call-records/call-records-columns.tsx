@@ -88,6 +88,22 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
 
   return [
     {
+      accessorKey: 'callee',
+      header: '客户号码',
+      size: 130,
+      meta: { sticky: 'left' },
+      cell: ({ row }) => {
+        if (isSkeletonRow(row.original.id)) {
+          return <Skeleton className="h-4 w-24" />
+        }
+        return (
+          <span className="font-mono text-sm">
+            {row.original.callee || row.original.caller || '-'}
+          </span>
+        )
+      },
+    },
+    {
       accessorKey: 'call_time',
       header: '通话时间',
       size: 150,
@@ -113,21 +129,6 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
         return (
           <span className="font-medium">
             {row.original.staff_name || '-'}
-          </span>
-        )
-      },
-    },
-    {
-      accessorKey: 'callee',
-      header: '客户号码',
-      size: 130,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-24" />
-        }
-        return (
-          <span className="font-mono text-sm">
-            {row.original.callee || row.original.caller || '-'}
           </span>
         )
       },
@@ -244,6 +245,7 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
       id: 'actions',
       header: '操作',
       size: 100,
+      meta: { sticky: 'right' },
       cell: ({ row }) => {
         if (isSkeletonRow(row.original.id)) {
           return <Skeleton className="h-8 w-16" />

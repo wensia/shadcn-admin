@@ -19,8 +19,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Label } from '@/components/ui/label'
-import { Search, X, RefreshCw, Timer, BrainCircuit, SpellCheck } from 'lucide-react'
+import { Search, X, RefreshCw, Timer, BrainCircuit, SpellCheck, Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { callRecordsApi } from '../../api'
 import { TranscriptCorrectionDialog } from './transcript-correction-dialog'
 import type { CallRecordListParams } from '../../types'
@@ -42,6 +51,7 @@ export function CallRecordsToolbar({
 }: CallRecordsToolbarProps) {
   const [searchInput, setSearchInput] = useState(filters.search || '')
   const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false)
+  const [staffPopoverOpen, setStaffPopoverOpen] = useState(false)
 
   // 获取部门列表
   const { data: departments = [] } = useQuery({
@@ -103,10 +113,11 @@ export function CallRecordsToolbar({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="pl-8 w-[200px]"
+            className="pl-8 w-[200px] h-9"
           />
         </div>
-        <Button variant="secondary" size="sm" onClick={handleSearch}>
+        <Button variant="default" size="sm" className="h-9" onClick={handleSearch}>
+          <Search className="h-4 w-4" />
           搜索
         </Button>
       </div>
@@ -127,7 +138,7 @@ export function CallRecordsToolbar({
           value={filters.department || 'all'}
           onValueChange={(v) => onFilterChange('department', v === 'all' ? undefined : v)}
         >
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger size="default" className="w-[130px]">
             <SelectValue placeholder="部门" />
           </SelectTrigger>
           <SelectContent>
@@ -141,24 +152,56 @@ export function CallRecordsToolbar({
         </Select>
       )}
 
-      {/* 员工筛选 */}
+      {/* 员工筛选（可搜索） */}
       {staffList.length > 0 && (
-        <Select
-          value={filters.staff_name || 'all'}
-          onValueChange={(v) => onFilterChange('staff_name', v === 'all' ? undefined : v)}
-        >
-          <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="员工" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部员工</SelectItem>
-            {staffList.map((name) => (
-              <SelectItem key={name} value={name}>
-                {name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={staffPopoverOpen} onOpenChange={setStaffPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={staffPopoverOpen}
+              className="w-[130px] justify-between h-9 px-3 font-normal"
+            >
+              <span className="truncate">
+                {filters.staff_name || '全部员工'}
+              </span>
+              <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="搜索员工..." />
+              <CommandList>
+                <CommandEmpty>未找到员工</CommandEmpty>
+                <CommandGroup>
+                  <CommandItem
+                    value="全部员工"
+                    onSelect={() => {
+                      onFilterChange('staff_name', undefined)
+                      setStaffPopoverOpen(false)
+                    }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', !filters.staff_name ? 'opacity-100' : 'opacity-0')} />
+                    全部员工
+                  </CommandItem>
+                  {staffList.map((name) => (
+                    <CommandItem
+                      key={name}
+                      value={name}
+                      onSelect={() => {
+                        onFilterChange('staff_name', name)
+                        setStaffPopoverOpen(false)
+                      }}
+                    >
+                      <Check className={cn('mr-2 h-4 w-4', filters.staff_name === name ? 'opacity-100' : 'opacity-0')} />
+                      {name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       )}
 
       {/* 通话类型 */}
@@ -166,13 +209,13 @@ export function CallRecordsToolbar({
         value={filters.call_type || 'all'}
         onValueChange={(v) => onFilterChange('call_type', v === 'all' ? undefined : v)}
       >
-        <SelectTrigger className="w-[100px]">
+        <SelectTrigger size="default" className="w-[120px]">
           <SelectValue placeholder="类型" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">全部类型</SelectItem>
-          <SelectItem value="s">外呼</SelectItem>
-          <SelectItem value="i">呼入</SelectItem>
+          <SelectItem value="外呼">外呼</SelectItem>
+          <SelectItem value="呼入">呼入</SelectItem>
         </SelectContent>
       </Select>
 
@@ -183,7 +226,7 @@ export function CallRecordsToolbar({
           onFilterChange('has_recording', v === 'all' ? undefined : v === 'true')
         }
       >
-        <SelectTrigger className="w-[110px]">
+        <SelectTrigger size="default" className="w-[110px]">
           <SelectValue placeholder="录音" />
         </SelectTrigger>
         <SelectContent>
@@ -198,7 +241,7 @@ export function CallRecordsToolbar({
         value={filters.transcript_status || 'all'}
         onValueChange={(v) => onFilterChange('transcript_status', v === 'all' ? undefined : v)}
       >
-        <SelectTrigger className="w-[110px]">
+        <SelectTrigger size="default" className="w-[110px]">
           <SelectValue placeholder="转录状态" />
         </SelectTrigger>
         <SelectContent>
@@ -279,7 +322,7 @@ export function CallRecordsToolbar({
         value={filters.ai_analysis_status || 'all'}
         onValueChange={(v) => onFilterChange('ai_analysis_status', v === 'all' ? undefined : v)}
       >
-        <SelectTrigger className="w-[120px]">
+        <SelectTrigger size="default" className="w-[120px]">
           <SelectValue placeholder="AI分析" />
         </SelectTrigger>
         <SelectContent>
@@ -359,7 +402,7 @@ export function CallRecordsToolbar({
       {/* 操作按钮 */}
       <div className="flex items-center gap-2 ml-auto">
         {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={onReset}>
+          <Button variant="ghost" size="sm" className="h-9" onClick={onReset}>
             <X className="h-4 w-4 mr-1" />
             清除筛选
           </Button>
@@ -367,12 +410,13 @@ export function CallRecordsToolbar({
         <Button
           variant="outline"
           size="sm"
+          className="h-9"
           onClick={() => setCorrectionDialogOpen(true)}
         >
           <SpellCheck className="h-4 w-4 mr-1" />
           文本纠错
         </Button>
-        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+        <Button variant="outline" size="sm" className="h-9" onClick={onRefresh} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
           刷新
         </Button>

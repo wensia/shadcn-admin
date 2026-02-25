@@ -144,6 +144,29 @@ export interface AIAnalysisComplianceAdjustment {
   ignored_without_evidence?: number
 }
 
+export type AIAnalysisScoreDimension =
+  | 'opening'
+  | 'needs_discovery'
+  | 'product_intro'
+  | 'objection_handling'
+  | 'closing'
+  | 'communication'
+  | 'compliance'
+  | 'ending'
+
+export interface AIAnalysisScorecardItem {
+  score: number
+  max_score: number
+  rationale: string
+  support_ids: string[]
+}
+
+export interface AIAnalysisImprovementItem {
+  dimension: AIAnalysisScoreDimension
+  priority: 'high' | 'medium' | 'low'
+  suggestion: string
+}
+
 // AI 分析结果
 export interface AIAnalysisResult {
   version?: number
@@ -158,7 +181,7 @@ export interface AIAnalysisResult {
   }
   quality_score: number
   quality_feedback: string
-  improvements?: string[]
+  improvements?: Array<string | AIAnalysisImprovementItem>
   scores?: {
     opening?: number
     needs_discovery?: number
@@ -173,10 +196,22 @@ export interface AIAnalysisResult {
     primary?: string
     secondary?: string
   }
+  scorecard?: {
+    opening: AIAnalysisScorecardItem
+    needs_discovery: AIAnalysisScorecardItem
+    product_intro: AIAnalysisScorecardItem
+    objection_handling: AIAnalysisScorecardItem
+    closing: AIAnalysisScorecardItem
+    communication: AIAnalysisScorecardItem
+    compliance: AIAnalysisScorecardItem
+    ending: AIAnalysisScorecardItem
+  }
   supports?: AIAnalysisSupport[]
   evidence?: AIAnalysisEvidence[]
   risk_flags?: AIAnalysisRiskFlag[]
   compliance_adjustment?: AIAnalysisComplianceAdjustment
+  validation_warnings?: string[]
+  validation_errors?: string[]
   prompt_name?: string
   prompt_version?: number
   model_config?: string

@@ -34,6 +34,7 @@ import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
+import { Route as AuthenticatedCrmIndexRouteImport } from './routes/_authenticated/crm/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
 import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
@@ -66,6 +67,7 @@ import { Route as AuthenticatedAdminSchoolsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminScheduledTasksRouteImport } from './routes/_authenticated/admin/scheduled-tasks'
 import { Route as AuthenticatedAdminRegionsRouteImport } from './routes/_authenticated/admin/regions'
 import { Route as AuthenticatedAdminPositionsRouteImport } from './routes/_authenticated/admin/positions'
+import { Route as AuthenticatedAdminPageAccessRouteImport } from './routes/_authenticated/admin/page-access'
 import { Route as AuthenticatedAdminOrganizationTreeRouteImport } from './routes/_authenticated/admin/organization-tree'
 import { Route as AuthenticatedAdminLeadAccessStatsRouteImport } from './routes/_authenticated/admin/lead-access-stats'
 import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated/admin/integrations'
@@ -77,6 +79,7 @@ import { Route as AuthenticatedAdminDiscTestRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminDingtalkRobotsRouteImport } from './routes/_authenticated/admin/dingtalk-robots'
 import { Route as AuthenticatedAdminDepartmentsRouteImport } from './routes/_authenticated/admin/departments'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
+import { Route as AuthenticatedAdminDailyNoticesRouteImport } from './routes/_authenticated/admin/daily-notices'
 import { Route as AuthenticatedAdminCoursesRouteImport } from './routes/_authenticated/admin/courses'
 import { Route as AuthenticatedAdminCampusesRouteImport } from './routes/_authenticated/admin/campuses'
 import { Route as AuthenticatedAdminCampusDepartmentsRouteImport } from './routes/_authenticated/admin/campus-departments'
@@ -215,6 +218,11 @@ const AuthenticatedHelpCenterIndexRoute =
     path: '/help-center/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCrmIndexRoute = AuthenticatedCrmIndexRouteImport.update({
+  id: '/crm/',
+  path: '/crm/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
   id: '/chats/',
   path: '/chats/',
@@ -401,6 +409,12 @@ const AuthenticatedAdminPositionsRoute =
     path: '/positions',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminPageAccessRoute =
+  AuthenticatedAdminPageAccessRouteImport.update({
+    id: '/page-access',
+    path: '/page-access',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminOrganizationTreeRoute =
   AuthenticatedAdminOrganizationTreeRouteImport.update({
     id: '/organization-tree',
@@ -465,6 +479,12 @@ const AuthenticatedAdminDashboardRoute =
   AuthenticatedAdminDashboardRouteImport.update({
     id: '/dashboard',
     path: '/dashboard',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminDailyNoticesRoute =
+  AuthenticatedAdminDailyNoticesRouteImport.update({
+    id: '/daily-notices',
+    path: '/daily-notices',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminCoursesRoute =
@@ -565,6 +585,7 @@ export interface FileRoutesByFullPath {
   '/admin/campus-departments': typeof AuthenticatedAdminCampusDepartmentsRoute
   '/admin/campuses': typeof AuthenticatedAdminCampusesRoute
   '/admin/courses': typeof AuthenticatedAdminCoursesRoute
+  '/admin/daily-notices': typeof AuthenticatedAdminDailyNoticesRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
@@ -576,6 +597,7 @@ export interface FileRoutesByFullPath {
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
+  '/admin/page-access': typeof AuthenticatedAdminPageAccessRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
   '/admin/regions': typeof AuthenticatedAdminRegionsRoute
   '/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
@@ -608,6 +630,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
+  '/crm': typeof AuthenticatedCrmIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
@@ -641,6 +664,7 @@ export interface FileRoutesByTo {
   '/admin/campus-departments': typeof AuthenticatedAdminCampusDepartmentsRoute
   '/admin/campuses': typeof AuthenticatedAdminCampusesRoute
   '/admin/courses': typeof AuthenticatedAdminCoursesRoute
+  '/admin/daily-notices': typeof AuthenticatedAdminDailyNoticesRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
@@ -652,6 +676,7 @@ export interface FileRoutesByTo {
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
+  '/admin/page-access': typeof AuthenticatedAdminPageAccessRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
   '/admin/regions': typeof AuthenticatedAdminRegionsRoute
   '/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
@@ -684,6 +709,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
+  '/crm': typeof AuthenticatedCrmIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
@@ -724,6 +750,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/campus-departments': typeof AuthenticatedAdminCampusDepartmentsRoute
   '/_authenticated/admin/campuses': typeof AuthenticatedAdminCampusesRoute
   '/_authenticated/admin/courses': typeof AuthenticatedAdminCoursesRoute
+  '/_authenticated/admin/daily-notices': typeof AuthenticatedAdminDailyNoticesRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/_authenticated/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
@@ -735,6 +762,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/_authenticated/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/_authenticated/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
+  '/_authenticated/admin/page-access': typeof AuthenticatedAdminPageAccessRoute
   '/_authenticated/admin/positions': typeof AuthenticatedAdminPositionsRoute
   '/_authenticated/admin/regions': typeof AuthenticatedAdminRegionsRoute
   '/_authenticated/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
@@ -767,6 +795,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
+  '/_authenticated/crm/': typeof AuthenticatedCrmIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
@@ -805,6 +834,7 @@ export interface FileRouteTypes {
     | '/admin/campus-departments'
     | '/admin/campuses'
     | '/admin/courses'
+    | '/admin/daily-notices'
     | '/admin/dashboard'
     | '/admin/departments'
     | '/admin/dingtalk-robots'
@@ -816,6 +846,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/lead-access-stats'
     | '/admin/organization-tree'
+    | '/admin/page-access'
     | '/admin/positions'
     | '/admin/regions'
     | '/admin/scheduled-tasks'
@@ -848,6 +879,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/apps'
     | '/chats'
+    | '/crm'
     | '/help-center'
     | '/settings/'
     | '/tasks'
@@ -881,6 +913,7 @@ export interface FileRouteTypes {
     | '/admin/campus-departments'
     | '/admin/campuses'
     | '/admin/courses'
+    | '/admin/daily-notices'
     | '/admin/dashboard'
     | '/admin/departments'
     | '/admin/dingtalk-robots'
@@ -892,6 +925,7 @@ export interface FileRouteTypes {
     | '/admin/integrations'
     | '/admin/lead-access-stats'
     | '/admin/organization-tree'
+    | '/admin/page-access'
     | '/admin/positions'
     | '/admin/regions'
     | '/admin/scheduled-tasks'
@@ -924,6 +958,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apps'
     | '/chats'
+    | '/crm'
     | '/help-center'
     | '/settings'
     | '/tasks'
@@ -963,6 +998,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/campus-departments'
     | '/_authenticated/admin/campuses'
     | '/_authenticated/admin/courses'
+    | '/_authenticated/admin/daily-notices'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/departments'
     | '/_authenticated/admin/dingtalk-robots'
@@ -974,6 +1010,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/integrations'
     | '/_authenticated/admin/lead-access-stats'
     | '/_authenticated/admin/organization-tree'
+    | '/_authenticated/admin/page-access'
     | '/_authenticated/admin/positions'
     | '/_authenticated/admin/regions'
     | '/_authenticated/admin/scheduled-tasks'
@@ -1006,6 +1043,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/apps/'
     | '/_authenticated/chats/'
+    | '/_authenticated/crm/'
     | '/_authenticated/help-center/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
@@ -1209,6 +1247,13 @@ declare module '@tanstack/react-router' {
       path: '/help-center'
       fullPath: '/help-center'
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crm/': {
+      id: '/_authenticated/crm/'
+      path: '/crm'
+      fullPath: '/crm'
+      preLoaderRoute: typeof AuthenticatedCrmIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chats/': {
@@ -1435,6 +1480,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPositionsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/page-access': {
+      id: '/_authenticated/admin/page-access'
+      path: '/page-access'
+      fullPath: '/admin/page-access'
+      preLoaderRoute: typeof AuthenticatedAdminPageAccessRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/organization-tree': {
       id: '/_authenticated/admin/organization-tree'
       path: '/organization-tree'
@@ -1510,6 +1562,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/daily-notices': {
+      id: '/_authenticated/admin/daily-notices'
+      path: '/daily-notices'
+      fullPath: '/admin/daily-notices'
+      preLoaderRoute: typeof AuthenticatedAdminDailyNoticesRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/courses': {
@@ -1608,6 +1667,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminCampusDepartmentsRoute: typeof AuthenticatedAdminCampusDepartmentsRoute
   AuthenticatedAdminCampusesRoute: typeof AuthenticatedAdminCampusesRoute
   AuthenticatedAdminCoursesRoute: typeof AuthenticatedAdminCoursesRoute
+  AuthenticatedAdminDailyNoticesRoute: typeof AuthenticatedAdminDailyNoticesRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
   AuthenticatedAdminDingtalkRobotsRoute: typeof AuthenticatedAdminDingtalkRobotsRoute
@@ -1619,6 +1679,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminIntegrationsRoute: typeof AuthenticatedAdminIntegrationsRoute
   AuthenticatedAdminLeadAccessStatsRoute: typeof AuthenticatedAdminLeadAccessStatsRoute
   AuthenticatedAdminOrganizationTreeRoute: typeof AuthenticatedAdminOrganizationTreeRoute
+  AuthenticatedAdminPageAccessRoute: typeof AuthenticatedAdminPageAccessRoute
   AuthenticatedAdminPositionsRoute: typeof AuthenticatedAdminPositionsRoute
   AuthenticatedAdminRegionsRoute: typeof AuthenticatedAdminRegionsRoute
   AuthenticatedAdminScheduledTasksRoute: typeof AuthenticatedAdminScheduledTasksRoute
@@ -1641,6 +1702,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
       AuthenticatedAdminCampusDepartmentsRoute,
     AuthenticatedAdminCampusesRoute: AuthenticatedAdminCampusesRoute,
     AuthenticatedAdminCoursesRoute: AuthenticatedAdminCoursesRoute,
+    AuthenticatedAdminDailyNoticesRoute: AuthenticatedAdminDailyNoticesRoute,
     AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
     AuthenticatedAdminDepartmentsRoute: AuthenticatedAdminDepartmentsRoute,
     AuthenticatedAdminDingtalkRobotsRoute:
@@ -1656,6 +1718,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
       AuthenticatedAdminLeadAccessStatsRoute,
     AuthenticatedAdminOrganizationTreeRoute:
       AuthenticatedAdminOrganizationTreeRoute,
+    AuthenticatedAdminPageAccessRoute: AuthenticatedAdminPageAccessRoute,
     AuthenticatedAdminPositionsRoute: AuthenticatedAdminPositionsRoute,
     AuthenticatedAdminRegionsRoute: AuthenticatedAdminRegionsRoute,
     AuthenticatedAdminScheduledTasksRoute:
@@ -1739,6 +1802,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
+  AuthenticatedCrmIndexRoute: typeof AuthenticatedCrmIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
@@ -1763,6 +1827,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
+  AuthenticatedCrmIndexRoute: AuthenticatedCrmIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,

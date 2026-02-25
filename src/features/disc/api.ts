@@ -55,6 +55,8 @@ export async function getTempDiscRecords(params: {
   name?: string
   phone?: string
   is_migrated?: boolean
+  confidence_level?: 'high' | 'medium' | 'low'
+  has_mixed_type?: boolean
 } = {}): Promise<ApiResponse<PaginatedResponse<TempDISCRecordListItem>>> {
   return apiClient.get(`${HR_BASE}/temp-disc-records`, { params })
 }

@@ -78,6 +78,7 @@ const formSchema = z.object({
   description: z.string().max(500, '描述不能超过500个字符').optional(),
   sort_order: z.number().min(0, '排序值不能小于0').default(0),
   is_active: z.boolean().default(true),
+  is_area_office: z.boolean().default(false),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -109,6 +110,7 @@ export function CampusesPage() {
       description: '',
       sort_order: 0,
       is_active: true,
+      is_area_office: false,
     },
   })
 
@@ -218,6 +220,22 @@ export function CampusesPage() {
         },
       },
       {
+        accessorKey: 'is_area_office',
+        header: '类型',
+        cell: ({ row }) => {
+          if (row.original.id.startsWith('__skeleton__')) {
+            return <Skeleton className="h-5 w-14" />
+          }
+          return row.original.is_area_office ? (
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+              区域办
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">普通校区</span>
+          )
+        },
+      },
+      {
         accessorKey: 'address',
         header: '地址',
         cell: ({ row }) => {
@@ -321,6 +339,7 @@ export function CampusesPage() {
         description: '',
         sort_order: 0,
         is_active: true,
+        is_area_office: false,
         created_at: '',
         updated_at: '',
       })),
@@ -346,6 +365,7 @@ export function CampusesPage() {
       description: '',
       sort_order: 0,
       is_active: true,
+      is_area_office: false,
     })
     setDialogOpen(true)
   }
@@ -361,6 +381,7 @@ export function CampusesPage() {
       description: item.description || '',
       sort_order: item.sort_order,
       is_active: item.is_active,
+      is_area_office: item.is_area_office || false,
     })
     setDialogOpen(true)
   }
@@ -635,6 +656,26 @@ export function CampusesPage() {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="is_area_office"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>区域办</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        设为区域办后，该校区下的员工可查看同区域所有校区的数据
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
