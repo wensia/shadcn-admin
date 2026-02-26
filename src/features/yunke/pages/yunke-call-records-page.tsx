@@ -3,7 +3,9 @@
  * 布局参考线索管理页面
  */
 
+import { useState, useCallback } from 'react'
 import { Main } from '@/components/layout/main'
+import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
 import {
   CallRecordsProvider,
   useCallRecords,
@@ -28,6 +30,14 @@ function CallRecordsContent() {
     setSize,
     refetch,
   } = useCallRecords()
+
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+  const [leadSheetOpen, setLeadSheetOpen] = useState(false)
+
+  const handleViewLead = useCallback((leadId: string) => {
+    setSelectedLeadId(leadId)
+    setLeadSheetOpen(true)
+  }, [])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -57,8 +67,16 @@ function CallRecordsContent() {
           isLoading={isLoading}
           onPageChange={setPage}
           onSizeChange={setSize}
+          onViewLead={handleViewLead}
         />
       </div>
+
+      {/* 线索详情抽屉 */}
+      <LeadDetailSheet
+        leadId={selectedLeadId}
+        open={leadSheetOpen}
+        onOpenChange={setLeadSheetOpen}
+      />
     </div>
   )
 }

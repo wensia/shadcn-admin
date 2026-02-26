@@ -168,10 +168,9 @@ class ApiClient {
           }
 
           // 如果当前在登录页面，也不自动处理401
-          if (typeof window !== 'undefined' && (
-            window.location.pathname.startsWith('/login') ||
+          if (typeof window !== 'undefined' &&
             window.location.pathname.startsWith('/sign-in')
-          )) {
+          ) {
             return Promise.reject(normalizedError)
           }
 
@@ -182,11 +181,11 @@ class ApiClient {
           toast.warning('登录已过期，正在跳转到登录页面')
           normalizedError.messageShown = true
 
-          // 跳转到登录页
+          // 跳转到登录页，携带当前路径以便登录后返回
           if (typeof window !== 'undefined') {
             const currentPath = window.location.pathname + window.location.search
-            if (!currentPath.startsWith('/login')) {
-              window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+            if (!currentPath.startsWith('/sign-in')) {
+              window.location.href = `/sign-in?redirect=${encodeURIComponent(currentPath)}`
             }
           }
 

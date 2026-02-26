@@ -138,7 +138,7 @@ export function CallRecordsToolbar({
           value={filters.department || 'all'}
           onValueChange={(v) => onFilterChange('department', v === 'all' ? undefined : v)}
         >
-          <SelectTrigger size="default" className="w-[130px]">
+          <SelectTrigger className="w-[130px]">
             <SelectValue placeholder="部门" />
           </SelectTrigger>
           <SelectContent>
@@ -209,7 +209,7 @@ export function CallRecordsToolbar({
         value={filters.call_type || 'all'}
         onValueChange={(v) => onFilterChange('call_type', v === 'all' ? undefined : v)}
       >
-        <SelectTrigger size="default" className="w-[120px]">
+        <SelectTrigger className="w-[120px]">
           <SelectValue placeholder="类型" />
         </SelectTrigger>
         <SelectContent>
@@ -226,7 +226,7 @@ export function CallRecordsToolbar({
           onFilterChange('has_recording', v === 'all' ? undefined : v === 'true')
         }
       >
-        <SelectTrigger size="default" className="w-[110px]">
+        <SelectTrigger className="w-[110px]">
           <SelectValue placeholder="录音" />
         </SelectTrigger>
         <SelectContent>
@@ -241,7 +241,7 @@ export function CallRecordsToolbar({
         value={filters.transcript_status || 'all'}
         onValueChange={(v) => onFilterChange('transcript_status', v === 'all' ? undefined : v)}
       >
-        <SelectTrigger size="default" className="w-[110px]">
+        <SelectTrigger className="w-[110px]">
           <SelectValue placeholder="转录状态" />
         </SelectTrigger>
         <SelectContent>
@@ -322,7 +322,7 @@ export function CallRecordsToolbar({
         value={filters.ai_analysis_status || 'all'}
         onValueChange={(v) => onFilterChange('ai_analysis_status', v === 'all' ? undefined : v)}
       >
-        <SelectTrigger size="default" className="w-[120px]">
+        <SelectTrigger className="w-[120px]">
           <SelectValue placeholder="AI分析" />
         </SelectTrigger>
         <SelectContent>

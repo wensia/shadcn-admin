@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatTime } from '@/lib/utils/time'
+import { copyToClipboard } from '@/lib/utils'
 
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
@@ -313,20 +314,20 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => {
+                  onClick={async () => {
                     const text = formatTranscriptText(fullTranscript || [])
-                    navigator.clipboard.writeText(text)
-                    toast.success('已复制格式化对话文本')
+                    const ok = await copyToClipboard(text)
+                    if (ok) toast.success('已复制格式化对话文本')
                   }}
                 >
                   <FileType className="mr-2 h-4 w-4" aria-hidden="true" />
                   复制对话文本
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => {
+                  onClick={async () => {
                     const json = JSON.stringify(fullTranscript || [], null, 2)
-                    navigator.clipboard.writeText(json)
-                    toast.success('已复制原始 JSON')
+                    const ok = await copyToClipboard(json)
+                    if (ok) toast.success('已复制原始 JSON')
                   }}
                 >
                   <FileJson className="mr-2 h-4 w-4" aria-hidden="true" />

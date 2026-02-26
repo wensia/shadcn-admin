@@ -369,6 +369,7 @@ export function LeadDetailSheet({
               asCard={false}
               showReleaseToPool={true}
               submitText="保存跟进"
+              enableAiSuggestion={true}
               onSuccess={() => {
                 setFollowupDialogOpen(false)
                 // 刷新线索数据和跟进记录

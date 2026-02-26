@@ -191,9 +191,19 @@ export interface EmployeeItem {
   yunke?: YunkeInfo
   is_active: boolean
   is_superuser: boolean
+  has_api_key?: boolean
   joined_at?: string
   created_at?: string
   updated_at?: string
+}
+
+/** 员工提交令牌信息 */
+export interface EmployeeSubmitToken {
+  channel_id: string
+  channel_name: string
+  token: string
+  employee_id: string
+  employee_name: string
 }
 
 /** 员工身份 */
@@ -202,9 +212,16 @@ export interface EmployeeIdentityItem {
   employee_id: string
   employee_name: string
   employee_username: string
-  employee_joined_at?: string  // 员工入职日期
-  campus_id: string
-  campus_name: string
+  employee_joined_at?: string
+  scope_type: 'campus' | 'area' | 'district' | 'region'
+  campus_id?: string
+  campus_name?: string
+  region_id?: string
+  region_name?: string
+  district_id?: string
+  district_name?: string
+  area_id?: string
+  area_name?: string
   department_id: string
   department_name: string
   position_id: string
@@ -519,7 +536,11 @@ export interface EmployeeYunkeUpdate {
 /** 快速创建员工 */
 export interface QuickCreateEmployeeData {
   name: string
-  campus_id: string
+  scope_type?: string
+  campus_id?: string
+  region_id?: string
+  district_id?: string
+  area_id?: string
   department_id: string
   position_id: string
   joined_at?: string
@@ -551,7 +572,11 @@ export interface QuickCreateEmployeeResult {
 /** 创建员工身份 */
 export interface EmployeeIdentityCreate {
   employee_id: string
-  campus_id: string
+  scope_type?: string
+  campus_id?: string
+  region_id?: string
+  district_id?: string
+  area_id?: string
   department_id: string
   position_id: string
   is_primary?: boolean
@@ -563,7 +588,11 @@ export interface EmployeeIdentityCreate {
 
 /** 更新员工身份 */
 export interface EmployeeIdentityUpdate {
+  scope_type?: string
   campus_id?: string
+  region_id?: string
+  district_id?: string
+  area_id?: string
   department_id?: string
   position_id?: string
   is_primary?: boolean
@@ -678,6 +707,18 @@ export interface SourceChannel {
   description?: string
   extra_fields?: ChannelFieldConfig[]
   channel_config?: {
+    // 快速录入配置
+    submit_token?: string
+    submit_campus_id?: string
+    submit_tokens?: Record<string, { employee_id: string; employee_name: string }>
+    // 钉钉通知配置
+    dingtalk_notify?: {
+      enabled: boolean
+      robot_id: string | null
+      notify_on_submit: boolean
+      notify_on_collision: boolean
+    }
+    // 兼容旧字段
     fields?: ChannelFieldConfig[]
     extra_fields?: Record<string, {
       label: string

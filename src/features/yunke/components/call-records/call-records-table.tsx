@@ -31,6 +31,7 @@ interface CallRecordsTableProps {
   isLoading?: boolean
   onPageChange: (page: number) => void
   onSizeChange: (size: number) => void
+  onViewLead?: (leadId: string) => void
 }
 
 export function CallRecordsTable({
@@ -41,6 +42,7 @@ export function CallRecordsTable({
   isLoading,
   onPageChange,
   onSizeChange,
+  onViewLead,
 }: CallRecordsTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [selectedRecord, setSelectedRecord] = useState<CallRecord | null>(null)
@@ -69,8 +71,9 @@ export function CallRecordsTable({
       createCallRecordsColumns({
         onPlayRecord: handlePlayRecord,
         onViewTranscript: handleViewTranscript,
+        onViewLead,
       }),
-    []
+    [onViewLead]
   )
 
   // 初始化表格

@@ -491,6 +491,94 @@ export const employeeApi = {
   }
 }
 
+/** AI 跟进建议 */
+export interface FollowupSuggestion {
+  followup_result: string
+  followup_content: string
+  intention_level: string | null
+  next_followup_at: string | null
+  call_record_id: string
+  call_time: string | null
+  duration: number | null
+  ai_summary: string
+  ai_quality_score: number | null
+  ai_label_primary: string
+}
+
+/** 获取 AI 跟进建议 */
+export function getFollowupSuggestion(
+  leadId: string,
+  callRecordId?: string
+): Promise<ApiResponse<FollowupSuggestion | null>> {
+  return apiClient.get<ApiResponse<FollowupSuggestion | null>>(
+    `/leads/${leadId}/followup-suggestion`,
+    { params: callRecordId ? { call_record_id: callRecordId } : undefined }
+  )
+}
+
+/** 通话处理流水线状态 */
+export type PipelineStatus = 'no_calls' | 'no_recording' | 'short_call' | 'transcribing' | 'analyzing' | 'ready'
+
+export interface CallPipelineResult {
+  pipeline_status: PipelineStatus
+  message: string
+  call_record_id?: string
+  call_time?: string
+  duration?: number
+}
+
+/** 触发通话记录快速处理流水线 */
+export function triggerCallPipeline(
+  leadId: string
+): Promise<ApiResponse<CallPipelineResult>> {
+  return apiClient.post<ApiResponse<CallPipelineResult>>(
+    `/leads/${leadId}/trigger-call-pipeline`
+  )
+}
+
+/** 转录文本段落 */
+export interface TranscriptSegment {
+  speaker: string
+  start_time: number
+  end_time: number
+  text: string
+}
+
+/** 线索通话记录项 */
+export interface LeadCallRecord {
+  id: string
+  caller: string | null
+  callee: string | null
+  call_time: string | null
+  duration: number | null
+  call_type: string | null
+  call_result: string | null
+  staff_name: string | null
+  has_recording: boolean
+  recording_url: string | null
+  // 转录文本
+  transcript_status: string | null
+  transcript: TranscriptSegment[] | null
+  // AI 分析
+  ai_analysis_status: string | null
+  ai_quality_score: number | null
+  ai_customer_intent: string | null
+  ai_summary: string | null
+  ai_label_primary: string | null
+  ai_label_secondary: string | null
+}
+
+/** 获取线索关联的通话记录 */
+export function getLeadCallRecords(
+  leadId: string,
+  params?: { page?: number; size?: number }
+): Promise<ApiResponse<PaginatedResponse<LeadCallRecord>>> {
+  return apiClient.get<ApiResponse<PaginatedResponse<LeadCallRecord>>>(
+    `/leads/${leadId}/call-records`,
+    { params }
+  )
+}
+
 /**
  * 云客外呼 API
  * 用于拨打电话和挂断通话

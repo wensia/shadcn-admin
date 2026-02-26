@@ -224,6 +224,33 @@ Dialog 内的表单字段较多时，内容可能超出弹窗高度。如果不�
 - 设置配置弹窗
 - 任何内容可能超出视口高度的 Dialog
 
+## 剪贴板复制规范
+
+**重要：禁止直接使用 `navigator.clipboard.writeText()`，必须使用项目统一的 `copyToClipboard` 工具函数**
+
+`navigator.clipboard` API 仅在安全上下文（HTTPS 或 localhost）中可用，HTTP 环境下会静默失败。项目的 `copyToClipboard` 函数内置了 `execCommand` 降级方案，确保 HTTP 环境下也能正常复制。
+
+```tsx
+import { copyToClipboard } from '@/lib/utils'
+
+// 正确做法
+const handleCopy = async () => {
+  const success = await copyToClipboard(text)
+  if (success) {
+    toast.success('已复制')
+  }
+}
+
+// 错误做法 - HTTP 环境下会失败
+navigator.clipboard.writeText(text) // ❌ 禁止
+```
+
+### 规则
+
+1. **所有复制操作**必须通过 `copyToClipboard` 函数（`@/lib/utils`）
+2. **禁止**在任何组件中直接调用 `navigator.clipboard`
+3. `copyToClipboard` 返回 `Promise<boolean>`，应根据返回值决定是否显示成功提示
+
 ## Badge 状态样式
 
 使用全局状态样式配置：

@@ -1,117 +1,166 @@
 /**
- * DISC 问题卡片 - 移动端优化 + Anthropic 品牌配色
+ * DISC 问题卡片
+ *
+ * Design system: Nature Distilled + Flat hybrid
+ *   - Cards: frosted white, soft shadow, no hard borders
+ *   - Buttons: pill outline (unselected) → solid fill (selected)
+ *   - Touch target ≥ 44px, focus-visible ring, prefers-reduced-motion
+ *   - Left accent bar on selected cards
  */
 
 import { cn } from '@/lib/utils'
-import { Check } from 'lucide-react'
+import { Check, ThumbsUp, ThumbsDown } from 'lucide-react'
 import type { DISCQuestion, DISCAnswer } from '../types'
 
-interface DiscQuestionCardProps {
+/* ─── Palette ─── */
+const clr = {
+  most: { bg: '#788c5d', ring: '#788c5d', tint: 'rgba(120,140,93,0.07)' },
+  least: { bg: '#c9554a', ring: '#c9554a', tint: 'rgba(201,85,74,0.06)' },
+} as const
+
+interface Props {
   question: DISCQuestion
   answer: DISCAnswer
-  onAnswer: (answer: DISCAnswer) => void
+  onAnswer: (a: DISCAnswer) => void
 }
 
-export function DiscQuestionCard({
-  question,
-  answer,
-  onAnswer,
-}: DiscQuestionCardProps) {
-  const handleMost = (index: number) => {
-    if (answer.most === index) {
-      onAnswer({ ...answer, most: null })
-    } else if (answer.least === index) {
-      onAnswer({ ...answer, most: index, least: null })
-    } else {
-      onAnswer({ ...answer, most: index })
-    }
-  }
-
-  const handleLeast = (index: number) => {
-    if (answer.least === index) {
-      onAnswer({ ...answer, least: null })
-    } else if (answer.most === index) {
-      onAnswer({ ...answer, least: index, most: null })
-    } else {
-      onAnswer({ ...answer, least: index })
-    }
+export function DiscQuestionCard({ question, answer, onAnswer }: Props) {
+  const toggle = (kind: 'most' | 'least', idx: number) => {
+    const other = kind === 'most' ? 'least' : 'most'
+    if (answer[kind] === idx) return onAnswer({ ...answer, [kind]: null })
+    if (answer[other] === idx) return onAnswer({ ...answer, [kind]: idx, [other]: null })
+    onAnswer({ ...answer, [kind]: idx })
   }
 
   return (
-    <div>
-      {/* 题号与说明 */}
-      <div className="mb-4">
-        <div
-          className="mb-1.5 inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-bold shadow-sm"
-          style={{ backgroundColor: 'rgba(255,255,255,0.85)', color: '#141413' }}
-        >
-          第 {question.id} 题
+    <div className="space-y-6">
+      {/* ── 题头 ── */}
+      <header>
+        <div className="mb-2.5 flex items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-[#3d3d3a] shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
+            {question.id} / 24
+          </span>
+          {question.category && (
+            <span className="inline-flex items-center rounded-full bg-[#d97757]/10 px-2.5 py-1 text-[11px] font-semibold text-[#d97757]">
+              {question.category}
+            </span>
+          )}
         </div>
-        <p className="mt-2 text-[13px]" style={{ color: '#b0aea5' }}>
-          请选择最符合和最不符合你的描述
-        </p>
-      </div>
 
-      {/* 选项列表 */}
+        {question.scenario && (
+          <p className="text-[15px] font-medium leading-[1.75] text-[#2c2c2a]">
+            {question.scenario}
+          </p>
+        )}
+
+      </header>
+
+      {/* ── 选项 ── */}
       <div className="space-y-3">
-        {question.options.map((option, index) => {
-          const isMost = answer.most === index
-          const isLeast = answer.least === index
-          const isSelected = isMost || isLeast
+        {question.options.map((opt, i) => {
+          const isMost = answer.most === i
+          const isLeast = answer.least === i
+          const active = isMost || isLeast
 
           return (
             <div
-              key={index}
+              key={i}
               className={cn(
-                'rounded-2xl border-2 p-4 transition-all duration-200',
-                !isSelected && 'bg-white'
+                'relative rounded-2xl p-4 transition-all duration-200',
+                'motion-reduce:transition-none',
+                active
+                  ? 'shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                  : 'bg-white/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.07)]',
               )}
               style={
-                isMost
-                  ? { borderColor: '#788c5d', backgroundColor: 'rgba(120,140,93,0.08)' }
-                  : isLeast
-                    ? { borderColor: '#c9554a', backgroundColor: 'rgba(201,85,74,0.06)' }
-                    : { borderColor: '#e8e6dc' }
+                active
+                  ? { backgroundColor: isMost ? clr.most.tint : clr.least.tint }
+                  : undefined
               }
             >
-              <p
-                className="mb-3 text-[15px] leading-relaxed"
-                style={{ color: '#141413' }}
-              >
-                {option.label}
+              {/* 左色条 */}
+              {active && (
+                <div
+                  className="absolute inset-y-2 left-0 w-[3px] rounded-full"
+                  style={{ backgroundColor: isMost ? clr.most.bg : clr.least.bg }}
+                />
+              )}
+
+              {/* 选项文字 */}
+              <p className="mb-3 text-[14px] leading-[1.75] text-[#2c2c2a]">
+                {opt.label}
               </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13px] font-medium transition-all duration-200 active:scale-[0.96]"
-                  style={
-                    isMost
-                      ? { backgroundColor: '#788c5d', color: '#fff', boxShadow: '0 1px 3px rgba(120,140,93,0.3)' }
-                      : { backgroundColor: '#e8e6dc', color: '#b0aea5' }
-                  }
-                  onClick={() => handleMost(index)}
-                >
-                  {isMost && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                  最符合
-                </button>
-                <button
-                  type="button"
-                  className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13px] font-medium transition-all duration-200 active:scale-[0.96]"
-                  style={
-                    isLeast
-                      ? { backgroundColor: '#c9554a', color: '#fff', boxShadow: '0 1px 3px rgba(201,85,74,0.3)' }
-                      : { backgroundColor: '#e8e6dc', color: '#b0aea5' }
-                  }
-                  onClick={() => handleLeast(index)}
-                >
-                  {isLeast && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                  最不符合
-                </button>
+
+              {/* 按钮组 */}
+              <div className="flex gap-2.5">
+                <ActionBtn
+                  active={isMost}
+                  kind="most"
+                  onClick={() => toggle('most', i)}
+                />
+                <ActionBtn
+                  active={isLeast}
+                  kind="least"
+                  onClick={() => toggle('least', i)}
+                />
               </div>
             </div>
           )
         })}
       </div>
     </div>
+  )
+}
+
+/* ── 最符合 / 最不符合 按钮 ── */
+function ActionBtn({
+  active,
+  kind,
+  onClick,
+}: {
+  active: boolean
+  kind: 'most' | 'least'
+  onClick: () => void
+}) {
+  const c = clr[kind]
+  const label = kind === 'most' ? '最符合' : '最不符合'
+  const Icon = kind === 'most' ? ThumbsUp : ThumbsDown
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        // 基础：pill, 44px 触控高度, flex 居中
+        'flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl text-[13px] font-medium',
+        // 过渡 + 点按
+        'transition-all duration-200 active:scale-[0.96]',
+        'motion-reduce:transition-none motion-reduce:active:scale-100',
+        // focus-visible
+        'outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+        active
+          ? 'text-white shadow-sm'
+          : [
+              // 未选中：白底 + 描边 + 可读文字
+              'bg-white text-[#7a7a74]',
+              'ring-1 ring-inset ring-black/[0.08]',
+              kind === 'most'
+                ? 'hover:bg-[#788c5d]/[0.06] hover:text-[#5e7043] hover:ring-[#788c5d]/25'
+                : 'hover:bg-[#c9554a]/[0.06] hover:text-[#a8433a] hover:ring-[#c9554a]/25',
+            ],
+      )}
+      style={
+        active
+          ? { backgroundColor: c.bg, boxShadow: `0 2px 6px ${c.bg}33` }
+          : undefined
+      }
+    >
+      {active ? (
+        <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+      ) : (
+        <Icon className="h-3 w-3 opacity-30" />
+      )}
+      {label}
+    </button>
   )
 }

@@ -81,6 +81,11 @@ export const crmNavGroups: NavGroup[] = [
         icon: Home,
       },
       {
+        title: '通话记录',
+        url: '/crm/call-records',
+        icon: PhoneCall,
+      },
+      {
         title: '连续外呼',
         url: '/crm/continuous-call',
         icon: Headphones,
@@ -89,6 +94,11 @@ export const crmNavGroups: NavGroup[] = [
         title: '日控表',
         url: '/crm/visit-schedule',
         icon: Calendar,
+      },
+      {
+        title: 'AI 数据助手',
+        url: '/crm/ai-assistant',
+        icon: Bot,
       },
       {
         title: '数据统计',
@@ -117,7 +127,7 @@ export const crmNavGroups: NavGroup[] = [
     items: [
       {
         title: '人事管理',
-        url: '/crm/hr',
+        url: '/hr/disc-test',
         icon: UserCog,
       },
       {
@@ -267,21 +277,6 @@ export const adminNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'DISC测试',
-    items: [
-      {
-        title: 'DISC性格测试',
-        url: '/admin/disc-test',
-        icon: ClipboardList,
-      },
-      {
-        title: '临时DISC记录',
-        url: '/admin/temp-disc-records',
-        icon: FileText,
-      },
-    ],
-  },
-  {
     title: '系统配置',
     items: [
       {
@@ -313,6 +308,35 @@ export const adminNavGroups: NavGroup[] = [
         title: '集成配置',
         url: '/admin/integrations',
         icon: Settings2,
+      },
+    ],
+  },
+]
+
+// 人事管理导航组
+export const hrNavGroups: NavGroup[] = [
+  {
+    title: '导航',
+    items: [
+      {
+        title: '返回 CRM',
+        url: '/crm/leads',
+        icon: ArrowLeft,
+      },
+    ],
+  },
+  {
+    title: 'DISC 性格测试',
+    items: [
+      {
+        title: 'DISC 测试管理',
+        url: '/hr/disc-test',
+        icon: ClipboardList,
+      },
+      {
+        title: '临时 DISC 记录',
+        url: '/hr/temp-disc-records',
+        icon: FileText,
       },
     ],
   },
@@ -407,6 +431,15 @@ export const adminTeams = [
     name: '管理后台',
     logo: Settings,
     plan: '系统管理',
+  },
+]
+
+// 人事管理团队配置
+export const hrTeams = [
+  {
+    name: '人事管理',
+    logo: UserCog,
+    plan: '人事系统',
   },
 ]
 

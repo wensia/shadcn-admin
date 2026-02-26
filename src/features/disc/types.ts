@@ -1,5 +1,5 @@
 /**
- * DISC 性格测试类型定义
+ * DISC 性格测试类型定义 - 通用职场版
  */
 
 // DISC 维度
@@ -14,6 +14,8 @@ export interface DISCOption {
 // 单道题
 export interface DISCQuestion {
   id: number
+  scenario?: string   // 场景描述
+  category?: string   // 场景类别
   options: DISCOption[]
 }
 
@@ -28,8 +30,9 @@ export interface DISCTestSubmitData {
   name: string
   phone: string
   answers: DISCAnswer[]
-  appointment_id?: string
   test_code?: string
+  start_time?: string | null
+  ref?: string
 }
 
 // DISC 类型信息
@@ -50,6 +53,20 @@ export interface DISCGraphData {
   C: number
 }
 
+// 岗位适配度单项
+export interface DISCJobFitItem {
+  jobKey: string
+  jobName: string
+  matchScore: number
+  idealScores: Record<DISCDimension, number>
+}
+
+// 岗位适配度
+export interface DISCJobFit {
+  items: DISCJobFitItem[]
+  bestMatch: string | null
+}
+
 // 后端返回的完整结果
 export interface DISCResult {
   scores: Record<DISCDimension, number>
@@ -65,6 +82,7 @@ export interface DISCResult {
     leastCounts: Record<DISCDimension, number>
     rawScores?: Record<DISCDimension, number>
   }
+  jobFit?: DISCJobFit
   interpretation?: Record<DISCDimension, string>
   characteristics?: {
     primary: string[]
@@ -127,28 +145,6 @@ export interface TempDISCRecordDetail {
   created_at: string
 }
 
-// DISC 测试链接
-export interface DiscTestLink {
-  id: string
-  appointment_id: string
-  name: string
-  phone?: string
-  test_url: string
-  status: 'PENDING' | 'COMPLETED' | 'EXPIRED'
-  test_record_id?: string
-  expires_at?: string
-  completed_at?: string
-  notes?: string
-  created_at: string
-}
-
-// 创建链接请求
-export interface DiscTestLinkCreate {
-  name: string
-  phone?: string
-  notes?: string
-}
-
 // 分页响应
 export interface PaginatedResponse<T> {
   items: T[]
@@ -165,8 +161,8 @@ export const DISC_TYPE_CONFIG: Record<DISCDimension, {
   bgColor: string
   description: string
 }> = {
-  D: { label: '支配型', color: '#dc2626', bgColor: '#fff1f0', description: '直接果断、竞争意识强、喜欢挑战、行动迅速' },
-  I: { label: '影响型', color: '#ea580c', bgColor: '#fff7e6', description: '热情乐观、善于社交、富有创造力、喜欢认可' },
-  S: { label: '稳健型', color: '#16a34a', bgColor: '#e6fffb', description: '耐心友善、重视团队、可靠稳定、善于倾听' },
-  C: { label: '服从型', color: '#2563eb', bgColor: '#e6f7ff', description: '精确细致、注重细节、善于分析、重视规则' },
+  D: { label: '支配型', color: '#dc2626', bgColor: '#fff1f0', description: '目标导向、执行力强、善于快速决策和资源调度' },
+  I: { label: '影响型', color: '#ea580c', bgColor: '#fff7e6', description: '善于沟通表达、社交能力强、善于激发团队热情' },
+  S: { label: '稳健型', color: '#16a34a', bgColor: '#e6fffb', description: '耐心倾听、稳定可靠、善于维护团队和谐' },
+  C: { label: '谨慎型', color: '#2563eb', bgColor: '#e6f7ff', description: '做事严谨细致、善于数据分析、注重流程规范' },
 }

@@ -14,6 +14,7 @@ interface LeadsSearchParams {
   source_channel_id?: string
   campus_id?: string
   search?: string
+  detail?: string
 }
 
 export const Route = createFileRoute('/_authenticated/crm/leads/')({
@@ -26,6 +27,7 @@ export const Route = createFileRoute('/_authenticated/crm/leads/')({
       source_channel_id: typeof search.source_channel_id === 'string' ? search.source_channel_id : undefined,
       campus_id: typeof search.campus_id === 'string' ? search.campus_id : undefined,
       search: typeof search.search === 'string' ? search.search : undefined,
+      detail: typeof search.detail === 'string' ? search.detail : undefined,
     }
   }
 })

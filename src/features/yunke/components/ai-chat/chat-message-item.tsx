@@ -3,7 +3,7 @@ import { Copy, Check } from 'lucide-react'
 import { motion } from 'motion/react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { cn } from '@/lib/utils'
+import { cn, copyToClipboard } from '@/lib/utils'
 import type { ChatMessage } from './use-ai-chat'
 import { ChatToolIndicator } from './chat-tool-indicator'
 import { Spinner } from './spinner'
@@ -111,11 +111,12 @@ function ResponseCard({
     }
   }, [text, isStreaming])
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text).then(() => {
+  const handleCopy = useCallback(async () => {
+    const ok = await copyToClipboard(text)
+    if (ok) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    })
+    }
   }, [text])
 
   return (

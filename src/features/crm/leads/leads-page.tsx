@@ -92,6 +92,12 @@ export function LeadsPage() {
       setSearchValue(searchParams.search)
     }
 
+    // 线索详情（从其他页面跳转过来时打开详情抽屉）
+    if (searchParams.detail) {
+      setCurrentLeadId(searchParams.detail)
+      setDetailSheetOpen(true)
+    }
+
     // 如果有 URL 参数，更新 filters
     if (Object.keys(urlFilters).length > 0) {
       setFilters(prev => ({ ...prev, ...urlFilters }))

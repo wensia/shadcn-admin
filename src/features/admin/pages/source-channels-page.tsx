@@ -15,7 +15,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, Share2, Filter, X, Settings2, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Share2, Filter, X, Settings2, RefreshCw, Copy, Link, Bot, Bell } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,8 +68,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { sourceChannelApi } from '../api'
-import type { SourceChannel } from '../types'
+import adminApi, { sourceChannelApi, dingtalkRobotsApi } from '../api'
+import type { SourceChannel, DingtalkRobot } from '../types'
 import { StatusBadge, SourceChannelCategoryBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -116,6 +116,21 @@ const formSchema = z.object({
   sort_order: z.number().min(0, '排序值不能小于0').default(0),
   is_active: z.boolean().default(true),
   extra_fields: z.array(extraFieldSchema).default([]),
+  // 快速录入 & 钉钉通知配置
+  channel_config: z.object({
+    submit_campus_id: z.string().optional(),
+    dingtalk_notify: z.object({
+      enabled: z.boolean().default(false),
+      robot_id: z.string().nullable().optional(),
+      notify_on_submit: z.boolean().default(true),
+      notify_on_collision: z.boolean().default(false),
+    }).default({
+      enabled: false,
+      robot_id: null,
+      notify_on_submit: true,
+      notify_on_collision: false,
+    }),
+  }).default({}),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -146,6 +161,15 @@ export function SourceChannelsPage() {
       sort_order: 0,
       is_active: true,
       extra_fields: [],
+      channel_config: {
+        submit_campus_id: '',
+        dingtalk_notify: {
+          enabled: false,
+          robot_id: null,
+          notify_on_submit: true,
+          notify_on_collision: false,
+        },
+      },
     },
   })
 
@@ -174,6 +198,74 @@ export function SourceChannelsPage() {
       }
       const response = await sourceChannelApi.getChannelsPaginated(params)
       return response
+    },
+  })
+
+  // 获取校区列表（快速录入配置需要）
+  const { data: campuses = [] } = useQuery({
+    queryKey: ['campuses-simple'],
+    queryFn: async () => {
+      const res = await adminApi.getCampusesSimple()
+      return res?.data || []
+    },
+    enabled: dialogOpen,
+  })
+
+  // 获取启用的钉钉机器人列表
+  const { data: robots = [] } = useQuery({
+    queryKey: ['dingtalk-robots-active'],
+    queryFn: () => dingtalkRobotsApi.getActive(),
+    enabled: dialogOpen,
+  })
+
+  // 获取员工列表（用于选择添加令牌的员工）
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees-simple-for-token'],
+    queryFn: async () => {
+      const res = await adminApi.getEmployees({ size: 200, is_active: true })
+      return res?.data?.items || []
+    },
+    enabled: dialogOpen,
+  })
+
+  // 添加员工令牌状态
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('')
+
+  // 添加员工令牌
+  const addTokenMutation = useMutation({
+    mutationFn: ({ channelId, employeeId, employeeName }: { channelId: string; employeeId: string; employeeName: string }) =>
+      sourceChannelApi.addSubmitToken(channelId, employeeId, employeeName),
+    onSuccess: () => {
+      toast.success('令牌已添加')
+      setSelectedEmployeeId('')
+      queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
+      // 刷新编辑项数据
+      if (editingItem) {
+        sourceChannelApi.getChannelById(editingItem.id).then(ch => {
+          if (ch) setEditingItem(ch)
+        })
+      }
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '添加令牌失败')
+    },
+  })
+
+  // 移除员工令牌
+  const removeTokenMutation = useMutation({
+    mutationFn: ({ channelId, token }: { channelId: string; token: string }) =>
+      sourceChannelApi.removeSubmitToken(channelId, token),
+    onSuccess: () => {
+      toast.success('令牌已移除')
+      queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
+      if (editingItem) {
+        sourceChannelApi.getChannelById(editingItem.id).then(ch => {
+          if (ch) setEditingItem(ch)
+        })
+      }
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '移除令牌失败')
     },
   })
 
@@ -357,6 +449,15 @@ export function SourceChannelsPage() {
       sort_order: 0,
       is_active: true,
       extra_fields: [],
+      channel_config: {
+        submit_campus_id: '',
+        dingtalk_notify: {
+          enabled: false,
+          robot_id: null,
+          notify_on_submit: true,
+          notify_on_collision: false,
+        },
+      },
     })
     setDialogOpen(true)
   }
@@ -386,6 +487,7 @@ export function SourceChannelsPage() {
       }))
     }
 
+    const config = item.channel_config || {}
     form.reset({
       name: item.name,
       category: (item.category?.toUpperCase() || 'ONLINE') as FormData['category'],
@@ -393,6 +495,15 @@ export function SourceChannelsPage() {
       sort_order: item.sort_order,
       is_active: item.is_active,
       extra_fields: extraFieldsData,
+      channel_config: {
+        submit_campus_id: config.submit_campus_id || '',
+        dingtalk_notify: {
+          enabled: config.dingtalk_notify?.enabled || false,
+          robot_id: config.dingtalk_notify?.robot_id || null,
+          notify_on_submit: config.dingtalk_notify?.notify_on_submit ?? true,
+          notify_on_collision: config.dingtalk_notify?.notify_on_collision ?? false,
+        },
+      },
     })
     setDialogOpen(true)
   }
@@ -419,9 +530,12 @@ export function SourceChannelsPage() {
         field => field.field_name.trim() && field.field_label.trim()
       ).map(field => ({
         ...field,
-        // 如果不是选择框类型，清空 options
         options: field.field_type === 'select' ? field.options : undefined,
       })),
+      channel_config: {
+        ...(data.channel_config || {}),
+        submit_campus_id: data.channel_config?.submit_campus_id || undefined,
+      },
     }
 
     if (editingItem) {
@@ -432,6 +546,25 @@ export function SourceChannelsPage() {
     } else {
       createMutation.mutate(submitData)
     }
+  }
+
+  // 添加员工令牌
+  const handleAddEmployeeToken = () => {
+    if (!editingItem || !selectedEmployeeId) return
+    const emp = employees.find((e: { id: string }) => e.id === selectedEmployeeId)
+    if (!emp) return
+    addTokenMutation.mutate({
+      channelId: editingItem.id,
+      employeeId: emp.id,
+      employeeName: (emp as { id: string; name: string }).name,
+    })
+  }
+
+  // 复制员工录入链接
+  const handleCopyTokenLink = (token: string) => {
+    const link = `${window.location.origin}/lead-submit?token=${token}`
+    navigator.clipboard.writeText(link)
+    toast.success('链接已复制到剪贴板')
   }
 
   // 添加新的额外字段
@@ -608,8 +741,16 @@ export function SourceChannelsPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
               <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
-                <TabsList className="mx-6 mt-2 grid w-auto grid-cols-2">
+                <TabsList className="mx-6 mt-2 grid w-auto grid-cols-4">
                   <TabsTrigger value="basic">基本信息</TabsTrigger>
+                  <TabsTrigger value="submit-config">
+                    <Link className="mr-1 h-3 w-3" />
+                    快速录入
+                  </TabsTrigger>
+                  <TabsTrigger value="dingtalk-notify">
+                    <Bell className="mr-1 h-3 w-3" />
+                    钉钉通知
+                  </TabsTrigger>
                   <TabsTrigger value="extra-fields">
                     额外字段
                     {extraFields.length > 0 && (
@@ -719,6 +860,228 @@ export function SourceChannelsPage() {
                       </FormItem>
                     )}
                   />
+                </TabsContent>
+
+                {/* 快速录入配置 Tab */}
+                <TabsContent value="submit-config" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                  {/* 归属校区 */}
+                  <FormField
+                    control={form.control}
+                    name="channel_config.submit_campus_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>归属校区</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || ''}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择线索归属校区" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {campuses.map((campus: { id: string; name: string }) => (
+                              <SelectItem key={campus.id} value={campus.id}>
+                                {campus.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* 员工提交令牌管理 */}
+                  <div className="space-y-3">
+                    <Label>员工专属链接</Label>
+
+                    {!editingItem ? (
+                      <p className="text-xs text-muted-foreground">请先保存渠道后再管理员工令牌</p>
+                    ) : (
+                      <>
+                        {/* 添加员工 */}
+                        <div className="flex gap-2">
+                          <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="选择员工" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {employees.map((emp: { id: string; name: string }) => (
+                                <SelectItem key={emp.id} value={emp.id}>
+                                  {emp.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleAddEmployeeToken}
+                            disabled={!selectedEmployeeId || addTokenMutation.isPending}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            生成链接
+                          </Button>
+                        </div>
+
+                        {/* 已有令牌列表 */}
+                        {(() => {
+                          const submitTokens = editingItem?.channel_config?.submit_tokens || {}
+                          const tokenEntries = Object.entries(submitTokens)
+                          if (tokenEntries.length === 0) {
+                            return (
+                              <div className="flex flex-col items-center justify-center py-6 text-center border rounded-lg border-dashed">
+                                <Link className="h-6 w-6 text-muted-foreground mb-2" />
+                                <p className="text-sm text-muted-foreground">暂无员工链接</p>
+                                <p className="text-xs text-muted-foreground mt-1">选择员工并点击生成链接</p>
+                              </div>
+                            )
+                          }
+                          return (
+                            <div className="space-y-2">
+                              {tokenEntries.map(([tok, info]) => (
+                                <Card key={tok} className="p-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-medium text-sm">{(info as { employee_name: string }).employee_name}</div>
+                                      <div className="text-xs text-muted-foreground font-mono truncate">
+                                        {`${window.location.origin}/lead-submit?token=${tok}`}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => handleCopyTokenLink(tok)}
+                                        title="复制链接"
+                                      >
+                                        <Copy className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-destructive"
+                                        onClick={() => removeTokenMutation.mutate({ channelId: editingItem.id, token: tok })}
+                                        title="移除"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          )
+                        })()}
+                      </>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* 钉钉通知配置 Tab */}
+                <TabsContent value="dingtalk-notify" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                  {/* 启用开关 */}
+                  <FormField
+                    control={form.control}
+                    name="channel_config.dingtalk_notify.enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>启用钉钉通知</FormLabel>
+                          <div className="text-sm text-muted-foreground">
+                            新线索提交时自动发送通知到钉钉群
+                          </div>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* 选择机器人（启用后显示） */}
+                  {form.watch('channel_config.dingtalk_notify.enabled') && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="channel_config.dingtalk_notify.robot_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>通知机器人</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value || ''}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <Bot className="mr-2 h-4 w-4" />
+                                  <SelectValue placeholder="选择钉钉机器人" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {robots.map((robot: DingtalkRobot) => (
+                                  <SelectItem key={robot.id} value={robot.id}>
+                                    {robot.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {robots.length === 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                暂无可用机器人，请先在钉钉机器人管理中创建
+                              </p>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 通知场景 */}
+                      <FormField
+                        control={form.control}
+                        name="channel_config.dingtalk_notify.notify_on_submit"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <FormLabel>新线索录入通知</FormLabel>
+                              <div className="text-sm text-muted-foreground">
+                                有新线索成功录入时发送通知
+                              </div>
+                            </div>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="channel_config.dingtalk_notify.notify_on_collision"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <FormLabel>撞量通知</FormLabel>
+                              <div className="text-sm text-muted-foreground">
+                                线索撞量时发送通知（包括成功接管和正在跟进中）
+                              </div>
+                            </div>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </TabsContent>
 
                 {/* 额外字段配置 Tab */}

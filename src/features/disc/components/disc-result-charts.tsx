@@ -88,10 +88,10 @@ export function DiscResultCharts({ result }: DiscResultChartsProps) {
       })
     : rawData?.mostCounts
       ? buildChartData({
-          D: (rawData.mostCounts.D / 20) * 100,
-          I: (rawData.mostCounts.I / 20) * 100,
-          S: (rawData.mostCounts.S / 20) * 100,
-          C: (rawData.mostCounts.C / 20) * 100,
+          D: (rawData.mostCounts.D / 24) * 100,
+          I: (rawData.mostCounts.I / 24) * 100,
+          S: (rawData.mostCounts.S / 24) * 100,
+          C: (rawData.mostCounts.C / 24) * 100,
         })
       : null
 
@@ -105,10 +105,10 @@ export function DiscResultCharts({ result }: DiscResultChartsProps) {
       })
     : rawData?.leastCounts
       ? buildChartData({
-          D: ((20 - rawData.leastCounts.D) / 20) * 100,
-          I: ((20 - rawData.leastCounts.I) / 20) * 100,
-          S: ((20 - rawData.leastCounts.S) / 20) * 100,
-          C: ((20 - rawData.leastCounts.C) / 20) * 100,
+          D: ((24 - rawData.leastCounts.D) / 24) * 100,
+          I: ((24 - rawData.leastCounts.I) / 24) * 100,
+          S: ((24 - rawData.leastCounts.S) / 24) * 100,
+          C: ((24 - rawData.leastCounts.C) / 24) * 100,
         })
       : null
 

@@ -8,8 +8,6 @@ import type {
   DISCTestSubmitData,
   TempDISCRecordListItem,
   TempDISCRecordDetail,
-  DiscTestLink,
-  DiscTestLinkCreate,
   PaginatedResponse,
 } from './types'
 
@@ -26,6 +24,12 @@ const publicClient = axios.create({
 // ============================================================================
 // 公开 API（测试页面使用，不需要登录）
 // ============================================================================
+
+/** 验证 DISC 测试链接推荐人 */
+export async function validateDiscTestRef(ref: string) {
+  const { data } = await publicClient.get('/public/disc-test/validate-ref', { params: { ref } })
+  return data
+}
 
 /** 验证 DISC 测试编码 */
 export async function verifyDiscTest(testCode: string) {
@@ -66,22 +70,3 @@ export async function getTempDiscRecordDetail(id: string): Promise<ApiResponse<T
   return apiClient.get(`${HR_BASE}/temp-disc-records/${id}`)
 }
 
-/** 创建 DISC 测试链接 */
-export async function createDiscTestLink(data: DiscTestLinkCreate): Promise<ApiResponse<DiscTestLink>> {
-  return apiClient.post(`${HR_BASE}/disc-test-links`, data)
-}
-
-/** 获取 DISC 测试链接列表 */
-export async function getDiscTestLinks(params: {
-  page?: number
-  size?: number
-  status?: string
-  name?: string
-} = {}): Promise<ApiResponse<PaginatedResponse<DiscTestLink>>> {
-  return apiClient.get(`${HR_BASE}/disc-test-links`, { params })
-}
-
-/** 删除 DISC 测试链接 */
-export async function deleteDiscTestLink(id: string): Promise<ApiResponse<void>> {
-  return apiClient.delete(`${HR_BASE}/disc-test-links/${id}`)
-}

@@ -252,6 +252,12 @@ export interface CallRecord {
   has_transcript?: boolean
   ai_quality_score?: number | null
   ai_customer_intent?: string | null
+  ai_label_primary?: string | null
+  // CRM 关联字段
+  lead_id?: string | null
+  lead_child_name?: string | null
+  lead_status?: string | null
+  employee_id?: string | null
 }
 
 // 通话记录查询参数

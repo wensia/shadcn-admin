@@ -50,7 +50,7 @@ import type { Order } from '@/features/crm/orders/types'
 // 详情组件
 import { LeadInfoDisplay } from './lead-info-display'
 import { ChangeHistoryTimeline } from './change-history-timeline'
-import { YunkeCallLogs } from './yunke-call-logs'
+import { LeadCallRecords } from './lead-call-records'
 
 // 图表组件
 import { FollowupFrequencyChart } from './charts/followup-frequency-chart'
@@ -381,7 +381,12 @@ export function LeadDetailTabs({
                             )}
                           </TableCell>
                           <TableCell className={s.text.xs}>
-                            {followup.followup_by_name || '-'}
+                            <span className="flex items-center gap-1">
+                              {followup.followup_by_name || '-'}
+                              {followup.source === 'ai_auto' && (
+                                <span className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] font-medium bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400" title="AI 通话分析自动生成">AI</span>
+                              )}
+                            </span>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -442,10 +447,10 @@ export function LeadDetailTabs({
             )}
           </div>
 
-          {/* 云客通话记录区域 - 可折叠，默认折叠 */}
-          {lead?.parent_phone && (
+          {/* 通话记录区域（本地数据，含AI分析）- 可折叠，默认折叠 */}
+          {leadId && (
             <div className="flex-shrink-0 flex flex-col border-t">
-              <YunkeCallLogs phone={lead.parent_phone} showHeader collapsible defaultCollapsed />
+              <LeadCallRecords leadId={leadId} showHeader collapsible defaultCollapsed />
             </div>
           )}
         </div>

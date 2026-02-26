@@ -261,13 +261,18 @@ export function IdentitiesPage() {
         },
       },
       {
-        accessorKey: 'campus_name',
-        header: '所属校区',
+        id: 'org_scope',
+        header: '所属组织',
         cell: ({ row }) => {
           if (row.original.id.startsWith('__skeleton__')) {
             return <Skeleton className="h-4 w-20" />
           }
-          return row.original.campus_name || '-'
+          const item = row.original
+          const scope = item.scope_type || 'campus'
+          if (scope === 'region' && item.region_name) return `大区:${item.region_name}`
+          if (scope === 'district' && item.district_name) return `地区:${item.district_name}`
+          if (scope === 'area' && item.area_name) return `片区:${item.area_name}`
+          return item.campus_name || '-'
         },
       },
       {

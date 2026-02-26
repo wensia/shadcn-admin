@@ -6,7 +6,7 @@ import { type ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Play, FileText, Phone, PhoneOff } from 'lucide-react'
+import { Play, FileText, Phone, PhoneOff, UserRound } from 'lucide-react'
 import { isSkeletonRow } from '@/components/ui/table-skeleton'
 import { formatTime } from '@/lib/utils/time'
 import type { CallRecord } from '../../types'
@@ -81,10 +81,11 @@ function getCallResultStyle(result: string | null, duration: number | null): {
 interface CreateColumnsOptions {
   onPlayRecord?: (record: CallRecord) => void
   onViewTranscript?: (record: CallRecord) => void
+  onViewLead?: (leadId: string) => void
 }
 
 export function createCallRecordsColumns(options: CreateColumnsOptions = {}): ColumnDef<CallRecord>[] {
-  const { onPlayRecord, onViewTranscript } = options
+  const { onPlayRecord, onViewTranscript, onViewLead } = options
 
   return [
     {
@@ -239,6 +240,39 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
             </span>
           </div>
         )
+      },
+    },
+    {
+      id: 'lead',
+      header: '关联线索',
+      size: 110,
+      cell: ({ row }) => {
+        if (isSkeletonRow(row.original.id)) {
+          return <Skeleton className="h-4 w-16" />
+        }
+        const record = row.original as CallRecord & {
+          lead_id?: string | null
+          lead_child_name?: string | null
+          lead_status?: string | null
+        }
+        if (record.lead_child_name) {
+          return (
+            <button
+              type="button"
+              className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onViewLead && record.lead_id) {
+                  onViewLead(record.lead_id)
+                }
+              }}
+            >
+              <UserRound className="h-3.5 w-3.5" />
+              {record.lead_child_name}
+            </button>
+          )
+        }
+        return <span className="text-xs text-muted-foreground">-</span>
       },
     },
     {

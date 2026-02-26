@@ -15,9 +15,11 @@ import {
   crmNavGroups,
   adminNavGroups,
   yunkeNavGroups,
+  hrNavGroups,
   crmTeams,
   adminTeams,
   yunkeTeams,
+  hrTeams,
 } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
@@ -59,11 +61,15 @@ export function AppSidebar() {
   // 根据当前路径判断使用哪个导航组
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isYunkeRoute = location.pathname.startsWith('/yunke')
+  const isHrRoute = location.pathname.startsWith('/hr')
 
   // 选择对应的导航组和团队配置
   const getNavConfig = () => {
     if (isYunkeRoute) {
       return { navGroups: yunkeNavGroups, teams: yunkeTeams }
+    }
+    if (isHrRoute) {
+      return { navGroups: hrNavGroups, teams: hrTeams }
     }
     if (isAdminRoute) {
       return { navGroups: adminNavGroups, teams: adminTeams }

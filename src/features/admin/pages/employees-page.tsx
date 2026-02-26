@@ -6,17 +6,17 @@ import { useState, useMemo } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
-  VisibilityState,
+  type ColumnDef,
+  type VisibilityState,
 } from '@tanstack/react-table'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, User, KeyRound, RefreshCw, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, User, KeyRound, RefreshCw, X, CheckCircle, AlertCircle, Copy, Shield, Eye, EyeOff, AlertTriangle, Key, XCircle, MoreHorizontal } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,6 +53,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form'
 import {
   Select,
@@ -62,16 +63,24 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { DataTableViewOptions } from '@/components/data-table/view-options'
-import { adminApi } from '../api'
-import type { EmployeeItem, EmployeeUpdate, EmployeeIdentityItem } from '../types'
-import { StatusBadge, EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
+import { adminApi, apiKeysApi } from '../api'
+import { DEFAULT_API_SCOPES, type EmployeeItem, type EmployeeUpdate, type EmployeeIdentityItem, type ApiKeyCreateResponse } from '../types'
+import { EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 // 表单验证 schema
@@ -87,11 +96,42 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+// API密钥创建表单
+const apiKeyFormSchema = z.object({
+  name: z.string().min(1, '请输入密钥名称').max(100, '名称最多100个字符'),
+  expires_in_days: z.coerce.number().int().min(1, '至少1天').max(3650, '最长10年').default(365),
+  scopes: z.record(z.array(z.string())).default({}),
+})
+
+type ApiKeyFormData = z.infer<typeof apiKeyFormSchema>
+
+// 权限名称映射
+const PERMISSION_LABELS: Record<string, string> = {
+  read: '查看',
+  create: '创建',
+  update: '更新',
+  delete: '删除',
+}
+
+
+// 组织级别类型
+type ScopeType = 'campus' | 'area' | 'district' | 'region'
+
+const SCOPE_TYPE_LABELS: Record<ScopeType, string> = {
+  region: '大区',
+  district: '地区',
+  area: '片区',
+  campus: '校区',
+}
 
 // 员工身份数据类型
 interface IdentityFormData {
   id?: string
+  scope_type: ScopeType
   campus_id: string
+  region_id: string
+  district_id: string
+  area_id: string
   department_id: string
   position_id: string
   is_active: boolean
@@ -132,6 +172,17 @@ export function EmployeesPage() {
   // 保存中状态
   const [isSavingIdentities, setIsSavingIdentities] = useState(false)
 
+  // API密钥管理状态
+  const [apiKeyFilter, setApiKeyFilter] = useState<string>('all')
+  const [apiKeyCreateDialogOpen, setApiKeyCreateDialogOpen] = useState(false)
+  const [apiKeyResultDialogOpen, setApiKeyResultDialogOpen] = useState(false)
+  const [apiKeyScopesDialogOpen, setApiKeyScopesDialogOpen] = useState(false)
+  const [apiKeyDeleteDialogOpen, setApiKeyDeleteDialogOpen] = useState(false)
+  const [selectedApiKeyEmployee, setSelectedApiKeyEmployee] = useState<EmployeeItem | null>(null)
+  const [createdApiKey, setCreatedApiKey] = useState<ApiKeyCreateResponse | null>(null)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [selectedScopes, setSelectedScopes] = useState<Record<string, string[]>>({})
+
   // 表单
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -146,10 +197,19 @@ export function EmployeesPage() {
     },
   })
 
+  // API密钥创建表单
+  const apiKeyForm = useForm<ApiKeyFormData>({
+    resolver: zodResolver(apiKeyFormSchema),
+    defaultValues: {
+      name: '',
+      expires_in_days: 365,
+      scopes: {},
+    },
+  })
 
   // 获取员工列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-employees', page, pageSize, searchValue, statusFilter],
+    queryKey: ['admin-employees', page, pageSize, searchValue, statusFilter, apiKeyFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = {
         page,
@@ -160,6 +220,9 @@ export function EmployeesPage() {
       }
       if (statusFilter !== 'all') {
         params.is_active = statusFilter === 'active'
+      }
+      if (apiKeyFilter !== 'all') {
+        params.has_api_key = apiKeyFilter === 'yes'
       }
       const response = await adminApi.getEmployees(params)
       return response.data
@@ -176,6 +239,67 @@ export function EmployeesPage() {
   })
 
   const campuses = campusesData || []
+
+  // 获取大区列表
+  const { data: regionsData } = useQuery({
+    queryKey: ['admin-regions-simple'],
+    queryFn: async () => {
+      const response = await adminApi.getRegions({ size: 100, is_active: true })
+      return response.data?.items || []
+    },
+  })
+  const regions = regionsData || []
+
+  // 获取全局部门列表（非校区级别身份使用）
+  const { data: globalDepartmentsData } = useQuery({
+    queryKey: ['admin-departments-simple'],
+    queryFn: async () => {
+      const response = await adminApi.getDepartmentsSimple()
+      return response.data || []
+    },
+  })
+  const globalDepartments = globalDepartmentsData || []
+
+  // 获取全局职位列表
+  const { data: globalPositionsData } = useQuery({
+    queryKey: ['admin-positions-simple'],
+    queryFn: async () => {
+      const response = await adminApi.getPositions({ size: 200, is_active: true })
+      return response.data?.items || []
+    },
+  })
+  const globalPositions = globalPositionsData || []
+
+  // 地区列表映射（按大区ID）
+  const [districtOptionsMap, setDistrictOptionsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({})
+  // 片区列表映射（按地区ID）
+  const [areaOptionsMap, setAreaOptionsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({})
+
+  // 加载地区列表（按大区）
+  const loadDistrictsForRegion = async (regionId: string) => {
+    if (districtOptionsMap[regionId]) return
+    try {
+      const response = await adminApi.getDistricts({ region_id: regionId, size: 100 })
+      if (response.data?.items) {
+        setDistrictOptionsMap(prev => ({ ...prev, [regionId]: response.data!.items.map(d => ({ id: d.id, name: d.name })) }))
+      }
+    } catch (error) {
+      showApiErrorToast(error, '加载地区失败')
+    }
+  }
+
+  // 加载片区列表（按地区）
+  const loadAreasForDistrict = async (districtId: string) => {
+    if (areaOptionsMap[districtId]) return
+    try {
+      const response = await adminApi.getAreas({ district_id: districtId, size: 100 })
+      if (response.data?.items) {
+        setAreaOptionsMap(prev => ({ ...prev, [districtId]: response.data!.items.map(a => ({ id: a.id, name: a.name })) }))
+      }
+    } catch (error) {
+      showApiErrorToast(error, '加载片区失败')
+    }
+  }
 
   // 获取员工身份信息（包含职位）
   const employeeIds = data?.items?.map(e => e.id) || []
@@ -203,9 +327,68 @@ export function EmployeesPage() {
     return map
   }, [identitiesData])
 
+  // API密钥 mutations
+  const createApiKeyMutation = useMutation({
+    mutationFn: (data: { employeeId: string; formData: ApiKeyFormData }) =>
+      apiKeysApi.create(data.employeeId, {
+        name: data.formData.name,
+        scopes: Object.keys(data.formData.scopes).length > 0 ? data.formData.scopes : undefined,
+        expires_in_days: data.formData.expires_in_days,
+      }),
+    onSuccess: (response) => {
+      setCreatedApiKey(response)
+      setApiKeyCreateDialogOpen(false)
+      setApiKeyResultDialogOpen(true)
+      apiKeyForm.reset()
+      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '创建失败')
+    },
+  })
+
+  const regenerateApiKeyMutation = useMutation({
+    mutationFn: (employeeId: string) => apiKeysApi.regenerate(employeeId),
+    onSuccess: (response) => {
+      setCreatedApiKey(response)
+      setApiKeyResultDialogOpen(true)
+      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '重新生成失败')
+    },
+  })
+
+  const deleteApiKeyMutation = useMutation({
+    mutationFn: (employeeId: string) => apiKeysApi.delete(employeeId),
+    onSuccess: () => {
+      toast.success('API密钥已删除')
+      setApiKeyDeleteDialogOpen(false)
+      setSelectedApiKeyEmployee(null)
+      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '删除失败')
+    },
+  })
+
+  const updateApiKeyScopesMutation = useMutation({
+    mutationFn: (data: { employeeId: string; scopes: Record<string, string[]> }) =>
+      apiKeysApi.updateScopes(data.employeeId, { scopes: data.scopes }),
+    onSuccess: () => {
+      toast.success('权限更新成功')
+      setApiKeyScopesDialogOpen(false)
+      setSelectedApiKeyEmployee(null)
+      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '更新权限失败')
+    },
+  })
+
   // 创建员工（使用快速创建API，自动生成用户名和密码）
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; campus_id: string; department_id: string; position_id: string; joined_at?: string }) =>
+    mutationFn: (data: { name: string; scope_type?: string; campus_id?: string; region_id?: string; district_id?: string; area_id?: string; department_id: string; position_id: string; joined_at?: string }) =>
       adminApi.quickCreateEmployee(data),
     onSuccess: (response) => {
       if (response.data) {
@@ -297,7 +480,7 @@ export function EmployeesPage() {
         return newMap
       }
     } catch (error) {
-      console.error('加载部门失败:', error)
+      showApiErrorToast(error, '加载部门失败')
     }
     return {}
   }
@@ -306,7 +489,6 @@ export function EmployeesPage() {
   const loadPositionsForDepartment = async (departmentId: string, campusDeptIdOverride?: string) => {
     const campusDeptId = campusDeptIdOverride || deptToCampusDeptMap[departmentId]
     if (!campusDeptId) {
-      console.warn('无法加载职位：找不到 campus_department_id，departmentId:', departmentId)
       return
     }
     if (positionOptionsMap[departmentId]) return // 已缓存
@@ -316,8 +498,77 @@ export function EmployeesPage() {
         setPositionOptionsMap(prev => ({ ...prev, [departmentId]: response.data! }))
       }
     } catch (error) {
-      console.error('加载职位失败:', error)
+      showApiErrorToast(error, '加载职位失败')
     }
+  }
+
+  // 处理组织级别变更
+  const handleIdentityScopeChange = (index: number, scopeType: ScopeType) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        scope_type: scopeType,
+        campus_id: '',
+        region_id: '',
+        district_id: '',
+        area_id: '',
+        department_id: '',
+        position_id: '',
+      }
+      return newIdentities
+    })
+  }
+
+  // 处理大区变更
+  const handleIdentityRegionChange = (index: number, regionId: string) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        region_id: regionId,
+        district_id: '',
+        area_id: '',
+        department_id: '',
+        position_id: '',
+      }
+      return newIdentities
+    })
+    if (regionId) {
+      loadDistrictsForRegion(regionId)
+    }
+  }
+
+  // 处理地区变更
+  const handleIdentityDistrictChange = (index: number, districtId: string) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        district_id: districtId,
+        area_id: '',
+        department_id: '',
+        position_id: '',
+      }
+      return newIdentities
+    })
+    if (districtId) {
+      loadAreasForDistrict(districtId)
+    }
+  }
+
+  // 处理片区变更
+  const handleIdentityAreaChange = (index: number, areaId: string) => {
+    setIdentities(prev => {
+      const newIdentities = [...prev]
+      newIdentities[index] = {
+        ...newIdentities[index],
+        area_id: areaId,
+        department_id: '',
+        position_id: '',
+      }
+      return newIdentities
+    })
   }
 
   // 处理校区变更
@@ -392,7 +643,7 @@ export function EmployeesPage() {
   const addIdentity = () => {
     setIdentities(prev => [
       ...prev,
-      { campus_id: '', department_id: '', position_id: '', is_active: true },
+      { scope_type: 'campus', campus_id: '', region_id: '', district_id: '', area_id: '', department_id: '', position_id: '', is_active: true },
     ])
   }
 
@@ -445,28 +696,38 @@ export function EmployeesPage() {
       },
       {
         id: 'campus',
-        header: '所属校区',
+        header: '所属组织',
         cell: ({ row }) => {
           if (row.original.id.startsWith('__skeleton__')) {
             return <Skeleton className="h-5 w-16" />
           }
           const identities = employeeIdentitiesMap[row.original.id] || []
-          // 获取活跃身份的校区，若有多个则显示第一个
           const activeIdentity = identities.find(i => i.is_active) || identities[0]
-          if (!activeIdentity || !activeIdentity.campus_name) {
+          if (!activeIdentity) {
             return <span className="text-muted-foreground">-</span>
           }
-          // 如果有多个校区，显示数量
-          const uniqueCampuses = [...new Set(identities.map(i => i.campus_name).filter(Boolean))]
-          if (uniqueCampuses.length > 1) {
+          // 根据 scope_type 显示对应的组织名称
+          const getOrgLabel = (i: EmployeeIdentityItem) => {
+            const scope = i.scope_type || 'campus'
+            if (scope === 'region') return i.region_name ? `大区:${i.region_name}` : null
+            if (scope === 'district') return i.district_name ? `地区:${i.district_name}` : null
+            if (scope === 'area') return i.area_name ? `片区:${i.area_name}` : null
+            return i.campus_name || null
+          }
+          const activeLabel = getOrgLabel(activeIdentity)
+          if (!activeLabel) {
+            return <span className="text-muted-foreground">-</span>
+          }
+          const uniqueLabels = [...new Set(identities.map(getOrgLabel).filter(Boolean))]
+          if (uniqueLabels.length > 1) {
             return (
               <div className="flex items-center gap-1">
-                <Badge variant="outline">{activeIdentity.campus_name}</Badge>
-                <span className="text-xs text-muted-foreground">+{uniqueCampuses.length - 1}</span>
+                <Badge variant="outline">{activeLabel}</Badge>
+                <span className="text-xs text-muted-foreground">+{uniqueLabels.length - 1}</span>
               </div>
             )
           }
-          return <Badge variant="outline">{activeIdentity.campus_name}</Badge>
+          return <Badge variant="outline">{activeLabel}</Badge>
         },
       },
       {
@@ -515,6 +776,24 @@ export function EmployeesPage() {
         },
       },
       {
+        id: 'api_key_status',
+        header: 'API Key',
+        cell: ({ row }) => {
+          if (row.original.id.startsWith('__skeleton__')) {
+            return <Skeleton className="h-5 w-20" />
+          }
+          if (row.original.has_api_key) {
+            return (
+              <Badge variant="default" className="gap-1">
+                <CheckCircle className="h-3 w-3" />
+                已创建
+              </Badge>
+            )
+          }
+          return <Badge variant="outline">未创建</Badge>
+        },
+      },
+      {
         accessorKey: 'joined_at',
         header: '入职日期',
         cell: ({ row }) => {
@@ -531,41 +810,58 @@ export function EmployeesPage() {
         header: '操作',
         cell: ({ row }) => {
           if (row.original.id.startsWith('__skeleton__')) {
-            return (
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
-              </div>
-            )
+            return <Skeleton className="h-8 w-8" />
           }
           return (
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-                title="编辑"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleResetPassword(row.original)}
-                title="重置密码"
-              >
-                <KeyRound className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-                title="删除"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="更多操作"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  编辑员工
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleResetPassword(row.original)}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  重置密码
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {row.original.has_api_key ? (
+                  <>
+                    <DropdownMenuItem onClick={() => handleApiKeyScopesClick(row.original)}>
+                      <Shield className="mr-2 h-4 w-4" />
+                      编辑API权限
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleApiKeyRegenerateClick(row.original)}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      重新生成API Key
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={() => handleApiKeyDeleteClick(row.original)}>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      删除API Key
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem onClick={() => handleApiKeyCreateClick(row.original)}>
+                    <Key className="mr-2 h-4 w-4 text-emerald-600" />
+                    创建API Key
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => handleDeleteClick(row.original)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  删除员工
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )
         },
       },
@@ -584,6 +880,7 @@ export function EmployeesPage() {
         phone: '',
         is_active: true,
         is_superuser: false,
+        has_api_key: false,
       })),
     []
   )
@@ -613,7 +910,7 @@ export function EmployeesPage() {
       joined_at: '',
     })
     // 初始化一个空身份
-    setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
+    setIdentities([{ scope_type: 'campus', campus_id: '', region_id: '', district_id: '', area_id: '', department_id: '', position_id: '', is_active: true }])
     setDialogOpen(true)
   }
 
@@ -638,42 +935,51 @@ export function EmployeesPage() {
       if (items.length > 0) {
         const identityData: IdentityFormData[] = items.map((identity) => ({
           id: identity.id,
-          campus_id: identity.campus_id,
+          scope_type: (identity.scope_type || 'campus') as ScopeType,
+          campus_id: identity.campus_id || '',
+          region_id: identity.region_id || '',
+          district_id: identity.district_id || '',
+          area_id: identity.area_id || '',
           department_id: identity.department_id,
           position_id: identity.position_id,
           is_active: identity.is_active,
         }))
         setIdentities(identityData)
 
-        // 预加载所有需要的部门和职位选项
-        const uniqueCampusIds = [...new Set(items.map(i => i.campus_id).filter(Boolean))]
+        // 预加载 campus 级别的部门和职位选项
+        const campusIdentities = items.filter(i => (i.scope_type || 'campus') === 'campus')
+        const uniqueCampusIds = [...new Set(campusIdentities.map(i => i.campus_id).filter(Boolean))] as string[]
 
-        // 并行加载所有校区的部门，并收集映射数据
         const deptMaps = await Promise.all(uniqueCampusIds.map(id => loadDepartmentsForCampus(id)))
 
-        // 合并所有映射
         const combinedDeptMap: Record<string, string> = {}
         deptMaps.forEach(map => {
           Object.assign(combinedDeptMap, map)
         })
 
-        // 使用收集到的映射加载职位
-        const uniqueDeptIds = [...new Set(items.map(i => i.department_id).filter(Boolean))]
-        await Promise.all(uniqueDeptIds.map(deptId => {
+        const campusDeptIds = [...new Set(campusIdentities.map(i => i.department_id).filter(Boolean))]
+        await Promise.all(campusDeptIds.map(deptId => {
           const campusDeptId = combinedDeptMap[deptId]
           return loadPositionsForDepartment(deptId, campusDeptId)
         }))
+
+        // 预加载区域级别的地区/片区选项
+        const uniqueRegionIds = [...new Set(items.map(i => i.region_id).filter(Boolean))] as string[]
+        await Promise.all(uniqueRegionIds.map(id => loadDistrictsForRegion(id)))
+        const uniqueDistrictIds = [...new Set(items.map(i => i.district_id).filter(Boolean))] as string[]
+        await Promise.all(uniqueDistrictIds.map(id => loadAreasForDistrict(id)))
       } else {
         // 没有身份，添加一个空的
-        setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
+        setIdentities([{ scope_type: 'campus', campus_id: '', region_id: '', district_id: '', area_id: '', department_id: '', position_id: '', is_active: true }])
       }
     } catch (error) {
-      console.error('加载身份信息失败:', error)
-      setIdentities([{ campus_id: '', department_id: '', position_id: '', is_active: true }])
+      showApiErrorToast(error, '加载身份信息失败')
+      setIdentities([{ scope_type: 'campus', campus_id: '', region_id: '', district_id: '', area_id: '', department_id: '', position_id: '', is_active: true }])
     }
 
     setDialogOpen(true)
   }
+
 
   // 处理重置密码
   const handleResetPassword = (item: EmployeeItem) => {
@@ -695,12 +1001,22 @@ export function EmployeesPage() {
     }
   }
 
+  // 验证身份是否完整
+  const isIdentityComplete = (i: IdentityFormData) => {
+    if (!i.department_id || !i.position_id) return false
+    if (i.scope_type === 'campus') return !!i.campus_id
+    if (i.scope_type === 'region') return !!i.region_id
+    if (i.scope_type === 'district') return !!i.region_id && !!i.district_id
+    if (i.scope_type === 'area') return !!i.region_id && !!i.district_id && !!i.area_id
+    return false
+  }
+
   // 处理表单提交
   const handleSubmit = async (data: FormData) => {
     // 验证身份信息必须完整
-    const validIdentities = identities.filter(i => i.campus_id && i.department_id && i.position_id)
+    const validIdentities = identities.filter(isIdentityComplete)
     if (validIdentities.length === 0) {
-      toast.warning('请至少配置一个完整的校区-部门-职位身份')
+      toast.warning('请至少配置一个完整的组织身份（包含部门和职位）')
       return
     }
 
@@ -736,16 +1052,31 @@ export function EmployeesPage() {
     } else {
       // 新建模式：使用第一个身份配置
       const firstIdentity = validIdentities[0]
-      // 获取 campus_department_id（需要通过 departmentOptionsMap 查找）
-      const deptInfo = departmentOptionsMap[firstIdentity.campus_id]?.find(d => d.id === firstIdentity.department_id)
 
-      createMutation.mutate({
-        name: data.name,
-        campus_id: firstIdentity.campus_id,
-        department_id: deptInfo?.campus_department_id || firstIdentity.department_id, // 使用 campus_department_id
-        position_id: firstIdentity.position_id,
-        joined_at: data.joined_at || undefined,
-      })
+      if (firstIdentity.scope_type === 'campus') {
+        // campus 级别：使用 campus_department_id
+        const deptInfo = departmentOptionsMap[firstIdentity.campus_id]?.find(d => d.id === firstIdentity.department_id)
+        createMutation.mutate({
+          name: data.name,
+          scope_type: 'campus',
+          campus_id: firstIdentity.campus_id,
+          department_id: deptInfo?.campus_department_id || firstIdentity.department_id,
+          position_id: firstIdentity.position_id,
+          joined_at: data.joined_at || undefined,
+        })
+      } else {
+        // 非 campus 级别：直接传全局部门 ID
+        createMutation.mutate({
+          name: data.name,
+          scope_type: firstIdentity.scope_type,
+          region_id: firstIdentity.region_id || undefined,
+          district_id: firstIdentity.district_id || undefined,
+          area_id: firstIdentity.area_id || undefined,
+          department_id: firstIdentity.department_id,
+          position_id: firstIdentity.position_id,
+          joined_at: data.joined_at || undefined,
+        })
+      }
     }
   }
 
@@ -763,6 +1094,84 @@ export function EmployeesPage() {
       setResetPasswordDialogOpen(false)
       setResetPasswordItem(null)
       setGeneratedPassword(null)
+    }
+  }
+
+  const handleApiKeyCreateClick = (employee: EmployeeItem) => {
+    setSelectedApiKeyEmployee(employee)
+    apiKeyForm.reset({
+      name: `${employee.name}的API密钥`,
+      expires_in_days: 365,
+      scopes: {},
+    })
+    setApiKeyCreateDialogOpen(true)
+  }
+
+  const handleApiKeyCreateSubmit = (data: ApiKeyFormData) => {
+    if (!selectedApiKeyEmployee) return
+    createApiKeyMutation.mutate({ employeeId: selectedApiKeyEmployee.id, formData: data })
+  }
+
+  const handleApiKeyRegenerateClick = (employee: EmployeeItem) => {
+    setSelectedApiKeyEmployee(employee)
+    regenerateApiKeyMutation.mutate(employee.id)
+  }
+
+  const handleApiKeyDeleteClick = (employee: EmployeeItem) => {
+    setSelectedApiKeyEmployee(employee)
+    setApiKeyDeleteDialogOpen(true)
+  }
+
+  const handleApiKeyDeleteConfirm = () => {
+    if (!selectedApiKeyEmployee) return
+    deleteApiKeyMutation.mutate(selectedApiKeyEmployee.id)
+  }
+
+  const handleApiKeyScopesClick = async (employee: EmployeeItem) => {
+    setSelectedApiKeyEmployee(employee)
+    try {
+      const detail = await apiKeysApi.get(employee.id)
+      if (!detail.has_api_key || !detail.api_key) {
+        toast.warning('该员工尚未创建API Key')
+        return
+      }
+      setSelectedScopes(detail.api_key.scopes || {})
+      setApiKeyScopesDialogOpen(true)
+    } catch (error) {
+      showApiErrorToast(error, '获取API Key详情失败')
+    }
+  }
+
+  const handleApiKeyScopesSubmit = () => {
+    if (!selectedApiKeyEmployee) return
+    updateApiKeyScopesMutation.mutate({
+      employeeId: selectedApiKeyEmployee.id,
+      scopes: selectedScopes,
+    })
+  }
+
+  const toggleScope = (scope: string, permission: string) => {
+    setSelectedScopes((prev) => {
+      const current = prev[scope] || []
+      if (current.includes(permission)) {
+        const newPermissions = current.filter((p) => p !== permission)
+        if (newPermissions.length === 0) {
+          const { [scope]: _, ...rest } = prev
+          return rest
+        }
+        return { ...prev, [scope]: newPermissions }
+      }
+      return { ...prev, [scope]: [...current, permission] }
+    })
+  }
+
+  const handleCopyToClipboard = async (text: string) => {
+    const { copyToClipboard } = await import('@/lib/utils')
+    const success = await copyToClipboard(text)
+    if (success) {
+      toast.success('API Key已复制到剪贴板')
+    } else {
+      toast.error('复制失败')
     }
   }
 
@@ -803,13 +1212,23 @@ export function EmployeesPage() {
               />
             </div>
             <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[140px] justify-center">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="全部状态" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部状态</SelectItem>
                 <SelectItem value="active">在职</SelectItem>
                 <SelectItem value="inactive">离职</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={apiKeyFilter} onValueChange={(value) => { setApiKeyFilter(value); setPage(1) }}>
+              <SelectTrigger className="w-[170px]">
+                <SelectValue placeholder="API Key状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部API Key状态</SelectItem>
+                <SelectItem value="yes">已创建API Key</SelectItem>
+                <SelectItem value="no">未创建API Key</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" onClick={handleSearch}>
@@ -1032,7 +1451,7 @@ export function EmployeesPage() {
               <Separator className="my-4" />
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">校区身份配置</h4>
+                  <h4 className="text-sm font-medium">组织身份配置</h4>
                   {/* 编辑时允许添加多个身份 */}
                   {editingItem && (
                     <Button
@@ -1051,8 +1470,8 @@ export function EmployeesPage() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
                     {editingItem
-                      ? '员工需要至少一个有效的校区身份配置才能正常使用系统功能。'
-                      : '请为新员工配置校区、部门和职位，用户名和密码将自动生成。'
+                      ? '员工需要至少一个有效的组织身份配置才能正常使用系统功能。支持大区/地区/片区/校区级别。'
+                      : '请为新员工配置组织级别、部门和职位，用户名和密码将自动生成。'
                     }
                   </AlertDescription>
                 </Alert>
@@ -1066,7 +1485,7 @@ export function EmployeesPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground">身份 {index + 1}</span>
-                              {identity.campus_id && identity.department_id && identity.position_id ? (
+                              {isIdentityComplete(identity) ? (
                                 <Badge variant="outline" className="gap-1 text-xs">
                                   <CheckCircle className="h-3 w-3 text-green-500" />
                                   完整
@@ -1101,59 +1520,233 @@ export function EmployeesPage() {
                         </CardHeader>
                       )}
                       <CardContent className={editingItem ? "p-3 pt-2" : "p-3"}>
-                        <div className="grid grid-cols-3 gap-2">
-                          {/* 校区选择 */}
-                          <Select
-                            value={identity.campus_id}
-                            onValueChange={(value) => handleIdentityCampusChange(index, value)}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="选择校区" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {campuses.map((campus) => (
-                                <SelectItem key={campus.id} value={campus.id}>
-                                  {campus.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        <div className="space-y-2">
+                          {/* 第一行：组织级别 + 组织层级选择 */}
+                          <div className="grid grid-cols-4 gap-2">
+                            {/* 组织级别选择 */}
+                            <Select
+                              value={identity.scope_type}
+                              onValueChange={(value) => handleIdentityScopeChange(index, value as ScopeType)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="组织级别" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(Object.entries(SCOPE_TYPE_LABELS) as [ScopeType, string][]).map(([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
 
-                          {/* 部门选择 */}
-                          <Select
-                            value={identity.department_id}
-                            onValueChange={(value) => handleIdentityDepartmentChange(index, value)}
-                            disabled={!identity.campus_id}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="选择部门" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(departmentOptionsMap[identity.campus_id] || []).map((dept) => (
-                                <SelectItem key={dept.id} value={dept.id}>
-                                  {dept.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            {/* 根据 scope_type 动态渲染组织层级选择器 */}
+                            {identity.scope_type === 'campus' && (
+                              <Select
+                                value={identity.campus_id}
+                                onValueChange={(value) => handleIdentityCampusChange(index, value)}
+                              >
+                                <SelectTrigger className="h-8 text-xs col-span-3">
+                                  <SelectValue placeholder="选择校区" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {campuses.map((campus) => (
+                                    <SelectItem key={campus.id} value={campus.id}>
+                                      {campus.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
 
-                          {/* 职位选择 */}
-                          <Select
-                            value={identity.position_id}
-                            onValueChange={(value) => handleIdentityPositionChange(index, value)}
-                            disabled={!identity.department_id}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="选择职位" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(positionOptionsMap[identity.department_id] || []).map((pos) => (
-                                <SelectItem key={pos.id} value={pos.id}>
-                                  {pos.name} ({pos.level_display})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            {identity.scope_type === 'region' && (
+                              <Select
+                                value={identity.region_id}
+                                onValueChange={(value) => handleIdentityRegionChange(index, value)}
+                              >
+                                <SelectTrigger className="h-8 text-xs col-span-3">
+                                  <SelectValue placeholder="选择大区" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {regions.map((region) => (
+                                    <SelectItem key={region.id} value={region.id}>
+                                      {region.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            {identity.scope_type === 'district' && (
+                              <>
+                                <Select
+                                  value={identity.region_id}
+                                  onValueChange={(value) => handleIdentityRegionChange(index, value)}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="选择大区" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {regions.map((region) => (
+                                      <SelectItem key={region.id} value={region.id}>
+                                        {region.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={identity.district_id}
+                                  onValueChange={(value) => handleIdentityDistrictChange(index, value)}
+                                  disabled={!identity.region_id}
+                                >
+                                  <SelectTrigger className="h-8 text-xs col-span-2">
+                                    <SelectValue placeholder="选择地区" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(districtOptionsMap[identity.region_id] || []).map((d) => (
+                                      <SelectItem key={d.id} value={d.id}>
+                                        {d.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </>
+                            )}
+
+                            {identity.scope_type === 'area' && (
+                              <>
+                                <Select
+                                  value={identity.region_id}
+                                  onValueChange={(value) => handleIdentityRegionChange(index, value)}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="大区" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {regions.map((region) => (
+                                      <SelectItem key={region.id} value={region.id}>
+                                        {region.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={identity.district_id}
+                                  onValueChange={(value) => handleIdentityDistrictChange(index, value)}
+                                  disabled={!identity.region_id}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="地区" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(districtOptionsMap[identity.region_id] || []).map((d) => (
+                                      <SelectItem key={d.id} value={d.id}>
+                                        {d.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={identity.area_id}
+                                  onValueChange={(value) => handleIdentityAreaChange(index, value)}
+                                  disabled={!identity.district_id}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="片区" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(areaOptionsMap[identity.district_id] || []).map((a) => (
+                                      <SelectItem key={a.id} value={a.id}>
+                                        {a.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </>
+                            )}
+                          </div>
+
+                          {/* 第二行：部门 + 职位 */}
+                          <div className="grid grid-cols-2 gap-2">
+                            {/* 部门选择 - campus 级别使用校区部门，其他使用全局部门 */}
+                            {identity.scope_type === 'campus' ? (
+                              <Select
+                                value={identity.department_id}
+                                onValueChange={(value) => handleIdentityDepartmentChange(index, value)}
+                                disabled={!identity.campus_id}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择部门" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(departmentOptionsMap[identity.campus_id] || []).map((dept) => (
+                                    <SelectItem key={dept.id} value={dept.id}>
+                                      {dept.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Select
+                                value={identity.department_id}
+                                onValueChange={(value) => {
+                                  setIdentities(prev => {
+                                    const newIdentities = [...prev]
+                                    newIdentities[index] = { ...newIdentities[index], department_id: value, position_id: '' }
+                                    return newIdentities
+                                  })
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择部门" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {globalDepartments.map((dept) => (
+                                    <SelectItem key={dept.id} value={dept.id}>
+                                      {dept.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            {/* 职位选择 - campus 级别使用校区部门职位，其他使用全局职位 */}
+                            {identity.scope_type === 'campus' ? (
+                              <Select
+                                value={identity.position_id}
+                                onValueChange={(value) => handleIdentityPositionChange(index, value)}
+                                disabled={!identity.department_id}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择职位" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(positionOptionsMap[identity.department_id] || []).map((pos) => (
+                                    <SelectItem key={pos.id} value={pos.id}>
+                                      {pos.name} ({pos.level_display})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Select
+                                value={identity.position_id}
+                                onValueChange={(value) => handleIdentityPositionChange(index, value)}
+                                disabled={!identity.department_id}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="选择职位" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {globalPositions.map((pos) => (
+                                    <SelectItem key={pos.id} value={pos.id}>
+                                      {pos.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -1343,6 +1936,249 @@ export function EmployeesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* API Key 创建对话框 */}
+      <Dialog open={apiKeyCreateDialogOpen} onOpenChange={setApiKeyCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+            <DialogTitle>创建API Key</DialogTitle>
+            <DialogDescription>
+              为员工 {selectedApiKeyEmployee?.name}（{selectedApiKeyEmployee?.username}）创建API Key
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...apiKeyForm}>
+            <form onSubmit={apiKeyForm.handleSubmit(handleApiKeyCreateSubmit)} className="flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto px-6 space-y-4">
+                <FormField
+                  control={apiKeyForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>密钥名称</FormLabel>
+                      <FormControl>
+                        <Input placeholder="请输入密钥名称" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={apiKeyForm.control}
+                  name="expires_in_days"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>有效期（天）</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} max={3650} {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        最短1天，最长10年（3650天）
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-2">
+                  <FormLabel>权限范围</FormLabel>
+                  <FormDescription>
+                    选择此API Key可访问的功能和权限
+                  </FormDescription>
+                  <div className="space-y-3 mt-2">
+                    {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
+                      <div key={scope} className="border rounded-lg p-3">
+                        <div className="font-medium mb-2">{info.description}</div>
+                        <div className="flex flex-wrap gap-2">
+                          {info.permissions.map((permission) => {
+                            const currentScopes = apiKeyForm.watch('scopes')
+                            const isChecked = currentScopes[scope]?.includes(permission)
+                            return (
+                              <label
+                                key={permission}
+                                className="flex items-center gap-2 cursor-pointer"
+                              >
+                                <Checkbox
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    const current = currentScopes[scope] || []
+                                    if (checked) {
+                                      apiKeyForm.setValue('scopes', {
+                                        ...currentScopes,
+                                        [scope]: [...current, permission],
+                                      })
+                                    } else {
+                                      const newPermissions = current.filter((p) => p !== permission)
+                                      if (newPermissions.length === 0) {
+                                        const { [scope]: _, ...rest } = currentScopes
+                                        apiKeyForm.setValue('scopes', rest)
+                                      } else {
+                                        apiKeyForm.setValue('scopes', {
+                                          ...currentScopes,
+                                          [scope]: newPermissions,
+                                        })
+                                      }
+                                    }
+                                  }}
+                                />
+                                <span className="text-sm">
+                                  {PERMISSION_LABELS[permission] || permission}
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
+                <Button type="button" variant="outline" onClick={() => setApiKeyCreateDialogOpen(false)}>
+                  取消
+                </Button>
+                <Button type="submit" disabled={createApiKeyMutation.isPending}>
+                  {createApiKeyMutation.isPending ? '创建中...' : '创建API Key'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* API Key 结果对话框 */}
+      <Dialog open={apiKeyResultDialogOpen} onOpenChange={setApiKeyResultDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              API Key已生成
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>重要提示</AlertTitle>
+              <AlertDescription>
+                请立即复制并安全保存此API Key，它只会显示一次。关闭此对话框后将无法再次查看完整密钥。
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+                <span className="text-sm font-medium">员工：</span>
+                <span>{createdApiKey?.name}（{createdApiKey?.username}）</span>
+              </div>
+              <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+                <span className="text-sm font-medium">密钥名称：</span>
+                <span>{createdApiKey?.info?.name}</span>
+              </div>
+              <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                <span className="text-sm font-medium">API Key：</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted px-2 py-1 rounded text-sm break-all flex-1">
+                      {showApiKey ? createdApiKey?.api_key : '••••••••••••••••••••••••••••••••'}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleCopyToClipboard(createdApiKey?.api_key || '')}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    复制API Key
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => {
+              setApiKeyResultDialogOpen(false)
+              setCreatedApiKey(null)
+              setShowApiKey(false)
+            }}>
+              我已安全保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* API Key 权限编辑对话框 */}
+      <Dialog open={apiKeyScopesDialogOpen} onOpenChange={setApiKeyScopesDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+            <DialogTitle>编辑API Key权限</DialogTitle>
+            <DialogDescription>
+              修改员工 {selectedApiKeyEmployee?.name} 的API Key权限范围
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 space-y-3">
+            {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
+              <div key={scope} className="border rounded-lg p-3">
+                <div className="font-medium mb-2">{info.description}</div>
+                <div className="flex flex-wrap gap-2">
+                  {info.permissions.map((permission) => {
+                    const isChecked = selectedScopes[scope]?.includes(permission)
+                    return (
+                      <label
+                        key={permission}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => toggleScope(scope, permission)}
+                        />
+                        <span className="text-sm">
+                          {PERMISSION_LABELS[permission] || permission}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
+            <Button type="button" variant="outline" onClick={() => setApiKeyScopesDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleApiKeyScopesSubmit} disabled={updateApiKeyScopesMutation.isPending}>
+              {updateApiKeyScopesMutation.isPending ? '保存中...' : '保存权限'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* API Key 删除确认对话框 */}
+      <AlertDialog open={apiKeyDeleteDialogOpen} onOpenChange={setApiKeyDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除API Key</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除员工 {selectedApiKeyEmployee?.name} 的API Key吗？删除后，使用该密钥的所有调用都会失败。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleApiKeyDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteApiKeyMutation.isPending ? '删除中...' : '删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

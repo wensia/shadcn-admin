@@ -1,85 +1,80 @@
 /**
- * 路由到组件的映射
- * 使用React.lazy实现按需加载
- * 用于TabsManager渲染tab内容
+ * 路由配置
+ * - routeComponents: 需要懒加载组件的旧路由（保留兼容）
+ * - sidebarTitleMap: 从 sidebar-data 自动提取的 url→title 映射
+ *   新增侧边栏菜单项时自动获得 tab 支持，无需手动维护
  */
 
 import { lazy, type ComponentType } from 'react'
+import {
+  crmNavGroups,
+  adminNavGroups,
+  hrNavGroups,
+  yunkeNavGroups,
+} from '@/components/layout/data/sidebar-data'
 
-/**
- * 路由组件映射类型
- */
 export type RouteComponent = ComponentType<unknown>
 
-/**
- * 路由配置接口
- */
 export interface RouteConfig {
-  component: React.LazyExoticComponent<RouteComponent>
+  component?: React.LazyExoticComponent<RouteComponent>
   title: string
 }
 
 /**
- * 路由到组件的映射表
- * key: 路由路径
- * value: 懒加载组件和标题
+ * 从侧边栏导航组中提取所有 url → title 映射
+ */
+function buildSidebarTitleMap(): Record<string, string> {
+  const map: Record<string, string> = {}
+  const allGroups = [
+    ...crmNavGroups,
+    ...adminNavGroups,
+    ...hrNavGroups,
+    ...yunkeNavGroups,
+  ]
+  for (const group of allGroups) {
+    for (const item of group.items) {
+      if (item.url) {
+        map[item.url] = item.title
+      }
+      // 处理子菜单
+      if (item.items) {
+        for (const sub of item.items) {
+          if (sub.url) {
+            map[sub.url] = sub.title
+          }
+        }
+      }
+    }
+  }
+  return map
+}
+
+const sidebarTitleMap = buildSidebarTitleMap()
+
+/**
+ * 需要懒加载组件的路由（保留兼容）
  */
 export const routeComponents: Record<string, RouteConfig> = {
-  // Dashboard
   '/': {
     component: lazy(() => import('@/features/dashboard').then(m => ({ default: m.Dashboard }))),
     title: 'Dashboard',
   },
-
-  // Tasks
   '/tasks': {
     component: lazy(() => import('@/features/tasks').then(m => ({ default: m.Tasks }))),
     title: 'Tasks',
   },
-
-  // Apps
   '/apps': {
     component: lazy(() => import('@/features/apps').then(m => ({ default: m.Apps }))),
     title: 'Apps',
   },
-
-  // Chats
   '/chats': {
     component: lazy(() => import('@/features/chats').then(m => ({ default: m.Chats }))),
     title: 'Chats',
   },
-
-  // Users
   '/users': {
     component: lazy(() => import('@/features/users').then(m => ({ default: m.Users }))),
     title: 'Users',
   },
-
-  // CRM - Leads
-  '/crm/leads': {
-    component: lazy(() => import('@/features/crm/leads/leads-page').then(m => ({ default: m.LeadsPage }))),
-    title: '线索管理',
-  },
-
-  // CRM - Leads Pool
-  '/crm/leads/pool': {
-    component: lazy(() => import('@/features/crm/leads-pool').then(m => ({ default: m.LeadsPoolPage }))),
-    title: '公海线索',
-  },
-
-  // CRM - Continuous Call
-  '/crm/continuous-call': {
-    component: lazy(() => import('@/features/crm/continuous-call').then(m => ({ default: m.ContinuousCallPage }))),
-    title: '快捷外呼',
-  },
-
-  // CRM - Batch Import
-  '/crm/batch-import': {
-    component: lazy(() => import('@/features/crm/batch-import').then(m => ({ default: m.BatchImportPage }))),
-    title: '批量导入',
-  },
-
-  // Settings
   '/settings': {
     component: lazy(() => import('@/features/settings/profile').then(m => ({ default: m.SettingsProfile }))),
     title: 'Profile',
@@ -100,8 +95,6 @@ export const routeComponents: Record<string, RouteConfig> = {
     component: lazy(() => import('@/features/settings/display').then(m => ({ default: m.SettingsDisplay }))),
     title: 'Display',
   },
-
-  // Help Center
   '/help-center': {
     component: lazy(() => import('@/components/coming-soon').then(m => ({ default: m.ComingSoon }))),
     title: 'Help Center',
@@ -109,25 +102,27 @@ export const routeComponents: Record<string, RouteConfig> = {
 }
 
 /**
- * 根据路径获取组件配置
+ * 根据路径获取路由配置
+ * 优先从 routeComponents 查找，其次从 sidebar 标题映射查找
  */
 export function getRouteConfig(path: string): RouteConfig | undefined {
-  // 先尝试精确匹配
-  if (routeComponents[path]) {
-    return routeComponents[path]
+  const pathClean = path.split('?')[0]
+
+  // 优先从 routeComponents 精确匹配
+  if (routeComponents[pathClean]) {
+    return routeComponents[pathClean]
   }
 
-  // 处理带参数的路径（移除查询参数）
-  const pathWithoutQuery = path.split('?')[0]
-  if (routeComponents[pathWithoutQuery]) {
-    return routeComponents[pathWithoutQuery]
+  // 从 sidebar 标题映射查找
+  if (sidebarTitleMap[pathClean]) {
+    return { title: sidebarTitleMap[pathClean] }
   }
 
   return undefined
 }
 
 /**
- * 检查路径是否有对应的组件
+ * 检查路径是否有对应的路由配置
  */
 export function hasRouteComponent(path: string): boolean {
   return getRouteConfig(path) !== undefined

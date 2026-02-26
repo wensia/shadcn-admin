@@ -93,11 +93,13 @@ function TabItem({
  */
 /**
  * 获取路径所属的模块前缀
- * /yunke/* -> "yunke", 其他 -> "main"
+ * 每个顶级路径独立一组 tabs，互不混用
  */
 function getModuleGroup(path: string): string {
   if (path.startsWith('/yunke')) return 'yunke'
-  return 'main'
+  if (path.startsWith('/admin')) return 'admin'
+  if (path.startsWith('/hr')) return 'hr'
+  return 'crm'
 }
 
 export function TabsManager() {

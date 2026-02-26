@@ -316,6 +316,8 @@ export interface LeadFollowup {
   followup_by_id: string
   followup_by_name?: string
   created_at: string
+  /** 来源: manual=人工填写, ai_auto=AI自动生成 */
+  source?: 'manual' | 'ai_auto'
   // 跨校区记录字段
   source_campus_id?: string
   source_campus_name?: string

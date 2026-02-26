@@ -4,7 +4,7 @@
  */
 
 import * as React from 'react'
-import { Phone, MessageSquare, Users, Mail, MessageCircle } from 'lucide-react'
+import { Phone, MessageSquare, Users, Mail, MessageCircle, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStyleClasses } from '@/lib/style-utils'
 import {
@@ -99,8 +99,14 @@ export function FollowupTimeline({
               showConnector={!isLast}
             />
             <TimelineContent>
-              {/* 头部: 方式徽章 + 结果徽章 + 相对时间 */}
+              {/* 头部: AI标签 + 方式徽章 + 结果徽章 + 相对时间 */}
               <TimelineHeader>
+                {followup.source === 'ai_auto' && (
+                  <Badge variant="outline" className={cn(s.text.xs, s.height.badge, 'border-purple-300 text-purple-600 bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:bg-purple-950/30 gap-0.5')}>
+                    <Sparkles className="h-2.5 w-2.5" />
+                    AI
+                  </Badge>
+                )}
                 <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
                   {followupMethodLabels[followup.method]}
                 </Badge>

@@ -84,6 +84,7 @@ import type {
   YunkePasswordResetResponse,
   YunkeBatchLoginResult,
   YunkeLoginStatusResult,
+  EmployeeSubmitToken,
   EmployeeApiKeyInfo,
   ApiKeyCreate,
   ApiKeyCreateResponse,
@@ -309,6 +310,7 @@ export const adminApi = {
   async getEmployees(params: ListQuery & {
     is_active?: boolean
     is_superuser?: boolean
+    has_api_key?: boolean
     department_id?: string
     campus_id?: string
   } = {}): Promise<ApiResponse<PaginatedResponse<EmployeeItem>>> {
@@ -346,6 +348,11 @@ export const adminApi = {
   /** 快速创建员工账号 */
   async quickCreateEmployee(data: QuickCreateEmployeeData): Promise<ApiResponse<QuickCreateEmployeeResult>> {
     return apiClient.post<ApiResponse<QuickCreateEmployeeResult>>('/employees/quick-create', data)
+  },
+
+  /** 获取员工的所有提交令牌 */
+  async getEmployeeSubmitTokens(employeeId: string): Promise<ApiResponse<EmployeeSubmitToken[]>> {
+    return apiClient.get<ApiResponse<EmployeeSubmitToken[]>>(`/employees/${employeeId}/submit-tokens`)
   },
 
   /** 重置员工密码 */
@@ -399,7 +406,11 @@ export const adminApi = {
   /** 批量更新员工身份 */
   async updateEmployeeIdentities(employeeId: string, identities: Array<{
     id?: string
-    campus_id: string
+    scope_type?: string
+    campus_id?: string
+    region_id?: string
+    district_id?: string
+    area_id?: string
     department_id: string
     position_id: string
     is_active: boolean
@@ -679,6 +690,21 @@ export const sourceChannelApi = {
   /** 删除来源渠道 */
   async deleteChannel(id: string): Promise<void> {
     await apiClient.delete(`/source-channels/${id}`)
+  },
+
+  /** 添加员工提交令牌 */
+  async addSubmitToken(channelId: string, employeeId: string, employeeName: string): Promise<{ token: string; employee_id: string; employee_name: string }> {
+    const response = await apiClient.post<ApiResponse<{ token: string; employee_id: string; employee_name: string }>>(
+      `/source-channels/${channelId}/submit-tokens`,
+      { employee_id: employeeId, employee_name: employeeName }
+    )
+    if (!response.success || !response.data) throw new Error(response.message || '添加失败')
+    return response.data
+  },
+
+  /** 移除员工提交令牌 */
+  async removeSubmitToken(channelId: string, token: string): Promise<void> {
+    await apiClient.delete(`/source-channels/${channelId}/submit-tokens/${token}`)
   },
 }
 

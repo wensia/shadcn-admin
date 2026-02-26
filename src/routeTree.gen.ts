@@ -10,10 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LeadSubmitRouteImport } from './routes/lead-submit'
 import { Route as DiscTestRouteImport } from './routes/disc-test'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
+import { Route as FullscreenRouteRouteImport } from './routes/_fullscreen/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as FullscreenExcelDemoRouteImport } from './routes/_fullscreen/excel-demo'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -28,6 +31,7 @@ import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_aut
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedYunkeRouteRouteImport } from './routes/_authenticated/yunke/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
+import { Route as AuthenticatedHrRouteRouteImport } from './routes/_authenticated/hr/route'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedYunkeIndexRouteImport } from './routes/_authenticated/yunke/index'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
@@ -51,6 +55,8 @@ import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedHrTempDiscRecordsRouteImport } from './routes/_authenticated/hr/temp-disc-records'
+import { Route as AuthenticatedHrDiscTestRouteImport } from './routes/_authenticated/hr/disc-test'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authenticated/crm/workbench'
 import { Route as AuthenticatedCrmVisitScheduleRouteImport } from './routes/_authenticated/crm/visit-schedule'
@@ -58,10 +64,11 @@ import { Route as AuthenticatedCrmPendingApprovalsRouteImport } from './routes/_
 import { Route as AuthenticatedCrmOrdersRouteImport } from './routes/_authenticated/crm/orders'
 import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
+import { Route as AuthenticatedCrmCallRecordsRouteImport } from './routes/_authenticated/crm/call-records'
 import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
+import { Route as AuthenticatedCrmAiAssistantRouteImport } from './routes/_authenticated/crm/ai-assistant'
 import { Route as AuthenticatedAdminYunkeAccountsRouteImport } from './routes/_authenticated/admin/yunke-accounts'
 import { Route as AuthenticatedAdminWebhookHooksRouteImport } from './routes/_authenticated/admin/webhook-hooks'
-import { Route as AuthenticatedAdminTempDiscRecordsRouteImport } from './routes/_authenticated/admin/temp-disc-records'
 import { Route as AuthenticatedAdminSourceChannelsRouteImport } from './routes/_authenticated/admin/source-channels'
 import { Route as AuthenticatedAdminSchoolsRouteImport } from './routes/_authenticated/admin/schools'
 import { Route as AuthenticatedAdminScheduledTasksRouteImport } from './routes/_authenticated/admin/scheduled-tasks'
@@ -75,7 +82,6 @@ import { Route as AuthenticatedAdminIdentitiesRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
 import { Route as AuthenticatedAdminEmployeeHierarchyRouteImport } from './routes/_authenticated/admin/employee-hierarchy'
 import { Route as AuthenticatedAdminDistrictsRouteImport } from './routes/_authenticated/admin/districts'
-import { Route as AuthenticatedAdminDiscTestRouteImport } from './routes/_authenticated/admin/disc-test'
 import { Route as AuthenticatedAdminDingtalkRobotsRouteImport } from './routes/_authenticated/admin/dingtalk-robots'
 import { Route as AuthenticatedAdminDepartmentsRouteImport } from './routes/_authenticated/admin/departments'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/admin/dashboard'
@@ -98,6 +104,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LeadSubmitRoute = LeadSubmitRouteImport.update({
+  id: '/lead-submit',
+  path: '/lead-submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiscTestRoute = DiscTestRouteImport.update({
   id: '/disc-test',
   path: '/disc-test',
@@ -108,6 +119,10 @@ const ClerkRouteRoute = ClerkRouteRouteImport.update({
   path: '/clerk',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FullscreenRouteRoute = FullscreenRouteRouteImport.update({
+  id: '/_fullscreen',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -116,6 +131,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const FullscreenExcelDemoRoute = FullscreenExcelDemoRouteImport.update({
+  id: '/excel-demo',
+  path: '/excel-demo',
+  getParentRoute: () => FullscreenRouteRoute,
 } as any)
 const errors503Route = errors503RouteImport.update({
   id: '/(errors)/503',
@@ -186,6 +206,11 @@ const AuthenticatedSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedHrRouteRoute = AuthenticatedHrRouteRouteImport.update({
+  id: '/hr',
+  path: '/hr',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -314,6 +339,17 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedHrTempDiscRecordsRoute =
+  AuthenticatedHrTempDiscRecordsRouteImport.update({
+    id: '/temp-disc-records',
+    path: '/temp-disc-records',
+    getParentRoute: () => AuthenticatedHrRouteRoute,
+  } as any)
+const AuthenticatedHrDiscTestRoute = AuthenticatedHrDiscTestRouteImport.update({
+  id: '/disc-test',
+  path: '/disc-test',
+  getParentRoute: () => AuthenticatedHrRouteRoute,
+} as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
@@ -355,10 +391,22 @@ const AuthenticatedCrmContinuousCallRoute =
     path: '/crm/continuous-call',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCrmCallRecordsRoute =
+  AuthenticatedCrmCallRecordsRouteImport.update({
+    id: '/crm/call-records',
+    path: '/crm/call-records',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCrmBatchImportRoute =
   AuthenticatedCrmBatchImportRouteImport.update({
     id: '/crm/batch-import',
     path: '/crm/batch-import',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCrmAiAssistantRoute =
+  AuthenticatedCrmAiAssistantRouteImport.update({
+    id: '/crm/ai-assistant',
+    path: '/crm/ai-assistant',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminYunkeAccountsRoute =
@@ -371,12 +419,6 @@ const AuthenticatedAdminWebhookHooksRoute =
   AuthenticatedAdminWebhookHooksRouteImport.update({
     id: '/webhook-hooks',
     path: '/webhook-hooks',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminTempDiscRecordsRoute =
-  AuthenticatedAdminTempDiscRecordsRouteImport.update({
-    id: '/temp-disc-records',
-    path: '/temp-disc-records',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminSourceChannelsRoute =
@@ -455,12 +497,6 @@ const AuthenticatedAdminDistrictsRoute =
   AuthenticatedAdminDistrictsRouteImport.update({
     id: '/districts',
     path: '/districts',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminDiscTestRoute =
-  AuthenticatedAdminDiscTestRouteImport.update({
-    id: '/disc-test',
-    path: '/disc-test',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminDingtalkRobotsRoute =
@@ -562,8 +598,10 @@ const AuthenticatedCrmDataStatisticsConsultingRoute =
 export interface FileRoutesByFullPath {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/disc-test': typeof DiscTestRoute
+  '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -576,6 +614,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/excel-demo': typeof FullscreenExcelDemoRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
@@ -589,7 +628,6 @@ export interface FileRoutesByFullPath {
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
-  '/admin/disc-test': typeof AuthenticatedAdminDiscTestRoute
   '/admin/districts': typeof AuthenticatedAdminDistrictsRoute
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
@@ -603,10 +641,11 @@ export interface FileRoutesByFullPath {
   '/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
   '/admin/schools': typeof AuthenticatedAdminSchoolsRoute
   '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
-  '/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
   '/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
   '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
+  '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
+  '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
@@ -614,6 +653,8 @@ export interface FileRoutesByFullPath {
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/hr/temp-disc-records': typeof AuthenticatedHrTempDiscRecordsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -644,7 +685,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/disc-test': typeof DiscTestRoute
+  '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
+  '/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/sign-in': typeof authSignInRoute
@@ -655,6 +698,7 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/excel-demo': typeof FullscreenExcelDemoRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
@@ -668,7 +712,6 @@ export interface FileRoutesByTo {
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
-  '/admin/disc-test': typeof AuthenticatedAdminDiscTestRoute
   '/admin/districts': typeof AuthenticatedAdminDistrictsRoute
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
@@ -682,10 +725,11 @@ export interface FileRoutesByTo {
   '/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
   '/admin/schools': typeof AuthenticatedAdminSchoolsRoute
   '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
-  '/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
   '/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
   '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
+  '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
+  '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
@@ -693,6 +737,8 @@ export interface FileRoutesByTo {
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/hr/temp-disc-records': typeof AuthenticatedHrTempDiscRecordsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -723,10 +769,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_fullscreen': typeof FullscreenRouteRouteWithChildren
   '/clerk': typeof ClerkRouteRouteWithChildren
   '/disc-test': typeof DiscTestRoute
+  '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/_authenticated/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
@@ -741,6 +790,7 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_fullscreen/excel-demo': typeof FullscreenExcelDemoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
@@ -754,7 +804,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/_authenticated/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
-  '/_authenticated/admin/disc-test': typeof AuthenticatedAdminDiscTestRoute
   '/_authenticated/admin/districts': typeof AuthenticatedAdminDistrictsRoute
   '/_authenticated/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
@@ -768,10 +817,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/scheduled-tasks': typeof AuthenticatedAdminScheduledTasksRoute
   '/_authenticated/admin/schools': typeof AuthenticatedAdminSchoolsRoute
   '/_authenticated/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
-  '/_authenticated/admin/temp-disc-records': typeof AuthenticatedAdminTempDiscRecordsRoute
   '/_authenticated/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
   '/_authenticated/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
+  '/_authenticated/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
+  '/_authenticated/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/_authenticated/crm/orders': typeof AuthenticatedCrmOrdersRoute
@@ -779,6 +829,8 @@ export interface FileRoutesById {
   '/_authenticated/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/_authenticated/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/_authenticated/hr/temp-disc-records': typeof AuthenticatedHrTempDiscRecordsRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -811,8 +863,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/clerk'
     | '/disc-test'
+    | '/lead-submit'
     | '/login'
     | '/admin'
+    | '/hr'
     | '/settings'
     | '/yunke'
     | '/forgot-password'
@@ -825,6 +879,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/excel-demo'
     | '/'
     | '/admin/ai-config'
     | '/admin/api-keys'
@@ -838,7 +893,6 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/departments'
     | '/admin/dingtalk-robots'
-    | '/admin/disc-test'
     | '/admin/districts'
     | '/admin/employee-hierarchy'
     | '/admin/employees'
@@ -852,10 +906,11 @@ export interface FileRouteTypes {
     | '/admin/scheduled-tasks'
     | '/admin/schools'
     | '/admin/source-channels'
-    | '/admin/temp-disc-records'
     | '/admin/webhook-hooks'
     | '/admin/yunke-accounts'
+    | '/crm/ai-assistant'
     | '/crm/batch-import'
+    | '/crm/call-records'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
     | '/crm/orders'
@@ -863,6 +918,8 @@ export interface FileRouteTypes {
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/errors/$error'
+    | '/hr/disc-test'
+    | '/hr/temp-disc-records'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -893,7 +950,9 @@ export interface FileRouteTypes {
   to:
     | '/clerk'
     | '/disc-test'
+    | '/lead-submit'
     | '/login'
+    | '/hr'
     | '/forgot-password'
     | '/otp'
     | '/sign-in'
@@ -904,6 +963,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/excel-demo'
     | '/'
     | '/admin/ai-config'
     | '/admin/api-keys'
@@ -917,7 +977,6 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/departments'
     | '/admin/dingtalk-robots'
-    | '/admin/disc-test'
     | '/admin/districts'
     | '/admin/employee-hierarchy'
     | '/admin/employees'
@@ -931,10 +990,11 @@ export interface FileRouteTypes {
     | '/admin/scheduled-tasks'
     | '/admin/schools'
     | '/admin/source-channels'
-    | '/admin/temp-disc-records'
     | '/admin/webhook-hooks'
     | '/admin/yunke-accounts'
+    | '/crm/ai-assistant'
     | '/crm/batch-import'
+    | '/crm/call-records'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
     | '/crm/orders'
@@ -942,6 +1002,8 @@ export interface FileRouteTypes {
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/errors/$error'
+    | '/hr/disc-test'
+    | '/hr/temp-disc-records'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -971,10 +1033,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/_fullscreen'
     | '/clerk'
     | '/disc-test'
+    | '/lead-submit'
     | '/login'
     | '/_authenticated/admin'
+    | '/_authenticated/hr'
     | '/_authenticated/settings'
     | '/_authenticated/yunke'
     | '/clerk/(auth)'
@@ -989,6 +1054,7 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_fullscreen/excel-demo'
     | '/_authenticated/'
     | '/_authenticated/admin/ai-config'
     | '/_authenticated/admin/api-keys'
@@ -1002,7 +1068,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/departments'
     | '/_authenticated/admin/dingtalk-robots'
-    | '/_authenticated/admin/disc-test'
     | '/_authenticated/admin/districts'
     | '/_authenticated/admin/employee-hierarchy'
     | '/_authenticated/admin/employees'
@@ -1016,10 +1081,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/scheduled-tasks'
     | '/_authenticated/admin/schools'
     | '/_authenticated/admin/source-channels'
-    | '/_authenticated/admin/temp-disc-records'
     | '/_authenticated/admin/webhook-hooks'
     | '/_authenticated/admin/yunke-accounts'
+    | '/_authenticated/crm/ai-assistant'
     | '/_authenticated/crm/batch-import'
+    | '/_authenticated/crm/call-records'
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/crm/lead-conversion'
     | '/_authenticated/crm/orders'
@@ -1027,6 +1093,8 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/visit-schedule'
     | '/_authenticated/crm/workbench'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/hr/disc-test'
+    | '/_authenticated/hr/temp-disc-records'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
@@ -1057,8 +1125,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  FullscreenRouteRoute: typeof FullscreenRouteRouteWithChildren
   ClerkRouteRoute: typeof ClerkRouteRouteWithChildren
   DiscTestRoute: typeof DiscTestRoute
+  LeadSubmitRoute: typeof LeadSubmitRoute
   LoginRoute: typeof LoginRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOtpRoute: typeof authOtpRoute
@@ -1081,6 +1151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lead-submit': {
+      id: '/lead-submit'
+      path: '/lead-submit'
+      fullPath: '/lead-submit'
+      preLoaderRoute: typeof LeadSubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/disc-test': {
       id: '/disc-test'
       path: '/disc-test'
@@ -1093,6 +1170,13 @@ declare module '@tanstack/react-router' {
       path: '/clerk'
       fullPath: '/clerk'
       preLoaderRoute: typeof ClerkRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_fullscreen': {
+      id: '/_fullscreen'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof FullscreenRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -1108,6 +1192,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_fullscreen/excel-demo': {
+      id: '/_fullscreen/excel-demo'
+      path: '/excel-demo'
+      fullPath: '/excel-demo'
+      preLoaderRoute: typeof FullscreenExcelDemoRouteImport
+      parentRoute: typeof FullscreenRouteRoute
     }
     '/(errors)/503': {
       id: '/(errors)/503'
@@ -1205,6 +1296,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hr': {
+      id: '/_authenticated/hr'
+      path: '/hr'
+      fullPath: '/hr'
+      preLoaderRoute: typeof AuthenticatedHrRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
@@ -1368,6 +1466,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/hr/temp-disc-records': {
+      id: '/_authenticated/hr/temp-disc-records'
+      path: '/temp-disc-records'
+      fullPath: '/hr/temp-disc-records'
+      preLoaderRoute: typeof AuthenticatedHrTempDiscRecordsRouteImport
+      parentRoute: typeof AuthenticatedHrRouteRoute
+    }
+    '/_authenticated/hr/disc-test': {
+      id: '/_authenticated/hr/disc-test'
+      path: '/disc-test'
+      fullPath: '/hr/disc-test'
+      preLoaderRoute: typeof AuthenticatedHrDiscTestRouteImport
+      parentRoute: typeof AuthenticatedHrRouteRoute
+    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
@@ -1417,11 +1529,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmContinuousCallRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/crm/call-records': {
+      id: '/_authenticated/crm/call-records'
+      path: '/crm/call-records'
+      fullPath: '/crm/call-records'
+      preLoaderRoute: typeof AuthenticatedCrmCallRecordsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/crm/batch-import': {
       id: '/_authenticated/crm/batch-import'
       path: '/crm/batch-import'
       fullPath: '/crm/batch-import'
       preLoaderRoute: typeof AuthenticatedCrmBatchImportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crm/ai-assistant': {
+      id: '/_authenticated/crm/ai-assistant'
+      path: '/crm/ai-assistant'
+      fullPath: '/crm/ai-assistant'
+      preLoaderRoute: typeof AuthenticatedCrmAiAssistantRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/yunke-accounts': {
@@ -1436,13 +1562,6 @@ declare module '@tanstack/react-router' {
       path: '/webhook-hooks'
       fullPath: '/admin/webhook-hooks'
       preLoaderRoute: typeof AuthenticatedAdminWebhookHooksRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/temp-disc-records': {
-      id: '/_authenticated/admin/temp-disc-records'
-      path: '/temp-disc-records'
-      fullPath: '/admin/temp-disc-records'
-      preLoaderRoute: typeof AuthenticatedAdminTempDiscRecordsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/source-channels': {
@@ -1534,13 +1653,6 @@ declare module '@tanstack/react-router' {
       path: '/districts'
       fullPath: '/admin/districts'
       preLoaderRoute: typeof AuthenticatedAdminDistrictsRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/admin/disc-test': {
-      id: '/_authenticated/admin/disc-test'
-      path: '/disc-test'
-      fullPath: '/admin/disc-test'
-      preLoaderRoute: typeof AuthenticatedAdminDiscTestRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/dingtalk-robots': {
@@ -1671,7 +1783,6 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
   AuthenticatedAdminDingtalkRobotsRoute: typeof AuthenticatedAdminDingtalkRobotsRoute
-  AuthenticatedAdminDiscTestRoute: typeof AuthenticatedAdminDiscTestRoute
   AuthenticatedAdminDistrictsRoute: typeof AuthenticatedAdminDistrictsRoute
   AuthenticatedAdminEmployeeHierarchyRoute: typeof AuthenticatedAdminEmployeeHierarchyRoute
   AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
@@ -1685,7 +1796,6 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminScheduledTasksRoute: typeof AuthenticatedAdminScheduledTasksRoute
   AuthenticatedAdminSchoolsRoute: typeof AuthenticatedAdminSchoolsRoute
   AuthenticatedAdminSourceChannelsRoute: typeof AuthenticatedAdminSourceChannelsRoute
-  AuthenticatedAdminTempDiscRecordsRoute: typeof AuthenticatedAdminTempDiscRecordsRoute
   AuthenticatedAdminWebhookHooksRoute: typeof AuthenticatedAdminWebhookHooksRoute
   AuthenticatedAdminYunkeAccountsRoute: typeof AuthenticatedAdminYunkeAccountsRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -1707,7 +1817,6 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminDepartmentsRoute: AuthenticatedAdminDepartmentsRoute,
     AuthenticatedAdminDingtalkRobotsRoute:
       AuthenticatedAdminDingtalkRobotsRoute,
-    AuthenticatedAdminDiscTestRoute: AuthenticatedAdminDiscTestRoute,
     AuthenticatedAdminDistrictsRoute: AuthenticatedAdminDistrictsRoute,
     AuthenticatedAdminEmployeeHierarchyRoute:
       AuthenticatedAdminEmployeeHierarchyRoute,
@@ -1726,8 +1835,6 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminSchoolsRoute: AuthenticatedAdminSchoolsRoute,
     AuthenticatedAdminSourceChannelsRoute:
       AuthenticatedAdminSourceChannelsRoute,
-    AuthenticatedAdminTempDiscRecordsRoute:
-      AuthenticatedAdminTempDiscRecordsRoute,
     AuthenticatedAdminWebhookHooksRoute: AuthenticatedAdminWebhookHooksRoute,
     AuthenticatedAdminYunkeAccountsRoute: AuthenticatedAdminYunkeAccountsRoute,
     AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
@@ -1737,6 +1844,19 @@ const AuthenticatedAdminRouteRouteWithChildren =
   AuthenticatedAdminRouteRoute._addFileChildren(
     AuthenticatedAdminRouteRouteChildren,
   )
+
+interface AuthenticatedHrRouteRouteChildren {
+  AuthenticatedHrDiscTestRoute: typeof AuthenticatedHrDiscTestRoute
+  AuthenticatedHrTempDiscRecordsRoute: typeof AuthenticatedHrTempDiscRecordsRoute
+}
+
+const AuthenticatedHrRouteRouteChildren: AuthenticatedHrRouteRouteChildren = {
+  AuthenticatedHrDiscTestRoute: AuthenticatedHrDiscTestRoute,
+  AuthenticatedHrTempDiscRecordsRoute: AuthenticatedHrTempDiscRecordsRoute,
+}
+
+const AuthenticatedHrRouteRouteWithChildren =
+  AuthenticatedHrRouteRoute._addFileChildren(AuthenticatedHrRouteRouteChildren)
 
 interface AuthenticatedSettingsRouteRouteChildren {
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
@@ -1789,10 +1909,13 @@ const AuthenticatedYunkeRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedHrRouteRoute: typeof AuthenticatedHrRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedYunkeRouteRoute: typeof AuthenticatedYunkeRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedCrmAiAssistantRoute: typeof AuthenticatedCrmAiAssistantRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
+  AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
   AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
@@ -1814,10 +1937,13 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedHrRouteRoute: AuthenticatedHrRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedYunkeRouteRoute: AuthenticatedYunkeRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedCrmAiAssistantRoute: AuthenticatedCrmAiAssistantRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
+  AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
   AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
@@ -1841,6 +1967,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+interface FullscreenRouteRouteChildren {
+  FullscreenExcelDemoRoute: typeof FullscreenExcelDemoRoute
+}
+
+const FullscreenRouteRouteChildren: FullscreenRouteRouteChildren = {
+  FullscreenExcelDemoRoute: FullscreenExcelDemoRoute,
+}
+
+const FullscreenRouteRouteWithChildren = FullscreenRouteRoute._addFileChildren(
+  FullscreenRouteRouteChildren,
+)
 
 interface ClerkauthRouteRouteChildren {
   ClerkauthSignInRoute: typeof ClerkauthSignInRoute
@@ -1887,8 +2025,10 @@ const ClerkRouteRouteWithChildren = ClerkRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  FullscreenRouteRoute: FullscreenRouteRouteWithChildren,
   ClerkRouteRoute: ClerkRouteRouteWithChildren,
   DiscTestRoute: DiscTestRoute,
+  LeadSubmitRoute: LeadSubmitRoute,
   LoginRoute: LoginRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOtpRoute: authOtpRoute,

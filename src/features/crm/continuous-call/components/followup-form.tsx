@@ -3,7 +3,7 @@
  * 用于连续外呼页面和线索详情抽屉
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { format, addDays, setHours, setMinutes } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -11,6 +11,7 @@ import {
   Phone, RotateCcw, Loader2, Send,
   TrendingUp, CalendarCheck, PhoneOff, UserX,
   Clock, Ban, PhoneMissed, GraduationCap, ChevronDown,
+  Sparkles, X,
   type LucideIcon
 } from 'lucide-react'
 import { showApiErrorToast } from '@/lib/api/error-toast'
@@ -36,7 +37,8 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
-import { leadsApi } from '../../leads/api'
+import { leadsApi, getFollowupSuggestion, triggerCallPipeline } from '../../leads/api'
+import type { FollowupSuggestion, PipelineStatus } from '../../leads/api'
 import { visitScheduleApi } from '../../visit-schedule/api'
 import {
   IntentionLevel,
@@ -200,6 +202,10 @@ export interface FollowupFormProps {
   asCard?: boolean
   /** 类名 */
   className?: string
+  /** 启用 AI 跟进建议预填充（基于最近的 AI 通话分析） */
+  enableAiSuggestion?: boolean
+  /** 指定通话记录ID获取建议（不传则取最近一条） */
+  callRecordId?: string
 }
 
 export function FollowupForm({
@@ -212,6 +218,8 @@ export function FollowupForm({
   submitText = '保存',
   asCard = true,
   className,
+  enableAiSuggestion = false,
+  callRecordId,
 }: FollowupFormProps) {
   // 表单状态
   const [saving, setSaving] = useState(false)
@@ -227,6 +235,13 @@ export function FollowupForm({
   const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined)
   const [appointmentTime, setAppointmentTime] = useState<string>('10:00')
   const [appointmentReason, setAppointmentReason] = useState<string>('')
+  // AI 建议 + 流水线状态
+  const [aiSuggestion, setAiSuggestion] = useState<FollowupSuggestion | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiApplied, setAiApplied] = useState(false)
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | 'idle'>('idle')
+  const [hasAiFollowup, setHasAiFollowup] = useState(false) // 是否已有AI自动跟进记录
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 重置表单
   const resetForm = useCallback(() => {
@@ -241,7 +256,121 @@ export function FollowupForm({
     setAppointmentTime('10:00')
     setAppointmentReason('')
     setIntentionLevel(initialIntentionLevel)
+    setAiSuggestion(null)
+    setAiApplied(false)
+    setPipelineStatus('idle')
+    setHasAiFollowup(false)
   }, [initialIntentionLevel])
+
+  // 应用 AI 建议到表单
+  const applyAiSuggestion = useCallback((suggestion: FollowupSuggestion) => {
+    // 跟进结果
+    if (suggestion.followup_result) {
+      setFollowupResult(suggestion.followup_result)
+      // 和原有逻辑一致：可继续/已预约 → 自动勾选钉钉
+      if (suggestion.followup_result === 'can_continue' || suggestion.followup_result === 'appointment_scheduled') {
+        setSendToDingding(true)
+      }
+    }
+    // 意向等级
+    if (suggestion.intention_level) {
+      setIntentionLevel(suggestion.intention_level as IntentionLevel)
+    }
+    // 跟进内容
+    if (suggestion.followup_content) {
+      setFollowupContent(suggestion.followup_content)
+    }
+    // 下次跟进时间
+    if (suggestion.next_followup_at) {
+      const dt = new Date(suggestion.next_followup_at)
+      if (!isNaN(dt.getTime())) {
+        setNextFollowupDate(dt)
+        setNextFollowupTime(format(dt, 'HH:mm'))
+      }
+    }
+    setAiApplied(true)
+  }, [])
+
+  // AI 跟进建议：触发流水线 + 轮询等待结果
+  useEffect(() => {
+    if (!enableAiSuggestion || !leadId) return
+
+    let cancelled = false
+    let attempts = 0
+    const MAX_ATTEMPTS = 30 // 30 * 10s = 5 分钟
+    const POLL_INTERVAL = 10000
+
+    setAiLoading(true)
+    setPipelineStatus('idle')
+
+    // 检查是否已有 AI 自动生成的跟进记录
+    async function checkExistingAiFollowup() {
+      try {
+        const followupsRes = await leadsApi.getLeadFollowups(leadId, { page: 1, size: 10 })
+        if (!cancelled && followupsRes.success && followupsRes.data) {
+          const hasAi = followupsRes.data.some(f => f.source === 'ai_auto')
+          setHasAiFollowup(hasAi)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    checkExistingAiFollowup()
+
+    async function poll() {
+      if (cancelled || attempts >= MAX_ATTEMPTS) {
+        setAiLoading(false)
+        return
+      }
+      attempts++
+
+      try {
+        // 先尝试获取建议（可能已经就绪）
+        const sugRes = await getFollowupSuggestion(leadId, callRecordId)
+        if (cancelled) return
+
+        if (sugRes.success && sugRes.data) {
+          setAiSuggestion(sugRes.data)
+          setPipelineStatus('ready')
+          applyAiSuggestion(sugRes.data)
+          setAiLoading(false)
+          return
+        }
+
+        // 未就绪 → 触发流水线并获取当前状态
+        const pipeRes = await triggerCallPipeline(leadId)
+        if (cancelled) return
+
+        if (pipeRes.success && pipeRes.data) {
+          const status = pipeRes.data.pipeline_status
+          setPipelineStatus(status)
+
+          // 终态：不需要继续轮询
+          if (status === 'no_calls' || status === 'no_recording' || status === 'short_call') {
+            setAiLoading(false)
+            return
+          }
+        }
+
+        // 继续轮询
+        pollTimerRef.current = setTimeout(poll, POLL_INTERVAL)
+      } catch {
+        // 网络错误时继续轮询
+        pollTimerRef.current = setTimeout(poll, POLL_INTERVAL)
+      }
+    }
+
+    // 启动轮询
+    poll()
+
+    return () => {
+      cancelled = true
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+    }
+  }, [enableAiSuggestion, leadId, callRecordId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 提交表单
   const handleSubmit = useCallback(async () => {
@@ -368,6 +497,62 @@ export function FollowupForm({
   // 表单内容
   const formContent = (
     <>
+      {/* AI 流水线状态横幅 */}
+      {aiLoading && enableAiSuggestion && pipelineStatus !== 'idle' && (
+        <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300 mb-3">
+          <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+          <span>
+            {pipelineStatus === 'transcribing' && '正在转录通话录音...'}
+            {pipelineStatus === 'analyzing' && 'AI 正在分析通话内容...'}
+            {(pipelineStatus === 'idle' || !pipelineStatus) && '正在获取 AI 跟进建议...'}
+          </span>
+        </div>
+      )}
+      {aiLoading && enableAiSuggestion && pipelineStatus === 'idle' && (
+        <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300 mb-3">
+          <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+          <span>正在检查通话记录...</span>
+        </div>
+      )}
+      {!aiLoading && enableAiSuggestion && pipelineStatus === 'no_calls' && (
+        <div className="flex items-center gap-2 rounded-md border border-muted px-3 py-2 text-xs text-muted-foreground mb-3">
+          <Phone className="h-3.5 w-3.5 shrink-0" />
+          <span>暂无通话记录，等待云客数据同步（约 5 分钟）</span>
+        </div>
+      )}
+      {!aiLoading && enableAiSuggestion && (pipelineStatus === 'no_recording' || pipelineStatus === 'short_call') && (
+        <div className="flex items-center gap-2 rounded-md border border-muted px-3 py-2 text-xs text-muted-foreground mb-3">
+          <Phone className="h-3.5 w-3.5 shrink-0" />
+          <span>{pipelineStatus === 'no_recording' ? '最近通话无录音，无法生成 AI 建议' : '通话时长不足，无法生成 AI 建议'}</span>
+        </div>
+      )}
+      {aiApplied && aiSuggestion && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300 mb-3">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1">
+            AI 已根据{aiSuggestion.call_time ? format(new Date(aiSuggestion.call_time), 'MM/dd HH:mm') : '最近'}通话
+            {aiSuggestion.ai_quality_score ? `（评分 ${aiSuggestion.ai_quality_score}）` : ''}
+            预填充建议，可直接修改
+          </span>
+          <button
+            type="button"
+            className="shrink-0 rounded p-0.5 hover:bg-amber-200/50 dark:hover:bg-amber-800/50"
+            onClick={() => {
+              setAiApplied(false)
+              resetForm()
+            }}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+      {hasAiFollowup && !aiLoading && (
+        <div className="flex items-center gap-2 rounded-md border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-300 mb-3">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+          <span>AI 已根据通话分析自动生成跟进记录，可在时间轴中查看。如需补充可继续填写。</span>
+        </div>
+      )}
+
       {/* 跟进结果 */}
       <div className="flex items-center">
         <Label className="text-xs font-medium text-red-500 whitespace-nowrap w-16 shrink-0">跟进结果</Label>

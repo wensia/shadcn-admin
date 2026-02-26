@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { AnthropicLogo } from '@/assets/anthropic-logo'
 
 type AuthLayoutProps = {
@@ -6,81 +5,75 @@ type AuthLayoutProps = {
 }
 
 export function AuthLayout({ children }: AuthLayoutProps) {
-  // 应用 Anthropic 主题
-  useEffect(() => {
-    document.documentElement.classList.add('theme-anthropic')
-    return () => {
-      document.documentElement.classList.remove('theme-anthropic')
-    }
-  }, [])
-
   return (
-    <div
-      className='relative min-h-svh w-full'
-      style={{
-        background: 'linear-gradient(135deg, #faf9f5 0%, #e8e6dc 100%)',
-        fontFamily: 'Lora, Georgia, serif',
-      }}
-    >
-      {/* 装饰性背景元素 */}
-      <div className='absolute inset-0 overflow-hidden'>
+    <div className='flex min-h-svh w-full'>
+      {/* Left Brand Panel */}
+      <div className='relative hidden w-[46%] flex-col justify-between overflow-hidden bg-foreground p-10 xl:p-14 lg:flex'>
+        {/* Grid pattern overlay */}
         <div
-          className='absolute -right-32 -top-32 h-96 w-96 rounded-full opacity-20'
-          style={{ background: '#d97757' }}
+          className='pointer-events-none absolute inset-0 opacity-[0.035]'
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(217,119,87,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(217,119,87,.6) 1px, transparent 1px)',
+            backgroundSize: '52px 52px',
+          }}
         />
-        <div
-          className='absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full opacity-10'
-          style={{ background: '#d97757' }}
-        />
-        <div
-          className='absolute right-1/4 bottom-1/4 h-64 w-64 rounded-full opacity-10'
-          style={{ background: '#788c5d' }}
-        />
-      </div>
+        {/* Decorative accent shapes */}
+        <div className='absolute -right-16 top-[18%] h-72 w-36 rotate-12 rounded-full bg-primary/[0.06]' />
+        <div className='absolute -left-8 bottom-[20%] h-56 w-28 -rotate-6 rounded-full bg-primary/[0.04]' />
 
-      {/* 主内容区域 */}
-      <div className='relative z-10 flex min-h-svh items-center justify-center px-4 py-12'>
-        <div className='w-full max-w-md'>
-          {/* Logo 和标题 */}
-          <div className='mb-8 flex flex-col items-center'>
-            <AnthropicLogo className='mb-4' />
-            <h1
-              className='text-2xl font-semibold tracking-tight'
-              style={{
-                fontFamily: 'Poppins, Arial, sans-serif',
-                color: '#141413',
-              }}
-            >
-              RMF CRM 管理系统
-            </h1>
-            <p
-              className='mt-2 text-sm'
-              style={{ color: '#b0aea5' }}
-            >
-              智能客户关系管理平台
-            </p>
+        {/* Logo */}
+        <div className='relative z-10'>
+          <div className='flex items-center gap-3'>
+            <AnthropicLogo className='size-9' />
+            <span className='font-poppins text-lg font-semibold tracking-tight text-primary-foreground'>
+              RMF CRM
+            </span>
           </div>
+        </div>
 
-          {/* 登录卡片 */}
-          <div
-            className='overflow-hidden shadow-xl'
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              border: '1px solid #e8e6dc',
-            }}
-          >
-            {children}
-          </div>
-
-          {/* 底部版权信息 */}
-          <p
-            className='mt-8 text-center text-xs'
-            style={{ color: '#b0aea5' }}
-          >
-            Powered by Anthropic Brand Design
+        {/* Brand message */}
+        <div className='relative z-10 max-w-sm'>
+          <h1 className='font-lora text-[2.5rem] font-normal leading-[1.2] text-primary-foreground/90'>
+            智能驱动，
+            <br />
+            <span className='text-primary'>高效管理</span>
+            <br />
+            每一位客户。
+          </h1>
+          <div className='mt-8 h-px w-16 bg-primary/60' />
+          <p className='mt-6 max-w-xs text-sm leading-relaxed text-primary-foreground/40'>
+            全方位客户关系管理解决方案，助力团队提升效率，实现业务持续增长。
           </p>
         </div>
+
+        {/* Copyright */}
+        <p className='relative z-10 text-xs text-primary-foreground/25'>
+          &copy; 2026 RMF CRM
+        </p>
+      </div>
+
+      {/* Right Form Panel */}
+      <div className='flex w-full flex-1 flex-col items-center justify-center bg-background px-6 py-12 lg:px-12'>
+        {/* Mobile-only header */}
+        <div className='mb-10 flex flex-col items-center lg:hidden'>
+          <AnthropicLogo className='mb-4' />
+          <h1 className='font-poppins text-xl font-semibold tracking-tight text-foreground'>
+            RMF CRM 管理系统
+          </h1>
+          <p className='mt-1.5 text-sm text-muted-foreground'>
+            智能客户关系管理平台
+          </p>
+        </div>
+
+        <div className='w-full max-w-[380px]'>
+          {children}
+        </div>
+
+        {/* Bottom copyright — mobile only */}
+        <p className='mt-12 text-center text-xs text-muted-foreground/50 lg:hidden'>
+          &copy; 2026 RMF CRM
+        </p>
       </div>
     </div>
   )
