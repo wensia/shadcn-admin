@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Main } from '@/components/layout/main'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -18,6 +19,7 @@ export function YunkeAIAssistantPage() {
     updateSessionTitle,
   } = useChatSessions()
 
+  useDocumentTitle('AI 数据助手')
   const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 

@@ -1,15 +1,14 @@
 /**
  * AI 场景配置组件
- * 为每个 AI 使用场景指定模型配置和 Prompt 版本
+ * 数据表布局：为每个 AI 使用场景指定模型配置和 Prompt 版本
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Settings2, FileText } from 'lucide-react'
+import { Settings2, FileText, CircleDot } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Card, CardContent } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -18,6 +17,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { aiConfigApi } from '../../api'
 import {
   AI_PROVIDER_OPTIONS,
@@ -104,115 +111,149 @@ export function AISceneConfigContent() {
   const isLoading = scenesLoading || configsLoading || promptsLoading
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Settings2 className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">场景配置</h3>
-          <span className="text-xs text-muted-foreground">
-            为每个 AI 场景指定模型和 Prompt
-          </span>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <Settings2 className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">场景配置</h3>
+        <span className="text-xs text-muted-foreground">
+          为每个 AI 场景指定模型和 Prompt
+        </span>
       </div>
 
-      <div className="flex flex-col gap-6">
-        {AI_SCENES.map((scene) => {
-          const currentConfig = sceneMapping?.[scene.key] as
-            | AISceneConfig
-            | undefined
-          const scenePrompts = promptsByScene[scene.key] || []
-          const activePrompt = scenePrompts.find((p) => p.is_active)
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">场景</TableHead>
+              <TableHead className="w-[280px]">模型</TableHead>
+              <TableHead className="w-[280px]">Prompt</TableHead>
+              <TableHead className="w-[80px] text-center">状态</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              // 骨架屏
+              Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24 mb-1" />
+                    <Skeleton className="h-3 w-36" />
+                  </TableCell>
+                  <TableCell><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              AI_SCENES.map((scene) => {
+                const currentConfig = sceneMapping?.[scene.key] as
+                  | AISceneConfig
+                  | undefined
+                const scenePrompts = promptsByScene[scene.key] || []
+                const activePrompt = scenePrompts.find((p) => p.is_active)
+                const isConfigured = !!currentConfig?.config_id
+                const isPromptReady = !scene.needsPrompt || !!activePrompt
 
-          return (
-            <Card key={scene.key} className="py-0">
-              <CardContent className="p-5">
-                {/* 场景标题 */}
-                <div className="mb-4">
-                  <div className="text-sm font-medium">{scene.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {scene.description}
-                  </div>
-                </div>
-
-                {/* 模型配置 */}
-                <div className="mb-4 max-w-sm">
-                  <Label className="text-xs text-muted-foreground mb-1 block">
-                    模型
-                  </Label>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-full" />
-                  ) : (
-                    <Select
-                      value={currentConfig?.config_id || '__none__'}
-                      onValueChange={(value) =>
-                        handleSceneChange(scene.key, value)
-                      }
-                      disabled={setSceneMutation.isPending}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="选择模型配置" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">
-                          <span className="text-muted-foreground">
-                            未配置（使用默认）
-                          </span>
-                        </SelectItem>
-                        {allConfigs?.items.map((config) => (
-                          <SelectItem key={config.id} value={config.id}>
-                            {config.name}
-                            <span className="ml-1 text-muted-foreground">
-                              ({getProviderLabel(config.provider)})
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-
-                {/* Prompt 选择（仅需要 prompt 的场景显示） */}
-                {scene.needsPrompt && (
-                  <div className="max-w-sm">
-                    <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
-                      <FileText className="h-3 w-3" />
-                      Prompt
-                    </Label>
-                    {isLoading ? (
-                      <Skeleton className="h-8 w-full" />
-                    ) : scenePrompts.length === 0 ? (
-                      <div className="text-xs text-muted-foreground py-1">
-                        暂无 Prompt，请在"Prompt 管理"中创建
+                return (
+                  <TableRow key={scene.key}>
+                    {/* 场景信息 */}
+                    <TableCell>
+                      <div className="text-sm font-medium">{scene.label}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {scene.description}
                       </div>
-                    ) : (
+                    </TableCell>
+
+                    {/* 模型选择 */}
+                    <TableCell>
                       <Select
-                        value={activePrompt?.id || '__none__'}
-                        onValueChange={handlePromptChange}
-                        disabled={activatePromptMutation.isPending}
+                        value={currentConfig?.config_id || '__none__'}
+                        onValueChange={(value) =>
+                          handleSceneChange(scene.key, value)
+                        }
+                        disabled={setSceneMutation.isPending}
                       >
                         <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="选择 Prompt 版本" />
+                          <SelectValue placeholder="选择模型配置" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">
                             <span className="text-muted-foreground">
-                              未选择
+                              未配置（使用默认）
                             </span>
                           </SelectItem>
-                          {scenePrompts.map((prompt) => (
-                            <SelectItem key={prompt.id} value={prompt.id}>
-                              v{prompt.version} - {prompt.name}
+                          {allConfigs?.items.map((config) => (
+                            <SelectItem key={config.id} value={config.id}>
+                              {config.name}
+                              <span className="ml-1 text-muted-foreground">
+                                ({getProviderLabel(config.provider)})
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
+                    </TableCell>
+
+                    {/* Prompt 选择 */}
+                    <TableCell>
+                      {scene.needsPrompt ? (
+                        scenePrompts.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            暂无 Prompt，请先在 Prompt 管理中创建
+                          </span>
+                        ) : (
+                          <Select
+                            value={activePrompt?.id || '__none__'}
+                            onValueChange={handlePromptChange}
+                            disabled={activatePromptMutation.isPending}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="选择 Prompt 版本" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">
+                                <span className="text-muted-foreground">
+                                  未选择
+                                </span>
+                              </SelectItem>
+                              {scenePrompts.map((prompt) => (
+                                <SelectItem key={prompt.id} value={prompt.id}>
+                                  <span className="flex items-center gap-1.5">
+                                    <span>v{prompt.version} - {prompt.name}</span>
+                                    {prompt.is_active && (
+                                      <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                                        当前
+                                      </Badge>
+                                    )}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* 状态 */}
+                    <TableCell className="text-center">
+                      {isConfigured && isPromptReady ? (
+                        <Badge variant="default" className="text-[10px] px-1.5 py-0 font-normal">
+                          就绪
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
+                          待配置
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   )

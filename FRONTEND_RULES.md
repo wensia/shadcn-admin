@@ -81,6 +81,39 @@ src/
 
 **前端端口: 3457** - 禁止随意更改
 
+## 表单组件高度一致性规范
+
+**重要：同一行内的表单组件（Input、Select、Button 等）必须保持相同高度，禁止出现高低不齐**
+
+### 统一高度标准
+
+| 组件 | 默认高度 | 小号高度 |
+|------|---------|---------|
+| Button (default/sm) | `h-8` (32px) | `h-8` (32px) |
+| Button (lg) | `h-10` (40px) | - |
+| Button (icon) | `size-8` (32px) | - |
+| Input | `h-8` (32px) | - |
+| SelectTrigger (default) | `h-8` (32px) | - |
+| SelectTrigger (sm) | `h-7` (28px) | - |
+
+所有默认尺寸的表单控件统一为 **h-8 (32px)**，确保并排放置时视觉对齐。
+
+### 检查规则
+
+当 Select、Input、Button 等组件在同一个 `flex` 容器中并排时，**不需要**手动指定高度 —— 它们的默认高度已经统一。如果自定义组件需要与表单控件对齐，请使用 `h-8`。
+
+```tsx
+// 正确 - 所有组件默认 h-8，自动对齐
+<div className="flex gap-2">
+  <Select>
+    <SelectTrigger><SelectValue placeholder="选择" /></SelectTrigger>
+    ...
+  </Select>
+  <Input placeholder="输入" />
+  <Button>操作</Button>
+</div>
+```
+
 ## Sheet/抽屉组件规范
 
 ### 关闭按钮位置

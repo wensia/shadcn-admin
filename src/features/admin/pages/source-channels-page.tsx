@@ -72,6 +72,8 @@ import adminApi, { sourceChannelApi, dingtalkRobotsApi } from '../api'
 import type { SourceChannel, DingtalkRobot } from '../types'
 import { StatusBadge, SourceChannelCategoryBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
+import { UserPlus } from 'lucide-react'
 
 // 渠道分类选项
 const CHANNEL_CATEGORIES = [
@@ -124,11 +126,13 @@ const formSchema = z.object({
       robot_id: z.string().nullable().optional(),
       notify_on_submit: z.boolean().default(true),
       notify_on_collision: z.boolean().default(false),
+      notify_on_followup: z.boolean().default(false),
     }).default({
       enabled: false,
       robot_id: null,
       notify_on_submit: true,
       notify_on_collision: false,
+      notify_on_followup: false,
     }),
   }).default({}),
 })
@@ -218,18 +222,8 @@ export function SourceChannelsPage() {
     enabled: dialogOpen,
   })
 
-  // 获取员工列表（用于选择添加令牌的员工）
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employees-simple-for-token'],
-    queryFn: async () => {
-      const res = await adminApi.getEmployees({ size: 200, is_active: true })
-      return res?.data?.items || []
-    },
-    enabled: dialogOpen,
-  })
-
-  // 添加员工令牌状态
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('')
+  // 员工选择弹窗状态
+  const [employeeSelectorOpen, setEmployeeSelectorOpen] = useState(false)
 
   // 添加员工令牌
   const addTokenMutation = useMutation({
@@ -237,7 +231,6 @@ export function SourceChannelsPage() {
       sourceChannelApi.addSubmitToken(channelId, employeeId, employeeName),
     onSuccess: () => {
       toast.success('令牌已添加')
-      setSelectedEmployeeId('')
       queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
       // 刷新编辑项数据
       if (editingItem) {
@@ -456,6 +449,7 @@ export function SourceChannelsPage() {
           robot_id: null,
           notify_on_submit: true,
           notify_on_collision: false,
+          notify_on_followup: false,
         },
       },
     })
@@ -502,6 +496,7 @@ export function SourceChannelsPage() {
           robot_id: config.dingtalk_notify?.robot_id || null,
           notify_on_submit: config.dingtalk_notify?.notify_on_submit ?? true,
           notify_on_collision: config.dingtalk_notify?.notify_on_collision ?? false,
+          notify_on_followup: config.dingtalk_notify?.notify_on_followup ?? false,
         },
       },
     })
@@ -548,15 +543,13 @@ export function SourceChannelsPage() {
     }
   }
 
-  // 添加员工令牌
-  const handleAddEmployeeToken = () => {
-    if (!editingItem || !selectedEmployeeId) return
-    const emp = employees.find((e: { id: string }) => e.id === selectedEmployeeId)
-    if (!emp) return
+  // 通过员工选择弹窗选择后直接生成链接
+  const handleEmployeeSelected = (employee: { id: string; name: string }) => {
+    if (!editingItem) return
     addTokenMutation.mutate({
       channelId: editingItem.id,
-      employeeId: emp.id,
-      employeeName: (emp as { id: string; name: string }).name,
+      employeeId: employee.id,
+      employeeName: employee.name,
     })
   }
 
@@ -762,7 +755,7 @@ export function SourceChannelsPage() {
                 </TabsList>
 
                 {/* 基本信息 Tab */}
-                <TabsContent value="basic" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                <TabsContent value="basic" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
                   <FormField
                     control={form.control}
                     name="name"
@@ -863,7 +856,7 @@ export function SourceChannelsPage() {
                 </TabsContent>
 
                 {/* 快速录入配置 Tab */}
-                <TabsContent value="submit-config" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                <TabsContent value="submit-config" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
                   {/* 归属校区 */}
                   <FormField
                     control={form.control}
@@ -902,29 +895,16 @@ export function SourceChannelsPage() {
                     ) : (
                       <>
                         {/* 添加员工 */}
-                        <div className="flex gap-2">
-                          <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="选择员工" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {employees.map((emp: { id: string; name: string }) => (
-                                <SelectItem key={emp.id} value={emp.id}>
-                                  {emp.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleAddEmployeeToken}
-                            disabled={!selectedEmployeeId || addTokenMutation.isPending}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            生成链接
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setEmployeeSelectorOpen(true)}
+                          disabled={addTokenMutation.isPending}
+                          className="w-full"
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          选择员工并生成链接
+                        </Button>
 
                         {/* 已有令牌列表 */}
                         {(() => {
@@ -984,7 +964,7 @@ export function SourceChannelsPage() {
                 </TabsContent>
 
                 {/* 钉钉通知配置 Tab */}
-                <TabsContent value="dingtalk-notify" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                <TabsContent value="dingtalk-notify" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
                   {/* 启用开关 */}
                   <FormField
                     control={form.control}
@@ -1080,12 +1060,30 @@ export function SourceChannelsPage() {
                           </FormItem>
                         )}
                       />
+
+                      <FormField
+                        control={form.control}
+                        name="channel_config.dingtalk_notify.notify_on_followup"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <FormLabel>跟进结果回传</FormLabel>
+                              <div className="text-sm text-muted-foreground">
+                                课程顾问添加跟进记录后，自动将结果回传到渠道方钉钉群（脱敏信息）
+                              </div>
+                            </div>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
                     </>
                   )}
                 </TabsContent>
 
                 {/* 额外字段配置 Tab */}
-                <TabsContent value="extra-fields" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
+                <TabsContent value="extra-fields" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Settings2 className="h-4 w-4" />
@@ -1291,6 +1289,17 @@ export function SourceChannelsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 员工选择弹窗 */}
+      <EmployeeSelectorDialog
+        open={employeeSelectorOpen}
+        onOpenChange={setEmployeeSelectorOpen}
+        onSelect={handleEmployeeSelected}
+        title="选择员工"
+        description="选择员工后将自动生成专属提交链接"
+        confirmText="选择并生成链接"
+        filterByAdvisorPosition={false}
+      />
     </Main>
   )
 }

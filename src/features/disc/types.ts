@@ -53,12 +53,25 @@ export interface DISCGraphData {
   C: number
 }
 
+// 维度匹配详情
+export interface DISCDimensionDetail {
+  userScore: number
+  idealScore: number
+  diff: number
+  weight: number
+  contribution: number
+}
+
 // 岗位适配度单项
 export interface DISCJobFitItem {
   jobKey: string
   jobName: string
   matchScore: number
   idealScores: Record<DISCDimension, number>
+  dimensionDetails?: Record<DISCDimension, DISCDimensionDetail>
+  strengths?: DISCDimension[]
+  gaps?: DISCDimension[]
+  fitReason?: string
 }
 
 // 岗位适配度
@@ -74,7 +87,7 @@ export interface DISCResult {
   secondaryType?: DISCTypeInfo
   graphs?: {
     external: DISCGraphData   // 现实中的我（外在行为）
-    internal: DISCGraphData   // 本我（内在核心）
+    internal: DISCGraphData   // 压力下的我（压力下的行为倾向）
     selfImage: DISCGraphData  // 自我形象（综合认知）
   }
   rawData?: {
@@ -108,6 +121,40 @@ export interface DISCResult {
   } | null
   testDate?: string
   calculationMethod?: string
+  aiAnalysis?: DISCAIAnalysis
+}
+
+// AI 辅助分析结果
+export interface DISCAIAnalysis {
+  version: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  analyzedAt?: string
+  personalityProfile: string
+  dimensionInsights: Record<'D' | 'I' | 'S' | 'C', string>
+  communicationStrategy: string[]
+  riskAnalysis: string[]
+  developmentPlan: string[]
+  teamCollaboration: string
+  industryInsights: string
+  jobFitAnalysis?: {
+    summary?: string | null
+    bestMatch?: {
+      jobName: string
+      matchLevel: string
+      analysis: string
+    } | null
+    otherMatches?: Array<{
+      jobName: string
+      matchLevel: string
+      brief: string
+    }>
+    developmentAdvice?: string | null
+    // 兼容旧版数据
+    bestMatchReason?: string | null
+    developmentRole?: string | null
+    topJobInsights?: Record<string, string>
+  } | null
+  error?: string | null
 }
 
 // 临时 DISC 记录列表项
@@ -125,6 +172,8 @@ export interface TempDISCRecordListItem {
   confidence_score?: number
   mixed_type_code?: string
   has_mixed_type?: boolean
+  ai_analysis_status?: 'pending' | 'processing' | 'completed' | 'failed' | string | null
+  best_match_job?: string | null
   submitted_at: string
   is_migrated: boolean
   created_at: string

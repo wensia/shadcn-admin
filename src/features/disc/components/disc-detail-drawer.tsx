@@ -1,11 +1,11 @@
 /**
  * DISC 测评报告 —— 单页编辑式排版
- * 面向管理者的专业性格分析报告，无 Tab、无图标
+ * 面向管理者的专业性格分析报告，支持 AI 辅助分析
  */
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { toBlob, toPng } from 'html-to-image'
-import { Copy, Download, Loader2 } from 'lucide-react'
+import { Briefcase, ChevronRight, Copy, Download, Loader2, Sparkles, User, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Sheet,
@@ -17,13 +17,21 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
 import {
   DISC_TYPE_CONFIG,
   type TempDISCRecordDetail,
   type DISCDimension,
   type DISCResult,
+  type DISCAIAnalysis,
 } from '../types'
+import { triggerDiscAIAnalysis } from '../api'
+import { DiscJobFitCard, renderMarkedText } from './disc-job-fit-card'
 
 // ─── 辅助类型与常量 ───────────────────────────────────────────
 
@@ -32,6 +40,8 @@ interface DiscDetailDrawerProps {
   onOpenChange: (open: boolean) => void
   detail: TempDISCRecordDetail | null
   loading: boolean
+  /** 当 AI 分析完成后回调，用于更新父组件缓存的 detail */
+  onDetailUpdate?: (updated: TempDISCRecordDetail) => void
 }
 
 const DIMENSIONS: DISCDimension[] = ['D', 'I', 'S', 'C']
@@ -93,6 +103,37 @@ const DISC_SECONDARY_BLEND_HINT: Record<DISCDimension, string> = {
   C: '次要维度偏 C，说明在执行中会更关注方法、标准和质量控制。',
 }
 
+// ─── 三图行为模式分析配置 ────────────────────────────────
+
+const GRAPH_SCENARIOS = [
+  {
+    key: 'external' as const,
+    label: '日常工作中',
+    subtitle: '工作环境中表现出来的行为风格',
+    Icon: Briefcase,
+  },
+  {
+    key: 'internal' as const,
+    label: '压力情境下',
+    subtitle: '面对压力时本能的行为反应',
+    Icon: Zap,
+  },
+  {
+    key: 'selfImage' as const,
+    label: '自我认知中',
+    subtitle: '认为自己是什么样的人',
+    Icon: User,
+  },
+]
+
+/** 每个维度的一句话通俗行为描述 */
+const DIMENSION_NARRATIVE: Record<DISCDimension, string> = {
+  D: '习惯以结果为导向，快速决策、主动推进',
+  I: '善于沟通协调，用热情和感染力影响他人',
+  S: '注重稳定和谐，耐心倾听、踏实配合',
+  C: '追求精准规范，注重数据和细节的把控',
+}
+
 // ─── 辅助函数 ───────────────────────────────────────────
 
 function formatTime(time: string) {
@@ -141,6 +182,83 @@ function buildGraphInsight(graphs?: DISCResult['graphs']) {
   }
 }
 
+/** 分析三图行为一致性 */
+function analyzeConsistency(
+  extTop: DISCDimension,
+  intTop: DISCDimension,
+  siTop: DISCDimension,
+  graphs: NonNullable<DISCResult['graphs']>,
+) {
+  const allSame = extTop === intTop && intTop === siTop
+  const twoSame = extTop === intTop || intTop === siTop || extTop === siTop
+
+  // 得分波动仅在主导类型一致时作为辅助参考
+  const maxShifts = DIMENSIONS.map((dim) => {
+    const vals = [graphs.external[dim], graphs.internal[dim], graphs.selfImage[dim]]
+    return Math.max(...vals) - Math.min(...vals)
+  })
+  const avgShift = Math.round(maxShifts.reduce((a, b) => a + b, 0) / maxShifts.length)
+
+  // ── 第一层：三个情境主导类型完全相同 ──
+  if (allSame) {
+    if (avgShift < 15) {
+      return {
+        label: '高度一致',
+        description: `在日常工作、压力情境和自我认知中，都以${DISC_TYPE_CONFIG[extTop].label}风格为主。行为表现稳定，内外一致性强，别人看到的样子和真实的自己差别不大。`,
+      }
+    }
+    return {
+      label: '基本一致',
+      description: `三种情境下的核心风格都是${DISC_TYPE_CONFIG[extTop].label}，行为类型保持一致。不过各维度的强弱在不同情境下有一定波动，说明虽然主导风格不变，表现的力度会随环境做出自然调整。`,
+    }
+  }
+
+  // ── 第二层：两个情境主导类型相同 ──
+  if (twoSame) {
+    let hint = '整体行为风格基本一致，在个别情境下会有轻微调整，属于正常的自我调节。'
+    if (extTop !== intTop && extTop === siTop) {
+      hint = `日常工作和自我认知一致（偏${DISC_TYPE_CONFIG[extTop].label}），但压力下行为会转向${DISC_TYPE_CONFIG[intTop].label}风格——这很常见，人在紧张时往往会切换到更本能的反应模式。`
+    } else if (intTop !== extTop && intTop === siTop) {
+      hint = `内心认同和压力反应一致（偏${DISC_TYPE_CONFIG[intTop].label}），但日常工作中会调整为${DISC_TYPE_CONFIG[extTop].label}风格——可能是为了适应当前的工作环境要求。`
+    } else if (extTop === intTop && siTop !== extTop) {
+      hint = `日常行为和压力反应一致（偏${DISC_TYPE_CONFIG[extTop].label}），但内心对自己的定位偏${DISC_TYPE_CONFIG[siTop].label}——自我觉察和实际表现有一定偏差。`
+    }
+    return {
+      label: '基本一致',
+      description: hint,
+    }
+  }
+
+  // ── 第三层：三个情境主导类型完全不同 ──
+  return {
+    label: '差异较大',
+    description: `不同情境下的行为风格有明显差异：日常偏${DISC_TYPE_CONFIG[extTop].label}、压力下偏${DISC_TYPE_CONFIG[intTop].label}、自我认知偏${DISC_TYPE_CONFIG[siTop].label}。这可能意味着工作中有较强的角色适应，需要关注这种调整是否带来了额外的内在消耗。`,
+  }
+}
+
+/** 提取显著偏移洞察 */
+function extractSignificantShifts(graphs: NonNullable<DISCResult['graphs']>) {
+  return DIMENSIONS
+    .map((dim) => {
+      const ext = Math.round(graphs.external[dim])
+      const int_ = Math.round(graphs.internal[dim])
+      const delta = ext - int_
+      if (Math.abs(delta) < 20) return null
+      const label = DISC_TYPE_CONFIG[dim].label
+      const narrative =
+        delta > 0
+          ? `${label}（${dim}）在日常工作中的表现明显高于压力下（${ext} vs ${int_}），说明有意识地加强了这方面的表现，但压力下会收敛。`
+          : `${label}（${dim}）在压力下明显增强（${int_} vs ${ext}），说明压力激发了这方面的本能反应，而日常中有所收敛。`
+      return { dim, delta, narrative }
+    })
+    .filter(Boolean)
+    .sort((a, b) => Math.abs(b!.delta) - Math.abs(a!.delta)) as Array<{
+    dim: DISCDimension
+    delta: number
+    narrative: string
+  }>
+}
+
 function getPressureLabel(pi: number): string {
   if (pi >= 25) return '高适应压力'
   if (pi >= 15) return '中等适应压力'
@@ -148,20 +266,31 @@ function getPressureLabel(pi: number): string {
 }
 
 function getPressureColor(pi: number): string {
-  if (pi >= 25) return 'text-red-600'
-  if (pi >= 15) return 'text-amber-600'
-  return 'text-emerald-600'
+  if (pi >= 25) return 'text-foreground font-semibold'
+  if (pi >= 15) return 'text-foreground'
+  return 'text-muted-foreground'
 }
 
 // ─── 子组件 ──────────────────────────────────────────────
 
 /** 编号章节标题 */
-function SectionHeading({ number, title }: { number: string; title: string }) {
+function SectionHeading({ number, title, aiEnhanced }: { number: string; title: string; aiEnhanced?: boolean }) {
   return (
     <div className="flex items-baseline gap-3 pt-5 pb-3">
       <span className="text-xs font-mono text-muted-foreground/60 tabular-nums tracking-tight">{number}</span>
       <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+      {aiEnhanced && <AITag />}
     </div>
+  )
+}
+
+/** AI 生成标记 */
+function AITag() {
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] text-primary font-medium">
+      <Sparkles className="h-3 w-3" />
+      AI
+    </span>
   )
 }
 
@@ -248,10 +377,43 @@ function triggerDownload(url: string, filename: string) {
   a.click()
 }
 
-export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDetailDrawerProps) {
+export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetailUpdate }: DiscDetailDrawerProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const [exporting, setExporting] = useState(false)
   const [copying, setCopying] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+
+  // AI 分析结果：优先从 detail.result.aiAnalysis 读取（缓存）
+  const cachedAI = detail?.result?.aiAnalysis
+  const [localAI, setLocalAI] = useState<DISCAIAnalysis | null>(null)
+  const aiAnalysis: DISCAIAnalysis | undefined = localAI ?? cachedAI
+  const hasAI = aiAnalysis?.status === 'completed'
+
+  const handleAIAnalyze = useCallback(async () => {
+    if (!detail?.id || analyzing) return
+    setAnalyzing(true)
+    try {
+      const resp = await triggerDiscAIAnalysis(detail.id, hasAI)
+      if (resp.code === 0 && resp.data?.aiAnalysis) {
+        const ai = resp.data.aiAnalysis as DISCAIAnalysis
+        setLocalAI(ai)
+        // 通知父组件更新缓存
+        if (onDetailUpdate && detail) {
+          onDetailUpdate({
+            ...detail,
+            result: { ...detail.result, aiAnalysis: ai },
+          })
+        }
+        toast.success('AI 分析完成')
+      } else {
+        toast.error(resp.message || 'AI 分析失败')
+      }
+    } catch {
+      toast.error('AI 分析请求失败，请稍后重试')
+    } finally {
+      setAnalyzing(false)
+    }
+  }, [detail, analyzing, onDetailUpdate])
 
   if (!open) return null
 
@@ -263,6 +425,10 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
   const resolvedConfidence = result?.confidence || null
   const resolvedMixedType = result?.mixedType || null
   const graphInsight = result ? buildGraphInsight(result.graphs) : null
+
+  // 动态章节编号
+  let sectionNum = 0
+  const nextSection = () => String(++sectionNum).padStart(2, '0')
 
   const filename = `DISC报告_${detail?.name || '未知'}_${new Date().toISOString().slice(0, 10)}.png`
 
@@ -321,6 +487,60 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
               DISC 测评报告
             </SheetTitle>
             <div className="flex items-center gap-1">
+              {/* AI 分析按钮 */}
+              {result && (
+                hasAI ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAIAnalyze}
+                    disabled={analyzing}
+                    className="text-xs h-7 gap-1"
+                  >
+                    {analyzing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    )}
+                    {analyzing ? '分析中...' : '重新分析'}
+                  </Button>
+                ) : aiAnalysis?.status === 'processing' || aiAnalysis?.status === 'pending' ? (
+                  <Badge variant="outline" className="text-xs gap-1 h-7 px-2 animate-pulse">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    AI 分析中...
+                  </Badge>
+                ) : aiAnalysis?.status === 'failed' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAIAnalyze}
+                    disabled={analyzing}
+                    className="text-xs h-7 gap-1"
+                  >
+                    {analyzing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    {analyzing ? '分析中...' : '重新分析'}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAIAnalyze}
+                    disabled={analyzing}
+                    className="text-xs h-7 gap-1"
+                  >
+                    {analyzing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    )}
+                    {analyzing ? '分析中...' : 'AI 分析'}
+                  </Button>
+                )
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -374,9 +594,9 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
                       <>
                         <span className="mx-1.5 text-muted-foreground/30">·</span>
                         <span className={cn(
-                          resolvedConfidence.level === 'high' && 'text-emerald-600',
-                          resolvedConfidence.level === 'medium' && 'text-amber-600',
-                          resolvedConfidence.level === 'low' && 'text-red-600',
+                          resolvedConfidence.level === 'high' && 'text-foreground font-medium',
+                          resolvedConfidence.level === 'medium' && 'text-muted-foreground',
+                          resolvedConfidence.level === 'low' && 'text-muted-foreground/70',
                         )}>
                           {CONFIDENCE_LABEL[resolvedConfidence.level] || resolvedConfidence.level}
                           {' '}{resolvedConfidence.score}分
@@ -401,15 +621,21 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
                     </Badge>
                   )}
                 </div>
-                {primaryGuide && (
+                {/* 性格画像：AI 版本 or 模板版本 */}
+                {hasAI ? (
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    {primaryGuide.summary}
+                    {renderMarkedText(aiAnalysis.personalityProfile)}
+                    <AITag />
                   </p>
-                )}
+                ) : primaryGuide ? (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {renderMarkedText(primaryGuide.summary)}
+                  </p>
+                ) : null}
               </div>
 
               {/* ═══ 01 四维分析 ═══ */}
-              <SectionHeading number="01" title="四维分析" />
+              <SectionHeading number={nextSection()} title="四维分析" aiEnhanced={hasAI} />
 
               {/* 特征标签 */}
               {result.characteristics && (
@@ -426,13 +652,15 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
               {/* 四维分数 + 解读 */}
               <div className="space-y-4">
                 {scoreRanking.map((item, idx) => {
-                  const interpretText = result.interpretation?.[item.dim]
+                  const aiText = hasAI ? aiAnalysis.dimensionInsights?.[item.dim] : undefined
+                  const interpretText = aiText || result.interpretation?.[item.dim]
                   return (
                     <div key={item.dim}>
                       <ScoreBar dim={item.dim} score={item.score} isTop={idx === 0} />
                       {interpretText && (
                         <p className="text-xs leading-relaxed text-muted-foreground mt-1.5 ml-[5.75rem]">
-                          {interpretText}
+                          {renderMarkedText(interpretText)}
+                          {aiText && <>{' '}<AITag /></>}
                         </p>
                       )}
                     </div>
@@ -442,103 +670,153 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
 
               <Separator className="mt-6" />
 
-              {/* ═══ 02 三图差异解读 ═══ */}
-              {graphInsight && result.graphs && (
-                <>
-                  <SectionHeading number="02" title="三图差异解读" />
+              {/* ═══ 02 行为模式分析 ═══ */}
+              {graphInsight && result.graphs && (() => {
+                const consistency = analyzeConsistency(
+                  graphInsight.externalTop,
+                  graphInsight.internalTop,
+                  graphInsight.selfImageTop,
+                  result.graphs!,
+                )
+                const shifts = extractSignificantShifts(result.graphs!)
 
-                  {/* 主维度总结 */}
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    {([
-                      { label: '外在行为', top: graphInsight.externalTop, bg: 'bg-emerald-50/60' },
-                      { label: '内在核心', top: graphInsight.internalTop, bg: 'bg-blue-50/60' },
-                      { label: '自我形象', top: graphInsight.selfImageTop, bg: 'bg-amber-50/60' },
-                    ] as const).map((g) => (
-                      <div key={g.label} className={cn('rounded-lg p-3 text-center', g.bg)}>
-                        <p className="text-xs text-muted-foreground mb-0.5">{g.label}</p>
-                        <p className="text-sm font-semibold" style={{ color: DISC_TYPE_CONFIG[g.top].color }}>
-                          {g.top} · {DISC_TYPE_CONFIG[g.top].label}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                return (
+                  <>
+                    <SectionHeading number={nextSection()} title="行为模式分析" />
 
-                  {/* 四维对比表格 */}
-                  <div className="rounded-lg border overflow-hidden mb-4">
-                    {/* 表头 */}
-                    <div className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
-                      <span>维度</span>
-                      <span className="text-center">外在行为</span>
-                      <span className="text-center">内在核心</span>
-                      <span className="text-center">自我形象</span>
-                      <span className="text-right">偏移</span>
+                    {/* ── 三场景卡片 ── */}
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                      {GRAPH_SCENARIOS.map((s) => {
+                        const g = result.graphs![s.key]
+                        const top = getTopDimension({ D: g.D, I: g.I, S: g.S, C: g.C })
+                        const cfg = DISC_TYPE_CONFIG[top]
+                        return (
+                          <div key={s.key} className="rounded-lg border bg-card p-3.5">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <s.Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
+                              <span className="text-sm font-semibold">{top} — {cfg.label}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              {DIMENSION_NARRATIVE[top]}
+                            </p>
+                          </div>
+                        )
+                      })}
                     </div>
-                    {/* 数据行 */}
-                    {DIMENSIONS.map((dim) => {
-                      const config = DISC_TYPE_CONFIG[dim]
-                      const ext = Math.round(result.graphs!.external[dim])
-                      const int_ = Math.round(result.graphs!.internal[dim])
-                      const self = Math.round(result.graphs!.selfImage[dim])
-                      const delta = ext - int_
-                      return (
-                        <div key={dim} className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] items-center border-t px-4 py-2.5">
-                          <span className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
-                            <span className="text-sm font-medium">{dim}</span>
-                          </span>
-                          {/* 外在 */}
-                          <div className="flex items-center gap-2 px-2">
-                            <div className="flex-1 h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${ext}%` }} />
+
+                    {/* ── 行为一致性分析 ── */}
+                    <div className="rounded-lg border bg-secondary/40 p-4 mb-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-medium text-muted-foreground">行为一致性</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border bg-card">
+                          {consistency.label}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed text-foreground/80">{consistency.description}</p>
+                    </div>
+
+                    {/* ── 关键发现 ── */}
+                    {shifts.length > 0 && (
+                      <div className="mb-5">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">关键发现</p>
+                        <div className="space-y-2">
+                          {shifts.map((s) => (
+                            <div key={s.dim} className="flex items-start gap-2.5 text-sm leading-relaxed">
+                              <div
+                                className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                                style={{ backgroundColor: DISC_TYPE_CONFIG[s.dim].color }}
+                              />
+                              <span>{s.narrative}</span>
                             </div>
-                            <span className="text-xs tabular-nums w-8 text-right">{ext}</span>
-                          </div>
-                          {/* 内在 */}
-                          <div className="flex items-center gap-2 px-2">
-                            <div className="flex-1 h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-blue-500" style={{ width: `${int_}%` }} />
-                            </div>
-                            <span className="text-xs tabular-nums w-8 text-right">{int_}</span>
-                          </div>
-                          {/* 自我 */}
-                          <div className="flex items-center gap-2 px-2">
-                            <div className="flex-1 h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-amber-500" style={{ width: `${self}%` }} />
-                            </div>
-                            <span className="text-xs tabular-nums w-8 text-right">{self}</span>
-                          </div>
-                          {/* 偏移 */}
-                          <span className={cn(
-                            'text-xs tabular-nums text-right font-medium',
-                            Math.abs(delta) >= 20 ? 'text-red-500' : 'text-muted-foreground'
-                          )}>
-                            {delta > 0 ? '+' : ''}{delta}
-                          </span>
+                          ))}
                         </div>
-                      )
-                    })}
-                  </div>
+                      </div>
+                    )}
 
-                  {/* 压力指数 */}
-                  <div className="flex items-center justify-between text-xs px-1">
-                    <span className="text-muted-foreground">
-                      最大偏移：
-                      <span className="font-medium text-foreground">{graphInsight.strongestShift.dim}</span>
-                      （{graphInsight.strongestShift.delta >= 0 ? '外显高于内在' : '内在高于外显'} {Math.abs(graphInsight.strongestShift.delta).toFixed(0)} 分）
-                    </span>
-                    <span className={cn('font-medium', getPressureColor(graphInsight.pressureIndex))}>
-                      {getPressureLabel(graphInsight.pressureIndex)}（{graphInsight.pressureIndex}）
-                    </span>
-                  </div>
+                    {/* ── 适应压力指数 ── */}
+                    <div className="flex items-center gap-3 text-xs mb-5 px-1">
+                      <span className="text-muted-foreground">环境适应压力：</span>
+                      <span className={cn(getPressureColor(graphInsight.pressureIndex))}>
+                        {getPressureLabel(graphInsight.pressureIndex)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        — 分数越高，说明不同情境下行为调整幅度越大
+                      </span>
+                    </div>
 
-                  <Separator className="mt-6" />
-                </>
-              )}
+                    {/* ── 详细对比数据（可折叠） ── */}
+                    <Collapsible>
+                      <CollapsibleTrigger asChild>
+                        <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group mb-2">
+                          <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-90" />
+                          <span>查看详细对比数据</span>
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="rounded-lg border overflow-hidden">
+                          <div className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
+                            <span>维度</span>
+                            <span className="text-center">日常工作</span>
+                            <span className="text-center">压力情境</span>
+                            <span className="text-center">自我认知</span>
+                            <span className="text-right">偏移</span>
+                          </div>
+                          {DIMENSIONS.map((dim) => {
+                            const config = DISC_TYPE_CONFIG[dim]
+                            const ext = Math.round(result.graphs!.external[dim])
+                            const int_ = Math.round(result.graphs!.internal[dim])
+                            const self = Math.round(result.graphs!.selfImage[dim])
+                            const delta = ext - int_
+                            return (
+                              <div key={dim} className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] items-center border-t px-4 py-2.5">
+                                <span className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
+                                  <span className="text-sm font-medium">{dim}</span>
+                                </span>
+                                <div className="flex items-center gap-2 px-2">
+                                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full opacity-40" style={{ width: `${ext}%`, backgroundColor: config.color }} />
+                                  </div>
+                                  <span className="text-xs tabular-nums w-8 text-right">{ext}</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-2">
+                                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full opacity-40" style={{ width: `${int_}%`, backgroundColor: config.color }} />
+                                  </div>
+                                  <span className="text-xs tabular-nums w-8 text-right">{int_}</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-2">
+                                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full opacity-40" style={{ width: `${self}%`, backgroundColor: config.color }} />
+                                  </div>
+                                  <span className="text-xs tabular-nums w-8 text-right">{self}</span>
+                                </div>
+                                <span className={cn(
+                                  'text-xs tabular-nums text-right font-medium',
+                                  Math.abs(delta) >= 20 ? 'text-foreground font-bold' : 'text-muted-foreground',
+                                )}>
+                                  {delta > 0 ? '+' : ''}{delta}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    <Separator className="mt-6" />
+                  </>
+                )
+              })()}
 
               {/* ═══ 03 行为风格特征 ═══ */}
               {primaryCode && primaryGuide && (
                 <>
-                  <SectionHeading number="03" title="行为风格特征" />
+                  <SectionHeading number={nextSection()} title="行为风格特征" aiEnhanced={hasAI} />
 
                   {/* 核心优势 */}
                   <div className="mb-4">
@@ -551,92 +829,156 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
                   </div>
 
                   <div className="rounded-lg border px-5 py-1">
-                    <GuideRow label="工作方式">{primaryGuide.workStyle}</GuideRow>
+                    <GuideRow label="工作方式">{renderMarkedText(primaryGuide.workStyle)}</GuideRow>
                     <GuideRow label="沟通风格">
-                      {primaryGuide.communication}
+                      {renderMarkedText(primaryGuide.communication)}
                       {secondaryCode && (
                         <span className="text-muted-foreground block mt-1 text-xs">
-                          {DISC_SECONDARY_BLEND_HINT[secondaryCode]}
+                          {renderMarkedText(DISC_SECONDARY_BLEND_HINT[secondaryCode])}
                         </span>
                       )}
                     </GuideRow>
                   </div>
 
-                  {/* 沟通建议 */}
-                  {result.communicationAdvice && result.communicationAdvice.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">沟通要点</p>
-                      <ul className="space-y-1.5">
-                        {result.communicationAdvice.map((item, i) => (
-                          <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['—'] before:absolute before:left-0 before:text-muted-foreground/40">
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {/* 沟通要点：AI 版本 or 模板版本 */}
+                  {(() => {
+                    const aiComm = hasAI ? aiAnalysis.communicationStrategy : undefined
+                    const templateComm = result.communicationAdvice
+                    const items = aiComm || templateComm
+                    if (!items || items.length === 0) return null
+                    return (
+                      <div className="mt-4 space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          沟通要点
+                          {aiComm && <>{' '}<AITag /></>}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {items.map((item, i) => (
+                            <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['—'] before:absolute before:left-0 before:text-muted-foreground/40">
+                              {renderMarkedText(item)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                  })()}
 
                   <Separator className="mt-6" />
                 </>
               )}
 
               {/* ═══ 04 风险与挑战 ═══ */}
-              {((primaryGuide?.riskSignals && primaryGuide.riskSignals.length > 0) ||
-                (result.potentialChallenges && result.potentialChallenges.length > 0)) && (
-                <>
-                  <SectionHeading number="04" title="风险与挑战" />
+              {(() => {
+                const aiRisks = hasAI ? aiAnalysis.riskAnalysis : undefined
+                const hasRiskSignals = primaryGuide?.riskSignals && primaryGuide.riskSignals.length > 0
+                const hasChallenges = aiRisks || (result.potentialChallenges && result.potentialChallenges.length > 0)
+                if (!hasRiskSignals && !hasChallenges) return null
+                return (
+                  <>
+                    <SectionHeading number={nextSection()} title="风险与挑战" aiEnhanced={!!aiRisks} />
 
-                  {primaryGuide && primaryGuide.riskSignals.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">需要注意的行为倾向</p>
-                      <ul className="space-y-2">
-                        {primaryGuide.riskSignals.map((item, i) => (
-                          <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-amber-500 before:font-bold">
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    {primaryGuide && primaryGuide.riskSignals.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">需要注意的行为倾向</p>
+                        <ul className="space-y-2">
+                          {primaryGuide.riskSignals.map((item, i) => (
+                            <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-muted-foreground before:font-bold">
+                              {renderMarkedText(item)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-                  {result.potentialChallenges && result.potentialChallenges.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2">潜在挑战</p>
-                      <ul className="space-y-2">
-                        {result.potentialChallenges.map((item, i) => (
-                          <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-muted-foreground/60 before:font-bold">
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    {(() => {
+                      const challenges = aiRisks || result.potentialChallenges
+                      if (!challenges || challenges.length === 0) return null
+                      return (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">
+                            {aiRisks ? '深度风险分析' : '潜在挑战'}
+                            {aiRisks && <>{' '}<AITag /></>}
+                          </p>
+                          <ul className="space-y-2">
+                            {challenges.map((item, i) => (
+                              <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-muted-foreground/60 before:font-bold">
+                                {renderMarkedText(item)}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    })()}
 
-                  <Separator className="mt-6" />
-                </>
-              )}
+                    <Separator className="mt-6" />
+                  </>
+                )
+              })()}
 
               {/* ═══ 个人发展建议 ═══ */}
-              {primaryGuide && (
-                <>
-                  <SectionHeading number="05" title="个人发展建议" />
-                  <div className="space-y-3">
-                    {primaryGuide.developmentAdvice.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-3">
-                        <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground mt-0.5">
-                          {idx + 1}
-                        </span>
-                        <p className="text-sm leading-relaxed pt-0.5">{item}</p>
-                      </div>
-                    ))}
-                  </div>
+              {(() => {
+                const aiDev = hasAI ? aiAnalysis.developmentPlan : undefined
+                const templateDev = primaryGuide?.developmentAdvice
+                const items = aiDev || templateDev
+                if (!items || items.length === 0) return null
+                return (
+                  <>
+                    <SectionHeading number={nextSection()} title="个人发展建议" aiEnhanced={!!aiDev} />
+                    <div className="space-y-3">
+                      {items.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-3">
+                          <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <p className="text-sm leading-relaxed pt-0.5">{renderMarkedText(item)}</p>
+                        </div>
+                      ))}
+                    </div>
 
+                    <Separator className="mt-6" />
+                  </>
+                )
+              })()}
+
+              {/* ═══ 岗位适配度（AI 生成） ═══ */}
+              <>
+                <SectionHeading number={nextSection()} title="岗位适配度" aiEnhanced={hasAI} />
+                <DiscJobFitCard
+                  aiJobFitAnalysis={hasAI ? aiAnalysis?.jobFitAnalysis : undefined}
+                  hasAI={hasAI}
+                  jobFit={result.jobFit}
+                />
+                <Separator className="mt-6" />
+              </>
+
+              {/* ═══ 团队协作建议（仅 AI） ═══ */}
+              {hasAI && aiAnalysis.teamCollaboration && aiAnalysis.teamCollaboration !== '暂不可用' && (
+                <>
+                  <SectionHeading number={nextSection()} title="团队协作建议" aiEnhanced />
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {renderMarkedText(aiAnalysis.teamCollaboration)}
+                    </p>
+                  </div>
                   <Separator className="mt-6" />
                 </>
               )}
 
-              {/* ═══ 06 数据附录 ═══ */}
-              <SectionHeading number="06" title="数据附录" />
+              {/* ═══ K12 行业适配分析（仅 AI） ═══ */}
+              {hasAI && aiAnalysis.industryInsights && aiAnalysis.industryInsights !== '暂不可用' && (
+                <>
+                  <SectionHeading number={nextSection()} title="K12 行业适配分析" aiEnhanced />
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {renderMarkedText(aiAnalysis.industryInsights)}
+                    </p>
+                  </div>
+                  <Separator className="mt-6" />
+                </>
+              )}
+
+              {/* ═══ 数据附录 ═══ */}
+              <SectionHeading number={nextSection()} title="数据附录" />
 
               {/* 原始计分 */}
               {result.rawData && (
@@ -692,7 +1034,7 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
                     </div>
                     <Progress value={resolvedConfidence.score} className="h-1.5" />
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      {resolvedConfidence.reason}
+                      {renderMarkedText(resolvedConfidence.reason)}
                     </p>
                   </div>
                 </div>
@@ -708,7 +1050,7 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
                       <Badge variant="secondary">{resolvedMixedType.tendencyLabel}</Badge>
                       <span className="text-xs text-muted-foreground">分差 {resolvedMixedType.gap}</span>
                     </div>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{resolvedMixedType.description}</p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{renderMarkedText(resolvedMixedType.description)}</p>
                   </div>
                 </div>
               )}
@@ -725,6 +1067,12 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading }: DiscDe
                   <span>{formatTime(detail.submitted_at)}</span>
                   <span className="text-muted-foreground">测评生成时间</span>
                   <span>{result.testDate ? formatTime(result.testDate) : '—'}</span>
+                  {hasAI && aiAnalysis.analyzedAt && (
+                    <>
+                      <span className="text-muted-foreground">AI 分析时间</span>
+                      <span>{formatTime(aiAnalysis.analyzedAt)}</span>
+                    </>
+                  )}
                 </div>
               </div>
 

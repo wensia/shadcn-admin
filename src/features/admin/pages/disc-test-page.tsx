@@ -12,7 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import QRCode from 'qrcode'
-import { Search, RefreshCw, Copy, Eye, QrCode, ChevronDown } from 'lucide-react'
+import { Search, RefreshCw, Copy, Eye, QrCode, ChevronDown, Loader2, Brain, Clock, AlertCircle } from 'lucide-react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,7 @@ import {
 import {
   DISC_TYPE_CONFIG,
   type TempDISCRecordListItem,
+  type TempDISCRecordDetail,
   type DISCDimension,
 } from '@/features/disc/types'
 import { DiscDetailDrawer } from '@/features/disc/components/disc-detail-drawer'
@@ -89,6 +90,26 @@ const CONFIDENCE_LEVEL_META = {
   high: { label: '高置信', variant: 'default' as const },
   medium: { label: '中置信', variant: 'secondary' as const },
   low: { label: '低置信', variant: 'outline' as const },
+}
+
+const AI_STATUS_META: Record<string, { label: string; icon: typeof Brain; className: string }> = {
+  completed: { label: '已分析', icon: Brain, className: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  processing: { label: '分析中', icon: Loader2, className: 'text-blue-600 bg-blue-50 border-blue-200' },
+  pending: { label: '待分析', icon: Clock, className: 'text-amber-600 bg-amber-50 border-amber-200' },
+  failed: { label: '分析失败', icon: AlertCircle, className: 'text-red-600 bg-red-50 border-red-200' },
+}
+
+function AIStatusBadge({ status }: { status?: string | null }) {
+  if (!status) return <span className="text-xs text-muted-foreground">-</span>
+  const meta = AI_STATUS_META[status]
+  if (!meta) return <Badge variant="outline">{status}</Badge>
+  const Icon = meta.icon
+  return (
+    <Badge variant="outline" className={cn('gap-1 font-normal', meta.className)}>
+      <Icon className={cn('h-3 w-3', status === 'processing' && 'animate-spin')} />
+      {meta.label}
+    </Badge>
+  )
 }
 
 // 固定测试链接弹窗（二维码 + 复制链接）
@@ -244,14 +265,21 @@ function MobileRecordCard({
         })}
       </div>
 
-      {/* 第4行：时间 + 复合倾向 */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{formatTime(record.submitted_at)}</span>
-        {record.has_mixed_type && (
+      {/* 第4行：AI状态 + 首推岗位 */}
+      <div className="flex items-center justify-between text-xs">
+        <AIStatusBadge status={record.ai_analysis_status} />
+        {record.best_match_job ? (
+          <span className="text-muted-foreground">首推: <span className="font-medium text-foreground">{record.best_match_job}</span></span>
+        ) : record.has_mixed_type ? (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
             {record.mixed_type_code || '复合型'}
           </Badge>
-        )}
+        ) : null}
+      </div>
+
+      {/* 第5行：时间 */}
+      <div className="text-xs text-muted-foreground">
+        {formatTime(record.submitted_at)}
       </div>
     </div>
   )
@@ -267,6 +295,7 @@ export function DiscTestPage() {
   const [searchPhone, setSearchPhone] = useState('')
   const [confidenceFilter, setConfidenceFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
   const [mixedTypeFilter, setMixedTypeFilter] = useState<'all' | 'yes' | 'no'>('all')
+  const [aiStatusFilter, setAiStatusFilter] = useState<'all' | 'completed' | 'pending' | 'processing' | 'failed' | 'none'>('all')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
@@ -281,13 +310,14 @@ export function DiscTestPage() {
 
   // 查询已完成记录
   const { data: recordsData, isLoading: loadingRecords } = useQuery({
-    queryKey: ['disc-records', page, pageSize, searchName, searchPhone, confidenceFilter, mixedTypeFilter],
+    queryKey: ['disc-records', page, pageSize, searchName, searchPhone, confidenceFilter, mixedTypeFilter, aiStatusFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = { page, size: pageSize }
       if (searchName) params.name = searchName
       if (searchPhone) params.phone = searchPhone
       if (confidenceFilter !== 'all') params.confidence_level = confidenceFilter
       if (mixedTypeFilter !== 'all') params.has_mixed_type = mixedTypeFilter === 'yes'
+      if (aiStatusFilter !== 'all') params.ai_analysis_status = aiStatusFilter
       const res = await getTempDiscRecords(params as Parameters<typeof getTempDiscRecords>[0])
       return res.data
     },
@@ -295,7 +325,7 @@ export function DiscTestPage() {
   const records = recordsData?.items || []
   const total = recordsData?.total || 0
 
-  // 查询详情
+  // 查询详情（AI 分析进行中时自动轮询）
   const { data: detailData, isLoading: loadingDetail } = useQuery({
     queryKey: ['disc-record-detail', detailId],
     queryFn: async () => {
@@ -303,6 +333,13 @@ export function DiscTestPage() {
       return res.data
     },
     enabled: !!detailId && detailOpen,
+    refetchInterval: (query) => {
+      const aiStatus = query.state.data?.result?.aiAnalysis?.status
+      // AI 分析进行中（pending/processing）时每 5 秒轮询
+      if (aiStatus === 'pending' || aiStatus === 'processing') return 5000
+      // 未触发或已完成/失败时不轮询
+      return false
+    },
   })
   const detail = detailData || null
   // 表格列定义
@@ -411,6 +448,26 @@ export function DiscTestPage() {
         },
       },
       {
+        id: 'ai_status',
+        header: 'AI分析',
+        cell: ({ row }) => {
+          if (row.original.id.startsWith('__skeleton__'))
+            return <Skeleton className="h-5 w-16" />
+          return <AIStatusBadge status={row.original.ai_analysis_status} />
+        },
+      },
+      {
+        id: 'best_match_job',
+        header: '首推岗位',
+        cell: ({ row }) => {
+          if (row.original.id.startsWith('__skeleton__'))
+            return <Skeleton className="h-4 w-16" />
+          const job = row.original.best_match_job
+          if (!job) return <span className="text-xs text-muted-foreground">-</span>
+          return <span className="text-xs font-medium">{job}</span>
+        },
+      },
+      {
         accessorKey: 'submitted_at',
         header: '提交时间',
         cell: ({ row }) => {
@@ -473,6 +530,7 @@ export function DiscTestPage() {
     setSearchPhone('')
     setConfidenceFilter('all')
     setMixedTypeFilter('all')
+    setAiStatusFilter('all')
     setPage(1)
   }
 
@@ -545,6 +603,19 @@ export function DiscTestPage() {
               <SelectItem value="no">单一型</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={aiStatusFilter} onValueChange={(value) => { setAiStatusFilter(value as typeof aiStatusFilter); setPage(1) }}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="AI分析" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部状态</SelectItem>
+              <SelectItem value="completed">已分析</SelectItem>
+              <SelectItem value="processing">分析中</SelectItem>
+              <SelectItem value="pending">待分析</SelectItem>
+              <SelectItem value="failed">分析失败</SelectItem>
+              <SelectItem value="none">未触发</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" onClick={handleSearch}>
             搜索
           </Button>
@@ -609,6 +680,19 @@ export function DiscTestPage() {
                     <SelectItem value="no">单一型</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={aiStatusFilter} onValueChange={(value) => { setAiStatusFilter(value as typeof aiStatusFilter); setPage(1) }}>
+                  <SelectTrigger className="col-span-2">
+                    <SelectValue placeholder="AI分析" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部AI状态</SelectItem>
+                    <SelectItem value="completed">已分析</SelectItem>
+                    <SelectItem value="processing">分析中</SelectItem>
+                    <SelectItem value="pending">待分析</SelectItem>
+                    <SelectItem value="failed">分析失败</SelectItem>
+                    <SelectItem value="none">未触发</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={handleSearch}>搜索</Button>
@@ -625,7 +709,13 @@ export function DiscTestPage() {
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        header.column.id === 'name' && 'sticky left-0 z-20 bg-background',
+                        header.column.id === 'actions' && 'sticky right-0 z-20 bg-background',
+                      )}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -639,7 +729,13 @@ export function DiscTestPage() {
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          cell.column.id === 'name' && 'sticky left-0 z-10 bg-background',
+                          cell.column.id === 'actions' && 'sticky right-0 z-10 bg-background',
+                        )}
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -725,6 +821,9 @@ export function DiscTestPage() {
         }}
         detail={detail}
         loading={loadingDetail}
+        onDetailUpdate={(updated: TempDISCRecordDetail) => {
+          queryClient.setQueryData(['disc-record-detail', detailId], updated)
+        }}
       />
     </Main>
   )

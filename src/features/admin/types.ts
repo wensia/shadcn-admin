@@ -541,8 +541,8 @@ export interface QuickCreateEmployeeData {
   region_id?: string
   district_id?: string
   area_id?: string
-  department_id: string
-  position_id: string
+  department_id?: string
+  position_id?: string
   joined_at?: string
 }
 
@@ -1417,6 +1417,7 @@ export const AI_PROVIDER_OPTIONS = [
 export const AI_SCENES = [
   { key: 'ai_chat', label: 'AI 数据助手', description: '对话式AI助手，支持Function Calling', needsPrompt: false },
   { key: 'call_analysis', label: '通话分析', description: '通话录音AI质检分析', needsPrompt: true },
+  { key: 'disc_analysis', label: 'DISC 测评分析', description: 'DISC性格测试AI深度分析报告', needsPrompt: true },
 ] as const
 
 export type AISceneKey = typeof AI_SCENES[number]['key']

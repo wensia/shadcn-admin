@@ -68,12 +68,14 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     textArea.value = text
     // 避免滚动到底部
     textArea.style.cssText = 'position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:none;outline:none;box-shadow:none;background:transparent;'
-    document.body.appendChild(textArea)
+    // 优先插入到当前 Dialog/Sheet 容器内，避免 Radix UI focus trap 阻止 focus
+    const dialogContainer = document.querySelector('[role="dialog"]') || document.body
+    dialogContainer.appendChild(textArea)
     textArea.focus()
     textArea.select()
 
     const successful = document.execCommand('copy')
-    document.body.removeChild(textArea)
+    dialogContainer.removeChild(textArea)
     return successful
   } catch {
     return false

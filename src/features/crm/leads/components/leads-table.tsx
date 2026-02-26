@@ -463,7 +463,7 @@ export function LeadsTable({
         )}
       >
         <Table style={{ tableLayout: 'fixed' }}>
-          <TableHeader className="sticky top-0 z-20 bg-card">
+          <TableHeader className="sticky top-0 z-40 bg-card">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
@@ -504,6 +504,7 @@ export function LeadsTable({
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
                   className={cn(
+                    'group',
                     !isSkeleton && "cursor-pointer hover:bg-muted/50"
                   )}
                   onClick={() => !isSkeleton && onRowClick?.(row.original)}
@@ -518,7 +519,7 @@ export function LeadsTable({
                         className={cn(
                           s.padding.cell,
                           s.text.xs,
-                          isFrozen(cell.column.id) && (row.getIsSelected() ? 'bg-muted' : 'bg-background'),
+                          isFrozen(cell.column.id) && (row.getIsSelected() ? 'bg-muted' : 'bg-background group-hover:bg-muted'),
                           isLastFrozen(cell.column.id) && 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]'
                         )}
                       >

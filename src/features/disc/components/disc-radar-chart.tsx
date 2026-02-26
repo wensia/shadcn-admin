@@ -105,7 +105,7 @@ export function DiscRadarChart({
                 dot={{ r: 4, fill: '#18a058', stroke: '#fff', strokeWidth: 1 }}
               />
               <Radar
-                name="内在核心"
+                name="压力下的行为"
                 dataKey="internal"
                 stroke="#2080f0"
                 fill="#2080f0"

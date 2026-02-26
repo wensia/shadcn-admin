@@ -70,3 +70,14 @@ export async function getTempDiscRecordDetail(id: string): Promise<ApiResponse<T
   return apiClient.get(`${HR_BASE}/temp-disc-records/${id}`)
 }
 
+/** 触发 DISC AI 分析 */
+export async function triggerDiscAIAnalysis(id: string, force = false): Promise<ApiResponse<{
+  success: boolean
+  message: string
+  aiAnalysis?: import('./types').DISCAIAnalysis
+}>> {
+  return apiClient.post(`${HR_BASE}/temp-disc-records/${id}/ai-analyze`, null, {
+    params: { force },
+  })
+}
+

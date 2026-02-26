@@ -1,7 +1,7 @@
 /**
  * Admin Dashboard 页面
- * 管理后台首页 - 重构设计版本
- * 风格：深色主题 + 几何感 + 大胆数字排版
+ * 管理后台首页 - "Warm Editorial" 设计
+ * 温暖编辑风格：品牌暖米色主题 + Anthropic 色系 + Bento Grid 布局
  */
 
 import { useQuery } from '@tanstack/react-query'
@@ -16,10 +16,11 @@ import {
   Plus,
   GitBranch,
   ArrowUpRight,
-  Sparkles,
   TrendingUp,
+  LayoutDashboard,
 } from 'lucide-react'
 
+import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -27,93 +28,230 @@ import { useAuthStore } from '@/stores/auth-store'
 import { adminApi } from '../api'
 import type { AdminStats } from '../types'
 
-// 统计项配置
-const statConfigs = [
-  { key: 'regions', label: '大区', icon: MapPin, gradient: 'from-emerald-400 to-teal-500' },
-  { key: 'districts', label: '地区', icon: MapPin, gradient: 'from-sky-400 to-blue-500' },
-  { key: 'areas', label: '区域', icon: MapPin, gradient: 'from-violet-400 to-purple-500' },
-  { key: 'campuses', label: '校区', icon: Building2, gradient: 'from-rose-400 to-pink-500' },
-  { key: 'departments', label: '部门', icon: Network, gradient: 'from-amber-400 to-orange-500' },
-  { key: 'positions', label: '职位', icon: Briefcase, gradient: 'from-lime-400 to-green-500' },
+// 品牌色常量
+const BRAND = {
+  terracotta: '#d97757',
+  green: '#788c5d',
+  blue: '#6a9bcc',
+  warmGray: '#e6e4dc',
+  midGray: '#b0aea5',
+} as const
+
+// 组织架构统计配置
+const orgStatConfigs = [
+  { key: 'regions', label: '大区', icon: MapPin, color: BRAND.terracotta, path: '/admin/regions' },
+  { key: 'districts', label: '地区', icon: MapPin, color: BRAND.green, path: '/admin/districts' },
+  { key: 'areas', label: '区域', icon: MapPin, color: BRAND.blue, path: '/admin/areas' },
+  { key: 'campuses', label: '校区', icon: Building2, color: BRAND.terracotta, path: '/admin/campuses' },
+  { key: 'departments', label: '部门', icon: Network, color: BRAND.green, path: '/admin/departments' },
+  { key: 'positions', label: '职位', icon: Briefcase, color: BRAND.blue, path: '/admin/positions' },
 ] as const
 
 // 快捷操作配置
 const quickActions = [
-  { key: 'create-region', title: '创建大区', icon: MapPin, path: '/admin/regions' },
-  { key: 'create-campus', title: '创建校区', icon: Building2, path: '/admin/campuses' },
-  { key: 'create-employee', title: '创建员工', icon: Plus, path: '/admin/employees' },
-  { key: 'view-tree', title: '组织架构', icon: GitBranch, path: '/admin/organization-tree' },
-  { key: 'manage-departments', title: '部门管理', icon: Network, path: '/admin/departments' },
-  { key: 'manage-positions', title: '职位管理', icon: Briefcase, path: '/admin/positions' },
+  { key: 'create-region', title: '创建大区', desc: '新增管理大区', icon: MapPin, path: '/admin/regions', primary: false },
+  { key: 'create-campus', title: '创建校区', desc: '新增教学校区', icon: Building2, path: '/admin/campuses', primary: false },
+  { key: 'create-employee', title: '创建员工', desc: '添加新员工', icon: Plus, path: '/admin/employees', primary: true },
+  { key: 'view-tree', title: '组织架构', desc: '查看架构全景', icon: GitBranch, path: '/admin/organization-tree', primary: true },
+  { key: 'manage-departments', title: '部门管理', desc: '管理部门设置', icon: Network, path: '/admin/departments', primary: false },
+  { key: 'manage-positions', title: '职位管理', desc: '配置职位体系', icon: Briefcase, path: '/admin/positions', primary: false },
 ]
 
-// 圆形进度组件
-function CircularProgress({
-  value,
-  size = 120,
-  strokeWidth = 8,
-}: {
-  value: number
-  size?: number
-  strokeWidth?: number
-}) {
-  const [animatedValue, setAnimatedValue] = useState(0)
-  const radius = (size - strokeWidth) / 2
-  const circumference = radius * 2 * Math.PI
-  const offset = circumference - (animatedValue / 100) * circumference
-
+// 动画计数 Hook
+function useAnimatedNumber(target: number, delay = 300, duration = 1200) {
+  const [value, setValue] = useState(0)
   useEffect(() => {
-    const timer = setTimeout(() => setAnimatedValue(value), 300)
+    const timer = setTimeout(() => {
+      const start = performance.now()
+      const animate = (now: number) => {
+        const elapsed = now - start
+        const progress = Math.min(elapsed / duration, 1)
+        // easeOutQuart
+        const eased = 1 - Math.pow(1 - progress, 4)
+        setValue(Math.round(target * eased))
+        if (progress < 1) requestAnimationFrame(animate)
+      }
+      requestAnimationFrame(animate)
+    }, delay)
     return () => clearTimeout(timer)
-  }, [value])
+  }, [target, delay, duration])
+  return value
+}
+
+// 员工总数英雄卡
+function EmployeeHeroCard({
+  total,
+  isLoading,
+}: {
+  total: number
+  isLoading: boolean
+}) {
+  const animatedTotal = useAnimatedNumber(total, 400)
 
   return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <defs>
-        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#14b8a6" />
-        </linearGradient>
-      </defs>
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        className="text-white/5"
+    <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-7 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-600">
+      {/* 右上装饰弧 */}
+      <div
+        className="absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-[0.07]"
+        style={{ background: BRAND.terracotta }}
       />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="url(#progressGradient)"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        className="transition-all duration-[1.5s] ease-out"
+      <div
+        className="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-[0.05]"
+        style={{ background: BRAND.terracotta }}
       />
-    </svg>
+
+      <div className="relative flex flex-1 flex-col">
+        <div className="mb-6 flex items-center gap-2.5">
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-lg"
+            style={{ backgroundColor: `${BRAND.terracotta}14` }}
+          >
+            <Users className="h-4.5 w-4.5" style={{ color: BRAND.terracotta }} />
+          </div>
+          <span className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground">
+            员工总数
+          </span>
+        </div>
+
+        {isLoading ? (
+          <Skeleton className="mb-4 h-24 w-36" />
+        ) : (
+          <div className="mb-4 font-poppins text-7xl font-semibold tracking-tight text-foreground lg:text-8xl">
+            {animatedTotal}
+          </div>
+        )}
+
+        <div className="mt-auto">
+          <div className="h-px w-16 bg-border" />
+          <div className="mt-4 flex items-center gap-2">
+            <TrendingUp className="h-3.5 w-3.5" style={{ color: BRAND.green }} />
+            <span className="text-sm" style={{ color: BRAND.green }}>
+              组织规模持续增长
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
-// 统计卡片组件
-function StatCard({
+// 员工状态可视化卡
+function EmployeeStatusCard({
+  active,
+  inactive,
+  superusers,
+  activeRate,
+  isLoading,
+}: {
+  active: number
+  inactive: number
+  superusers: number
+  activeRate: number
+  isLoading: boolean
+}) {
+  const [barWidth, setBarWidth] = useState(0)
+  const animatedRate = useAnimatedNumber(activeRate, 500)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setBarWidth(activeRate), 500)
+    return () => clearTimeout(timer)
+  }, [activeRate])
+
+  return (
+    <div
+      className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-7 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-600"
+      style={{ animationDelay: '100ms' }}
+    >
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-medium text-foreground">人员状态</h3>
+          <p className="mt-0.5 text-sm text-muted-foreground">实时追踪员工在职情况</p>
+        </div>
+      </div>
+
+      {/* 在职率进度条 */}
+      <div className="mb-7">
+        <div className="mb-2 flex items-baseline gap-1.5">
+          {isLoading ? (
+            <Skeleton className="h-10 w-20" />
+          ) : (
+            <>
+              <span className="font-poppins text-4xl font-semibold tracking-tight text-foreground">
+                {animatedRate}
+              </span>
+              <span className="font-poppins text-lg font-medium text-muted-foreground">%</span>
+            </>
+          )}
+          <span className="ml-2 text-sm text-muted-foreground">在职率</span>
+        </div>
+
+        <div className="h-3 overflow-hidden rounded-full" style={{ backgroundColor: BRAND.warmGray }}>
+          <div
+            className="h-full rounded-full transition-all duration-[1.2s] ease-[cubic-bezier(0.4,0,0.2,1)]"
+            style={{
+              width: `${barWidth}%`,
+              backgroundColor: BRAND.green,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 三格数据 */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border border-border bg-secondary/40 p-3.5">
+          <div className="mb-1.5 flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND.green }} />
+            <span className="text-xs text-muted-foreground">在职</span>
+          </div>
+          {isLoading ? (
+            <Skeleton className="h-8 w-10" />
+          ) : (
+            <span className="font-poppins text-2xl font-semibold text-foreground">{active}</span>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-secondary/40 p-3.5">
+          <div className="mb-1.5 flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND.terracotta }} />
+            <span className="text-xs text-muted-foreground">离职</span>
+          </div>
+          {isLoading ? (
+            <Skeleton className="h-8 w-10" />
+          ) : (
+            <span className="font-poppins text-2xl font-semibold text-foreground">{inactive}</span>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-secondary/40 p-3.5">
+          <div className="mb-1.5 flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND.blue }} />
+            <span className="text-xs text-muted-foreground">管理员</span>
+          </div>
+          {isLoading ? (
+            <Skeleton className="h-8 w-10" />
+          ) : (
+            <span className="font-poppins text-2xl font-semibold text-foreground">{superusers}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 组织架构统计卡
+function OrgStatCard({
   label,
   value,
   icon: Icon,
-  gradient,
+  color,
   index,
   isLoading,
-  onClick
+  onClick,
 }: {
   label: string
   value: number
   icon: React.ElementType
-  gradient: string
+  color: string
   index: number
   isLoading: boolean
   onClick: () => void
@@ -121,71 +259,73 @@ function StatCard({
   return (
     <div
       onClick={onClick}
-      className="group relative cursor-pointer animate-in fade-in slide-in-from-bottom-4 duration-500"
-      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'backwards' }}
+      className="group relative cursor-pointer rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500"
+      style={{
+        animationDelay: `${200 + index * 60}ms`,
+        animationFillMode: 'backwards',
+        borderTopColor: `${color}60`,
+        borderTopWidth: '2px',
+      }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl -z-10"
-        style={{ background: `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))` }}
-      />
-      <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.05] p-5 backdrop-blur-sm hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300">
-        {/* 装饰性渐变角 */}
-        <div className={cn(
-          "absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br opacity-20 rounded-full blur-2xl group-hover:opacity-40 transition-opacity",
-          gradient
-        )} />
-
-        <div className="flex items-start justify-between mb-4">
-          <div className={cn("p-2.5 rounded-xl bg-gradient-to-br", gradient)}>
-            <Icon className="w-4 h-4 text-white/90" />
-          </div>
-          <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white/50 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+      <div className="mb-3.5 flex items-center justify-between">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-lg"
+          style={{ backgroundColor: `${color}14` }}
+        >
+          <Icon className="h-4 w-4" style={{ color }} />
         </div>
-
-        {isLoading ? (
-          <Skeleton className="h-10 w-16 bg-white/10" />
-        ) : (
-          <div
-            className="text-4xl font-light tracking-tight text-white mb-1 animate-in zoom-in-50 duration-500"
-            style={{
-              fontFamily: "'Sora', system-ui, sans-serif",
-              animationDelay: `${index * 80 + 200}ms`,
-              animationFillMode: 'backwards'
-            }}
-          >
-            {value.toLocaleString()}
-          </div>
-        )}
-        <div className="text-sm text-white/40 font-medium">{label}</div>
+        <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/40 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
       </div>
+
+      {isLoading ? (
+        <Skeleton className="mb-1 h-10 w-14" />
+      ) : (
+        <div className="font-poppins text-4xl font-semibold tracking-tight text-foreground">
+          {value}
+        </div>
+      )}
+      <div className="mt-1 text-sm text-muted-foreground">{label}</div>
     </div>
   )
 }
 
-// 快捷操作按钮
-function QuickActionButton({
+// 快捷操作卡片
+function QuickActionCard({
   title,
+  desc,
   icon: Icon,
+  primary,
   onClick,
-  index
+  index,
 }: {
   title: string
+  desc: string
   icon: React.ElementType
+  primary: boolean
   onClick: () => void
   index: number
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200 group text-left animate-in fade-in slide-in-from-left-2 duration-400"
-      style={{ animationDelay: `${500 + index * 50}ms`, animationFillMode: 'backwards' }}
+      className={cn(
+        'group flex w-full items-center gap-4 rounded-xl border bg-card p-4 text-left shadow-sm transition-all duration-200 hover:bg-secondary/60 hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-400',
+        primary ? 'border-l-2' : 'border-border',
+      )}
+      style={{
+        animationDelay: `${400 + index * 50}ms`,
+        animationFillMode: 'backwards',
+        ...(primary ? { borderLeftColor: index === 2 ? BRAND.terracotta : BRAND.green } : {}),
+      }}
     >
-      <div className="p-2 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] transition-colors">
-        <Icon className="w-4 h-4 text-white/60 group-hover:text-white/90 transition-colors" />
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
+        <Icon className="h-4 w-4 text-foreground/60 transition-colors group-hover:text-foreground" />
       </div>
-      <span className="text-sm text-white/60 group-hover:text-white/90 transition-colors font-medium">
-        {title}
-      </span>
-      <ArrowUpRight className="w-3.5 h-3.5 text-white/20 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-foreground">{title}</div>
+        <div className="text-xs text-muted-foreground">{desc}</div>
+      </div>
+      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
     </button>
   )
 }
@@ -194,7 +334,6 @@ export function AdminDashboardPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
-  // 获取统计数据
   const { data: statsData, isLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => adminApi.getStats(),
@@ -202,20 +341,18 @@ export function AdminDashboardPage() {
 
   const stats = statsData?.data as AdminStats | undefined
 
-  // 计算员工统计
   const employeeStats = stats
     ? {
-      total: stats.employees,
-      active: stats.active_employees,
-      inactive: stats.employees - stats.active_employees,
-      superusers: stats.superusers,
-      activeRate: stats.employees > 0
-        ? Math.round((stats.active_employees / stats.employees) * 100)
-        : 0,
-    }
+        total: stats.employees,
+        active: stats.active_employees,
+        inactive: stats.employees - stats.active_employees,
+        superusers: stats.superusers,
+        activeRate: stats.employees > 0
+          ? Math.round((stats.active_employees / stats.employees) * 100)
+          : 0,
+      }
     : null
 
-  // 获取当前时间段的问候语
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return '早上好'
@@ -224,216 +361,97 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-auto">
-      {/* 背景装饰 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-emerald-500/[0.03] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-violet-500/[0.03] rounded-full blur-[120px]" />
-        {/* 网格背景 */}
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                             linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px'
-          }}
-        />
-      </div>
-
-      <div className="relative z-10 p-6 lg:p-8 max-w-7xl mx-auto">
+    <Main>
+      <div className="space-y-8">
         {/* Header */}
-        <header className="mb-10 animate-in fade-in slide-in-from-top-4 duration-600">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs text-emerald-400/80 font-medium tracking-wider uppercase">
-                  系统概览
-                </span>
-              </div>
-              <h1
-                className="text-3xl lg:text-4xl font-light text-white mb-2"
-                style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
-              >
-                {getGreeting()}，
-                <span className="bg-gradient-to-r from-emerald-300 to-teal-400 bg-clip-text text-transparent">
-                  {user?.name || '管理员'}
-                </span>
-              </h1>
-              <p className="text-white/40 text-sm">
-                组织架构与人员管理一览
-              </p>
+        <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between animate-in fade-in duration-500">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4 text-primary/60" />
+              <span className="text-xs font-medium tracking-[0.15em] uppercase text-primary">
+                系统概览
+              </span>
             </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground lg:text-4xl">
+              {getGreeting()}，
+              <span className="text-primary">{user?.name || '管理员'}</span>
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              组织架构与人员管理一览
+            </p>
+          </div>
 
-            <div className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: '200ms' }}>
-              <Button
-                onClick={() => navigate({ to: '/admin/employees' })}
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white border-0 rounded-full px-6 h-11 font-medium shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                创建员工
-              </Button>
-            </div>
+          <div className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: '200ms' }}>
+            <Button
+              onClick={() => navigate({ to: '/admin/employees' })}
+              className="rounded-full px-6"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              创建员工
+            </Button>
           </div>
         </header>
 
-        {/* 主要统计 - 员工概览 */}
-        <section className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-600" style={{ animationDelay: '100ms' }}>
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* 员工活跃率 - 大卡片 */}
-            <div className="lg:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.05] p-8">
-              {/* 装饰性背景 */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
-              <div className="relative flex flex-col lg:flex-row lg:items-center gap-8">
-                {/* 圆形进度 */}
-                <div className="relative flex-shrink-0">
-                  <CircularProgress
-                    value={employeeStats?.activeRate || 0}
-                    size={160}
-                    strokeWidth={12}
-                  />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    {isLoading ? (
-                      <Skeleton className="h-10 w-16 bg-white/10" />
-                    ) : (
-                      <>
-                        <span
-                          className="text-4xl font-light text-white animate-in fade-in duration-500"
-                          style={{ fontFamily: "'Sora', system-ui, sans-serif", animationDelay: '800ms' }}
-                        >
-                          {employeeStats?.activeRate || 0}%
-                        </span>
-                        <span className="text-xs text-white/40 mt-1">在职率</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* 详细数据 */}
-                <div className="flex-1 space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-white/90 mb-1">人员状态</h3>
-                    <p className="text-sm text-white/40">实时追踪员工在职情况</p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span className="text-xs text-white/40">在职</span>
-                      </div>
-                      {isLoading ? (
-                        <Skeleton className="h-8 w-12 bg-white/10" />
-                      ) : (
-                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
-                          {employeeStats?.active || 0}
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-400" />
-                        <span className="text-xs text-white/40">离职</span>
-                      </div>
-                      {isLoading ? (
-                        <Skeleton className="h-8 w-12 bg-white/10" />
-                      ) : (
-                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
-                          {employeeStats?.inactive || 0}
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-violet-400" />
-                        <span className="text-xs text-white/40">管理员</span>
-                      </div>
-                      {isLoading ? (
-                        <Skeleton className="h-8 w-12 bg-white/10" />
-                      ) : (
-                        <span className="text-2xl font-light text-white" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
-                          {employeeStats?.superusers || 0}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 总员工数 - 突出卡片 */}
-            <div
-              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-600/10 border border-emerald-500/20 p-8 flex flex-col justify-between animate-in fade-in zoom-in-95 duration-500"
-              style={{ animationDelay: '300ms' }}
-            >
-              <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-400/20 rounded-full blur-3xl" />
-
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="w-5 h-5 text-emerald-400" />
-                  <span className="text-sm text-emerald-400/80 font-medium">员工总数</span>
-                </div>
-
-                {isLoading ? (
-                  <Skeleton className="h-16 w-24 bg-white/10" />
-                ) : (
-                  <div
-                    className="text-6xl font-light text-white animate-in fade-in slide-in-from-bottom-2 duration-500"
-                    style={{ fontFamily: "'Sora', system-ui, sans-serif", animationDelay: '500ms' }}
-                  >
-                    {employeeStats?.total || 0}
-                  </div>
-                )}
-              </div>
-
-              <div className="relative flex items-center gap-2 mt-6 text-emerald-400/60">
-                <TrendingUp className="w-4 h-4" />
-                <span className="text-sm">组织规模持续增长</span>
-              </div>
-            </div>
+        {/* Row A: 员工核心数据 - Bento Grid */}
+        <section className="grid gap-5 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <EmployeeHeroCard
+              total={employeeStats?.total || 0}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className="lg:col-span-7">
+            <EmployeeStatusCard
+              active={employeeStats?.active || 0}
+              inactive={employeeStats?.inactive || 0}
+              superusers={employeeStats?.superusers || 0}
+              activeRate={employeeStats?.activeRate || 0}
+              isLoading={isLoading}
+            />
           </div>
         </section>
 
-        {/* 组织架构统计 */}
-        <section className="mb-10">
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-lg font-medium text-white/80">组织架构</h2>
-            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+        {/* Row B: 组织架构统计 */}
+        <section>
+          <div className="mb-5 flex items-center gap-3">
+            <h2 className="text-lg font-medium text-foreground">组织架构</h2>
+            <div className="h-px flex-1 bg-border" />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {statConfigs.map((config, index) => {
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {orgStatConfigs.map((config, index) => {
               const value = stats ? (stats as Record<string, number>)[config.key] : 0
               return (
-                <StatCard
+                <OrgStatCard
                   key={config.key}
                   label={config.label}
                   value={value}
                   icon={config.icon}
-                  gradient={config.gradient}
+                  color={config.color}
                   index={index}
                   isLoading={isLoading}
-                  onClick={() => navigate({ to: `/admin/${config.key}` })}
+                  onClick={() => navigate({ to: config.path })}
                 />
               )
             })}
           </div>
         </section>
 
-        {/* 快捷操作 */}
+        {/* Row C: 快捷操作 */}
         <section>
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-lg font-medium text-white/80">快捷操作</h2>
-            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+          <div className="mb-5 flex items-center gap-3">
+            <h2 className="text-lg font-medium text-foreground">快捷操作</h2>
+            <div className="h-px flex-1 bg-border" />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {quickActions.map((action, index) => (
-              <QuickActionButton
+              <QuickActionCard
                 key={action.key}
                 title={action.title}
+                desc={action.desc}
                 icon={action.icon}
+                primary={action.primary}
                 onClick={() => navigate({ to: action.path })}
                 index={index}
               />
@@ -441,6 +459,6 @@ export function AdminDashboardPage() {
           </div>
         </section>
       </div>
-    </div>
+    </Main>
   )
 }

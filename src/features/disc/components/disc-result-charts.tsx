@@ -95,7 +95,7 @@ export function DiscResultCharts({ result }: DiscResultChartsProps) {
         })
       : null
 
-  // 图2: 本我 (内在核心)
+  // 图2: 压力下的我 (压力下的行为倾向)
   const internalData = graphs?.internal
     ? buildChartData({
         D: graphs.internal.D,
@@ -139,7 +139,7 @@ export function DiscResultCharts({ result }: DiscResultChartsProps) {
         <SingleChart title="现实中的我" data={externalData} color="#18a058" />
       )}
       {internalData && (
-        <SingleChart title="本我" data={internalData} color="#2080f0" />
+        <SingleChart title="压力下的我" data={internalData} color="#2080f0" />
       )}
       {selfImageData && (
         <SingleChart title="自我形象" data={selfImageData} color="#f0a020" />

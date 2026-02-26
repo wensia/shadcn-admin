@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { hasRouteComponent } from '@/lib/route-components'
 
 /**
@@ -44,6 +44,11 @@ interface TabsState {
 function generateTabId(path: string): string {
   return `tab-${path.replace(/\//g, '-')}-${Date.now()}`
 }
+
+/**
+ * 每个模块最大Tab数量
+ */
+const MAX_TABS = 6
 
 /**
  * 首页Tab配置
@@ -87,8 +92,17 @@ export const useTabsStore = create<TabsState>()(
           ...tabData,
         }
 
+        let newTabs = [...tabs, newTab]
+
+        // 超出最大数量时，关闭最早的可关闭tab
+        while (newTabs.length > MAX_TABS) {
+          const firstClosable = newTabs.find(t => t.closable)
+          if (!firstClosable) break
+          newTabs = newTabs.filter(t => t.id !== firstClosable.id)
+        }
+
         set({
-          tabs: [...tabs, newTab],
+          tabs: newTabs,
           activeTabId: newTab.id,
         })
       },
@@ -200,6 +214,7 @@ export const useTabsStore = create<TabsState>()(
     }),
     {
       name: 'tabs-storage',
+      storage: createJSONStorage(() => sessionStorage),
       version: 1,
       // 迁移旧版本数据
       migrate: (persistedState, version) => {

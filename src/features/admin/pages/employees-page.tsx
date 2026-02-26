@@ -16,7 +16,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, User, KeyRound, RefreshCw, X, CheckCircle, AlertCircle, Copy, Shield, Eye, EyeOff, AlertTriangle, Key, XCircle, MoreHorizontal } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, User, KeyRound, RefreshCw, X, CheckCircle, AlertCircle, Copy, Shield, Eye, EyeOff, AlertTriangle, Key, XCircle, MoreHorizontal, UserCheck, UserX } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -388,7 +388,7 @@ export function EmployeesPage() {
 
   // 创建员工（使用快速创建API，自动生成用户名和密码）
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; scope_type?: string; campus_id?: string; region_id?: string; district_id?: string; area_id?: string; department_id: string; position_id: string; joined_at?: string }) =>
+    mutationFn: (data: { name: string; scope_type?: string; campus_id?: string; region_id?: string; district_id?: string; area_id?: string; department_id?: string; position_id?: string; joined_at?: string }) =>
       adminApi.quickCreateEmployee(data),
     onSuccess: (response) => {
       if (response.data) {
@@ -424,6 +424,20 @@ export function EmployeesPage() {
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '更新失败')
+    },
+  })
+
+  // 切换员工在职/离职状态
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      adminApi.updateEmployeeStatus(id, { is_active }),
+    onSuccess: (_response, variables) => {
+      toast.success(variables.is_active ? '已设为在职' : '已设为离职')
+      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '状态更新失败')
     },
   })
 
@@ -829,6 +843,21 @@ export function EmployeesPage() {
                   <Pencil className="mr-2 h-4 w-4" />
                   编辑员工
                 </DropdownMenuItem>
+                {row.original.is_active ? (
+                  <DropdownMenuItem
+                    onClick={() => toggleStatusMutation.mutate({ id: row.original.id, is_active: false })}
+                  >
+                    <UserX className="mr-2 h-4 w-4 text-amber-500" />
+                    设为离职
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => toggleStatusMutation.mutate({ id: row.original.id, is_active: true })}
+                  >
+                    <UserCheck className="mr-2 h-4 w-4 text-emerald-600" />
+                    设为在职
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => handleResetPassword(row.original)}>
                   <KeyRound className="mr-2 h-4 w-4" />
                   重置密码
@@ -1013,14 +1042,15 @@ export function EmployeesPage() {
 
   // 处理表单提交
   const handleSubmit = async (data: FormData) => {
-    // 验证身份信息必须完整
     const validIdentities = identities.filter(isIdentityComplete)
-    if (validIdentities.length === 0) {
-      toast.warning('请至少配置一个完整的组织身份（包含部门和职位）')
-      return
-    }
 
     if (editingItem) {
+      // 编辑模式：身份必须完整
+      if (validIdentities.length === 0) {
+        toast.warning('请至少配置一个完整的组织身份（包含部门和职位）')
+        return
+      }
+
       // 编辑模式
       const submitData = {
         ...data,
@@ -1050,32 +1080,41 @@ export function EmployeesPage() {
         setIsSavingIdentities(false)
       }
     } else {
-      // 新建模式：使用第一个身份配置
-      const firstIdentity = validIdentities[0]
-
-      if (firstIdentity.scope_type === 'campus') {
-        // campus 级别：使用 campus_department_id
-        const deptInfo = departmentOptionsMap[firstIdentity.campus_id]?.find(d => d.id === firstIdentity.department_id)
+      // 新建模式
+      if (validIdentities.length === 0) {
+        // 无身份：只创建员工账号
         createMutation.mutate({
           name: data.name,
-          scope_type: 'campus',
-          campus_id: firstIdentity.campus_id,
-          department_id: deptInfo?.campus_department_id || firstIdentity.department_id,
-          position_id: firstIdentity.position_id,
           joined_at: data.joined_at || undefined,
         })
       } else {
-        // 非 campus 级别：直接传全局部门 ID
-        createMutation.mutate({
-          name: data.name,
-          scope_type: firstIdentity.scope_type,
-          region_id: firstIdentity.region_id || undefined,
-          district_id: firstIdentity.district_id || undefined,
-          area_id: firstIdentity.area_id || undefined,
-          department_id: firstIdentity.department_id,
-          position_id: firstIdentity.position_id,
-          joined_at: data.joined_at || undefined,
-        })
+        // 有身份：使用第一个身份配置
+        const firstIdentity = validIdentities[0]
+
+        if (firstIdentity.scope_type === 'campus') {
+          // campus 级别：使用 campus_department_id
+          const deptInfo = departmentOptionsMap[firstIdentity.campus_id]?.find(d => d.id === firstIdentity.department_id)
+          createMutation.mutate({
+            name: data.name,
+            scope_type: 'campus',
+            campus_id: firstIdentity.campus_id,
+            department_id: deptInfo?.campus_department_id || firstIdentity.department_id,
+            position_id: firstIdentity.position_id,
+            joined_at: data.joined_at || undefined,
+          })
+        } else {
+          // 非 campus 级别：直接传全局部门 ID
+          createMutation.mutate({
+            name: data.name,
+            scope_type: firstIdentity.scope_type,
+            region_id: firstIdentity.region_id || undefined,
+            district_id: firstIdentity.district_id || undefined,
+            area_id: firstIdentity.area_id || undefined,
+            department_id: firstIdentity.department_id,
+            position_id: firstIdentity.position_id,
+            joined_at: data.joined_at || undefined,
+          })
+        }
       }
     }
   }
