@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Input, Banner } from '@douyinfe/semi-ui-19'
 import { AlertTriangle } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { sleep } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 

@@ -6,9 +6,9 @@
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Mic, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle, Star } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-import { Table, Button, Input, Modal, Form, Select, Switch, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
+import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
@@ -18,7 +18,6 @@ import { StatusBadge } from '../../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
-const { TextArea } = Input
 
 // 提供商字段配置
 const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, {
@@ -218,8 +217,7 @@ export function ASRConfigContent() {
     }
   }
 
-  const columns: ColumnProps<ASRConfigItem>[] = useMemo(
-    () => [
+  const columns: ColumnProps<ASRConfigItem>[] = [
       {
         title: '配置名称',
         dataIndex: 'name',
@@ -308,9 +306,7 @@ export function ASRConfigContent() {
           )
         },
       },
-    ],
-    [testMutation.isPending]
-  )
+    ]
 
   const tableData = isLoading ? createSkeletonData(5) : (data?.items || [])
 

@@ -5,11 +5,11 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BrainCircuit, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle, RefreshCw, Star } from 'lucide-react'
-import { toast } from 'sonner'
+import { BrainCircuit, Plus, Pencil, Trash2, Play, Star } from 'lucide-react'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Select, Modal, Form, Tag, Skeleton, Typography, Switch } from '@douyinfe/semi-ui-19'
+import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
@@ -18,6 +18,24 @@ import { AI_PROVIDER_OPTIONS, type AIConfigItem, type AIProvider } from '../../t
 import { StatusBadge } from '../../components/status-badge'
 
 const { Text } = Typography
+
+interface PaginationTextInfo {
+  currentStart: number
+  currentEnd: number
+  total: number
+}
+
+interface AIConfigFormValues {
+  provider: AIProvider
+  name: string
+  api_key: string
+  base_url: string
+  default_model: string
+  endpoint_id?: string
+  notes?: string
+  is_default: boolean
+  is_active: boolean
+}
 
 // 提供商默认值
 const PROVIDER_DEFAULTS: Record<AIProvider, { base_url: string; default_model: string }> = {
@@ -167,8 +185,7 @@ export function AIConfigContent() {
   const getProviderTagColor = (provider: string): string | undefined =>
     provider === 'doubao' ? 'blue' : provider === 'kimi' ? undefined : undefined
 
-  const columns: ColumnProps<AIConfigItem>[] = useMemo(
-    () => [
+  const columns: ColumnProps<AIConfigItem>[] = [
       {
         title: '配置名称',
         dataIndex: 'name',
@@ -260,15 +277,13 @@ export function AIConfigContent() {
           return (
             <div className="flex items-center gap-1">
               <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} title="编辑" />
-              <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} onClick={() => handleTest(record.id)} disabled={testMutation.isPending} title="测试" />
+              <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} onClick={() => testMutation.mutate(record.id)} disabled={testMutation.isPending} title="测试" />
               <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} onClick={() => handleDeleteClick(record)} title="删除" />
             </div>
           )
         },
       },
-    ],
-    [testMutation.isPending]
-  )
+    ]
 
   const tableData = isLoading ? createSkeletonData(3) : (data?.items || [])
 
@@ -281,7 +296,7 @@ export function AIConfigContent() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info: PaginationTextInfo) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
   }), [page, pageSize, data?.total])
 
   const handleCreate = () => {
@@ -336,10 +351,6 @@ export function AIConfigContent() {
     }
   }
 
-  const handleTest = (id: string) => {
-    testMutation.mutate(id)
-  }
-
   // 提供商切换时更新默认值
   const handleProviderChange = (provider: AIProvider) => {
     setSelectedProvider(provider)
@@ -353,7 +364,7 @@ export function AIConfigContent() {
     }
   }
 
-  const handleSubmit = (formData: Record<string, any>) => {
+  const handleSubmit = (formData: AIConfigFormValues) => {
     if (editingItem) {
       const updateData: AIConfigUpdate = {
         name: formData.name,

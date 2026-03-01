@@ -5,7 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Settings2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Table, Select, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'

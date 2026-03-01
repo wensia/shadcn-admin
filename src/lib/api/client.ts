@@ -1,7 +1,7 @@
 /**
  * API客户端
  * 基于Axios,提供统一的请求/响应处理
- * 从frontend-vue/src/api/client.ts迁移
+ * 从旧版前端 API Client 迁移
  */
 
 import axios, {
@@ -12,8 +12,8 @@ import axios, {
   type AxiosResponse
 } from 'axios'
 import qs from 'qs'
-import { toast } from 'sonner'
-import type { ApiResponse, ApiError } from './types'
+import { toast } from '@/lib/toast'
+import type { ApiError } from './types'
 import { ApiClientError, getErrorMessage, isApiResponse, normalizeAxiosError } from './response-handler'
 
 // 在开发环境可用 VITE_API_URL，生产环境强制走相对路径（由 Nginx 代理）
@@ -25,6 +25,11 @@ const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1'
  */
 interface ExtendedAxiosRequestConfig extends AxiosRequestConfig {
   _silentBusinessError?: boolean
+}
+
+type RequestPayload = unknown
+type SilentRequestConfig = ExtendedAxiosRequestConfig & {
+  _silentBusinessError: true
 }
 
 class ApiClient {
@@ -62,6 +67,14 @@ class ApiClient {
     localStorage.removeItem('user_info')
     // 同步清除 zustand 持久化的认证状态，避免刷新后仍认为已登录
     localStorage.removeItem('auth-storage')
+  }
+
+  private createBusinessErrorResponse(response: AxiosResponse) {
+    return {
+      data: response.data,
+      status: response.status,
+      statusText: response.statusText
+    }
   }
 
   /**
@@ -114,11 +127,7 @@ class ApiClient {
             error.status = response.status
             error.code = response.data.code
             error.messageShown = true
-            ;(error as any).response = {
-              data: response.data,
-              status: response.status,
-              statusText: response.statusText
-            }
+            error.response = this.createBusinessErrorResponse(response)
             throw error
           }
 
@@ -134,11 +143,7 @@ class ApiClient {
             error.isBusinessError = true
             error.status = response.status
             error.code = response.data.code
-            ;(error as any).response = {
-              data: response.data,
-              status: response.status,
-              statusText: response.statusText
-            }
+            error.response = this.createBusinessErrorResponse(response)
             throw error
           }
 
@@ -152,7 +157,7 @@ class ApiClient {
       (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as ExtendedAxiosRequestConfig
         const normalizedError = normalizeAxiosError(error)
-        if ((normalizedError as any).messageShown) {
+        if (normalizedError.messageShown) {
           return Promise.reject(normalizedError)
         }
 
@@ -206,55 +211,63 @@ class ApiClient {
 
   // ==================== 标准请求方法 ====================
 
-  public get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  public get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.client.get(url, config)
   }
 
-  public post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  public post<T = unknown>(url: string, data?: RequestPayload, config?: AxiosRequestConfig): Promise<T> {
     return this.client.post(url, data, config)
   }
 
-  public put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  public put<T = unknown>(url: string, data?: RequestPayload, config?: AxiosRequestConfig): Promise<T> {
     return this.client.put(url, data, config)
   }
 
-  public delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  public delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.client.delete(url, config)
   }
 
-  public patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  public patch<T = unknown>(url: string, data?: RequestPayload, config?: AxiosRequestConfig): Promise<T> {
     return this.client.patch(url, data, config)
   }
 
   // ==================== 静默请求方法 ====================
   // 不会因为业务错误抛出异常，适用于需要自行处理错误的场景
 
-  public postSilent<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  public postSilent<T = unknown>(
+    url: string,
+    data?: RequestPayload,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
     return this.client.post(url, data, {
       ...config,
       _silentBusinessError: true
-    } as any)
+    } satisfies SilentRequestConfig)
   }
 
-  public getSilent<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  public getSilent<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.client.get(url, {
       ...config,
       _silentBusinessError: true
-    } as any)
+    } satisfies SilentRequestConfig)
   }
 
-  public putSilent<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  public putSilent<T = unknown>(
+    url: string,
+    data?: RequestPayload,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
     return this.client.put(url, data, {
       ...config,
       _silentBusinessError: true
-    } as any)
+    } satisfies SilentRequestConfig)
   }
 
-  public deleteSilent<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  public deleteSilent<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.client.delete(url, {
       ...config,
       _silentBusinessError: true
-    } as any)
+    } satisfies SilentRequestConfig)
   }
 }
 

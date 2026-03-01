@@ -1,5 +1,4 @@
 import { type SVGProps } from 'react'
-import { Root as Radio, Item } from '@radix-ui/react-radio-group'
 import { Check, CircleCheck, RotateCcw, Settings } from 'lucide-react'
 import { SideSheet, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { IconDir } from '@/assets/custom/icon-dir'
@@ -118,6 +117,8 @@ function SectionTitle({
 
 function RadioGroupItem({
   item,
+  selected,
+  onSelect,
   isTheme = false,
 }: {
   item: {
@@ -125,19 +126,27 @@ function RadioGroupItem({
     label: string
     icon: (props: SVGProps<SVGSVGElement>) => React.ReactElement
   }
+  selected: boolean
+  onSelect: (value: string) => void
   isTheme?: boolean
 }) {
   return (
-    <Item
-      value={item.value}
-      className={cn('group outline-none', 'transition duration-200 ease-in')}
+    <button
+      type='button'
+      onClick={() => onSelect(item.value)}
+      className={cn(
+        'group border-0 bg-transparent p-0 text-left outline-none',
+        'transition duration-200 ease-in'
+      )}
       aria-label={`Select ${item.label.toLowerCase()}`}
       aria-describedby={`${item.value}-description`}
+      role='radio'
+      aria-checked={selected}
     >
       <div
         className={cn(
           'relative rounded-[6px] ring-[1px] ring-border',
-          'group-data-[state=checked]:shadow-2xl group-data-[state=checked]:ring-primary',
+          selected && 'shadow-2xl ring-primary',
           'group-focus-visible:ring-2'
         )}
         role='img'
@@ -147,15 +156,16 @@ function RadioGroupItem({
         <CircleCheck
           className={cn(
             'size-6 fill-primary stroke-white',
-            'group-data-[state=unchecked]:hidden',
+            !selected && 'hidden',
             'absolute top-0 right-0 translate-x-1/2 -translate-y-1/2'
           )}
           aria-hidden='true'
         />
         <item.icon
           className={cn(
-            !isTheme &&
-              'fill-primary stroke-primary group-data-[state=unchecked]:fill-muted-foreground group-data-[state=unchecked]:stroke-muted-foreground'
+            !isTheme && (selected
+              ? 'fill-primary stroke-primary'
+              : 'fill-muted-foreground stroke-muted-foreground')
           )}
           aria-hidden='true'
         />
@@ -167,7 +177,7 @@ function RadioGroupItem({
       >
         {item.label}
       </div>
-    </Item>
+    </button>
   )
 }
 
@@ -180,10 +190,9 @@ function ThemeConfig() {
         showReset={theme !== defaultTheme}
         onReset={() => setTheme(defaultTheme)}
       />
-      <Radio
-        value={theme}
-        onValueChange={setTheme}
+      <div
         className='grid w-full max-w-md grid-cols-3 gap-4'
+        role='radiogroup'
         aria-label='Select theme preference'
         aria-describedby='theme-description'
       >
@@ -204,9 +213,15 @@ function ThemeConfig() {
             icon: IconThemeDark,
           },
         ].map((item) => (
-          <RadioGroupItem key={item.value} item={item} isTheme />
+          <RadioGroupItem
+            key={item.value}
+            item={item}
+            selected={theme === item.value}
+            onSelect={(value) => setTheme(value as typeof theme)}
+            isTheme
+          />
         ))}
-      </Radio>
+      </div>
       <div id='theme-description' className='sr-only'>
         Choose between system preference, light mode, or dark mode
       </div>
@@ -217,6 +232,9 @@ function ThemeConfig() {
 function AccentColorConfig() {
   const { defaultAccentColor, accentColor, setAccentColor } = useAccentColor()
   const currentColor = ACCENT_COLORS.find(c => c.value === accentColor)
+  const currentDescription = currentColor && 'description' in currentColor
+    ? currentColor.description
+    : undefined
   return (
     <div>
       <SectionTitle
@@ -242,7 +260,7 @@ function AccentColorConfig() {
             style={{ backgroundColor: colorOption.color }}
             aria-label={colorOption.label}
             aria-pressed={accentColor === colorOption.value}
-            title={colorOption.description || colorOption.label}
+            title={'description' in colorOption ? colorOption.description : colorOption.label}
           >
             {accentColor === colorOption.value && (
               <Check className='h-4 w-4 text-white drop-shadow-md' />
@@ -252,9 +270,9 @@ function AccentColorConfig() {
       </div>
       <div className='mt-2 text-xs text-[var(--semi-color-text-2)]'>
         {currentColor?.label}
-        {currentColor?.description && (
+        {currentDescription && (
           <span className='ml-1 opacity-70'>
-            - {currentColor.description}
+            - {currentDescription}
           </span>
         )}
       </div>
@@ -271,10 +289,9 @@ function SidebarConfig() {
         showReset={defaultVariant !== variant}
         onReset={() => setVariant(defaultVariant)}
       />
-      <Radio
-        value={variant}
-        onValueChange={setVariant}
+      <div
         className='grid w-full max-w-md grid-cols-3 gap-4'
+        role='radiogroup'
         aria-label='Select sidebar style'
         aria-describedby='sidebar-description'
       >
@@ -295,9 +312,14 @@ function SidebarConfig() {
             icon: IconSidebarSidebar,
           },
         ].map((item) => (
-          <RadioGroupItem key={item.value} item={item} />
+          <RadioGroupItem
+            key={item.value}
+            item={item}
+            selected={variant === item.value}
+            onSelect={(value) => setVariant(value as typeof variant)}
+          />
         ))}
-      </Radio>
+      </div>
       <div id='sidebar-description' className='sr-only'>
         Choose between inset, floating, or standard sidebar layout
       </div>
@@ -321,17 +343,9 @@ function LayoutConfig() {
           setCollapsible(defaultCollapsible)
         }}
       />
-      <Radio
-        value={radioState}
-        onValueChange={(v) => {
-          if (v === 'default') {
-            setOpen(true)
-            return
-          }
-          setOpen(false)
-          setCollapsible(v as Collapsible)
-        }}
+      <div
         className='grid w-full max-w-md grid-cols-3 gap-4'
+        role='radiogroup'
         aria-label='Select layout style'
         aria-describedby='layout-description'
       >
@@ -352,9 +366,21 @@ function LayoutConfig() {
             icon: IconLayoutFull,
           },
         ].map((item) => (
-          <RadioGroupItem key={item.value} item={item} />
+          <RadioGroupItem
+            key={item.value}
+            item={item}
+            selected={radioState === item.value}
+            onSelect={(value) => {
+              if (value === 'default') {
+                setOpen(true)
+                return
+              }
+              setOpen(false)
+              setCollapsible(value as Collapsible)
+            }}
+          />
         ))}
-      </Radio>
+      </div>
       <div id='layout-description' className='sr-only'>
         Choose between default expanded, compact icon-only, or full layout mode
       </div>
@@ -371,10 +397,9 @@ function DirConfig() {
         showReset={defaultDir !== dir}
         onReset={() => setDir(defaultDir)}
       />
-      <Radio
-        value={dir}
-        onValueChange={setDir}
-        className='grid w-full max-w-md grid-cols-3 gap-4'
+      <div
+        className='grid w-full max-w-md grid-cols-2 gap-4'
+        role='radiogroup'
         aria-label='Select site direction'
         aria-describedby='direction-description'
       >
@@ -394,9 +419,14 @@ function DirConfig() {
             ),
           },
         ].map((item) => (
-          <RadioGroupItem key={item.value} item={item} />
+          <RadioGroupItem
+            key={item.value}
+            item={item}
+            selected={dir === item.value}
+            onSelect={(value) => setDir(value as typeof dir)}
+          />
         ))}
-      </Radio>
+      </div>
       <div id='direction-description' className='sr-only'>
         Choose between left-to-right or right-to-left site direction
       </div>

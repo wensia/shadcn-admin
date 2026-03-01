@@ -11,11 +11,11 @@ import {
   Phone,
   Clock,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Main } from '@/components/layout/main'
 import { Table, Button, Card, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { yunkeApi } from '../api'
 import { formatTime } from '@/lib/utils/time'
@@ -142,35 +142,31 @@ export function YunkeLoginStatusPage() {
   }))
 
   return (
-    <Main fixed>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {/* 标题栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>登录状态管理</h1>
-            <Text type="tertiary" size="small">检查和管理员工的云客登录状态</Text>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Button
-              theme="outline"
-              onClick={() => checkLoginStatusMutation.mutate()}
-              disabled={isLoading}
-              loading={isLoading}
-              icon={isLoading ? undefined : <CheckCircle style={{ width: 16, height: 16 }} />}
-            >
-              {isLoading ? '检查中...' : '检查登录状态'}
-            </Button>
-            <Button
-              onClick={() => batchLoginMutation.mutate()}
-              disabled={batchLoginMutation.isPending}
-              loading={batchLoginMutation.isPending}
-              icon={batchLoginMutation.isPending ? undefined : <RefreshCw style={{ width: 16, height: 16 }} />}
-            >
-              {batchLoginMutation.isPending ? '更新中...' : '一键更新登录'}
-            </Button>
-          </div>
+    <DataTableLayout
+      title="登录状态管理"
+      headerActions={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Button
+            theme="outline"
+            onClick={() => checkLoginStatusMutation.mutate()}
+            disabled={isLoading}
+            loading={isLoading}
+            icon={isLoading ? undefined : <CheckCircle style={{ width: 16, height: 16 }} />}
+          >
+            {isLoading ? '检查中...' : '检查登录状态'}
+          </Button>
+          <Button
+            onClick={() => batchLoginMutation.mutate()}
+            disabled={batchLoginMutation.isPending}
+            loading={batchLoginMutation.isPending}
+            icon={batchLoginMutation.isPending ? undefined : <RefreshCw style={{ width: 16, height: 16 }} />}
+          >
+            {batchLoginMutation.isPending ? '更新中...' : '一键更新登录'}
+          </Button>
         </div>
-
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: 16, overflow: 'auto', flex: 1 }}>
         {/* 统计卡片 */}
         {statusData && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -229,6 +225,6 @@ export function YunkeLoginStatusPage() {
           )}
         </Card>
       </div>
-    </Main>
+    </DataTableLayout>
   )
 }

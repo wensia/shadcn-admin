@@ -1,6 +1,6 @@
 /**
  * Admin 管理后台 API
- * 从 frontend-vue/src/api/admin.ts 迁移
+ * 从旧版前端 API 实现迁移
  */
 
 import { apiClient } from '@/lib/api/client'

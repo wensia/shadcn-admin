@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button, Tooltip, Tag, Divider, Dropdown } from '@douyinfe/semi-ui-19'
 import { Trash2, CircleArrowUp, ArrowUpDown, Download, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { sleep } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { priorities, statuses } from '../data/data'

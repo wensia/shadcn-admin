@@ -17,7 +17,7 @@ import {
   Zap,
   ArrowRight,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'

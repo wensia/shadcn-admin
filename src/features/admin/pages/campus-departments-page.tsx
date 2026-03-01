@@ -5,13 +5,15 @@
 import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Trash2, Building2, Network, Users, Eye } from 'lucide-react'
-import { Main } from '@/components/layout/main'
-import { Form, Button, Modal, Input, Select, Table, Skeleton, Typography, Tag, Tooltip } from '@douyinfe/semi-ui-19'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
+import { Form, Button, Modal, Input, Select, Typography, Tag, Tooltip } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { IconSearch } from '@douyinfe/semi-icons'
 import { adminApi } from '../api'
 import type { CampusDepartmentItem, CampusDepartmentCreate, ManagerType } from '../types'
 import { StatusBadge } from '../components/status-badge'
@@ -21,8 +23,11 @@ import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
 
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+interface CampusDepartmentFormValues {
+  campus_id?: string
+  department_id?: string
+  sort_order?: number
+}
 
 export function CampusDepartmentsPage() {
   useDocumentTitle('校区部门配置')
@@ -83,8 +88,9 @@ export function CampusDepartmentsPage() {
     },
   })
 
-  const campuses = campusesData?.items || []
-  const departments = departmentsData?.items || []
+  const campuses = useMemo(() => campusesData?.items ?? [], [campusesData?.items])
+  const departments = useMemo(() => departmentsData?.items ?? [], [departmentsData?.items])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 创建校区部门配置
   const createMutation = useMutation({
@@ -128,181 +134,134 @@ export function CampusDepartmentsPage() {
   }
 
   // 表格列定义
-  const columns: ColumnProps<CampusDepartmentItem>[] = useMemo(
-    () => [
-      {
-        title: '校区',
-        dataIndex: 'campus_name',
-        render: (_, record) => {
-          if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
-          }
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Building2 className="h-4 w-4" style={{ color: '#14b8a6' }} />
-              <span style={{ fontWeight: 500 }}>{record!.campus_name || '-'}</span>
-            </div>
-          )
-        },
+  const columns: ColumnProps<CampusDepartmentItem>[] = [
+    {
+      title: '校区',
+      dataIndex: 'campus_name',
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={96} />
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Building2 className="h-4 w-4" style={{ color: '#14b8a6' }} />
+            <span style={{ fontWeight: 500 }}>{record!.campus_name || '-'}</span>
+          </div>
+        )
       },
-      {
-        title: '部门',
-        dataIndex: 'department_name',
-        render: (_, record) => {
-          if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
-          }
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Network className="h-4 w-4" style={{ color: '#a855f7' }} />
-              <span>{record!.department_name || '-'}</span>
-            </div>
-          )
-        },
+    },
+    {
+      title: '部门',
+      dataIndex: 'department_name',
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={96} />
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Network className="h-4 w-4" style={{ color: '#a855f7' }} />
+            <span>{record!.department_name || '-'}</span>
+          </div>
+        )
       },
-      {
-        title: '负责人',
-        dataIndex: 'managers',
-        render: (_, record) => {
-          if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
-          }
-          const managers = record!.managers || []
-          if (managers.length === 0) {
-            return <Text type="tertiary" size="small">未配置</Text>
-          }
+    },
+    {
+      title: '负责人',
+      dataIndex: 'managers',
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={128} />
+        const managers = record!.managers || []
+        if (managers.length === 0) {
+          return <Text type="tertiary" size="small">未配置</Text>
+        }
 
-          return (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {managers.slice(0, 3).map((m) => (
-                <Tooltip key={m.id} content={`${typeLabels[m.manager_type]}: ${m.employee?.name}`}>
-                  <Tag
-                    color={typeColors[m.manager_type]}
-                    size="small"
-                    style={{ cursor: 'default' }}
-                  >
-                    {m.employee?.name || '未知'}
-                  </Tag>
-                </Tooltip>
-              ))}
-              {managers.length > 3 && (
-                <Tooltip content={
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {managers.slice(3).map((m) => (
-                      <div key={m.id}>{typeLabels[m.manager_type]}: {m.employee?.name}</div>
-                    ))}
-                  </div>
-                }>
-                  <Tag size="small" style={{ cursor: 'default' }}>
-                    +{managers.length - 3}
-                  </Tag>
-                </Tooltip>
-              )}
-            </div>
-          )
-        },
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {managers.slice(0, 3).map((m) => (
+              <Tooltip key={m.id} content={`${typeLabels[m.manager_type]}: ${m.employee?.name}`}>
+                <Tag
+                  color={typeColors[m.manager_type]}
+                  size="small"
+                  style={{ cursor: 'default' }}
+                >
+                  {m.employee?.name || '未知'}
+                </Tag>
+              </Tooltip>
+            ))}
+            {managers.length > 3 && (
+              <Tooltip content={
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {managers.slice(3).map((m) => (
+                    <div key={m.id}>{typeLabels[m.manager_type]}: {m.employee?.name}</div>
+                  ))}
+                </div>
+              }>
+                <Tag size="small" style={{ cursor: 'default' }}>
+                  +{managers.length - 3}
+                </Tag>
+              </Tooltip>
+            )}
+          </div>
+        )
       },
-      {
-        title: '排序',
-        dataIndex: 'sort_order',
-        width: 80,
-        render: (_, record) => {
-          if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
-          }
-          return record!.sort_order ?? '-'
-        },
+    },
+    {
+      title: '排序',
+      dataIndex: 'sort_order',
+      width: 80,
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={32} />
+        return record!.sort_order ?? '-'
       },
-      {
-        title: '状态',
-        dataIndex: 'is_active',
-        width: 100,
-        render: (_, record) => {
-          if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
-          }
-          return <StatusBadge isActive={record!.is_active} />
-        },
+    },
+    {
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 100,
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={56} />
+        return <StatusBadge isActive={record!.is_active} />
       },
-      {
-        title: '创建时间',
-        dataIndex: 'created_at',
-        width: 180,
-        render: (_, record) => {
-          if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
-          }
-          return new Date(record!.created_at).toLocaleString('zh-CN')
-        },
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      width: 180,
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={112} />
+        return new Date(record!.created_at).toLocaleString('zh-CN')
       },
-      {
-        title: '操作',
-        dataIndex: 'id',
-        width: 140,
-        render: (_, record) => {
-          if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
-          }
-          return (
-            <div style={{ display: 'flex', gap: 4 }}>
-              <Button
-                theme="borderless"
-                type="tertiary"
-                icon={<Eye className="h-4 w-4" />}
-                size="small"
-                onClick={() => handleViewEmployees(record!)}
-              />
-              <Button
-                theme="borderless"
-                type="tertiary"
-                icon={<Users className="h-4 w-4" />}
-                size="small"
-                onClick={() => handleManageManagers(record!)}
-              />
-              <Button
-                theme="borderless"
-                type="danger"
-                icon={<Trash2 className="h-4 w-4" />}
-                size="small"
-                onClick={() => handleDeleteClick(record!)}
-              />
-            </div>
-          )
-        },
+    },
+    {
+      title: '操作',
+      dataIndex: 'id',
+      width: 140,
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={80} />
+        return (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<Eye className="h-4 w-4" />}
+              size="small"
+              onClick={() => handleViewEmployees(record!)}
+            />
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<Users className="h-4 w-4" />}
+              size="small"
+              onClick={() => handleManageManagers(record!)}
+            />
+            <Button
+              theme="borderless"
+              type="danger"
+              icon={<Trash2 className="h-4 w-4" />}
+              size="small"
+              onClick={() => handleDeleteClick(record!)}
+            />
+          </div>
+        )
       },
-    ],
-    []
-  )
-
-  // 生成骨架屏数据
-  const skeletonData: CampusDepartmentItem[] = useMemo(
-    () =>
-      Array.from({ length: 5 }).map((_, i) => ({
-        id: `${SKELETON_PREFIX}${i}`,
-        campus_id: '',
-        department_id: '',
-        sort_order: 0,
-        is_active: true,
-        created_at: '',
-        updated_at: '',
-      })),
-    []
-  )
-
-  const displayData = isLoading ? skeletonData : (data?.items || [])
-
-  // 分页
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
+    },
+  ]
 
   // 处理创建
   const handleCreate = () => {
@@ -336,7 +295,7 @@ export function CampusDepartmentsPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (values: Record<string, any>) => {
+  const handleSubmit = (values: CampusDepartmentFormValues) => {
     createMutation.mutate({
       campus_id: values.campus_id,
       department_id: values.department_id,
@@ -372,24 +331,19 @@ export function CampusDepartmentsPage() {
     departments.map((d) => ({ value: d.id, label: d.name })), [departments])
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">校区部门配置</h1>
-            <Text type="tertiary" size="small">
-              配置校区与部门的关联关系，决定每个校区有哪些部门
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="校区部门配置"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             添加配置
           </Button>
-        </div>
-
-        {/* 工具栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
             <Input
               prefix={<IconSearch />}
               placeholder="搜索..."
@@ -413,19 +367,19 @@ export function CampusDepartmentsPage() {
             />
             <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <Table
+        }
+      >
+        <SemiDataTable
           columns={columns}
-          dataSource={displayData}
-          rowKey="id"
-          pagination={pagination}
-          loading={false}
-          style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
         />
-      </div>
+      </DataTableLayout>
 
       {/* 创建对话框 */}
       <Modal
@@ -503,6 +457,6 @@ export function CampusDepartmentsPage() {
         onOpenChange={setEmployeesDialogOpen}
         campusDepartment={viewingDepartment}
       />
-    </Main>
+    </>
   )
 }

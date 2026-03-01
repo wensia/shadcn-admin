@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2 } from 'lucide-react'
 import { Modal, Button, Select, Switch, Typography } from '@douyinfe/semi-ui-19'
 import { leadAccessStatsApi, dingtalkRobotsApi } from '../api'

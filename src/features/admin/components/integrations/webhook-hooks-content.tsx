@@ -16,10 +16,9 @@ import {
   Bot,
   Building2,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-import { Table, Button, Input, Modal, Form, Select, Switch, Tag, Skeleton, Typography, Tooltip, Radio } from '@douyinfe/semi-ui-19'
-import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import { Table, Button, Input, Modal, Form, Select, Tag, Skeleton, Typography, Tooltip, Radio, Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
@@ -105,8 +104,8 @@ export function WebhookHooksContent() {
     },
   })
 
-  const robots = robotsData || []
-  const campuses = campusesData?.items || []
+  const robots = useMemo<DingtalkRobot[]>(() => robotsData ?? [], [robotsData])
+  const campuses = useMemo<CampusItem[]>(() => campusesData?.items ?? [], [campusesData?.items])
 
   // 机器人选项
   const robotOptions = useMemo(() => {
@@ -345,7 +344,7 @@ export function WebhookHooksContent() {
   )
 
   // 分页数据
-  const allHooks = data?.items || []
+  const allHooks = useMemo<WebhookHook[]>(() => data?.items ?? [], [data?.items])
   const filteredHooks = useMemo(() => {
     let result = allHooks
     if (searchValue) {

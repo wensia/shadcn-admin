@@ -18,7 +18,7 @@ import {
   IconArrowRight,
   IconTickCircle,
 } from '@douyinfe/semi-icons'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { callRecordsApi } from '../../api'
 

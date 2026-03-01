@@ -1,6 +1,6 @@
 /**
  * Semi Design Badge 组件 - 基于 Tag 的 Badge 封装
- * 保留原 shadcn Badge 的所有 variant 色值，使用 Semi Tag 实现
+ * 保留原有 Badge variant 色值，使用 Semi Tag 实现
  */
 
 import { Tag } from '@douyinfe/semi-ui-19'

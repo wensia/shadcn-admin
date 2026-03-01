@@ -9,7 +9,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { ChevronLeft, ChevronRight, Send, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DISC_QUESTIONS } from '../data/questions'

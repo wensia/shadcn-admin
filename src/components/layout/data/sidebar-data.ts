@@ -469,7 +469,7 @@ export const sidebarData: SidebarData = {
   user: {
     name: 'RMF CRM',
     email: 'admin@rmf.com',
-    avatar: '/avatars/shadcn.jpg',
+    avatar: '/images/favicon.png',
   },
   teams: crmTeams,
   navGroups: crmNavGroups,

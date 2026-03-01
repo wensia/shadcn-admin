@@ -2,35 +2,32 @@
  * 每日通知管理页面
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
-import { Bell, Plus, Pencil, Trash2, Power, PowerOff, Eye } from 'lucide-react'
-import { toast } from 'sonner'
+import { Plus, Pencil, Trash2, Power, PowerOff, Eye } from 'lucide-react'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Modal, Tag, Switch, Skeleton, Typography, TextArea } from '@douyinfe/semi-ui-19'
+import { Button, Input, Modal, Tag, Switch, Typography, TextArea } from '@douyinfe/semi-ui-19'
 import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi } from '../api'
 import type { DailyNoticeItem, DailyNoticeCreate, DailyNoticeUpdate } from '../types'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
 
-// 骨架屏
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-const SKELETON_DATA: { id: string }[] = Array.from({ length: 3 }, (_, i) => ({
-  id: `${SKELETON_PREFIX}${i}`,
-}))
-
 export function DailyNoticesPage() {
   useDocumentTitle('每日通知')
   const queryClient = useQueryClient()
 
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
@@ -44,7 +41,7 @@ export function DailyNoticesPage() {
   const [formIsActive, setFormIsActive] = useState(false)
 
   // 查询
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-daily-notices'],
     queryFn: async () => {
       const response = await adminApi.getDailyNotices(1, 100)
@@ -52,7 +49,7 @@ export function DailyNoticesPage() {
     },
   })
 
-  const notices = data?.items ?? []
+  const notices = useMemo(() => data?.items ?? [], [data?.items])
 
   // 创建
   const createMutation = useMutation({
@@ -164,12 +161,9 @@ export function DailyNoticesPage() {
       dataIndex: 'title',
       width: 250,
       render: (_text: string, record: DailyNoticeItem) => {
-        if (isSkeletonRow(record.id)) {
-          return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
-        }
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
         return (
           <div className="flex items-center gap-2">
-            <Bell className="h-4 w-4 text-orange-500" />
             <span className="font-medium">{record.title}</span>
           </div>
         )
@@ -180,9 +174,7 @@ export function DailyNoticesPage() {
       dataIndex: 'is_active',
       width: 100,
       render: (_text: boolean, record: DailyNoticeItem) => {
-        if (isSkeletonRow(record.id)) {
-          return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
-        }
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
         return record.is_active ? (
           <Tag color="green" size="small">生效中</Tag>
         ) : (
@@ -195,9 +187,7 @@ export function DailyNoticesPage() {
       dataIndex: 'created_by_name',
       width: 120,
       render: (_text: string, record: DailyNoticeItem) => {
-        if (isSkeletonRow(record.id)) {
-          return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
-        }
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return <Text type="tertiary">{record.created_by_name || '-'}</Text>
       },
     },
@@ -206,9 +196,7 @@ export function DailyNoticesPage() {
       dataIndex: 'updated_at',
       width: 170,
       render: (_text: string, record: DailyNoticeItem) => {
-        if (isSkeletonRow(record.id)) {
-          return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
-        }
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
         return <Text type="tertiary">{formatTime(record.updated_at)}</Text>
       },
     },
@@ -217,9 +205,7 @@ export function DailyNoticesPage() {
       dataIndex: 'actions',
       width: 160,
       render: (_text: unknown, record: DailyNoticeItem) => {
-        if (isSkeletonRow(record.id)) {
-          return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
-        }
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
         return (
           <div className="flex items-center gap-1">
             <Button theme="borderless" type="tertiary" size="small" icon={<Eye className="h-4 w-4" />} onClick={() => handlePreview(record)} />
@@ -256,43 +242,31 @@ export function DailyNoticesPage() {
     },
   ]
 
-  const tableData = isLoading ? SKELETON_DATA : notices
-
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Bell className="h-6 w-6" style={{ color: 'var(--semi-color-text-2)' }} />
-            <div>
-              <h1 className="text-2xl font-bold">每日通知</h1>
-              <Text type="tertiary" size="small">
-                配置 CRM 用户每日登录弹窗通知，同时只能有一条生效
-              </Text>
-            </div>
-          </div>
+    <>
+      <DataTableLayout
+        title="每日通知"
+        total={notices.length}
+        headerActions={
           <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新建通知
           </Button>
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 overflow-hidden">
-          <Table
-            columns={columns as any}
-            dataSource={tableData}
-            rowKey="id"
-            pagination={false}
-            empty={
-              <div className="py-6 text-center" style={{ color: 'var(--semi-color-text-2)' }}>
-                暂无通知，点击「新建通知」创建
-              </div>
-            }
-            size="middle"
-          />
-        </div>
-      </div>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+      >
+        <SemiDataTable
+          columns={columns as any}
+          data={notices}
+          total={notices.length}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+          emptyText="暂无通知，点击「新建通知」创建"
+        />
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -414,6 +388,6 @@ export function DailyNoticesPage() {
       >
         确定要删除通知「{deletingItem?.title}」吗？此操作不可撤销。
       </Modal>
-    </Main>
+    </>
   )
 }

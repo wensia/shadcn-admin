@@ -1,4 +1,4 @@
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { ApiClientError, getErrorMessage } from './response-handler'
 
 export function showApiErrorToast(error: unknown, fallback = '请求失败') {

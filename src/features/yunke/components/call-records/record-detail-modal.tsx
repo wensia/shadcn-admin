@@ -31,10 +31,18 @@ interface RecordDetailModalProps {
 /** Semi 原生色（使用 CSS 变量） */
 const BRAND = {
   cardBorder: 'var(--semi-color-border)',
+  accent: 'var(--semi-color-primary)',
 }
 
 /** 倍速选项 */
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
+type AnalysisStatusResponse = {
+  status: string
+  analysis: unknown
+  error: string | null
+  analyzed_at: string | null
+}
+type SemiTagColor = 'grey' | 'green' | 'orange' | 'blue'
 
 /**
  * 将转写文本格式化为可读对话文本
@@ -76,7 +84,7 @@ function formatDurationDisplay(seconds: number | null | undefined): string {
 /**
  * 获取通话结果颜色
  */
-function getCallResultColor(result: string | null | undefined): string {
+function getCallResultColor(result: string | null | undefined): SemiTagColor {
   if (!result) return 'grey'
   const r = result.toLowerCase()
   if (r.includes('接通') || r.includes('answered') || r.includes('connected')) return 'green'
@@ -99,17 +107,31 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const [fullRecord, setFullRecord] = useState<CallRecord | null>(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
 
+  const resetPlayerState = useCallback(() => {
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+    setPlaybackRate(1)
+  }, [])
+
   useEffect(() => {
-    if (open && recordProp) {
+    if (!open || !recordProp) {
+      const frameId = requestAnimationFrame(() => {
+        setFullRecord(null)
+      })
+      return () => cancelAnimationFrame(frameId)
+    }
+
+    const frameId = requestAnimationFrame(() => {
       setIsDetailLoading(true)
       callRecordsApi.getCallRecord(recordProp.id)
-        .then(data => setFullRecord(data))
-        .catch(err => showApiErrorToast(err, '加载详情失败'))
+        .then((data) => setFullRecord(data))
+        .catch((err) => showApiErrorToast(err, '加载详情失败'))
         .finally(() => setIsDetailLoading(false))
-    } else {
-      setFullRecord(null)
-    }
-  }, [open, recordProp?.id])
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [open, recordProp])
 
   const record = recordProp
 
@@ -123,7 +145,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     enabled: !!record?.id && open && isPolling,
     refetchInterval: 3000,
     refetchIntervalInBackground: false,
-    select: useCallback((data: { status: string; analysis: any; error: string | null; analyzed_at: string | null }) => {
+    select: useCallback((data: AnalysisStatusResponse) => {
       if (data.status === 'completed' && data.analysis) {
         setFullRecord((prev) =>
           prev
@@ -164,13 +186,18 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
 
   // 重置播放状态
   useEffect(() => {
-    if (!open) {
-      setIsPlaying(false)
-      setCurrentTime(0)
-      setDuration(0)
-      setPlaybackRate(1)
-    }
-  }, [open])
+    if (open) return
+    const frameId = requestAnimationFrame(() => {
+      resetPlayerState()
+    })
+    return () => cancelAnimationFrame(frameId)
+  }, [open, resetPlayerState])
+
+  const handleClose = useCallback(() => {
+    resetPlayerState()
+    setFullRecord(null)
+    onOpenChange(false)
+  }, [onOpenChange, resetPlayerState])
 
   const togglePlay = () => {
     if (!audioRef.current) return
@@ -245,7 +272,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   return (
     <SideSheet
       visible={open}
-      onCancel={() => onOpenChange(false)}
+      onCancel={handleClose}
       placement="right"
       width="100vw"
       title={record ? (
@@ -265,7 +292,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
             </span>
           </div>
           <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
-          <Tag size="small" color={getCallResultColor(record.call_result) as any} style={{ height: 20, fontSize: 11 }}>
+          <Tag size="small" color={getCallResultColor(record.call_result)} style={{ height: 20, fontSize: 11 }}>
             {record.call_result || '未知'}
           </Tag>
           <Tag size="small" color="blue" style={{ height: 20, fontSize: 11 }}>
@@ -289,8 +316,8 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
             <>
               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <Baby style={{ height: 12, width: 12, color: ('var(--semi-color-primary)' as any), flexShrink: 0 }} />
-                <span style={{ color: ('var(--semi-color-primary)' as any), fontWeight: 500 }}>{record.lead_child_name}</span>
+                <Baby style={{ height: 12, width: 12, color: BRAND.accent, flexShrink: 0 }} />
+                <span style={{ color: BRAND.accent, fontWeight: 500 }}>{record.lead_child_name}</span>
               </div>
             </>
           )}

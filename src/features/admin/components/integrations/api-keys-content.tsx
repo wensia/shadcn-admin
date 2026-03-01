@@ -17,7 +17,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Checkbox, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'

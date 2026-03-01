@@ -3,7 +3,7 @@
  * 支持导入和编辑 Markdown 文档，供 AI 分析时作为参考资料
  */
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   BookOpen,
@@ -14,10 +14,10 @@ import {
   EyeOff,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Select, Modal, Form, Tag, Skeleton, Typography, Tooltip, Tabs, TabPane, TextArea } from '@douyinfe/semi-ui-19'
+import { Table, Button, Modal, Form, Tag, Skeleton, Typography, Tooltip, Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { aiConfigApi } from '../../api'
@@ -27,6 +27,13 @@ const { Text } = Typography
 
 const SKELETON_PREFIX = 'skeleton-'
 const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+
+type DocumentFormValues = {
+  name: string
+  content: string
+  description?: string
+  category?: string
+}
 
 function createSkeletonData(count: number): AIDocumentItem[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -54,6 +61,7 @@ export function AIDocumentLibrary() {
   const [editingDoc, setEditingDoc] = useState<AIDocumentItem | null>(null)
   const [deleteDoc, setDeleteDoc] = useState<AIDocumentItem | null>(null)
   const [previewTab, setPreviewTab] = useState<string>('edit')
+  const [previewContent, setPreviewContent] = useState('')
 
   // 查询文档列表
   const { data, isLoading } = useQuery({
@@ -121,23 +129,26 @@ export function AIDocumentLibrary() {
     onError: (error: Error) => showApiErrorToast(error, '删除失败'),
   })
 
-  const closeDialog = () => {
+  const closeDialog = useCallback(() => {
     setDialogOpen(false)
     setEditingDoc(null)
     setPreviewTab('edit')
-  }
+    setPreviewContent('')
+  }, [])
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     closeDialog()
+    setPreviewContent('')
     setDialogOpen(true)
     setTimeout(() => {
       formRef.current?.setValues({ name: '', content: '', description: '', category: '' })
     }, 0)
-  }
+  }, [closeDialog])
 
-  const handleEdit = (doc: AIDocumentItem) => {
+  const handleEdit = useCallback((doc: AIDocumentItem) => {
     setEditingDoc(doc)
     setPreviewTab('edit')
+    setPreviewContent(doc.content)
     setDialogOpen(true)
     setTimeout(() => {
       formRef.current?.setValues({
@@ -147,144 +158,141 @@ export function AIDocumentLibrary() {
         category: doc.category || '',
       })
     }, 0)
-  }
+  }, [])
 
-  const handleSubmit = (formData: Record<string, any>) => {
+  const handleSubmit = (formData: DocumentFormValues) => {
     if (editingDoc) {
-      updateMutation.mutate({ id: editingDoc.id, data: formData as any })
+      updateMutation.mutate({ id: editingDoc.id, data: formData })
     } else {
-      createMutation.mutate(formData as any)
+      createMutation.mutate(formData)
     }
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   // 表格列定义
-  const columns: ColumnProps<AIDocumentItem>[] = useMemo(
-    () => [
-      {
-        title: '名称',
-        dataIndex: 'name',
-        render: (_: unknown, record: AIDocumentItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
-          }
-          return (
-            <div className="flex flex-col">
-              <span className="font-medium text-sm">{record.name}</span>
-              {record.description && (
-                <Text type="tertiary" size="small" className="line-clamp-1">
-                  {record.description}
-                </Text>
-              )}
-            </div>
-          )
-        },
+  const columns: ColumnProps<AIDocumentItem>[] = [
+    {
+      title: '名称',
+      dataIndex: 'name',
+      render: (_: unknown, record: AIDocumentItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
+        }
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium text-sm">{record.name}</span>
+            {record.description && (
+              <Text type="tertiary" size="small" className="line-clamp-1">
+                {record.description}
+              </Text>
+            )}
+          </div>
+        )
       },
-      {
-        title: '分类',
-        dataIndex: 'category',
-        width: 100,
-        render: (_: unknown, record: AIDocumentItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
-          }
-          return (
-            <Tag size="small" type="light">
-              {getCategoryLabel(record.category)}
-            </Tag>
-          )
-        },
+    },
+    {
+      title: '分类',
+      dataIndex: 'category',
+      width: 100,
+      render: (_: unknown, record: AIDocumentItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+        }
+        return (
+          <Tag size="small" type="light">
+            {getCategoryLabel(record.category)}
+          </Tag>
+        )
       },
-      {
-        title: '状态',
-        dataIndex: 'is_active',
-        width: 80,
-        render: (_: unknown, record: AIDocumentItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
-          }
-          return record.is_active ? (
-            <Tag size="small" type="light" color="green">
-              启用
-            </Tag>
-          ) : (
-            <Tag size="small" type="light">
-              停用
-            </Tag>
-          )
-        },
+    },
+    {
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 80,
+      render: (_: unknown, record: AIDocumentItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
+        }
+        return record.is_active ? (
+          <Tag size="small" type="light" color="green">
+            启用
+          </Tag>
+        ) : (
+          <Tag size="small" type="light">
+            停用
+          </Tag>
+        )
       },
-      {
-        title: '更新时间',
-        dataIndex: 'updated_at',
-        width: 110,
-        render: (_: unknown, record: AIDocumentItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
-          }
-          return (
-            <Text type="tertiary" size="small">
-              {new Date(record.updated_at).toLocaleString('zh-CN', {
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
-          )
-        },
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updated_at',
+      width: 110,
+      render: (_: unknown, record: AIDocumentItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+        }
+        return (
+          <Text type="tertiary" size="small">
+            {new Date(record.updated_at).toLocaleString('zh-CN', {
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+        )
       },
-      {
-        title: '操作',
-        dataIndex: 'actions',
-        width: 140,
-        render: (_: unknown, record: AIDocumentItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
-          }
-          return (
-            <div className="flex items-center gap-1">
-              <Tooltip content="编辑">
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  size="small"
-                  icon={<Pencil className="h-3.5 w-3.5" />}
-                  onClick={() => handleEdit(record)}
-                />
-              </Tooltip>
-              <Tooltip content={record.is_active ? '停用' : '启用'}>
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  size="small"
-                  icon={record.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  onClick={() =>
-                    toggleMutation.mutate({
-                      id: record.id,
-                      is_active: !record.is_active,
-                    })
-                  }
-                  disabled={toggleMutation.isPending}
-                />
-              </Tooltip>
-              <Tooltip content="删除">
-                <Button
-                  theme="borderless"
-                  type="danger"
-                  size="small"
-                  icon={<Trash2 className="h-3.5 w-3.5" />}
-                  onClick={() => setDeleteDoc(record)}
-                />
-              </Tooltip>
-            </div>
-          )
-        },
+    },
+    {
+      title: '操作',
+      dataIndex: 'actions',
+      width: 140,
+      render: (_: unknown, record: AIDocumentItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+        }
+        return (
+          <div className="flex items-center gap-1">
+            <Tooltip content="编辑">
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<Pencil className="h-3.5 w-3.5" />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+            <Tooltip content={record.is_active ? '停用' : '启用'}>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={record.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                onClick={() =>
+                  toggleMutation.mutate({
+                    id: record.id,
+                    is_active: !record.is_active,
+                  })
+                }
+                disabled={toggleMutation.isPending}
+              />
+            </Tooltip>
+            <Tooltip content="删除">
+              <Button
+                theme="borderless"
+                type="danger"
+                size="small"
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                onClick={() => setDeleteDoc(record)}
+              />
+            </Tooltip>
+          </div>
+        )
       },
-    ],
-    [toggleMutation.isPending]
-  )
+    },
+  ]
 
   const tableData = isLoading ? createSkeletonData(3) : (data?.items || [])
 
@@ -407,11 +415,12 @@ export function AIDocumentLibrary() {
                 rows={12}
                 rules={[{ required: true, message: '请输入文档内容' }]}
                 style={{ fontFamily: 'monospace', fontSize: 13 }}
+                onChange={(value) => setPreviewContent(value)}
               />
             ) : (
               <div className="min-h-[300px] rounded-md border p-4 overflow-auto prose prose-sm max-w-none dark:prose-invert">
-                {formRef.current?.getValue('content') ? (
-                  <ReactMarkdown>{formRef.current.getValue('content') as string}</ReactMarkdown>
+                {previewContent ? (
+                  <ReactMarkdown>{previewContent}</ReactMarkdown>
                 ) : (
                   <Text type="tertiary">暂无内容</Text>
                 )}

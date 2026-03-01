@@ -27,7 +27,7 @@ import {
   IconEyeOpened,
 } from '@douyinfe/semi-icons'
 import { QrCode, Brain, Clock, AlertCircle, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
 import {
@@ -129,13 +129,9 @@ function FixedLinkModal({
   url: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [qrReady, setQrReady] = useState(false)
 
   useEffect(() => {
-    if (!visible || !url) {
-      setQrReady(false)
-      return
-    }
+    if (!visible || !url) return
     const timer = setTimeout(() => {
       if (canvasRef.current) {
         QRCode.toCanvas(
@@ -146,9 +142,7 @@ function FixedLinkModal({
             margin: 2,
             color: { dark: '#141413', light: '#ffffff' },
           },
-          (err) => {
-            if (!err) setQrReady(true)
-          }
+          () => {}
         )
       }
     }, 50)
@@ -383,6 +377,12 @@ function createSkeletonData(count: number): TempDISCRecordListItem[] {
   }))
 }
 
+interface PaginationTextInfo {
+  currentStart: number
+  currentEnd: number
+  total: number
+}
+
 export function DiscTestPage() {
   useDocumentTitle('DISC性格测试')
   const queryClient = useQueryClient()
@@ -445,7 +445,7 @@ export function DiscTestPage() {
       return res.data
     },
   })
-  const records = recordsData?.items || []
+  const records = useMemo<TempDISCRecordListItem[]>(() => recordsData?.items ?? [], [recordsData?.items])
   const total = recordsData?.total || 0
 
   // 查询详情（AI 分析进行中时自动轮询）
@@ -470,8 +470,7 @@ export function DiscTestPage() {
   }, [loadingRecords, records, pageSize])
 
   // 表格列定义
-  const columns: ColumnProps<TempDISCRecordListItem>[] = useMemo(
-    () => [
+  const columns: ColumnProps<TempDISCRecordListItem>[] = [
       {
         title: '姓名',
         dataIndex: 'name',
@@ -614,9 +613,7 @@ export function DiscTestPage() {
           )
         },
       },
-    ],
-    []
-  )
+    ]
 
   // 搜索
   const handleSearch = () => {
@@ -667,7 +664,7 @@ export function DiscTestPage() {
       showSizeChanger: true,
       pageSizeOpts: [10, 20, 50],
       showTotal: true,
-      formatPageText: (info: any) =>
+      formatPageText: (info: PaginationTextInfo) =>
         `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
     }
   }, [total, page, pageSize])

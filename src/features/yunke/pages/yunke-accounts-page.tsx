@@ -3,14 +3,13 @@
  * 按凭证分 Tab 展示子账号
  */
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, type ComponentProps } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   User,
   Phone,
   Building2,
   RefreshCw,
-  Key,
   Link,
   Unlink,
   Copy,
@@ -19,21 +18,21 @@ import {
   PauseCircle,
   AlertCircle,
   Check,
-  LogIn,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Main } from '@/components/layout/main'
-import { Table, Button, Input, Tag, Skeleton, Modal, Tabs, TabPane, Typography, Banner } from '@douyinfe/semi-ui-19'
+import { Table, Button, Input, Tag, Modal, Tabs, TabPane, Typography, Banner } from '@douyinfe/semi-ui-19'
 import { IconSearch } from '@douyinfe/semi-icons'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { SemiTablePagination } from '@/components/semi/table-pagination'
-import { isSkeletonRow, createSkeletonData } from '@/lib/table-utils'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { yunkeApi, yunkeCredentialsApi } from '../api'
 import type { YunkeSubAccount, YunkeAvailableEmployee, YunkePasswordResetResponse, YunkeCredential } from '../types'
 
 const { Text } = Typography
+const EMPTY_EMPLOYEES: YunkeAvailableEmployee[] = []
 
 // 子账号表格组件
 function SubAccountsTable({
@@ -81,7 +80,7 @@ function SubAccountsTable({
     queryFn: () => yunkeApi.getAvailableEmployees(),
   })
 
-  const employees = employeesData || []
+  const employees = employeesData ?? EMPTY_EMPLOYEES
   const accounts = data?.users || []
   const total = data?.total || 0
 
@@ -172,14 +171,13 @@ function SubAccountsTable({
   }
 
   // 列定义
-  const columns: ColumnProps<YunkeSubAccount>[] = useMemo(
-    () => [
+  const columns: ColumnProps<YunkeSubAccount>[] = [
       {
         title: '账号信息',
         dataIndex: 'username',
         width: 200,
         render: (_text: string, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 160 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={160} />
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <User style={{ width: 16, height: 16, color: 'var(--semi-color-success)' }} />
@@ -199,7 +197,7 @@ function SubAccountsTable({
         dataIndex: 'department_name',
         width: 150,
         render: (text: string, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
@@ -213,7 +211,7 @@ function SubAccountsTable({
         dataIndex: 'position',
         width: 120,
         render: (_text: string, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
           return (
             <Tag type="ghost">{record.position || record.role_name || '未设置'}</Tag>
           )
@@ -224,7 +222,7 @@ function SubAccountsTable({
         dataIndex: 'bound_employee',
         width: 180,
         render: (_: unknown, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
           const bound = record.bound_employee
           if (bound) {
             return (
@@ -262,7 +260,7 @@ function SubAccountsTable({
         dataIndex: 'login_status',
         width: 100,
         render: (_: unknown, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
           const loginStatus = record.login_status
           const bound = record.bound_employee
 
@@ -301,11 +299,11 @@ function SubAccountsTable({
         dataIndex: 'status',
         width: 100,
         render: (_: unknown, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
           const statusInfo = getStatusInfo(record.status)
           const Icon = statusInfo.icon
           return (
-            <Tag color={statusInfo.color as any} type="light" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Tag color={statusInfo.color as ComponentProps<typeof Tag>['color']} type="light" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Icon style={{ width: 12, height: 12 }} />
               {statusInfo.label}
             </Tag>
@@ -318,7 +316,7 @@ function SubAccountsTable({
         width: 180,
         fixed: 'right' as const,
         render: (_: unknown, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
           const bound = record.bound_employee
           const loginStatus = record.login_status
           const isLoggedIn = loginStatus?.is_logged_in
@@ -354,12 +352,7 @@ function SubAccountsTable({
           )
         },
       },
-    ],
-    []
-  )
-
-  // 表格数据
-  const tableData = isLoading ? createSkeletonData<YunkeSubAccount>(5) : accounts
+  ]
 
   // 处理函数
   const handleResetPasswordClick = (account: YunkeSubAccount) => {
@@ -544,29 +537,20 @@ function SubAccountsTable({
   return (
     <>
       {/* 表格 */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <Table
-          columns={columns}
-          dataSource={tableData}
-          rowKey="id"
-          pagination={false}
-          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-        />
-      </div>
-
-      {/* 分页 */}
-      {total > 0 && (
-        <SemiTablePagination
-          total={total}
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size)
-            setPage(1)
-          }}
-        />
-      )}
+      <SemiDataTable<YunkeSubAccount>
+        columns={columns}
+        data={accounts}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        isLoading={isLoading}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size)
+          setPage(1)
+        }}
+        emptyText="暂无数据"
+      />
 
       {/* 绑定员工对话框 */}
       <Modal
@@ -765,14 +749,10 @@ export function YunkeAccountsPage() {
     queryFn: () => yunkeCredentialsApi.getCredentials({ limit: 100 }),
   })
 
-  const credentials = credentialsData?.items || []
-
-  // 设置默认 Tab
-  useMemo(() => {
-    if (credentials.length > 0 && !activeTab) {
-      setActiveTab(credentials[0].id)
-    }
-  }, [credentials, activeTab])
+  const credentials = credentialsData?.items ?? []
+  const resolvedActiveTab = credentials.some((credential) => credential.id === activeTab)
+    ? activeTab
+    : (credentials[0]?.id ?? '')
 
   const handleSearch = () => {
     setSearchValue(searchInput)
@@ -786,47 +766,42 @@ export function YunkeAccountsPage() {
   // 加载状态
   if (credentialsLoading) {
     return (
-      <Main fixed>
-        <div style={{ display: 'flex', height: '100%', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>云客子账号管理</h1>
-            <Text type="tertiary" size="small">加载中...</Text>
-          </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <RefreshCw style={{ width: 32, height: 32, color: 'var(--semi-color-text-2)', animation: 'spin 1s linear infinite' }} />
-          </div>
+      <DataTableLayout
+        title="云客子账号管理"
+        onRefresh={handleRefresh}
+      >
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <RefreshCw style={{ width: 32, height: 32, color: 'var(--semi-color-text-2)', animation: 'spin 1s linear infinite' }} />
         </div>
-      </Main>
+      </DataTableLayout>
     )
   }
 
   // 无凭证时显示提示
   if (credentials.length === 0) {
     return (
-      <Main fixed>
-        <div style={{ display: 'flex', height: '100%', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>云客子账号管理</h1>
-            <Text type="tertiary" size="small">管理云客子账号、绑定员工、重置密码</Text>
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--semi-color-text-2)' }}>
-            <AlertCircle style={{ width: 64, height: 64, marginBottom: 16 }} />
-            <p style={{ fontSize: 18, fontWeight: 500, marginBottom: 8 }}>暂无账号凭证</p>
-            <Text type="tertiary" style={{ marginBottom: 16 }}>请先在「账号凭证管理」页面添加云客账号</Text>
-            <Button theme="outline" onClick={() => window.location.href = '/yunke/credentials'}>
-              前往添加凭证
-            </Button>
-          </div>
+      <DataTableLayout
+        title="云客子账号管理"
+        onRefresh={handleRefresh}
+      >
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--semi-color-text-2)' }}>
+          <AlertCircle style={{ width: 64, height: 64, marginBottom: 16 }} />
+          <p style={{ fontSize: 18, fontWeight: 500, marginBottom: 8 }}>暂无账号凭证</p>
+          <Text type="tertiary" style={{ marginBottom: 16 }}>请先在「账号凭证管理」页面添加云客账号</Text>
+          <Button theme="outline" onClick={() => window.location.href = '/yunke/credentials'}>
+            前往添加凭证
+          </Button>
         </div>
-      </Main>
+      </DataTableLayout>
     )
   }
 
   return (
-    <Main fixed>
-      <div style={{ display: 'flex', height: '100%', flexDirection: 'column', gap: 16 }}>
-        {/* 搜索栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <DataTableLayout
+      title="云客子账号管理"
+      onRefresh={handleRefresh}
+      toolbar={
+        <div className="flex items-center gap-2">
           <Input
             prefix={<IconSearch />}
             placeholder="输入姓名搜索..."
@@ -836,69 +811,62 @@ export function YunkeAccountsPage() {
             onEnterPress={handleSearch}
           />
           <Button theme="outline" onClick={handleSearch}>搜索</Button>
-          <div style={{ flex: 1 }} />
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<RefreshCw style={{ width: 16, height: 16 }} />}
-            onClick={handleRefresh}
-          />
         </div>
-
-        {/* Tab 切换 */}
-        <Tabs activeKey={activeTab} onChange={setActiveTab} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {credentials.map((cred) => (
-            <TabPane
-              key={cred.id}
-              itemKey={cred.id}
-              tab={
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: cred.status === 1 ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
-                    }}
-                  />
-                  <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {cred.company_name || cred.phone}
-                  </span>
+      }
+    >
+      {/* Tab 切换 */}
+      <Tabs activeKey={resolvedActiveTab} onChange={setActiveTab} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {credentials.map((cred) => (
+          <TabPane
+            key={cred.id}
+            itemKey={cred.id}
+            tab={
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: cred.status === 1 ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
+                  }}
+                />
+                <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {cred.company_name || cred.phone}
                 </span>
-              }
-            >
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16, minHeight: 0 }}>
-                {/* 凭证信息卡片 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '12px 16px', background: 'var(--semi-color-fill-0)', borderRadius: 8, fontSize: 13 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Phone style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
-                    <span style={{ fontWeight: 500 }}>{cred.phone}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
-                    <span>{cred.company_name || '未设置公司'}</span>
-                  </div>
-                  <Tag
-                    color={cred.status === 1 ? 'green' : 'red'}
-                    type="light"
-                    style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                  >
-                    {cred.status === 1 ? (
-                      <><CheckCircle style={{ width: 12, height: 12 }} /> 已登录</>
-                    ) : (
-                      <><XCircle style={{ width: 12, height: 12 }} /> 未登录</>
-                    )}
-                  </Tag>
+              </span>
+            }
+          >
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16, minHeight: 0 }}>
+              {/* 凭证信息卡片 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '12px 16px', background: 'var(--semi-color-fill-0)', borderRadius: 8, fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Phone style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+                  <span style={{ fontWeight: 500 }}>{cred.phone}</span>
                 </div>
-
-                {/* 子账号表格 */}
-                <SubAccountsTable credential={cred} searchValue={searchValue} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+                  <span>{cred.company_name || '未设置公司'}</span>
+                </div>
+                <Tag
+                  color={cred.status === 1 ? 'green' : 'red'}
+                  type="light"
+                  style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  {cred.status === 1 ? (
+                    <><CheckCircle style={{ width: 12, height: 12 }} /> 已登录</>
+                  ) : (
+                    <><XCircle style={{ width: 12, height: 12 }} /> 未登录</>
+                  )}
+                </Tag>
               </div>
-            </TabPane>
-          ))}
-        </Tabs>
-      </div>
-    </Main>
+
+              {/* 子账号表格 */}
+              <SubAccountsTable credential={cred} searchValue={searchValue} />
+            </div>
+          </TabPane>
+        ))}
+      </Tabs>
+    </DataTableLayout>
   )
 }

@@ -10,7 +10,6 @@ import {
   Modal,
   Button,
   Input,
-  Select,
   Table,
   Tag,
   Toast,
@@ -41,14 +40,16 @@ import {
 } from 'lucide-react'
 import { orderApi } from '../api'
 import { leadsApi } from '../../leads/api'
-import { employeeApi } from '../../lead-conversion/api'
+import { employeeApi, type Employee } from '../../lead-conversion/api'
 import { coursesApi } from '@/features/admin/api'
-import type { Order, OrderCreate, OrderUpdate } from '../types'
 import {
   orderPaymentMethodOptions,
   orderPaymentStatusOptions,
   OrderPaymentMethod,
-  OrderPaymentStatus
+  OrderPaymentStatus,
+  type Order,
+  type OrderCreate,
+  type OrderUpdate
 } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -61,6 +62,37 @@ type CourseItem = {
   unit_price: number
   amount: number
   remark?: string
+}
+
+type CourseFormValues = {
+  course_name?: string
+  course_hours?: number | string
+  unit_price?: number | string
+  remark?: string
+}
+
+type OrderFormValues = {
+  payment_method?: string
+  payment_status?: string
+  payment_at?: string
+  collector_id?: string
+  discount_amount?: number | string
+  receipt_no?: string
+  contract_no?: string
+  remark?: string
+}
+
+type SearchLeadOption = {
+  id: string
+  child_name: string
+  parent_phone: string
+}
+
+const EMPTY_COURSE_FORM_VALUES: CourseFormValues = {
+  course_name: '',
+  course_hours: 0,
+  unit_price: 0,
+  remark: ''
 }
 
 interface OrderDialogProps {
@@ -132,25 +164,23 @@ function CourseEditDialog({
   const courseFormRef = useRef<FormApi>()
   const [computedAmount, setComputedAmount] = useState(0)
 
+  const closeCourseDialog = () => {
+    setComputedAmount(0)
+    onOpenChange(false)
+  }
+
   useEffect(() => {
-    if (open && courseFormRef.current) {
-      if (courseItem) {
-        courseFormRef.current.setValues({ ...courseItem })
-        setComputedAmount(courseItem.amount || 0)
-      } else {
-        courseFormRef.current.setValues({
-          course_name: '',
-          course_hours: 0,
-          unit_price: 0,
-          amount: 0,
-          remark: ''
-        })
-        setComputedAmount(0)
-      }
-    }
+    if (!open) return
+    const frameId = requestAnimationFrame(() => {
+      if (!courseFormRef.current) return
+      const initialValues = courseItem ?? EMPTY_COURSE_FORM_VALUES
+      courseFormRef.current.setValues(initialValues)
+      setComputedAmount(courseItem?.amount || 0)
+    })
+    return () => cancelAnimationFrame(frameId)
   }, [open, courseItem])
 
-  const handleFieldChange = (values: any) => {
+  const handleFieldChange = (values: CourseFormValues) => {
     const hours = Number(values.course_hours) || 0
     const price = Number(values.unit_price) || 0
     const amt = hours * price
@@ -158,17 +188,18 @@ function CourseEditDialog({
   }
 
   const handleSave = () => {
-    courseFormRef.current?.validate().then((values: any) => {
+    courseFormRef.current?.validate().then((rawValues) => {
+      const values = rawValues as CourseFormValues
       const hours = Number(values.course_hours) || 0
       const price = Number(values.unit_price) || 0
       onSave({
-        course_name: values.course_name,
+        course_name: values.course_name || '',
         course_hours: hours,
         unit_price: price,
         amount: hours * price,
         remark: values.remark || ''
       })
-      onOpenChange(false)
+      closeCourseDialog()
     })
   }
 
@@ -183,10 +214,10 @@ function CourseEditDialog({
         </div>
       }
       visible={open}
-      onCancel={() => onOpenChange(false)}
+      onCancel={closeCourseDialog}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <Button onClick={() => onOpenChange(false)}>取消</Button>
+          <Button onClick={closeCourseDialog}>取消</Button>
           <Button theme="solid" icon={<IconTick />} onClick={handleSave}>确定</Button>
         </div>
       }
@@ -296,7 +327,7 @@ export function OrderDialog({
   // 搜索线索
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['search-leads-for-order', searchPhone],
-    queryFn: async () => {
+    queryFn: async (): Promise<SearchLeadOption[]> => {
       if (!searchPhone || searchPhone.length < 3) return []
       const response = await leadsApi.searchLeadsByPhone(searchPhone)
       return response.data?.items || []
@@ -306,8 +337,9 @@ export function OrderDialog({
 
   // 填充编辑数据或预设学员
   useEffect(() => {
-    if (order && open) {
-      setTimeout(() => {
+    if (!open) return
+    const frameId = requestAnimationFrame(() => {
+      if (order) {
         formRef.current?.setValues({
           payment_method: order.payment_method || OrderPaymentMethod.WECHAT,
           payment_status: order.payment_status,
@@ -318,35 +350,34 @@ export function OrderDialog({
           contract_no: order.contract_no || '',
           remark: order.remark || '',
         })
-      }, 0)
-      setCourseItems(
-        order.items.map(item => ({
-          course_name: item.course_name,
-          course_hours: item.course_hours,
-          unit_price: item.unit_price,
-          amount: item.amount,
-          remark: item.remark || ''
-        }))
-      )
-      setSelectedLead({
-        id: order.lead_id,
-        child_name: order.child_name || '',
-        parent_phone: order.parent_phone || ''
-      })
-      setDiscountAmount(order.discount_amount)
-    } else if (!order && open) {
-      setTimeout(() => {
-        formRef.current?.setValues({
-          payment_method: OrderPaymentMethod.WECHAT,
-          payment_status: OrderPaymentStatus.PAID,
-          payment_at: new Date().toISOString().slice(0, 16),
-          collector_id: '',
-          discount_amount: 0,
-          receipt_no: '',
-          contract_no: '',
-          remark: '',
+        setCourseItems(
+          order.items.map((item) => ({
+            course_name: item.course_name,
+            course_hours: item.course_hours,
+            unit_price: item.unit_price,
+            amount: item.amount,
+            remark: item.remark || ''
+          }))
+        )
+        setSelectedLead({
+          id: order.lead_id,
+          child_name: order.child_name || '',
+          parent_phone: order.parent_phone || ''
         })
-      }, 0)
+        setDiscountAmount(order.discount_amount)
+        return
+      }
+
+      formRef.current?.setValues({
+        payment_method: OrderPaymentMethod.WECHAT,
+        payment_status: OrderPaymentStatus.PAID,
+        payment_at: new Date().toISOString().slice(0, 16),
+        collector_id: '',
+        discount_amount: 0,
+        receipt_no: '',
+        contract_no: '',
+        remark: '',
+      })
       setCourseItems([])
       setDiscountAmount(0)
       if (leadId && leadName && leadPhone) {
@@ -355,7 +386,8 @@ export function OrderDialog({
         setSelectedLead(null)
       }
       setSearchPhone('')
-    }
+    })
+    return () => cancelAnimationFrame(frameId)
   }, [order, open, leadId, leadName, leadPhone])
 
   // 创建订单
@@ -368,7 +400,7 @@ export function OrderDialog({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '创建失败')
     }
   })
@@ -384,7 +416,7 @@ export function OrderDialog({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '更新失败')
     }
   })
@@ -438,7 +470,8 @@ export function OrderDialog({
       return
     }
 
-    formRef.current?.validate().then((values: any) => {
+    formRef.current?.validate().then((rawValues) => {
+      const values = rawValues as OrderFormValues
       const data = {
         lead_id: selectedLead.id,
         payment_method: values.payment_method || undefined,
@@ -514,7 +547,7 @@ export function OrderDialog({
       title: '操作',
       width: 80,
       align: 'center' as const,
-      render: (_: any, __: any, index: number) => (
+      render: (_value: unknown, _record: CourseItem, index: number) => (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <Button
             type="tertiary"
@@ -538,7 +571,7 @@ export function OrderDialog({
   // 收款人选项
   const collectorOptions = [
     { value: '', label: '不指定' },
-    ...(employeesData?.map((emp) => ({ value: emp.id, label: emp.name })) || [])
+    ...(employeesData?.map((emp: Employee) => ({ value: emp.id, label: emp.name })) || [])
   ]
 
   return (
@@ -626,7 +659,7 @@ export function OrderDialog({
                       border: '1px solid var(--semi-color-border)',
                       borderRadius: 8, maxHeight: 128, overflow: 'auto',
                     }}>
-                      {searchResults.map((lead: any) => (
+                      {searchResults.map((lead: SearchLeadOption) => (
                         <div
                           key={lead.id}
                           style={{

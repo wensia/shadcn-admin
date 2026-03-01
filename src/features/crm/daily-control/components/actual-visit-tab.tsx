@@ -3,8 +3,8 @@
  * 状态: visited
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { Button, Card, Skeleton, Table, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
+import { useState, useEffect } from 'react'
+import { Button, Card, Skeleton, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
 import { IconPlus, IconRefresh, IconMore, IconEdit, IconCreditCard } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
@@ -13,7 +13,8 @@ import {
 } from '../api'
 import { VisitScheduleDialog } from './visit-schedule-dialog'
 import { CopyableCell } from './copyable-cell'
-import { SemiTablePagination } from '@/components/semi/table-pagination'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow } from '@/lib/table-utils'
 
 // 星期映射
 const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -27,20 +28,6 @@ function formatDateWithWeekday(dateStr: string | undefined): string {
   } catch {
     return dateStr
   }
-}
-
-// 骨架屏
-const SKELETON_ID_PREFIX = '__skeleton__'
-function createSkeletonData(count: number): VisitScheduleItem[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_ID_PREFIX}${i}`,
-    lead_id: '', student_name: '', phone: '', visit_date: '', visit_time: '',
-    advisor_name: '', campus_name: '', status: 'visited' as const,
-    course_names: [], remark: '', created_at: '',
-  }))
-}
-function isSkeletonRow(id: string): boolean {
-  return id.startsWith(SKELETON_ID_PREFIX)
 }
 
 interface ActualVisitTabProps {
@@ -57,23 +44,6 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<VisitScheduleItem | null>(null)
-
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollY, setScrollY] = useState<number>(400)
-
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const measure = () => {
-      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
-      const available = el.clientHeight - headerH
-      if (available > 100) setScrollY(available)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
 
   const fetchData = async () => {
     setIsLoading(true)
@@ -100,8 +70,6 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
   const handleEdit = (item: VisitScheduleItem) => { setEditData(item); setDialogOpen(true) }
   const handleCreate = () => { setEditData(null); setDialogOpen(true) }
   const handleRegisterPayment = (_item: VisitScheduleItem) => { Toast.info('缴费登记功能开发中') }
-
-  const displayData = useMemo(() => isLoading ? createSkeletonData(pageSize) : data, [isLoading, data, pageSize])
 
   const columns: ColumnProps<VisitScheduleItem>[] = [
     {
@@ -204,26 +172,18 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
         </div>
       }
     >
-      <div ref={wrapperRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <Table
-          columns={columns}
-          dataSource={displayData}
-          rowKey="id"
-          pagination={false}
-          scroll={{ y: scrollY }}
-          style={{ fontSize: 12 }}
-          size="middle"
-          rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
-          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无到访记录</div>}
-        />
-      </div>
-      <div style={{ flexShrink: 0, paddingTop: 16 }}>
-        <SemiTablePagination
-          page={page} pageSize={pageSize} total={total}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
-        />
-      </div>
+      <SemiDataTable<VisitScheduleItem>
+        columns={columns}
+        data={data}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        isLoading={isLoading}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
+        emptyText="暂无到访记录"
+      />
       <VisitScheduleDialog
         open={dialogOpen} onOpenChange={setDialogOpen}
         defaultStatus="visited" onSuccess={fetchData} editData={editData}

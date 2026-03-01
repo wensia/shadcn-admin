@@ -1,6 +1,6 @@
 /**
  * 公海线索 API
- * 从 frontend-vue/src/api/leadPool.ts 迁移
+ * 从旧版前端线索公海 API 迁移
  */
 
 import { apiClient } from '@/lib/api/client'
@@ -83,4 +83,3 @@ export interface ExportStatusResult {
   file_path?: string
   file_name?: string
 }
-

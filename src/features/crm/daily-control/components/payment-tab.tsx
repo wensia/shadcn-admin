@@ -2,8 +2,8 @@
  * 缴费 Tab - Semi Design 版
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Button, Card, Skeleton, Table, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Button, Card, Skeleton, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
 import { IconPlus, IconRefresh, IconMore, IconEdit, IconTickCircle, IconDelete, IconUpload } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { useAuthStore } from '@/stores/auth-store'
@@ -20,7 +20,8 @@ import {
 } from '../api'
 import { PaymentDialog } from '@/features/crm/lead-conversion/components/payment-dialog'
 import { CopyableCell } from './copyable-cell'
-import { SemiTablePagination } from '@/components/semi/table-pagination'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow } from '@/lib/table-utils'
 
 // 星期映射
 const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -35,21 +36,6 @@ function formatDateWithWeekday(dateStr: string | undefined): string {
   } catch {
     return dateStr
   }
-}
-
-// 骨架屏
-const SKELETON_ID_PREFIX = '__skeleton__'
-function createSkeletonData(count: number): PaymentItem[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_ID_PREFIX}${i}`,
-    lead_id: '', child_name: '', parent_phone: '', amount: 0,
-    payment_method: 'cash' as const, payment_type: 'deposit' as const,
-    status: 'pending' as const, payment_at: '', collector_name: '',
-    campus_name: '', course_name: '', remark: '', created_at: '',
-  }))
-}
-function isSkeletonRow(id: string): boolean {
-  return id.startsWith(SKELETON_ID_PREFIX)
 }
 
 // 状态颜色
@@ -73,23 +59,6 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
   const [editData, setEditData] = useState<PaymentItem | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [isImporting, setIsImporting] = useState(false)
-
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollY, setScrollY] = useState<number>(400)
-
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const measure = () => {
-      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
-      const available = el.clientHeight - headerH
-      if (available > 100) setScrollY(available)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
 
   const user = useAuthStore((state) => state.user)
   const isSuperUser = user?.is_superuser ?? false
@@ -166,8 +135,6 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
     try { await deletePayment(item.id); Toast.success('删除成功'); fetchData() }
     catch { Toast.error('删除失败') }
   }
-
-  const displayData = useMemo(() => isLoading ? createSkeletonData(pageSize) : data, [isLoading, data, pageSize])
 
   const columns: ColumnProps<PaymentItem>[] = [
     {
@@ -280,16 +247,6 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
     },
   ]
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (_keys: any, rows: PaymentItem[]) => {
-      setSelectedRowKeys(rows.map(r => r.id))
-    },
-    getCheckboxProps: (record: PaymentItem) => ({
-      disabled: isSkeletonRow(record?.id || ''),
-    }),
-  }
-
   return (
     <Card
       style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
@@ -319,27 +276,22 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
         </div>
       }
     >
-      <div ref={wrapperRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <Table
-          columns={columns}
-          dataSource={displayData}
-          rowKey="id"
-          rowSelection={rowSelection}
-          pagination={false}
-          scroll={{ y: scrollY }}
-          style={{ fontSize: 12 }}
-          size="middle"
-          rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
-          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无缴费记录</div>}
-        />
-      </div>
-      <div style={{ flexShrink: 0, paddingTop: 16 }}>
-        <SemiTablePagination
-          page={page} pageSize={pageSize} total={total}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
-        />
-      </div>
+      <SemiDataTable<PaymentItem>
+        columns={columns}
+        data={data}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        isLoading={isLoading}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys as string[]),
+        }}
+        rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
+        emptyText="暂无缴费记录"
+      />
       <PaymentDialog
         open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={fetchData}
         payment={editData ? {

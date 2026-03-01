@@ -3,11 +3,11 @@
  * 管理员可配置哪些普通员工能访问特定页面
  */
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Shield, Search, X, UserPlus, Loader2 } from 'lucide-react'
+import { toast } from '@/lib/toast'
+import { Shield, Search, UserPlus, Loader2 } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { Button, Input, Tag, Switch, Skeleton, Typography, Card } from '@douyinfe/semi-ui-19'
 import { adminApi } from '../api'
@@ -95,17 +95,19 @@ function PageAccessCard({
 }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isEnabled, setIsEnabled] = useState(config?.is_enabled ?? true)
-  const employees = config?.employees || []
+  const employees = config?.employees ?? []
+  const allowedEmployeeIds = config?.allowed_employee_ids ?? []
+  const allowedEmployeeIdsKey = allowedEmployeeIds.join(',')
 
   // 搜索员工
   const { data: searchResults, isFetching: isSearching } = useQuery({
-    queryKey: ['employee-search', searchTerm],
+    queryKey: ['employee-search', searchTerm, allowedEmployeeIdsKey],
     queryFn: async () => {
       if (!searchTerm.trim()) return []
       const response = await adminApi.getEmployees({ search: searchTerm, size: 10 })
       if (!response.success || !response.data) return []
       // 过滤掉已添加的员工和超级管理员
-      const existingIds = new Set(config?.allowed_employee_ids || [])
+      const existingIds = new Set(allowedEmployeeIds)
       return response.data.items.filter(
         (emp: { id: string; is_superuser: boolean }) => !existingIds.has(emp.id) && !emp.is_superuser
       )
@@ -133,45 +135,44 @@ function PageAccessCard({
       showApiErrorToast(error)
     },
   })
+  const { mutate: updatePageAccessConfig, isPending: isUpdating } = updateMutation
 
   // 添加员工
-  const handleAddEmployee = useCallback((employeeId: string) => {
-    const currentIds = config?.allowed_employee_ids || []
-    if (currentIds.includes(employeeId)) return
-    updateMutation.mutate({
-      employeeIds: [...currentIds, employeeId],
+  const handleAddEmployee = (employeeId: string) => {
+    if (allowedEmployeeIds.includes(employeeId)) return
+    updatePageAccessConfig({
+      employeeIds: [...allowedEmployeeIds, employeeId],
       enabled: isEnabled,
     })
-  }, [config?.allowed_employee_ids, isEnabled, updateMutation])
+  }
 
   // 移除员工
-  const handleRemoveEmployee = useCallback((employeeId: string) => {
-    const currentIds = config?.allowed_employee_ids || []
-    updateMutation.mutate({
-      employeeIds: currentIds.filter(id => id !== employeeId),
+  const handleRemoveEmployee = (employeeId: string) => {
+    updatePageAccessConfig({
+      employeeIds: allowedEmployeeIds.filter(id => id !== employeeId),
       enabled: isEnabled,
     })
-  }, [config?.allowed_employee_ids, isEnabled, updateMutation])
+  }
 
   // 切换启用状态
-  const handleToggleEnabled = useCallback((enabled: boolean) => {
+  const handleToggleEnabled = (enabled: boolean) => {
     setIsEnabled(enabled)
-    updateMutation.mutate({
-      employeeIds: config?.allowed_employee_ids || [],
+    updatePageAccessConfig({
+      employeeIds: allowedEmployeeIds,
       enabled,
     })
-  }, [config?.allowed_employee_ids, updateMutation])
+  }
 
   return (
     <Card
       title={pageName}
       headerExtraContent={
         <div className="flex items-center gap-2">
-          <Text type="tertiary" size="small">启用访问控制</Text>
+            <Text type="tertiary" size="small">启用访问控制</Text>
           <Switch
             checked={isEnabled}
             onChange={handleToggleEnabled}
-            disabled={updateMutation.isPending}
+            disabled={isUpdating}
           />
         </div>
       }

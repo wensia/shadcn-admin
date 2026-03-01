@@ -3,7 +3,7 @@
  * 可复用的员工选择组件，支持搜索、分页、校区筛选
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, Button, Input, Select, Table, Tag, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
@@ -73,30 +73,27 @@ export function EmployeeSelectorDialog({
     (emp) => !excludeIds.includes(emp.id)
   ) || []
 
-  useEffect(() => {
-    if (!open) {
-      setSelectedEmployee(null)
-      setSearchText('')
-      setSelectedCampus('')
-      setPage(1)
-    }
-  }, [open])
-
-  useEffect(() => {
-    setPage(1)
-  }, [searchText, selectedCampus])
-
-  const handleRefresh = () => {
+  const resetDialogState = () => {
+    setSelectedEmployee(null)
     setSearchText('')
     setSelectedCampus('')
     setPage(1)
+  }
+
+  const handleClose = () => {
+    resetDialogState()
+    onOpenChange(false)
+  }
+
+  const handleRefresh = () => {
+    resetDialogState()
     refetch()
   }
 
   const handleConfirm = () => {
     if (selectedEmployee) {
       onSelect(selectedEmployee)
-      onOpenChange(false)
+      handleClose()
     }
   }
 
@@ -156,7 +153,7 @@ export function EmployeeSelectorDialog({
       title: '职位',
       dataIndex: 'position',
       width: 90,
-      render: (_: any, record: EmployeeListItem) => {
+      render: (_: unknown, record: EmployeeListItem) => {
         const info = getEmployeeInfo(record)
         return info.position !== '-' ? (
           <Tag size="small">{info.position}</Tag>
@@ -203,7 +200,7 @@ export function EmployeeSelectorDialog({
         </div>
       }
       visible={open}
-      onCancel={() => onOpenChange(false)}
+      onCancel={handleClose}
       width={900}
       closeOnEsc
       style={{ maxHeight: '85vh' }}
@@ -231,7 +228,10 @@ export function EmployeeSelectorDialog({
           <Input
             prefix={<IconSearch />}
             value={searchText}
-            onChange={(v) => setSearchText(v)}
+            onChange={(v) => {
+              setSearchText(v)
+              setPage(1)
+            }}
             placeholder="输入姓名或用户名搜索"
             size="small"
             showClear
@@ -242,7 +242,10 @@ export function EmployeeSelectorDialog({
           <Text type="tertiary" size="small">校区</Text>
           <Select
             value={selectedCampus}
-            onChange={(v) => setSelectedCampus(v as string)}
+            onChange={(v) => {
+              setSelectedCampus(v as string)
+              setPage(1)
+            }}
             optionList={campusOptions}
             size="small"
             style={{ width: 140 }}
@@ -270,7 +273,7 @@ export function EmployeeSelectorDialog({
           total: employeeData?.total || 0,
           onPageChange: setPage,
           showTotal: true,
-          formatPageText: (info: any) => `共 ${info.total} 位员工`,
+          formatPageText: (info: { total: number }) => `共 ${info.total} 位员工`,
         }}
         onRow={(record) => ({
           onClick: () => {

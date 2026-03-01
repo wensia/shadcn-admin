@@ -152,12 +152,15 @@ export function LeadDetailTabs({
       render: (text) => text ? <FollowupContentCell content={text as string} /> : '-',
     },
     {
-      title: '跟进人', dataIndex: 'followup_by_name', width: 80,
+      title: '跟进人', dataIndex: 'followup_by_name', width: 100,
       render: (text, record) => (
         <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
           {(text as string) || '-'}
           {record?.source === 'ai_auto' && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 3, padding: '0 4px', fontSize: 10, fontWeight: 500, background: '#faf5ff', color: '#9333ea' }} title="AI 通话分析自动生成">AI</span>
+          )}
+          {record?.source === 'ai_supplement' && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 3, padding: '0 4px', fontSize: 10, fontWeight: 500, background: '#eff6ff', color: '#2563eb' }} title="AI 通话分析补充记录">AI补充</span>
           )}
         </span>
       ),

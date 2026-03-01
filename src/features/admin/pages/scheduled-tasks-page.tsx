@@ -23,14 +23,15 @@ import {
   TrendingUp,
   AlertTriangle,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Main } from '@/components/layout/main'
-import { Table, Button, Input, Select, Modal, Form, Tag, Skeleton, Typography, Switch, Tabs, TabPane, TextArea } from '@douyinfe/semi-ui-19'
+import { Table, Button, Modal, Form, Tag, Typography, Switch, Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconRefresh } from '@douyinfe/semi-icons'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiSkeletonCell } from '@/lib/table-utils'
 import { scheduledTasksApi } from '../api'
 import {
   INTERVAL_PERIOD_OPTIONS,
@@ -50,9 +51,33 @@ const { Text } = Typography
 // ASR 任务名称常量
 const ASR_TASK_NAME = 'rmf.asr_transcribe'
 
-// 骨架屏前缀
+// 骨架屏前缀（本页 id 为 number，无法使用共享 isSkeletonRow）
 const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (name: string) => name.startsWith(SKELETON_PREFIX)
+const isSkeletonRowByName = (name: string) => name.startsWith(SKELETON_PREFIX)
+
+interface PaginationTextInfo {
+  currentStart: number
+  currentEnd: number
+  total: number
+}
+
+interface ScheduledTaskFormValues {
+  name: string
+  task: string
+  description?: string
+  enabled: boolean
+  interval_every?: number
+  interval_period?: IntervalPeriod
+  crontab_minute: string
+  crontab_hour: string
+  crontab_day_of_week: string
+  crontab_day_of_month: string
+  crontab_month_of_year: string
+  queue?: string
+  one_off: boolean
+  args_json?: string
+  kwargs_json?: string
+}
 
 function createSkeletonData(count: number): ScheduledTask[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -162,9 +187,9 @@ export function ScheduledTasksPage() {
     refetchInterval: 30000,
   })
 
-  const tasks = data?.items || []
-  const availableTasks = availableTasksData?.items || []
-  const executionHistory = historyData?.items || []
+  const tasks = useMemo(() => data?.items ?? [], [data?.items])
+  const availableTasks = useMemo(() => availableTasksData?.items ?? [], [availableTasksData?.items])
+  const executionHistory = useMemo(() => historyData?.items ?? [], [historyData?.items])
 
   // 查询任务执行结果
   const { data: taskResultData, isLoading: taskResultLoading, refetch: refetchTaskResult } = useQuery({
@@ -260,15 +285,14 @@ export function ScheduledTasksPage() {
   const isASRTask = selectedTask === ASR_TASK_NAME
 
   // 任务列表列定义
-  const taskColumns: ColumnProps<ScheduledTask>[] = useMemo(
-    () => [
+  const taskColumns: ColumnProps<ScheduledTask>[] = [
       {
         title: '任务名称',
         dataIndex: 'name',
         width: 200,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRow(record.name)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
+          if (isSkeletonRowByName(record.name)) {
+            return <SemiSkeletonCell width={128} />
           }
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -290,8 +314,8 @@ export function ScheduledTasksPage() {
         dataIndex: 'task',
         width: 250,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRow(record.name)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 160 }} />
+          if (isSkeletonRowByName(record.name)) {
+            return <SemiSkeletonCell width={160} />
           }
           return (
             <code style={{ fontSize: 12, backgroundColor: 'var(--semi-color-fill-0)', padding: '2px 8px', borderRadius: 4 }}>
@@ -305,8 +329,8 @@ export function ScheduledTasksPage() {
         dataIndex: 'schedule',
         width: 180,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRow(record.name)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+          if (isSkeletonRowByName(record.name)) {
+            return <SemiSkeletonCell width={112} />
           }
           const st = getScheduleType(record)
           return (
@@ -326,8 +350,8 @@ export function ScheduledTasksPage() {
         dataIndex: 'enabled',
         width: 100,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRow(record.name)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
+          if (isSkeletonRowByName(record.name)) {
+            return <SemiSkeletonCell width={56} />
           }
           return (
             <Switch
@@ -344,8 +368,8 @@ export function ScheduledTasksPage() {
         dataIndex: 'last_run_at',
         width: 160,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRow(record.name)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+          if (isSkeletonRowByName(record.name)) {
+            return <SemiSkeletonCell width={112} />
           }
           return record.last_run_at ? formatTime(record.last_run_at) : '-'
         },
@@ -355,8 +379,8 @@ export function ScheduledTasksPage() {
         dataIndex: 'total_run_count',
         width: 100,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRow(record.name)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+          if (isSkeletonRowByName(record.name)) {
+            return <SemiSkeletonCell width={48} />
           }
           return <Tag size="small">{record.total_run_count}</Tag>
         },
@@ -367,8 +391,8 @@ export function ScheduledTasksPage() {
         width: 150,
         fixed: 'right' as const,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRow(record.name)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+          if (isSkeletonRowByName(record.name)) {
+            return <SemiSkeletonCell width={96} />
           }
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -398,13 +422,10 @@ export function ScheduledTasksPage() {
           )
         },
       },
-    ],
-    [toggleMutation.isPending, runNowMutation.isPending]
-  )
+    ]
 
   // 执行记录列定义
-  const historyColumns: ColumnProps<TaskExecutionHistory>[] = useMemo(
-    () => [
+  const historyColumns: ColumnProps<TaskExecutionHistory>[] = [
       {
         title: '任务名称',
         dataIndex: 'task_name',
@@ -492,9 +513,7 @@ export function ScheduledTasksPage() {
           />
         ),
       },
-    ],
-    []
-  )
+    ]
 
   const taskDisplayData = isLoading ? createSkeletonData(5) : tasks
 
@@ -507,7 +526,7 @@ export function ScheduledTasksPage() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info: PaginationTextInfo) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
   }), [tasksPagination.page, tasksPagination.size, data?.total])
 
   const historyTablePagination = useMemo(() => ({
@@ -519,7 +538,7 @@ export function ScheduledTasksPage() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info: PaginationTextInfo) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
   }), [historyPagination.page, historyPagination.size, historyData?.total])
 
   // 打开新增对话框
@@ -621,7 +640,7 @@ export function ScheduledTasksPage() {
   }
 
   // 提交表单
-  const handleFormSubmit = (values: Record<string, any>) => {
+  const handleFormSubmit = (values: ScheduledTaskFormValues) => {
     let args: unknown[] | undefined
     let kwargs: Record<string, unknown> | undefined
 
@@ -679,70 +698,73 @@ export function ScheduledTasksPage() {
     }
   }
 
+  const currentTotal = activeTab === 'tasks' ? (data?.total || 0) : (historyData?.total || 0)
+  const currentLoading = activeTab === 'tasks' ? isLoading : historyLoading
+  const currentRefetch = activeTab === 'tasks'
+    ? () => queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] })
+    : () => refetchHistory()
+
   return (
-    <Main fixed className="min-h-0">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">定时任务管理</h1>
-            <Text type="tertiary" size="small">管理 Celery Beat 定时任务</Text>
-          </div>
-          {activeTab === 'tasks' && (
+    <>
+      <DataTableLayout
+        title="定时任务管理"
+        total={currentTotal}
+        headerActions={
+          activeTab === 'tasks' ? (
             <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
               新建任务
             </Button>
-          )}
-          {activeTab === 'history' && (
-            <Button theme="outline" icon={<IconRefresh />} onClick={() => refetchHistory()}>
-              刷新
-            </Button>
-          )}
-        </div>
-
-        {/* 统计卡片 */}
-        {statsLoading ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: '10px 16px' }}>
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+          ) : undefined
+        }
+        onRefresh={currentRefetch}
+        isRefreshing={currentLoading}
+        toolbar={
+          <>
+            {/* 统计卡片 */}
+            {statsLoading ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <SemiSkeletonCell width={64} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 24px', border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: '10px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Activity className="h-4 w-4 text-blue-500" />
-              <Text type="tertiary" size="small">今日执行</Text>
-              <Text strong size="small">{statsData?.today?.total ?? 0}</Text>
-              <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <Text type="tertiary" size="small">成功率</Text>
-              <Text strong size="small">{statsData?.today?.success_rate ?? 0}%</Text>
-              <Text type="tertiary" size="small" style={{ marginLeft: 4 }}>({statsData?.today?.success ?? 0} 成功 / {statsData?.today?.failure ?? 0} 失败)</Text>
-              <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Timer className="h-4 w-4 text-purple-500" />
-              <Text type="tertiary" size="small">平均耗时</Text>
-              <Text strong size="small">{statsData?.today?.avg_duration ?? 0}s</Text>
-              <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-              <Text type="tertiary" size="small">最近失败</Text>
-              <Text strong size="small">{statsData?.recent_failures?.length ?? 0}</Text>
-              {statsData?.recent_failures?.[0]?.task_name && (
-                <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }} style={{ maxWidth: 128 }}>
-                  ({statsData.recent_failures[0].task_name})
-                </Text>
-              )}
-            </div>
-          </div>
-        )}
-
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Activity className="h-4 w-4 text-blue-500" />
+                  <Text type="tertiary" size="small">今日执行</Text>
+                  <Text strong size="small">{statsData?.today?.total ?? 0}</Text>
+                  <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <Text type="tertiary" size="small">成功率</Text>
+                  <Text strong size="small">{statsData?.today?.success_rate ?? 0}%</Text>
+                  <Text type="tertiary" size="small" style={{ marginLeft: 4 }}>({statsData?.today?.success ?? 0} 成功 / {statsData?.today?.failure ?? 0} 失败)</Text>
+                  <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Timer className="h-4 w-4 text-purple-500" />
+                  <Text type="tertiary" size="small">平均耗时</Text>
+                  <Text strong size="small">{statsData?.today?.avg_duration ?? 0}s</Text>
+                  <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <Text type="tertiary" size="small">最近失败</Text>
+                  <Text strong size="small">{statsData?.recent_failures?.length ?? 0}</Text>
+                  {statsData?.recent_failures?.[0]?.task_name && (
+                    <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }} style={{ maxWidth: 128 }}>
+                      ({statsData.recent_failures[0].task_name})
+                    </Text>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        }
+      >
         {/* 顶层 Tab */}
         <Tabs activeKey={activeTab} onChange={(v) => setActiveTab(v as 'tasks' | 'history')} className="flex-1 flex flex-col min-h-0">
           <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Clock size={16}/>定时任务</span>} itemKey="tasks">
@@ -772,7 +794,7 @@ export function ScheduledTasksPage() {
             </div>
           </TabPane>
         </Tabs>
-      </div>
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -1093,7 +1115,7 @@ export function ScheduledTasksPage() {
           )}
         </div>
       </Modal>
-    </Main>
+    </>
   )
 }
 

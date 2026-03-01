@@ -18,34 +18,35 @@ import {
   LogIn,
   Zap,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Select, Modal, Form, Skeleton, Typography, Tag } from '@douyinfe/semi-ui-19'
+import { Button, Input, Select, Modal, Form, Typography, Tag } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { yunkeAdminApi } from '../api'
 import type { YunkeSubAccount, YunkeAvailableEmployee, YunkePasswordResetResponse } from '../types'
-import { StatusBadge } from '../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
 
-// 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-function createSkeletonData(count: number): YunkeSubAccount[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
-    phone: '',
-    username: '',
-    real_name: '',
-    status: 'active' as const,
-  }))
+type AccountStatusColor = 'green' | 'grey' | 'red'
+
+interface LoginFormValues {
+  phone: string
+  password: string
 }
+
+interface LoginStatusInfo {
+  is_logged_in: boolean
+  message: string
+}
+
 
 // 状态选项
 const STATUS_OPTIONS = [
@@ -75,7 +76,7 @@ export function YunkeAccountsPage() {
   } | null>(null)
   const [selectedAccount, setSelectedAccount] = useState<YunkeSubAccount | null>(null)
   const [passwordResult, setPasswordResult] = useState<YunkePasswordResetResponse | null>(null)
-  const [loginStatusMap, setLoginStatusMap] = useState<Map<string, { is_logged_in: boolean; message: string }>>(new Map())
+  const [loginStatusMap, setLoginStatusMap] = useState<Map<string, LoginStatusInfo>>(new Map())
 
   // 查询云客子账号列表
   const { data, isLoading, refetch } = useQuery({
@@ -97,9 +98,9 @@ export function YunkeAccountsPage() {
     queryFn: () => yunkeAdminApi.getAvailableEmployees(),
   })
 
-  const employees = employeesData || []
-  const accounts = data?.users || []
-  const total = data?.total || 0
+  const employees = useMemo<YunkeAvailableEmployee[]>(() => employeesData ?? [], [employeesData])
+  const accounts = useMemo<YunkeSubAccount[]>(() => data?.users ?? [], [data?.users])
+  const total = data?.total ?? 0
 
   // 管理员登录
   const loginMutation = useMutation({
@@ -178,7 +179,7 @@ export function YunkeAccountsPage() {
   const checkLoginStatusMutation = useMutation({
     mutationFn: () => yunkeAdminApi.checkAllLoginStatus(),
     onSuccess: (response) => {
-      const newMap = new Map<string, { is_logged_in: boolean; message: string }>()
+      const newMap = new Map<string, LoginStatusInfo>()
       response.details.forEach((detail) => {
         newMap.set(detail.employee_id, {
           is_logged_in: detail.is_logged_in,
@@ -216,7 +217,7 @@ export function YunkeAccountsPage() {
 
   // 状态图标映射
   const getStatusInfo = (status: string) => {
-    const statusMap: Record<string, { icon: typeof CheckCircle; color: string; label: string }> = {
+    const statusMap: Record<string, { icon: typeof CheckCircle; color: AccountStatusColor; label: string }> = {
       active: { icon: CheckCircle, color: 'green', label: '正常' },
       paused: { icon: PauseCircle, color: 'grey', label: '暂停' },
       inactive: { icon: XCircle, color: 'red', label: '停用' },
@@ -225,176 +226,150 @@ export function YunkeAccountsPage() {
   }
 
   // 列定义
-  const columns: ColumnProps[] = useMemo(
-    () => [
-      {
-        title: '账号信息',
-        dataIndex: 'username',
-        width: 200,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 160, height: 16 }} loading />
-          return (
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-green-500" />
-              <div>
-                <Text strong>{record.real_name || record.username}</Text>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-                  <Phone className="h-3 w-3" />
-                  <span>{record.phone || record.username}</span>
-                </div>
+  const columns: ColumnProps<YunkeSubAccount>[] = [
+    {
+      title: '账号信息',
+      dataIndex: 'username',
+      width: 200,
+      render: (_text: string, record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={160} />
+        return (
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-green-500" />
+            <div>
+              <Text strong>{record.real_name || record.username}</Text>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                <Phone className="h-3 w-3" />
+                <span>{record.phone || record.username}</span>
               </div>
             </div>
-          )
-        },
+          </div>
+        )
       },
-      {
-        title: '部门',
-        dataIndex: 'department_name',
-        width: 150,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
+    },
+    {
+      title: '部门',
+      dataIndex: 'department_name',
+      width: 150,
+      render: (text: string, record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        return (
+          <div className="flex items-center gap-1">
+            <Building2 className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
+            <span>{text || '未分配'}</span>
+          </div>
+        )
+      },
+    },
+    {
+      title: '职位',
+      dataIndex: 'position',
+      width: 120,
+      render: (text: string, record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return <Tag size="small">{text || '未设置'}</Tag>
+      },
+    },
+    {
+      title: '云客登录状态',
+      dataIndex: 'id',
+      width: 120,
+      render: (_id: string, record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        const boundEmployee = record.bound_employee
+        if (!boundEmployee) {
+          return <Tag size="small">未绑定</Tag>
+        }
+
+        const status = loginStatusMap.get(boundEmployee.id)
+        if (checkLoginStatusMutation.isPending) {
+          return <Text type="tertiary" size="small">检查中...</Text>
+        }
+        if (!status) {
+          return <Tag size="small">未检查</Tag>
+        }
+
+        return (
+          <Tag size="small" color={status.is_logged_in ? 'green' : 'red'}>
+            {status.is_logged_in ? <CheckCircle className="h-3 w-3 mr-1 inline" /> : <XCircle className="h-3 w-3 mr-1 inline" />}
+            {status.is_logged_in ? '已登录' : '未登录'}
+          </Tag>
+        )
+      },
+    },
+    {
+      title: '绑定用户',
+      dataIndex: 'bound_employee',
+      width: 180,
+      render: (_boundEmployee: YunkeSubAccount['bound_employee'], record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
+        const boundEmployee = record.bound_employee
+        if (boundEmployee) {
           return (
-            <div className="flex items-center gap-1">
-              <Building2 className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
-              <span>{text || '未分配'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Tag size="small" color="grey">
+                <Link className="h-3 w-3 mr-1 inline" />
+                {boundEmployee.name}
+              </Tag>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<Unlink className="h-3 w-3" />}
+                size="small"
+                style={{ width: 24, height: 24 }}
+                onClick={() => handleUnbindClick(record)}
+              />
             </div>
           )
-        },
+        }
+        return (
+          <Button theme="outline" size="small" icon={<Link className="h-3 w-3" />} onClick={() => handleBindClick(record)}>
+            绑定员工
+          </Button>
+        )
       },
-      {
-        title: '职位',
-        dataIndex: 'position',
-        width: 120,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
-          return <Tag size="small">{text || '未设置'}</Tag>
-        },
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (_status: string, record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
+        const statusInfo = getStatusInfo(record.status)
+        const Icon = statusInfo.icon
+        return (
+          <Tag size="small" color={statusInfo.color}>
+            <Icon className="h-3 w-3 mr-1 inline" />
+            {statusInfo.label}
+          </Tag>
+        )
       },
-      {
-        title: '云客登录状态',
-        dataIndex: 'id',
-        width: 120,
-        render: (_: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
-          const boundEmployee = record.bound_employee
-          if (!boundEmployee) {
-            return <Tag size="small">未绑定</Tag>
-          }
+    },
+    {
+      title: '最后登录',
+      dataIndex: 'last_login_time',
+      width: 160,
+      render: (text: string, record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+        return <Text type="tertiary">{text ? formatTime(text) : '从未登录'}</Text>
+      },
+    },
+    {
+      title: '操作',
+      dataIndex: 'id',
+      width: 120,
+      render: (_id: string, record: YunkeSubAccount) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        return (
+          <Button theme="outline" size="small" icon={<Key className="h-4 w-4" />} onClick={() => handleResetPasswordClick(record)}>
+            重置密码
+          </Button>
+        )
+      },
+    },
+  ]
 
-          const status = loginStatusMap.get(boundEmployee.id)
-          if (checkLoginStatusMutation.isPending) {
-            return <Text type="tertiary" size="small">检查中...</Text>
-          }
-          if (!status) {
-            return <Tag size="small">未检查</Tag>
-          }
-
-          return (
-            <Tag size="small" color={status.is_logged_in ? 'green' : 'red'}>
-              {status.is_logged_in ? <CheckCircle className="h-3 w-3 mr-1 inline" /> : <XCircle className="h-3 w-3 mr-1 inline" />}
-              {status.is_logged_in ? '已登录' : '未登录'}
-            </Tag>
-          )
-        },
-      },
-      {
-        title: '绑定用户',
-        dataIndex: 'bound_employee',
-        width: 180,
-        render: (_: any, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 28 }} loading />
-          const bound = record.bound_employee
-          if (bound) {
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Tag size="small" color="grey">
-                  <Link className="h-3 w-3 mr-1 inline" />
-                  {bound.name}
-                </Tag>
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  icon={<Unlink className="h-3 w-3" />}
-                  size="small"
-                  style={{ width: 24, height: 24 }}
-                  onClick={() => handleUnbindClick(record)}
-                />
-              </div>
-            )
-          }
-          return (
-            <Button theme="outline" size="small" icon={<Link className="h-3 w-3" />} onClick={() => handleBindClick(record)}>
-              绑定员工
-            </Button>
-          )
-        },
-      },
-      {
-        title: '状态',
-        dataIndex: 'status',
-        width: 100,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
-          const statusInfo = getStatusInfo(record.status)
-          const Icon = statusInfo.icon
-          return (
-            <Tag size="small" color={statusInfo.color as any}>
-              <Icon className="h-3 w-3 mr-1 inline" />
-              {statusInfo.label}
-            </Tag>
-          )
-        },
-      },
-      {
-        title: '最后登录',
-        dataIndex: 'last_login_time',
-        width: 160,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
-          return <Text type="tertiary">{text ? formatTime(text) : '从未登录'}</Text>
-        },
-      },
-      {
-        title: '操作',
-        dataIndex: 'id',
-        width: 120,
-        render: (_: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 28 }} loading />
-          return (
-            <Button theme="outline" size="small" icon={<Key className="h-4 w-4" />} onClick={() => handleResetPasswordClick(record)}>
-              重置密码
-            </Button>
-          )
-        },
-      },
-    ],
-    [loginStatusMap, checkLoginStatusMutation.isPending]
-  )
-
-  // 表格数据
-  const displayData = isLoading ? createSkeletonData(5) : accounts
-
-  // 分页配置
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, total])
-
-  // 行选择配置
-  const rowSelection = useMemo(() => ({
-    selectedRowKeys,
-    onChange: (keys: (string | number)[] | undefined) => setSelectedRowKeys(keys || []),
-    getCheckboxProps: (record: any) => ({
-      disabled: isSkeletonRow(record.id),
-    }),
-  }), [selectedRowKeys])
+  const items = accounts
 
   // 处理函数
   const handleSearch = () => {
@@ -412,7 +387,7 @@ export function YunkeAccountsPage() {
     setTimeout(() => { loginFormRef.current?.reset() }, 0)
   }
 
-  const handleLoginSubmit = (values: Record<string, any>) => {
+  const handleLoginSubmit = (values: LoginFormValues) => {
     loginMutation.mutate({ phone: values.phone, password: values.password })
   }
 
@@ -532,16 +507,11 @@ export function YunkeAccountsPage() {
   const confirmMessage = getConfirmMessage()
 
   return (
-    <Main fixed>
-      <div className="flex flex-col gap-4 h-full">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <div>
-            <h1 className="text-2xl font-semibold">云客子账号管理</h1>
-            <p style={{ color: 'var(--semi-color-text-2)', fontSize: 14 }}>
-              管理云客子账号、绑定员工、重置密码
-            </p>
-          </div>
+    <>
+      <DataTableLayout
+        title="云客子账号管理"
+        total={total}
+        headerActions={
           <div style={{ display: 'flex', gap: 8 }}>
             <Button theme="outline" icon={<LogIn className="h-4 w-4" />} onClick={handleLoginClick}>
               云客管理员登录
@@ -556,45 +526,44 @@ export function YunkeAccountsPage() {
               一键更新登录
             </Button>
           </div>
-        </div>
-
-        {/* 搜索栏 */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Input
-            prefix={<IconSearch />}
-            placeholder="输入姓名搜索..."
-            value={searchValue}
-            onChange={(v) => setSearchValue(v)}
-            onEnterPress={handleSearch}
-            showClear
-            style={{ width: 250 }}
-          />
-          <Select
-            value={statusFilter}
-            onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
-            optionList={STATUS_OPTIONS}
-            style={{ width: 130 }}
-          />
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={handleRefresh} />
-          {selectedRowKeys.length > 0 && (
-            <Tag size="small" color="grey">已选择 {selectedRowKeys.length} 个账号</Tag>
-          )}
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 min-h-0">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            rowSelection={rowSelection}
-            pagination={total > 0 ? pagination : false}
-            loading={false}
-            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-            empty={<div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-          />
-        </div>
-      </div>
+        }
+        onRefresh={handleRefresh}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
+            <Input
+              prefix={<IconSearch />}
+              placeholder="输入姓名搜索..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+              showClear
+              style={{ width: 250 }}
+            />
+            <Select
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
+              optionList={STATUS_OPTIONS}
+              style={{ width: 130 }}
+            />
+          </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys) => setSelectedRowKeys(keys),
+          }}
+        />
+      </DataTableLayout>
 
       {/* 云客管理员登录对话框 */}
       <Modal
@@ -749,6 +718,6 @@ export function YunkeAccountsPage() {
       >
         {confirmMessage.description}
       </Modal>
-    </Main>
+    </>
   )
 }

@@ -5,21 +5,30 @@
 import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Pencil, Trash2, GraduationCap } from 'lucide-react'
-import { Table, Form, Button, Modal, Input, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import { Form, Button, Modal, Input, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
-import { Main } from '@/components/layout/main'
+import { IconSearch } from '@douyinfe/semi-icons'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi } from '../api'
-import type { SchoolItem } from '../types'
+import type { SchoolItem, SchoolCreate, SchoolUpdate } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
 
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+interface SchoolFormValues {
+  name: string
+  province?: string
+  city?: string
+  district?: string
+  address?: string
+  contact_phone?: string
+  remark?: string
+}
 
 export function SchoolsPage() {
   useDocumentTitle('学校管理')
@@ -53,7 +62,7 @@ export function SchoolsPage() {
 
   // 创建学校
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, any>) => adminApi.createSchool(data),
+    mutationFn: (data: SchoolCreate) => adminApi.createSchool(data),
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
@@ -66,7 +75,7 @@ export function SchoolsPage() {
 
   // 更新学校
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+    mutationFn: ({ id, data }: { id: string; data: SchoolUpdate }) =>
       adminApi.updateSchool(id, data),
     onSuccess: () => {
       toast.success('更新成功')
@@ -94,102 +103,88 @@ export function SchoolsPage() {
   })
 
   // 表格列定义
-  const columns: ColumnProps[] = useMemo(
-    () => [
-      {
-        title: '学校名称',
-        dataIndex: 'name',
-        width: 200,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 16 }} loading />
-          return (
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-amber-500" />
-              <Text strong>{text}</Text>
-            </div>
-          )
-        },
+  const columns: ColumnProps<SchoolItem>[] = [
+    {
+      title: '学校名称',
+      dataIndex: 'name',
+      width: 200,
+      render: (text: string, record: SchoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
+        return (
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-amber-500" />
+            <Text strong>{text}</Text>
+          </div>
+        )
       },
-      {
-        title: '所在地区',
-        dataIndex: 'province',
-        width: 200,
-        render: (_: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
-          const parts = [record.province, record.city, record.district].filter(Boolean)
-          return parts.length > 0 ? parts.join(' / ') : '-'
-        },
+    },
+    {
+      title: '所在地区',
+      dataIndex: 'province',
+      width: 200,
+      render: (_province: string, record: SchoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
+        const parts = [record.province, record.city, record.district].filter(Boolean)
+        return parts.length > 0 ? parts.join(' / ') : '-'
       },
-      {
-        title: '详细地址',
-        dataIndex: 'address',
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 160, height: 16 }} loading />
-          if (!text) return '-'
-          return (
-            <span style={{ maxWidth: 200, display: 'inline-block' }} className="truncate" title={text}>
-              {text}
-            </span>
-          )
-        },
+    },
+    {
+      title: '详细地址',
+      dataIndex: 'address',
+      render: (text: string, record: SchoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={160} />
+        if (!text) return '-'
+        return (
+          <span style={{ maxWidth: 200, display: 'inline-block' }} className="truncate" title={text}>
+            {text}
+          </span>
+        )
       },
-      {
-        title: '联系电话',
-        dataIndex: 'contact_phone',
-        width: 140,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
-          return text || '-'
-        },
+    },
+    {
+      title: '联系电话',
+      dataIndex: 'contact_phone',
+      width: 140,
+      render: (text: string, record: SchoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
+        return text || '-'
       },
-      {
-        title: '年级',
-        dataIndex: 'grade_levels',
-        width: 120,
-        render: (levels: string[], record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
-          return levels && levels.length > 0 ? levels.join(', ') : '-'
-        },
+    },
+    {
+      title: '年级',
+      dataIndex: 'grade_levels',
+      width: 120,
+      render: (levels: string[], record: SchoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return levels && levels.length > 0 ? levels.join(', ') : '-'
       },
-      {
-        title: '创建时间',
-        dataIndex: 'created_at',
-        width: 180,
-        render: (text: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
-          return text ? new Date(text).toLocaleString('zh-CN') : '-'
-        },
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      width: 180,
+      render: (text: string | undefined, record: SchoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+        return text ? new Date(text).toLocaleString('zh-CN') : '-'
       },
-      {
-        title: '操作',
-        dataIndex: 'id',
-        width: 120,
-        render: (_: string, record: any) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
-          return (
-            <div style={{ display: 'flex', gap: 4 }}>
-              <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
-              <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
-            </div>
-          )
-        },
+    },
+    {
+      title: '操作',
+      dataIndex: 'id',
+      width: 120,
+      render: (_id: string, record: SchoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
+          </div>
+        )
       },
-    ],
-    []
-  )
+    },
+  ]
 
-  // 生成骨架屏数据
-  const skeletonData: SchoolItem[] = useMemo(
-    () =>
-      Array.from({ length: 5 }).map((_, i) => ({
-        id: `${SKELETON_PREFIX}${i}`,
-        name: '',
-        grade_levels: [],
-      })),
-    []
-  )
-
-  const displayData = isLoading ? skeletonData : (data?.items || [])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 处理创建
   const handleCreate = () => {
@@ -229,8 +224,8 @@ export function SchoolsPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (values: Record<string, any>) => {
-    const submitData = {
+  const handleSubmit = (values: SchoolFormValues) => {
+    const submitData: SchoolCreate = {
       ...values,
       province: values.province || undefined,
       city: values.city || undefined,
@@ -238,11 +233,12 @@ export function SchoolsPage() {
       address: values.address || undefined,
       contact_phone: values.contact_phone || undefined,
       remark: values.remark || undefined,
+      grade_levels: editingItem?.grade_levels ?? [],
     }
     if (editingItem) {
       updateMutation.mutate({
         id: editingItem.id,
-        data: submitData,
+        data: submitData as SchoolUpdate,
       })
     } else {
       createMutation.mutate(submitData)
@@ -257,38 +253,20 @@ export function SchoolsPage() {
 
   const isPending = createMutation.isPending || updateMutation.isPending
 
-  // 分页配置
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
-
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <div>
-            <h1 className="text-2xl font-semibold">学校管理</h1>
-            <p style={{ color: 'var(--semi-color-text-2)', fontSize: 14 }}>
-              管理系统中的学校信息
-            </p>
-          </div>
+    <>
+      <DataTableLayout
+        title="学校管理"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新建学校
           </Button>
-        </div>
-
-        {/* 工具栏 */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
             <Input
               prefix={<IconSearch />}
               placeholder="搜索学校名称..."
@@ -299,22 +277,19 @@ export function SchoolsPage() {
               style={{ width: 250 }}
             />
           </div>
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 min-h-0">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={pagination}
-            loading={false}
-            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-            empty={<Text type="tertiary">暂无数据</Text>}
-          />
-        </div>
-      </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        />
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -380,6 +355,6 @@ export function SchoolsPage() {
       >
         确定要删除学校"{deletingItem?.name}"吗？此操作不可撤销。
       </Modal>
-    </Main>
+    </>
   )
 }

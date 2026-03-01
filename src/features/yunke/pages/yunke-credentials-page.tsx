@@ -9,7 +9,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Phone,
   Building2,
-  RefreshCw,
   Plus,
   Pencil,
   Trash2,
@@ -20,16 +19,16 @@ import {
   Clock,
   Bell,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Main } from '@/components/layout/main'
-import { Table, Button, Input, Select, Modal, Form, Tag, Skeleton, Dropdown, Typography } from '@douyinfe/semi-ui-19'
+import { Button, Input, Select, Modal, Form, Tag, Dropdown, Typography } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch } from '@douyinfe/semi-icons'
-import { SemiTablePagination } from '@/components/semi/table-pagination'
-import { isSkeletonRow, createSkeletonData } from '@/lib/table-utils'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { yunkeCredentialsApi } from '../api'
 import { dingtalkRobotsApi } from '@/features/admin/api'
 import type { YunkeCredential } from '../types'
@@ -43,6 +42,15 @@ const STATUS_OPTIONS = [
   { value: '1', label: '已登录' },
   { value: '0', label: '未登录' },
 ]
+
+interface CredentialFormValues {
+  phone?: string
+  password?: string
+  company_code?: string
+  company_name?: string
+  domain?: string
+  notify_robot_id?: string
+}
 
 export function YunkeCredentialsPage() {
   const queryClient = useQueryClient()
@@ -81,9 +89,9 @@ export function YunkeCredentialsPage() {
     queryKey: ['dingtalk-robots-active'],
     queryFn: () => dingtalkRobotsApi.getActive(),
   })
-  const robots = robotsData || []
+  const robots = useMemo(() => robotsData ?? [], [robotsData])
 
-  const credentials = data?.items || []
+  const credentials = useMemo(() => data?.items ?? [], [data?.items])
   const total = data?.total || 0
 
   // 创建账号
@@ -102,7 +110,7 @@ export function YunkeCredentialsPage() {
 
   // 更新账号
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+    mutationFn: ({ id, data }: { id: string; data: CredentialFormValues }) =>
       yunkeCredentialsApi.updateCredential(id, {
         phone: data.phone,
         password: data.password || undefined,
@@ -154,14 +162,13 @@ export function YunkeCredentialsPage() {
   })
 
   // 列定义
-  const columns: ColumnProps<YunkeCredential>[] = useMemo(
-    () => [
+  const columns: ColumnProps<YunkeCredential>[] = [
       {
         title: '手机号',
         dataIndex: 'phone',
         width: 150,
         render: (_text: string, record: YunkeCredential) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Phone style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
@@ -175,7 +182,7 @@ export function YunkeCredentialsPage() {
         dataIndex: 'company_name',
         width: 200,
         render: (_text: string, record: YunkeCredential) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 160 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={160} />
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
@@ -194,7 +201,7 @@ export function YunkeCredentialsPage() {
         dataIndex: 'status',
         width: 100,
         render: (_text: number, record: YunkeCredential) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
           const isLoggedIn = record.status === 1
           return (
             <Tag
@@ -217,7 +224,7 @@ export function YunkeCredentialsPage() {
         dataIndex: 'last_login',
         width: 180,
         render: (_text: string, record: YunkeCredential) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
           if (!record.last_login) {
             return <Text type="tertiary">从未登录</Text>
           }
@@ -234,7 +241,7 @@ export function YunkeCredentialsPage() {
         dataIndex: 'notify_robot_name',
         width: 140,
         render: (_text: string, record: YunkeCredential) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
           if (!record.notify_robot_name) {
             return <Text type="tertiary" size="small">-</Text>
           }
@@ -253,7 +260,7 @@ export function YunkeCredentialsPage() {
         dataIndex: 'created_at',
         width: 160,
         render: (_text: string, record: YunkeCredential) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
           return record.created_at ? formatTime(record.created_at) : '-'
         },
       },
@@ -263,7 +270,7 @@ export function YunkeCredentialsPage() {
         width: 120,
         fixed: 'right' as const,
         render: (_: unknown, record: YunkeCredential) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Button
@@ -302,24 +309,9 @@ export function YunkeCredentialsPage() {
           )
         },
       },
-    ],
-    [loginMutation.isPending]
-  )
+  ]
 
-  // 表格数据
-  const tableData = isLoading ? createSkeletonData<YunkeCredential>(5) : credentials
-
-  // 过滤数据（本地搜索）
-  const filteredData = useMemo(() => {
-    if (!searchValue) return tableData
-    const search = searchValue.toLowerCase()
-    return tableData.filter(
-      (item) =>
-        item.phone?.toLowerCase().includes(search) ||
-        item.company_name?.toLowerCase().includes(search) ||
-        item.company_code?.toLowerCase().includes(search)
-    )
-  }, [tableData, searchValue])
+  const items = credentials
 
   // 处理函数
   const handleSearch = () => {
@@ -337,8 +329,9 @@ export function YunkeCredentialsPage() {
   }
 
   const handleCreateSubmit = () => {
-    createFormRef.current?.validate().then((values: Record<string, any>) => {
-      createMutation.mutate(values as any)
+    createFormRef.current?.validate().then((rawValues) => {
+      const values = rawValues as CredentialFormValues
+      createMutation.mutate(values)
     })
   }
 
@@ -359,7 +352,8 @@ export function YunkeCredentialsPage() {
   }
 
   const handleUpdateSubmit = () => {
-    updateFormRef.current?.validate().then((values: Record<string, any>) => {
+    updateFormRef.current?.validate().then((rawValues) => {
+      const values = rawValues as CredentialFormValues
       if (selectedCredential) {
         updateMutation.mutate({ id: selectedCredential.id, data: values })
       }
@@ -391,24 +385,19 @@ export function YunkeCredentialsPage() {
   }, [robots])
 
   return (
-    <Main fixed>
-      <div style={{ display: 'flex', height: '100%', flexDirection: 'column', gap: 16 }}>
-        {/* 标题栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>云客账号凭证管理</h1>
-            <Text type="tertiary" size="small">
-              管理云客登录凭证，支持创建、编辑密码、手动登录
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="云客账号凭证管理"
+        total={total}
+        headerActions={
           <Button icon={<Plus style={{ width: 16, height: 16 }} />} onClick={handleCreateClick}>
             添加账号
           </Button>
-        </div>
-
-        {/* 搜索栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+        }
+        onRefresh={handleRefresh}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
             <Input
               prefix={<IconSearch />}
               placeholder="搜索手机号或公司名..."
@@ -423,41 +412,20 @@ export function YunkeCredentialsPage() {
               optionList={STATUS_OPTIONS}
               style={{ width: 120 }}
             />
-            <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<RefreshCw style={{ width: 16, height: 16 }} />}
-            onClick={handleRefresh}
-          />
-        </div>
-
-        {/* 表格 */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <Table
-            columns={columns}
-            dataSource={filteredData}
-            rowKey="id"
-            pagination={false}
-            empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-          />
-        </div>
-
-        {/* 分页 */}
-        {total > 0 && (
-          <SemiTablePagination
-            total={total}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
-          />
-        )}
-      </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        />
+      </DataTableLayout>
 
       {/* 创建账号对话框 */}
       <Modal
@@ -594,6 +562,6 @@ export function YunkeCredentialsPage() {
       >
         确定要删除账号 {selectedCredential?.phone} 吗？此操作无法撤销。
       </Modal>
-    </Main>
+    </>
   )
 }

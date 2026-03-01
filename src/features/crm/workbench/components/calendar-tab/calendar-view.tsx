@@ -5,7 +5,7 @@
  * 右侧 1/4 展示选中日期的详细线索列表
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   format,
@@ -140,8 +140,34 @@ export function CalendarView() {
 
   const weekDays = ['一', '二', '三', '四', '五', '六', '日']
 
-  // 周视图中每天最多显示的线索条数（空间更大）
-  const maxLeadsPerCell = viewMode === 'week' ? 10 : 4
+  // 动态计算月视图每格能放多少个线索条
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [cellHeight, setCellHeight] = useState(0)
+
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+    const update = () => {
+      const rows = Math.ceil(calendarDays.length / 7)
+      if (rows > 0) setCellHeight(el.clientHeight / rows)
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [calendarDays.length])
+
+  const maxSlots = useMemo(() => {
+    if (cellHeight <= 0) return 3 // 测量前的安全回退
+    if (viewMode === 'week') {
+      // 周视图：badge 25px + padding 16px，每条约 29px（25px条 + 4px gap）
+      const available = cellHeight - 25 - 16
+      return Math.max(1, Math.floor(available / 29))
+    }
+    // 月视图：日期头 32px + padding 16px，每条约 21px（17px条 + 4px gap）
+    const available = cellHeight - 32 - 16
+    return Math.max(1, Math.floor(available / 21))
+  }, [cellHeight, viewMode])
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 16, flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -249,7 +275,7 @@ export function CalendarView() {
           </div>
 
           {/* 日期格子 */}
-          <div style={{
+          <div ref={gridRef} style={{
             flex: 1,
             minHeight: 0,
             overflow: 'hidden',
@@ -264,6 +290,11 @@ export function CalendarView() {
               const isCurrentMonth = isSameMonth(day, currentDate)
               const isTodayDate = isToday(day)
               const isSelected = isSameDay(day, selectedDate)
+
+              // 动态截断：如果全部放得下就全部显示，否则留一个槽位给"+n"
+              const showAll = dayLeads.length <= maxSlots
+              const displayCount = showAll ? dayLeads.length : Math.max(1, maxSlots - 1)
+              const remaining = dayLeads.length - displayCount
 
               return (
                 <div
@@ -344,10 +375,10 @@ export function CalendarView() {
                   {/* 线索条 */}
                   <div style={{
                     display: 'flex', flexDirection: 'column', gap: 4,
-                    overflow: viewMode === 'week' ? 'auto' : 'hidden',
-                    flex: viewMode === 'week' ? 1 : undefined,
+                    overflow: 'hidden',
+                    flex: 1,
                   }}>
-                    {dayLeads.slice(0, maxLeadsPerCell).map((lead) => {
+                    {dayLeads.slice(0, displayCount).map((lead) => {
                       const timeStr = lead.next_followup_at
                         ? format(parseISO(lead.next_followup_at), 'HH:mm')
                         : ''
@@ -357,15 +388,12 @@ export function CalendarView() {
                         return (
                           <div
                             key={lead.id}
-                            onClick={(e) => handleLeadClick(e, lead.id)}
                             style={{
                               display: 'flex', alignItems: 'center', gap: 6,
                               borderRadius: 4, padding: '4px 8px',
                               fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                               background: isSelected ? 'rgba(var(--semi-color-primary-rgb, 0,100,250), 0.15)' : 'var(--semi-color-fill-0)',
                               color: isSelected ? 'var(--semi-color-primary)' : 'var(--semi-color-text-1)',
-                              cursor: 'pointer',
-                              transition: 'background 0.15s',
                             }}
                           >
                             <span style={{ fontFamily: 'monospace', opacity: 0.7, flexShrink: 0, fontSize: 11 }}>{timeStr}</span>
@@ -393,9 +421,9 @@ export function CalendarView() {
                         </div>
                       )
                     })}
-                    {dayLeads.length > maxLeadsPerCell && (
+                    {remaining > 0 && (
                       <div style={{ fontSize: viewMode === 'week' ? 11 : 10, color: 'var(--semi-color-text-2)', paddingLeft: 4 }}>
-                        还有 {dayLeads.length - maxLeadsPerCell} 条...
+                        还有 {remaining} 条...
                       </div>
                     )}
                   </div>

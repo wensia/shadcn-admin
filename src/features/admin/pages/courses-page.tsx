@@ -6,11 +6,13 @@ import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BookOpen, Plus, Pencil, Trash2, Copy, RefreshCw } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Main } from '@/components/layout/main'
-import { Button, Form, Modal, Switch, Table, Skeleton, Typography, Checkbox } from '@douyinfe/semi-ui-19'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
+import { Button, Form, Modal, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { coursesApi } from '../api'
@@ -20,27 +22,14 @@ import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
 
-// 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
-function createSkeletonData(count: number): Course[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
-    name: '',
-    sort_order: 0,
-    is_active: true,
-    created_at: '',
-    updated_at: '',
-  }))
-}
-
 export function CoursesPage() {
   useDocumentTitle('课程配置')
   const queryClient = useQueryClient()
   const formRef = useRef<FormApi>()
 
   // 状态管理
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
@@ -50,13 +39,15 @@ export function CoursesPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
   // 查询数据
-  const { data: courses = [], isLoading } = useQuery({
+  const { data: courses = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-courses'],
     queryFn: async () => {
       const response = await coursesApi.getCourses()
       return response || []
     },
   })
+
+  const items = useMemo(() => courses, [courses])
 
   // 创建
   const createMutation = useMutation({
@@ -173,9 +164,7 @@ export function CoursesPage() {
         dataIndex: 'name',
         width: 200,
         render: (_: unknown, record: Course) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 20 }} loading />
-          }
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <BookOpen className="h-4 w-4 text-blue-500" />
@@ -189,9 +178,7 @@ export function CoursesPage() {
         dataIndex: 'is_active',
         width: 100,
         render: (_: unknown, record: Course) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
-          }
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
           return <StatusBadge isActive={record.is_active} />
         },
       },
@@ -200,9 +187,7 @@ export function CoursesPage() {
         dataIndex: 'sort_order',
         width: 100,
         render: (_: unknown, record: Course) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 48, height: 20 }} loading />
-          }
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={48} />
           return record.sort_order
         },
       },
@@ -211,9 +196,7 @@ export function CoursesPage() {
         dataIndex: 'created_at',
         width: 180,
         render: (_: unknown, record: Course) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
-          }
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
           return formatTime(record.created_at)
         },
       },
@@ -222,9 +205,7 @@ export function CoursesPage() {
         dataIndex: 'updated_at',
         width: 180,
         render: (_: unknown, record: Course) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
-          }
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
           return formatTime(record.updated_at)
         },
       },
@@ -233,9 +214,7 @@ export function CoursesPage() {
         dataIndex: 'id',
         width: 180,
         render: (_: unknown, record: Course) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 20 }} loading />
-          }
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
           return (
             <div style={{ display: 'flex', gap: 4 }}>
               <Button
@@ -267,9 +246,6 @@ export function CoursesPage() {
     ],
     [copyMutation.isPending]
   )
-
-  // 表格数据
-  const displayData = isLoading ? createSkeletonData(5) : courses
 
   // 打开新增对话框
   const handleCreate = () => {
@@ -350,28 +326,12 @@ export function CoursesPage() {
 
   const isPending = createMutation.isPending || updateMutation.isPending
 
-  // 行选择配置
-  const rowSelection = useMemo(() => ({
-    selectedRowKeys,
-    onChange: (_selectedRowKeys: (string | number)[] | undefined) => {
-      setSelectedRowKeys((_selectedRowKeys || []) as string[])
-    },
-    getCheckboxProps: (record: Course) => ({
-      disabled: isSkeletonRow(record.id),
-    }),
-  }), [selectedRowKeys])
-
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">课程管理</h1>
-            <Text type="tertiary" size="small">
-              管理系统中的课程信息
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="课程管理"
+        total={items.length}
+        headerActions={
           <div style={{ display: 'flex', gap: 8 }}>
             <Button
               theme="outline"
@@ -385,39 +345,43 @@ export function CoursesPage() {
               新增课程
             </Button>
           </div>
-        </div>
-
-        {/* 批量操作栏 */}
-        {selectedRowKeys.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8, border: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)' }}>
-            <Text type="tertiary" size="small">
-              已选择 {selectedRowKeys.length} 项
-            </Text>
-            <Button size="small" theme="outline" onClick={handleBatchActivate} disabled={batchActivateMutation.isPending}>
-              批量启用
-            </Button>
-            <Button size="small" theme="outline" onClick={handleBatchDeactivate} disabled={batchDeactivateMutation.isPending}>
-              批量停用
-            </Button>
-            <Button size="small" theme="solid" type="danger" onClick={() => setBatchDeleteDialogOpen(true)}>
-              批量删除
-            </Button>
-          </div>
-        )}
-
-        {/* 表格 */}
-        <div className="flex-1 overflow-hidden">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={false}
-            loading={false}
-            rowSelection={rowSelection as any}
-            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-          />
-        </div>
-      </div>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          selectedRowKeys.length > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8, border: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)', marginBottom: 8 }}>
+              <Text type="tertiary" size="small">
+                已选择 {selectedRowKeys.length} 项
+              </Text>
+              <Button size="small" theme="outline" onClick={handleBatchActivate} disabled={batchActivateMutation.isPending}>
+                批量启用
+              </Button>
+              <Button size="small" theme="outline" onClick={handleBatchDeactivate} disabled={batchDeactivateMutation.isPending}>
+                批量停用
+              </Button>
+              <Button size="small" theme="solid" type="danger" onClick={() => setBatchDeleteDialogOpen(true)}>
+                批量删除
+              </Button>
+            </div>
+          ) : undefined
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={items.length}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys) => setSelectedRowKeys(keys as string[]),
+          }}
+        />
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -513,6 +477,6 @@ export function CoursesPage() {
       >
         确定要初始化预设课程吗？这将添加系统预设的课程列表。
       </Modal>
-    </Main>
+    </>
   )
 }

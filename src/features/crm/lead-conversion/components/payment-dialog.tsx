@@ -9,7 +9,6 @@ import {
   Modal,
   Button,
   Input,
-  Select,
   Toast,
   Typography,
   Form,
@@ -17,7 +16,6 @@ import {
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { UserPlus, X } from 'lucide-react'
 import { paymentApi, employeeApi } from '../api'
-import type { Payment, PaymentCreate, PaymentUpdate } from '../types'
 import { LeadSelectDialog, type SelectedLead } from '@/features/crm/daily-control/components/lead-select-dialog'
 import {
   paymentMethodOptions,
@@ -25,7 +23,10 @@ import {
   paymentStatusOptions,
   PaymentMethod,
   PaymentType,
-  PaymentStatus
+  PaymentStatus,
+  type Payment,
+  type PaymentCreate,
+  type PaymentUpdate
 } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -38,6 +39,21 @@ interface PaymentDialogProps {
   onSuccess?: () => void
 }
 
+interface PaymentFormValues {
+  lead_id?: string
+  amount?: number | string
+  payment_method?: string
+  payment_type?: string
+  payment_at?: string
+  status?: string
+  collector_id?: string
+  course_name?: string
+  course_hours?: number | string
+  receipt_no?: string
+  contract_no?: string
+  remark?: string
+}
+
 export function PaymentDialog({
   open,
   onOpenChange,
@@ -48,6 +64,7 @@ export function PaymentDialog({
   const isEdit = !!payment?.id
   const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
   const [leadSelectOpen, setLeadSelectOpen] = useState(false)
+  const [amountInput, setAmountInput] = useState('0')
   const formApiRef = useRef<FormApi>()
 
   // 获取收款人列表
@@ -62,27 +79,32 @@ export function PaymentDialog({
 
   // 填充编辑数据
   useEffect(() => {
-    if (payment && open) {
-      formApiRef.current?.setValues({
-        lead_id: payment.lead_id,
-        amount: payment.amount,
-        payment_method: payment.payment_method,
-        payment_type: payment.payment_type,
-        payment_at: payment.payment_at.slice(0, 16),
-        status: payment.status,
-        collector_id: payment.collector_id || '',
-        course_name: payment.course_name || '',
-        course_hours: payment.course_hours || '',
-        receipt_no: payment.receipt_no || '',
-        contract_no: payment.contract_no || '',
-        remark: payment.remark || '',
-      })
-      setSelectedLead({
-        id: payment.lead_id,
-        child_name: payment.child_name || '',
-        parent_phone: payment.parent_phone || '',
-      })
-    } else if (!payment && open) {
+    if (!open) return
+    const frameId = requestAnimationFrame(() => {
+      if (payment) {
+        formApiRef.current?.setValues({
+          lead_id: payment.lead_id,
+          amount: payment.amount,
+          payment_method: payment.payment_method,
+          payment_type: payment.payment_type,
+          payment_at: payment.payment_at.slice(0, 16),
+          status: payment.status,
+          collector_id: payment.collector_id || '',
+          course_name: payment.course_name || '',
+          course_hours: payment.course_hours || '',
+          receipt_no: payment.receipt_no || '',
+          contract_no: payment.contract_no || '',
+          remark: payment.remark || '',
+        })
+        setAmountInput(payment.amount.toString())
+        setSelectedLead({
+          id: payment.lead_id,
+          child_name: payment.child_name || '',
+          parent_phone: payment.parent_phone || '',
+        })
+        return
+      }
+
       formApiRef.current?.setValues({
         lead_id: '',
         amount: 0,
@@ -97,8 +119,10 @@ export function PaymentDialog({
         contract_no: '',
         remark: '',
       })
+      setAmountInput('0')
       setSelectedLead(null)
-    }
+    })
+    return () => cancelAnimationFrame(frameId)
   }, [payment, open])
 
   // 创建缴费记录
@@ -111,7 +135,7 @@ export function PaymentDialog({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '创建失败')
     },
   })
@@ -127,7 +151,7 @@ export function PaymentDialog({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '更新失败')
     },
   })
@@ -144,13 +168,18 @@ export function PaymentDialog({
     formApiRef.current?.setValue('lead_id', '')
   }
 
+  const handleAmountChange = (value: string) => {
+    setAmountInput(value)
+    formApiRef.current?.setValue('amount', value)
+  }
+
   // 提交表单
-  const handleSubmit = (values: Record<string, any>) => {
+  const handleSubmit = (values: PaymentFormValues) => {
     if (!values.lead_id) {
       Toast.warning({ content: '请选择线索' })
       return
     }
-    const amount = parseFloat(values.amount)
+    const amount = parseFloat(String(values.amount ?? '0'))
     if (!amount || amount <= 0) {
       Toast.warning({ content: '金额必须大于0' })
       return
@@ -265,8 +294,8 @@ export function PaymentDialog({
                   type="number"
                   style={{ paddingLeft: 28 }}
                   placeholder="0.00"
-                  value={formApiRef.current?.getValue('amount')?.toString()}
-                  onChange={(v) => formApiRef.current?.setValue('amount', v)}
+                  value={amountInput}
+                  onChange={handleAmountChange}
                 />
               </div>
             </Form.Slot>

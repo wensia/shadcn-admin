@@ -1,10 +1,10 @@
 /**
  * CRM线索管理类型定义
- * 从frontend-vue/src/api/leads.ts迁移
+ * 从旧版前端线索类型迁移
  */
 
 // ==================== 样式配置接口 ====================
-// shadcn/ui Badge组件支持的variant类型（包含语义化扩展和状态颜色）
+// Semi Badge 兼容的 variant 类型（包含语义化扩展和状态颜色）
 export type BadgeVariant =
   | 'default' | 'secondary' | 'destructive' | 'outline'
   | 'success' | 'warning' | 'info' | 'purple'
@@ -14,7 +14,7 @@ export type BadgeVariant =
 // 枚举样式配置（旧版，保留兼容）
 export interface EnumStyleConfig {
   label: string        // 中文标签
-  variant: BadgeVariant // shadcn/ui badge variant
+  variant: BadgeVariant // badge variant
   color?: string       // 自定义颜色（可选）
 }
 
@@ -316,8 +316,10 @@ export interface LeadFollowup {
   followup_by_id: string
   followup_by_name?: string
   created_at: string
-  /** 来源: manual=人工填写, ai_auto=AI自动生成 */
-  source?: 'manual' | 'ai_auto'
+  /** 来源: manual=人工填写, ai_auto=AI自动生成, ai_supplement=AI补充记录 */
+  source?: 'manual' | 'ai_auto' | 'ai_supplement'
+  yunke_call_id?: string
+  parent_followup_id?: string
   // 跨校区记录字段
   source_campus_id?: string
   source_campus_name?: string
@@ -333,6 +335,7 @@ export interface LeadFollowupCreate {
   next_action?: string
   next_followup_at?: string
   send_dingtalk?: boolean
+  yunke_call_id?: string
 }
 
 // ==================== 变更记录接口 ====================

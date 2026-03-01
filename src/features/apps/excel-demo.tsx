@@ -11,7 +11,7 @@ import { createUniver, LocaleType, mergeLocales } from '@univerjs/presets'
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import UniverPresetSheetsCoreZhCN from '@univerjs/preset-sheets-core/locales/zh-CN'
 import { Button, Divider, Tooltip } from '@douyinfe/semi-ui-19'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   FileUp,
   Download,

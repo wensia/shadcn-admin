@@ -13,8 +13,8 @@ const emailOptions = [
 export function ProfileForm() {
   const formRef = useRef<FormApi>()
   const [urls, setUrls] = useState([
-    { value: 'https://shadcn.com' },
-    { value: 'http://twitter.com/shadcn' },
+    { value: 'https://ruimf.example.com' },
+    { value: 'https://x.com/ruimf' },
   ])
 
   function handleSubmit(values: Record<string, any>) {
@@ -36,7 +36,7 @@ export function ProfileForm() {
       <Form.Input
         field='username'
         label='Username'
-        placeholder='shadcn'
+        placeholder='ruimf-user'
         rules={[
           { required: true, message: 'Please enter your username.' },
           { min: 2, message: 'Username must be at least 2 characters.' },

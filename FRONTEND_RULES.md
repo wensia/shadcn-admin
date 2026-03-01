@@ -17,6 +17,7 @@ shadcn-admin (React 19 + Semi Design) 前端开发的核心规范。
 | 动画 | motion (framer-motion) | 12+ |
 | 样式 | Tailwind CSS 4 + Semi Design 内联样式 | - |
 | HTTP | Axios | 1.13+ |
+| 通知 | `@/lib/toast`（基于 Semi Toast） | - |
 
 ## Semi Design 使用规范
 
@@ -38,6 +39,9 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 
 // Lucide 图标（Semi Icons 没有的）
 import { Play, FileText, UserRound } from 'lucide-react'
+
+// 统一通知入口
+import { toast } from '@/lib/toast'
 ```
 
 ### 样式方式
@@ -68,8 +72,7 @@ src/
 ├── components/
 │   ├── semi/              # Semi Design 通用组件（数据表、布局、分页等）
 │   ├── layout/            # 页面布局（侧边栏、头部、标签页管理器）
-│   ├── ui/                # 遗留 shadcn/ui 基础组件（逐步弃用）
-│   └── data-table/        # 遗留 TanStack Table 组件（逐步弃用）
+│   └── ...                # 业务无关的通用组件
 ├── features/              # 功能模块（按业务域划分）
 │   ├── crm/               # CRM（线索、公海、订单、工作台等）
 │   ├── yunke/             # 云客（AI 助手、通话记录）
@@ -389,6 +392,103 @@ try { ... } catch (error) {
 | `.semi-navigation-*` | 侧边栏 Nav 可滚动 + Footer 固定底部 |
 | `*:focus` | 移除所有焦点轮廓 |
 | 表格粘性列 | `[data-slot="table-row"] > .sticky` 背景色 |
+
+## 数据表页面布局规范（强制）
+
+**重要：所有包含分页数据表格的页面/组件必须使用 `SemiDataTable` 标准组件。独立页面还应使用 `DataTableLayout` 包裹。**
+
+### 适用范围
+
+| 场景 | 使用方式 |
+|------|---------|
+| 独立数据表页面（如线索管理、通话记录） | `DataTableLayout` + `SemiDataTable` |
+| Tab 内嵌数据表（如日控表各 Tab） | `SemiDataTable`（外层可用 Card） |
+| 弹窗/抽屉内小型数据表（<50条，无分页） | 可直接使用 `<Table>`（不需要分页/骨架屏） |
+| 弹窗内选择列表（如绑定员工选择） | 可直接使用 `<Table>`（交互性小表格） |
+
+### 禁止的做法（code review 必查项）
+
+- **禁止**在 features/ 目录中直接使用 `<Table>` + `<SemiTablePagination>` 组合 → 必须用 `SemiDataTable`
+- **禁止**直接使用 Semi `<Table pagination={...}>` 内置分页 → 必须用 `SemiDataTable`
+- **禁止**在页面/组件中定义本地 `createSkeletonData` / `isSkeletonRow` / `SKELETON_PREFIX` → 必须用 `@/lib/table-utils`
+- **禁止**手动编写 `ResizeObserver` 来计算表格高度 → `SemiDataTable` 内部的 `useTableScroll` 已封装
+- **禁止**手动计算 `displayData`（`isLoading ? createSkeletonData(...) : data`） → `SemiDataTable` 内部管理
+- **禁止**使用 `<Main fixed>` 包裹数据表页面
+- **禁止**手动定义 `pagination` useMemo 配置对象
+
+### 自查清单（新增/修改数据表时）
+
+1. 是否使用了 `SemiDataTable` 而非直接 `<Table>`？
+2. 是否从 `@/lib/table-utils` 导入 `isSkeletonRow` / `SemiSkeletonCell`（而非本地定义）？
+3. 是否用 `useMemo` 稳定了 `data?.items ?? []` 的引用？
+4. 独立页面是否用 `DataTableLayout` 包裹？
+5. 弹窗/SideSheet 是否放在 `DataTableLayout` 外面？
+
+### 标准页面结构（简化版）
+
+```tsx
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
+
+export function MyPage() {
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const { data, isLoading, refetch } = useQuery({ ... })
+
+  // ⚠️ 必须 useMemo 稳定引用，否则 SemiDataTable 内部 useEffect 因引用变化导致无限循环
+  const items = useMemo(() => data?.items ?? [], [data?.items])
+
+  const columns: ColumnProps[] = useMemo(() => [
+    {
+      title: '名称', dataIndex: 'name', width: 120,
+      render: (text, record) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        return <Text strong>{text}</Text>
+      },
+    },
+  ], [])
+
+  return (
+    <>
+      <DataTableLayout
+        title="xxx管理"
+        total={data?.total}
+        headerActions={<Button theme="solid" icon={<Plus />} onClick={handleCreate}>新建</Button>}
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
+            <Input prefix={<IconSearch />} ... />
+            <Select ... />
+          </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        />
+      </DataTableLayout>
+
+      {/* 弹窗放在 DataTableLayout 外面 */}
+      <Modal>...</Modal>
+    </>
+  )
+}
+```
+
+### 注意事项
+
+- SemiDataTable 自动计算 `scroll.y`，无需手动设置表格高度
+- DataTableLayout 自带刷新按钮（`onRefresh` prop），toolbar 中不需要额外的刷新按钮
+- 骨架屏使用 `isSkeletonRow(record.id)` + `<SemiSkeletonCell width={N} />`
+- 所有弹窗（Modal / SideSheet）放在 `<DataTableLayout>` 外面
 
 ## 开发命令
 

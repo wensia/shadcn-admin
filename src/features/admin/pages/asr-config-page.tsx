@@ -4,22 +4,41 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Mic, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle, Star } from 'lucide-react'
-import { toast } from 'sonner'
+import { Mic, Plus, Pencil, Trash2, Play, Star } from 'lucide-react'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Main } from '@/components/layout/main'
-import { Form, Button, Modal, Input, TextArea, Select, Switch, Table, Skeleton, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
+import { Form, Button, Modal, Input, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
-import { asrConfigApi, type ASRConfigCreate, type ASRConfigUpdate, type ASRProviderFields } from '../api'
-import type { ASRConfigItem, ASRProvider } from '../types'
-import { ASR_PROVIDER_OPTIONS } from '../types'
+import { IconSearch } from '@douyinfe/semi-icons'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
+import { asrConfigApi, type ASRConfigCreate, type ASRConfigUpdate } from '../api'
+import { ASR_PROVIDER_OPTIONS, type ASRConfigItem, type ASRProvider } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
+
+interface ASRConfigFormValues {
+  provider: ASRProvider
+  name: string
+  notes?: string
+  is_default: boolean
+  is_active: boolean
+  volcengine_app_id?: string
+  volcengine_access_token?: string
+  volcengine_cluster?: string
+  tencent_secret_id?: string
+  tencent_secret_key?: string
+  tencent_app_id?: string
+  tencent_engine_type?: string
+  alibaba_access_key_id?: string
+  alibaba_access_key_secret?: string
+  alibaba_app_key?: string
+}
 
 // 提供商字段配置（本地定义，不依赖后端）
 const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, { required: string[]; optional: string[]; labels: Record<string, string> }> = {
@@ -53,22 +72,6 @@ const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, { required: string[]; optional
   },
 }
 
-// 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
-function createSkeletonData(count: number): ASRConfigItem[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
-    provider: 'volcengine' as ASRProvider,
-    name: '',
-    credentials: {},
-    is_active: true,
-    is_default: false,
-    last_verified_at: null,
-    notes: null,
-  }))
-}
 
 export function ASRConfigPage() {
   const queryClient = useQueryClient()
@@ -199,15 +202,14 @@ export function ASRConfigPage() {
   }
 
   // 列定义
-  const columns: ColumnProps<ASRConfigItem>[] = useMemo(
-    () => [
+  const columns: ColumnProps<ASRConfigItem>[] = [
       {
         title: '配置名称',
         dataIndex: 'name',
         width: 250,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 160, height: 20 }} loading />
+            return <SemiSkeletonCell width={160} />
           }
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -231,7 +233,7 @@ export function ASRConfigPage() {
         width: 120,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
+            return <SemiSkeletonCell width={64} />
           }
           return (
             <Tag color={getProviderTagColor(record!.provider)}>
@@ -246,7 +248,7 @@ export function ASRConfigPage() {
         width: 100,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
+            return <SemiSkeletonCell width={56} />
           }
           return <StatusBadge isActive={record!.is_active} />
         },
@@ -257,7 +259,7 @@ export function ASRConfigPage() {
         width: 160,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
+            return <SemiSkeletonCell width={128} />
           }
           return record!.last_verified_at
             ? formatTime(record!.last_verified_at)
@@ -270,7 +272,7 @@ export function ASRConfigPage() {
         width: 150,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
+            return <SemiSkeletonCell width={96} />
           }
           return (
             <div style={{ display: 'flex', gap: 4 }}>
@@ -286,7 +288,7 @@ export function ASRConfigPage() {
                 type="tertiary"
                 icon={<Play className="h-4 w-4" />}
                 size="small"
-                onClick={() => handleTest(record!.id)}
+                onClick={() => testMutation.mutate(record!.id)}
                 disabled={testMutation.isPending}
               />
               <Button
@@ -300,25 +302,9 @@ export function ASRConfigPage() {
           )
         },
       },
-    ],
-    [testMutation.isPending]
-  )
+    ]
 
-  // 表格数据
-  const displayData = isLoading ? createSkeletonData(5) : (data?.items || [])
-
-  // 分页
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 打开新增对话框
   const handleCreate = () => {
@@ -340,7 +326,7 @@ export function ASRConfigPage() {
     setTestStatus({ tested: false, success: false, message: '' })
     setDialogOpen(true)
     setTimeout(() => {
-      const values: Record<string, any> = {
+      const values: ASRConfigFormValues = {
         provider,
         name: item.name,
         notes: item.notes || '',
@@ -381,14 +367,9 @@ export function ASRConfigPage() {
     }
   }
 
-  // 测试配置
-  const handleTest = (id: string) => {
-    testMutation.mutate(id)
-  }
-
   // 提交表单
-  const handleSubmit = (values: Record<string, any>) => {
-    const provider = values.provider as ASRProvider
+  const handleSubmit = (values: ASRConfigFormValues) => {
+    const provider = values.provider
     const config = PROVIDER_FIELD_CONFIGS[provider]
 
     // 构建凭证对象
@@ -503,24 +484,19 @@ export function ASRConfigPage() {
   const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">ASR 配置管理</h1>
-            <Text type="tertiary" size="small">
-              管理语音识别服务配置（火山引擎、腾讯云、阿里云）
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="ASR 配置管理"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新增配置
           </Button>
-        </div>
-
-        {/* 搜索栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
             <Input
               prefix={<IconSearch />}
               placeholder="搜索配置名称或提供商..."
@@ -530,21 +506,20 @@ export function ASRConfigPage() {
               showClear
               style={{ width: 250 }}
             />
-            <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <Table
+        }
+      >
+        <SemiDataTable
           columns={columns}
-          dataSource={displayData}
-          rowKey="id"
-          pagination={pagination}
-          loading={false}
-          style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
         />
-      </div>
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -640,6 +615,6 @@ export function ASRConfigPage() {
       >
         确定要删除 ASR 配置「{deletingItem?.name}」吗？此操作不可撤销。
       </Modal>
-    </Main>
+    </>
   )
 }

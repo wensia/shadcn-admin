@@ -50,8 +50,6 @@ import type {
   BatchImportQueryParams,
   BatchStatus,
   ImportMethod,
-} from './types'
-import {
   batchStatusLabels,
   importMethodLabels,
 } from './types'
@@ -112,7 +110,7 @@ function formatDuration(seconds?: number): string {
 
 // 状态 Tag 组件
 function StatusTag({ status }: { status: BatchStatus }) {
-  const colorMap: Record<BatchStatus, string> = {
+  const colorMap: Record<BatchStatus, 'blue' | 'green' | 'red'> = {
     processing: 'blue',
     completed: 'green',
     failed: 'red',
@@ -123,7 +121,7 @@ function StatusTag({ status }: { status: BatchStatus }) {
     failed: <IconCrossCircleStroked style={{ marginRight: 4 }} />,
   }
   return (
-    <Tag color={colorMap[status] as any} type="light">
+    <Tag color={colorMap[status]} type="light">
       {iconMap[status]}
       {batchStatusLabels[status]}
     </Tag>
@@ -197,7 +195,7 @@ export function BatchImportPage() {
     },
   })
 
-  const batchList = data?.data?.items || []
+  const batchList = useMemo<BatchImportItem[]>(() => data?.data?.items ?? [], [data?.data?.items])
   const totalCount = data?.data?.total || 0
 
   // 是否有处理中的批次
@@ -213,17 +211,6 @@ export function BatchImportPage() {
   )
 
   // 删除批次
-  const deleteMutation = useMutation({
-    mutationFn: batchImportApi.deleteBatch,
-    onSuccess: () => {
-      Toast.success('删除成功')
-      queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
-    },
-    onError: (error: Error) => {
-      showApiErrorToast(error, '删除失败')
-    },
-  })
-
   // 下载模板
   const handleDownloadTemplate = useCallback(async () => {
     try {
@@ -666,7 +653,7 @@ export function BatchImportPage() {
             columns={columns}
             dataSource={tableData}
             rowKey="id"
-            rowSelection={rowSelection as any}
+            rowSelection={rowSelection}
             pagination={false}
             scroll={{ y: scrollY }}
             empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}

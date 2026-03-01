@@ -6,7 +6,7 @@
 import { useRef, useState, useCallback } from 'react'
 import { toBlob, toPng } from 'html-to-image'
 import { Briefcase, ChevronRight, Copy, Download, Image, Loader2, Sparkles, User, Zap } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { SideSheet, Dropdown, Skeleton } from '@douyinfe/semi-ui-19'
 import { Tag } from '@douyinfe/semi-ui-19'
 import { Button as SemiButton } from '@douyinfe/semi-ui-19'

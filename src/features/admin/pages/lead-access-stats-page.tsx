@@ -5,7 +5,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   Download,
   Search,
@@ -16,10 +16,10 @@ import {
   Activity,
   Bell,
 } from 'lucide-react'
-import { Table, Button, Input, Select, Modal, Checkbox, Skeleton, Typography } from '@douyinfe/semi-ui-19'
-import { IconRefresh } from '@douyinfe/semi-icons'
+import { Table, Button, Input, Select, Modal, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { leadAccessStatsApi } from '../api'
 import { LeadAccessNotifyDialog } from '../components/lead-access-notify-dialog'
 import type {
@@ -43,10 +43,8 @@ const TIME_RANGE_OPTIONS = [
 ]
 
 // 骨架屏数据 - 在组件外部创建，避免每次渲染都创建新数组
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 const SKELETON_DATA: AdvisorAccessStatistics[] = Array.from({ length: 10 }, (_, i) => ({
-  user_id: `${SKELETON_PREFIX}${i}`,
+  user_id: `__skeleton__${i}`,
   user_name: '',
   username: '',
   campus_name: '',
@@ -93,7 +91,7 @@ export function LeadAccessStatsPage() {
     queryFn: () => leadAccessStatsApi.getAdvisorStatistics(filters),
   })
 
-  const statistics = data?.statistics || []
+  const statistics = useMemo<AdvisorAccessStatistics[]>(() => data?.statistics ?? [], [data?.statistics])
   const summary: AccessStatisticsSummary = data?.summary || {
     total_users: 0,
     active_users: 0,
@@ -145,6 +143,7 @@ export function LeadAccessStatsPage() {
       showApiErrorToast(error, '更新失败')
     },
   })
+  const { mutate: batchUpdateAccessLimits } = batchUpdateMutation
 
   // 打开单个编辑弹窗 - 使用 useCallback 缓存
   const handleEditLimit = useCallback((user: AdvisorAccessStatistics) => {
@@ -161,7 +160,7 @@ export function LeadAccessStatsPage() {
         dataIndex: 'user_name',
         render: (_text: string, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+            return <SemiSkeletonCell width={80} />
           }
           return <span className="font-medium">{record.user_name}</span>
         },
@@ -171,7 +170,7 @@ export function LeadAccessStatsPage() {
         dataIndex: 'campus_name',
         render: (_text: string, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+            return <SemiSkeletonCell width={112} />
           }
           return record.campus_name
         },
@@ -181,7 +180,7 @@ export function LeadAccessStatsPage() {
         dataIndex: 'district_name',
         render: (_text: string, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+            return <SemiSkeletonCell width={80} />
           }
           return record.district_name || '-'
         },
@@ -192,7 +191,7 @@ export function LeadAccessStatsPage() {
         sorter: (a: AdvisorAccessStatistics, b: AdvisorAccessStatistics) => (a?.view_count ?? 0) - (b?.view_count ?? 0),
         render: (_text: number, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+            return <SemiSkeletonCell width={48} />
           }
           const count = record.view_count
           return (
@@ -213,7 +212,7 @@ export function LeadAccessStatsPage() {
         sorter: (a: AdvisorAccessStatistics, b: AdvisorAccessStatistics) => (a?.total_access ?? 0) - (b?.total_access ?? 0),
         render: (_text: number, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+            return <SemiSkeletonCell width={48} />
           }
           return record.total_access
         },
@@ -223,7 +222,7 @@ export function LeadAccessStatsPage() {
         dataIndex: 'daily_limit',
         render: (_text: number, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+            return <SemiSkeletonCell width={64} />
           }
           return (
             <Button
@@ -244,7 +243,7 @@ export function LeadAccessStatsPage() {
         dataIndex: 'usage_rate',
         render: (_text: unknown, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+            return <SemiSkeletonCell width={48} />
           }
           const rate =
             record.daily_limit > 0
@@ -265,7 +264,7 @@ export function LeadAccessStatsPage() {
         dataIndex: 'remaining',
         render: (_text: unknown, record: AdvisorAccessStatistics) => {
           if (isSkeletonRow(record.user_id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+            return <SemiSkeletonCell width={48} />
           }
           const remaining = Math.max(
             0,
@@ -299,10 +298,10 @@ export function LeadAccessStatsPage() {
       setEditDialogOpen(false)
       return
     }
-    batchUpdateMutation.mutate([
+    batchUpdateAccessLimits([
       { user_id: editingUser.user_id, daily_limit: editDailyLimit },
     ])
-  }, [editingUser, editDailyLimit, batchUpdateMutation])
+  }, [editingUser, editDailyLimit, batchUpdateAccessLimits])
 
   // 打开批量编辑弹窗
   const handleOpenBatchEdit = useCallback(() => {
@@ -321,8 +320,8 @@ export function LeadAccessStatsPage() {
       user_id: row.user_id,
       daily_limit: batchDailyLimit,
     }))
-    batchUpdateMutation.mutate(updates)
-  }, [selectedRows, batchDailyLimit, batchUpdateMutation])
+    batchUpdateAccessLimits(updates)
+  }, [selectedRows, batchDailyLimit, batchUpdateAccessLimits])
 
   // 导出数据
   const handleExport = useCallback(() => {
@@ -405,16 +404,11 @@ export function LeadAccessStatsPage() {
   }), [selectedRowKeys])
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">线索查看统计</h1>
-            <Text type="tertiary" size="small">
-              监控和管理顾问访问线索的频次和限制
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="线索查看统计"
+        total={filteredData.length}
+        headerActions={
           <div className="flex items-center gap-2">
             <Button theme="outline" icon={<Bell className="h-4 w-4" />} onClick={() => setNotifyDialogOpen(true)}>
               通知设置
@@ -423,104 +417,100 @@ export function LeadAccessStatsPage() {
               {exportLoading ? '导出中...' : '导出数据'}
             </Button>
           </div>
-        </div>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8 }}>
+            {/* 统计卡片 */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="rounded-lg border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-blue-100 p-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <Text type="tertiary" size="small">总顾问数</Text>
+                    <p className="text-2xl font-bold">{summary.total_users}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-green-100 p-2">
+                    <Activity className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <Text type="tertiary" size="small">活跃顾问数</Text>
+                    <p className="text-2xl font-bold">
+                      {summary.active_users}
+                      <Text type="tertiary" size="small" className="ml-2">
+                        ({activeRate}%)
+                      </Text>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-purple-100 p-2">
+                    <Eye className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <Text type="tertiary" size="small">总查看线索数</Text>
+                    <p className="text-2xl font-bold">{summary.total_views}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg border bg-card p-6">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-orange-100 p-2">
+                    <MousePointer className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <Text type="tertiary" size="small">总访问次数</Text>
+                    <p className="text-2xl font-bold">{summary.total_access}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        {/* 统计卡片 */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="rounded-lg border bg-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <Text type="tertiary" size="small">总顾问数</Text>
-                <p className="text-2xl font-bold">{summary.total_users}</p>
-              </div>
+            {/* 筛选工具栏 */}
+            <div className="flex items-center gap-2">
+              <Select
+                value={filters.time_range || 'today'}
+                onChange={(value) => handleFilterChange('time_range', value as string)}
+                optionList={TIME_RANGE_OPTIONS}
+                style={{ width: 140 }}
+              />
+              <Input
+                prefix={<Search className="h-4 w-4" />}
+                placeholder="搜索顾问姓名..."
+                value={searchValue}
+                onChange={(v) => setSearchValue(v)}
+                style={{ width: 200 }}
+              />
+              {selectedRows.length > 0 && (
+                <Button theme="outline" onClick={handleOpenBatchEdit}>
+                  批量修改限制 ({selectedRows.length})
+                </Button>
+              )}
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-100 p-2">
-                <Activity className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <Text type="tertiary" size="small">活跃顾问数</Text>
-                <p className="text-2xl font-bold">
-                  {summary.active_users}
-                  <Text type="tertiary" size="small" className="ml-2">
-                    ({activeRate}%)
-                  </Text>
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-lg border bg-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 p-2">
-                <Eye className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <Text type="tertiary" size="small">总查看线索数</Text>
-                <p className="text-2xl font-bold">{summary.total_views}</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-lg border bg-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-orange-100 p-2">
-                <MousePointer className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <Text type="tertiary" size="small">总访问次数</Text>
-                <p className="text-2xl font-bold">{summary.total_access}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 工具栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <Select
-              value={filters.time_range || 'today'}
-              onChange={(value) => handleFilterChange('time_range', value as string)}
-              optionList={TIME_RANGE_OPTIONS}
-              style={{ width: 140 }}
-            />
-            <Input
-              prefix={<Search className="h-4 w-4" />}
-              placeholder="搜索顾问姓名..."
-              value={searchValue}
-              onChange={(v) => setSearchValue(v)}
-              style={{ width: 200 }}
-            />
-            {selectedRows.length > 0 && (
-              <Button theme="outline" onClick={handleOpenBatchEdit}>
-                批量修改限制 ({selectedRows.length})
-              </Button>
-            )}
-          </div>
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<IconRefresh />}
-            onClick={() => refetch()}
-          />
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 overflow-hidden">
+        }
+      >
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           <Table
             columns={columns}
             dataSource={tableData}
             rowKey={(record) => `${record.user_id}_${record.campus_name || ''}`}
-            rowSelection={rowSelection as any}
+            rowSelection={rowSelection}
             pagination={false}
             empty={<div className="py-6 text-center" style={{ color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
             size="middle"
           />
         </div>
-      </div>
+      </DataTableLayout>
 
       {/* 单个编辑弹窗 */}
       <Modal
@@ -613,6 +603,6 @@ export function LeadAccessStatsPage() {
         open={notifyDialogOpen}
         onOpenChange={setNotifyDialogOpen}
       />
-    </Main>
+    </>
   )
 }

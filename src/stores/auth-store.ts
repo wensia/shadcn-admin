@@ -2,7 +2,7 @@
  * 认证状态管理Store
  * 使用Zustand + localStorage持久化
  * 与Vue版本共享localStorage keys
- * 参考: frontend-vue/src/stores/auth.ts
+ * 参考: 旧版前端认证状态实现
  */
 
 import { create } from 'zustand'

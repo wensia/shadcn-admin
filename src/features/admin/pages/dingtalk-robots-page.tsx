@@ -5,14 +5,16 @@
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Bot, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Main } from '@/components/layout/main'
-import { Form, Button, Modal, Input, TextArea, Select, Switch, Table, Skeleton, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
+import { Form, Button, Modal, Input, TextArea, Select, Switch, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { IconSearch } from '@douyinfe/semi-icons'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { dingtalkRobotsApi } from '../api'
 import type { DingtalkRobot, DingtalkRobotCreate, DingtalkRobotUpdate, DingtalkSecurityType } from '../types'
 import { SECURITY_TYPE_OPTIONS } from '../types'
@@ -21,24 +23,6 @@ import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
 
-// 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
-function createSkeletonData(count: number): DingtalkRobot[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
-    name: '',
-    webhook: '',
-    security_type: 'sign' as DingtalkSecurityType,
-    supported_msg_types: [],
-    is_active: true,
-    sort_order: 0,
-    created_at: '',
-    updated_at: '',
-    created_by_id: '',
-  }))
-}
 
 export function DingtalkRobotsPage() {
   const queryClient = useQueryClient()
@@ -155,7 +139,7 @@ export function DingtalkRobotsPage() {
         width: 200,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
+            return <SemiSkeletonCell width={128} />
           }
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -176,7 +160,7 @@ export function DingtalkRobotsPage() {
         width: 100,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
+            return <SemiSkeletonCell width={56} />
           }
           return <StatusBadge isActive={record!.is_active} />
         },
@@ -187,7 +171,7 @@ export function DingtalkRobotsPage() {
         width: 120,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
+            return <SemiSkeletonCell width={64} />
           }
           return (
             <Tag>{getSecurityTypeLabel(record!.security_type)}</Tag>
@@ -200,7 +184,7 @@ export function DingtalkRobotsPage() {
         width: 160,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
+            return <SemiSkeletonCell width={128} />
           }
           return formatTime(record!.created_at)
         },
@@ -211,7 +195,7 @@ export function DingtalkRobotsPage() {
         width: 150,
         render: (_, record) => {
           if (isSkeletonRow(record!.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
+            return <SemiSkeletonCell width={96} />
           }
           return (
             <div style={{ display: 'flex', gap: 4 }}>
@@ -244,21 +228,7 @@ export function DingtalkRobotsPage() {
     []
   )
 
-  // 表格数据
-  const displayData = isLoading ? createSkeletonData(5) : (data?.items || [])
-
-  // 分页
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 打开新增对话框
   const handleCreate = () => {
@@ -390,24 +360,19 @@ export function DingtalkRobotsPage() {
   const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">钉钉机器人管理</h1>
-            <Text type="tertiary" size="small">
-              管理钉钉群机器人配置
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="钉钉机器人管理"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新增机器人
           </Button>
-        </div>
-
-        {/* 搜索栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
             <Input
               prefix={<IconSearch />}
               placeholder="搜索机器人名称..."
@@ -417,21 +382,20 @@ export function DingtalkRobotsPage() {
               showClear
               style={{ width: 250 }}
             />
-            <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <Table
+        }
+      >
+        <SemiDataTable
           columns={columns}
-          dataSource={displayData}
-          rowKey="id"
-          pagination={pagination}
-          loading={false}
-          style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
         />
-      </div>
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -588,6 +552,6 @@ export function DingtalkRobotsPage() {
           </div>
         </div>
       </Modal>
-    </Main>
+    </>
   )
 }

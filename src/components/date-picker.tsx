@@ -197,7 +197,7 @@ export function DateRangePickerSingle({
 
 /**
  * 表单用日期选择器
- * 兼容 react-hook-form，value/onChange 使用字符串格式
+ * 兼容常见表单库，value/onChange 使用字符串格式
  */
 interface FormDatePickerProps {
   /** 字符串格式的日期值 (YYYY-MM-DD) */

@@ -5,15 +5,12 @@
  */
 
 import * as React from 'react'
-import { Popover, Input, Select, Button, Toast, Spin, AutoComplete } from '@douyinfe/semi-ui-19'
-import { DatePicker } from '@douyinfe/semi-ui-19'
-import { IconCopy, IconTick, IconEdit, IconLoading, IconPlus, IconSearch } from '@douyinfe/semi-icons'
+import { Popover, Input, Select, Button, Toast, Spin, DatePicker } from '@douyinfe/semi-ui-19'
+import { IconCopy, IconTick, IconEdit, IconLoading, IconPlus } from '@douyinfe/semi-icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { copyToClipboard } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-const { TextArea } = Input
 
 // 异步 Select 配置
 interface AsyncSelectConfig {
@@ -26,6 +23,8 @@ interface AsyncSelectConfig {
   createEndpoint?: string
   createFieldName?: string
 }
+
+type AsyncSelectOptionItem = Record<string, unknown>
 
 interface InfoItemProps {
   label: string
@@ -68,7 +67,14 @@ export function InfoItem({
 
   // 异步 Select 搜索查询
   const { data: asyncOptions = [], isLoading: isLoadingOptions } = useQuery({
-    queryKey: ['async-select', asyncSelectConfig?.apiEndpoint, searchQuery],
+    queryKey: [
+      'async-select',
+      asyncSelectConfig,
+      asyncSelectConfig?.apiEndpoint,
+      searchQuery,
+      asyncSelectConfig?.searchParam,
+      asyncSelectConfig?.itemsKey,
+    ],
     queryFn: async () => {
       if (!asyncSelectConfig) return []
       const searchParam = asyncSelectConfig.searchParam || 'search'
@@ -123,7 +129,7 @@ export function InfoItem({
       await onSave(editValue)
       setIsEditing(false)
       Toast.success('保存成功')
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '保存失败')
     } finally {
       setIsSaving(false)
@@ -158,7 +164,7 @@ export function InfoItem({
         return (
           <DatePicker
             value={editValue || undefined}
-            onChange={(date, dateStr) => setEditValue(dateStr as string || '')}
+            onChange={(_date, dateStr) => setEditValue((dateStr as string) || '')}
             type="date"
             style={{ width: '100%' }}
           />
@@ -167,7 +173,7 @@ export function InfoItem({
         return (
           <DatePicker
             value={editValue || undefined}
-            onChange={(date, dateStr) => setEditValue(dateStr as string || '')}
+            onChange={(_date, dateStr) => setEditValue((dateStr as string) || '')}
             type="dateTime"
             style={{ width: '100%' }}
           />
@@ -186,9 +192,9 @@ export function InfoItem({
         if (!asyncSelectConfig) return null
         const labelKey = asyncSelectConfig.labelKey || 'name'
         const valueKey = asyncSelectConfig.valueKey || 'name'
-        const optList = asyncOptions.map((opt: any) => ({
-          label: opt[labelKey],
-          value: opt[valueKey],
+        const optList = asyncOptions.map((opt: AsyncSelectOptionItem) => ({
+          label: String(opt[labelKey] ?? ''),
+          value: String(opt[valueKey] ?? ''),
         }))
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -205,7 +211,7 @@ export function InfoItem({
               emptyContent={searchQuery ? '未找到匹配项' : '输入关键词搜索'}
             />
             {asyncSelectConfig.creatable && searchQuery && !asyncOptions.some(
-              (opt: any) => opt[labelKey]?.toLowerCase() === searchQuery.toLowerCase()
+              (opt: AsyncSelectOptionItem) => String(opt[labelKey] ?? '').toLowerCase() === searchQuery.toLowerCase()
             ) && (
               <Button
                 size="small"
@@ -219,8 +225,8 @@ export function InfoItem({
                     setEditValue(searchQuery)
                     setSearchQuery('')
                     Toast.success(`"${searchQuery}" 创建成功`)
-                  } catch (e: any) {
-                    Toast.error(e?.message || '创建失败')
+                  } catch (error: unknown) {
+                    Toast.error(error instanceof Error ? error.message : '创建失败')
                   } finally {
                     setIsCreating(false)
                   }

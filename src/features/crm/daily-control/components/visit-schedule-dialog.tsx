@@ -5,9 +5,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Modal, Button, Input, TextArea, Select, Toast, Form } from '@douyinfe/semi-ui-19'
+import { Modal, Button, Toast, Form } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconUserAdd, IconClose } from '@douyinfe/semi-icons'
-import { DatePicker } from '@douyinfe/semi-ui-19'
 import { visitScheduleApi } from '@/features/crm/lead-conversion/api'
 import { coursesApi } from '@/features/admin/api'
 import type { VisitScheduleCreate } from '@/features/crm/lead-conversion/types'
@@ -23,6 +23,23 @@ interface VisitScheduleDialogProps {
   editData?: VisitScheduleItem | null
 }
 
+interface CourseOptionItem {
+  is_active: boolean
+  name: string
+}
+
+interface VisitScheduleFormValues {
+  scheduled_at?: Date | string
+  trial_course?: string
+  trial_teacher?: string
+  remark?: string
+}
+
+type VisitScheduleCreatePayload = VisitScheduleCreate & {
+  actual_visit_at?: string
+  status?: 'visited'
+}
+
 export function VisitScheduleDialog({
   open,
   onOpenChange,
@@ -33,7 +50,7 @@ export function VisitScheduleDialog({
   const queryClient = useQueryClient()
   const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
   const [leadSelectOpen, setLeadSelectOpen] = useState(false)
-  const formRef = useRef<any>(null)
+  const formRef = useRef<FormApi | null>(null)
 
   const isScheduled = defaultStatus === 'scheduled'
   const isEditMode = !!editData
@@ -47,7 +64,7 @@ export function VisitScheduleDialog({
     queryFn: () => coursesApi.getCourses(),
     staleTime: 5 * 60 * 1000,
   })
-  const activeCourses = courses.filter((c: any) => c.is_active)
+  const activeCourses = (courses as CourseOptionItem[]).filter((course) => course.is_active)
 
   const getDefaultScheduledAt = () => {
     const date = new Date()
@@ -57,51 +74,51 @@ export function VisitScheduleDialog({
 
   // 重置表单
   useEffect(() => {
-    if (open) {
-      if (editData) {
-        const scheduledAt = editData.visit_date && editData.visit_time
-          ? new Date(`${editData.visit_date}T${editData.visit_time}`)
-          : editData.visit_date
-            ? new Date(`${editData.visit_date}T10:00:00`)
-            : getDefaultScheduledAt()
-        setSelectedLead({
+    if (!open) return
+
+    const nextSelectedLead = editData
+      ? {
           id: editData.lead_id,
           child_name: editData.child_name,
           parent_phone: editData.parent_phone || '',
-        })
-        // 延迟设置表单值
-        setTimeout(() => {
-          formRef.current?.setValues({
-            scheduled_at: scheduledAt,
-            trial_course: editData.course_names?.[0] || '',
-            trial_teacher: '',
-            remark: editData.remark || '',
-          })
-        }, 0)
-      } else {
-        setSelectedLead(null)
-        setTimeout(() => {
-          formRef.current?.setValues({
-            scheduled_at: getDefaultScheduledAt(),
-            trial_course: '',
-            trial_teacher: '',
-            remark: '',
-          })
-        }, 0)
-      }
-    }
+        }
+      : null
+    const nextValues: VisitScheduleFormValues = editData
+      ? {
+          scheduled_at: editData.visit_date && editData.visit_time
+            ? new Date(`${editData.visit_date}T${editData.visit_time}`)
+            : editData.visit_date
+              ? new Date(`${editData.visit_date}T10:00:00`)
+              : getDefaultScheduledAt(),
+          trial_course: editData.course_names?.[0] || '',
+          trial_teacher: '',
+          remark: editData.remark || '',
+        }
+      : {
+          scheduled_at: getDefaultScheduledAt(),
+          trial_course: '',
+          trial_teacher: '',
+          remark: '',
+        }
+
+    const frameId = requestAnimationFrame(() => {
+      setSelectedLead(nextSelectedLead)
+      formRef.current?.setValues(nextValues)
+    })
+
+    return () => cancelAnimationFrame(frameId)
   }, [open, editData])
 
   // 创建
   const createMutation = useMutation({
-    mutationFn: (data: VisitScheduleCreate) => visitScheduleApi.createVisitSchedule(data),
+    mutationFn: (data: VisitScheduleCreatePayload) => visitScheduleApi.createVisitSchedule(data),
     onSuccess: () => {
       Toast.success(isScheduled ? '诺到记录创建成功' : '到访记录创建成功')
       queryClient.invalidateQueries({ queryKey: ['visit-schedules'] })
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: any) => { showApiErrorToast(error, '创建失败') },
+    onError: (error: unknown) => { showApiErrorToast(error, '创建失败') },
   })
 
   // 更新
@@ -113,7 +130,7 @@ export function VisitScheduleDialog({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: any) => { showApiErrorToast(error, '更新失败') },
+    onError: (error: unknown) => { showApiErrorToast(error, '更新失败') },
   })
 
   const handleSelectLead = (lead: SelectedLead) => {
@@ -125,7 +142,7 @@ export function VisitScheduleDialog({
   }
 
   const handleSubmit = () => {
-    const values = formRef.current?.getValues()
+    const values = formRef.current?.getValues() as VisitScheduleFormValues | undefined
     if (!values) return
 
     if (!selectedLead && !isEditMode) {
@@ -151,7 +168,7 @@ export function VisitScheduleDialog({
       }
       updateMutation.mutate(updateData)
     } else {
-      const data: VisitScheduleCreate = {
+      const data: VisitScheduleCreatePayload = {
         lead_id: selectedLead!.id,
         scheduled_at: scheduledAtStr,
         trial_course: values.trial_course || undefined,
@@ -160,8 +177,8 @@ export function VisitScheduleDialog({
       }
 
       if (!isScheduled) {
-        ;(data as any).actual_visit_at = scheduledAtStr
-        ;(data as any).status = 'visited'
+        data.actual_visit_at = scheduledAtStr
+        data.status = 'visited'
       }
 
       createMutation.mutate(data)
@@ -170,7 +187,7 @@ export function VisitScheduleDialog({
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
-  const courseOptions = activeCourses.map((course: any) => ({
+  const courseOptions = activeCourses.map((course) => ({
     value: course.name,
     label: course.name,
   }))

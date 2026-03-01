@@ -2,16 +2,18 @@
  * 员工身份管理页面
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Pencil, Trash2, UserCog } from 'lucide-react'
-import { Main } from '@/components/layout/main'
-import { Button, Form, Input, Modal, Select, Switch, Table, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
+import { Button, Form, Input, Modal, Select, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { IconSearch } from '@douyinfe/semi-icons'
 import { adminApi } from '../api'
 import type {
   EmployeeIdentityItem,
@@ -27,10 +29,17 @@ import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
 
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
 const PAGE_SIZE = 20
+
+interface IdentityFormValues {
+  employee_id?: string
+  campus_id?: string
+  department_id?: string
+  position_id?: string
+  is_active?: boolean
+  can_manage_leads?: boolean
+  can_access_pool?: boolean
+}
 
 export function IdentitiesPage() {
   useDocumentTitle('员工身份管理')
@@ -111,10 +120,14 @@ export function IdentitiesPage() {
     enabled: !!formCampusId,
   })
 
-  const employees: EmployeeItem[] = employeesData?.items || []
-  const campuses: CampusItem[] = campusesData?.items || []
-  const positions: PositionItem[] = positionsData?.items || []
-  const campusDepartments: CampusDepartmentItem[] = campusDepartmentsData?.items || []
+  const employees: EmployeeItem[] = useMemo(() => employeesData?.items ?? [], [employeesData?.items])
+  const campuses: CampusItem[] = useMemo(() => campusesData?.items ?? [], [campusesData?.items])
+  const positions: PositionItem[] = useMemo(() => positionsData?.items ?? [], [positionsData?.items])
+  const campusDepartments: CampusDepartmentItem[] = useMemo(
+    () => campusDepartmentsData?.items ?? [],
+    [campusDepartmentsData?.items]
+  )
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 创建身份
   const createMutation = useMutation({
@@ -159,147 +172,93 @@ export function IdentitiesPage() {
   })
 
   // 表格列定义
-  const columns: ColumnProps<EmployeeIdentityItem>[] = useMemo(
-    () => [
-      {
-        title: '员工姓名',
-        dataIndex: 'employee_name',
-        render: (_: unknown, record: EmployeeIdentityItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
-          }
-          return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <UserCog className="h-4 w-4 text-blue-500" />
-              <Text strong>{record.employee_name}</Text>
-            </div>
-          )
-        },
+  const columns: ColumnProps<EmployeeIdentityItem>[] = [
+    {
+      title: '员工姓名',
+      dataIndex: 'employee_name',
+      render: (_: unknown, record: EmployeeIdentityItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <UserCog className="h-4 w-4 text-blue-500" />
+            <Text strong>{record.employee_name}</Text>
+          </div>
+        )
       },
-      {
-        title: '所属组织',
-        dataIndex: 'org_scope',
-        render: (_: unknown, record: EmployeeIdentityItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
-          }
-          const scope = record.scope_type || 'campus'
-          if (scope === 'region' && record.region_name) return `大区:${record.region_name}`
-          if (scope === 'district' && record.district_name) return `地区:${record.district_name}`
-          if (scope === 'area' && record.area_name) return `片区:${record.area_name}`
-          return record.campus_name || '-'
-        },
+    },
+    {
+      title: '所属组织',
+      dataIndex: 'org_scope',
+      render: (_: unknown, record: EmployeeIdentityItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        const scope = record.scope_type || 'campus'
+        if (scope === 'region' && record.region_name) return `大区:${record.region_name}`
+        if (scope === 'district' && record.district_name) return `地区:${record.district_name}`
+        if (scope === 'area' && record.area_name) return `片区:${record.area_name}`
+        return record.campus_name || '-'
       },
-      {
-        title: '部门',
-        dataIndex: 'department_name',
-        render: (_: unknown, record: EmployeeIdentityItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
-          }
-          return record.department_name || '-'
-        },
+    },
+    {
+      title: '部门',
+      dataIndex: 'department_name',
+      render: (_: unknown, record: EmployeeIdentityItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return record.department_name || '-'
       },
-      {
-        title: '职位',
-        dataIndex: 'position_name',
-        render: (_: unknown, record: EmployeeIdentityItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
-          }
-          return record.position_name || '-'
-        },
+    },
+    {
+      title: '职位',
+      dataIndex: 'position_name',
+      render: (_: unknown, record: EmployeeIdentityItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return record.position_name || '-'
       },
-      {
-        title: '状态',
-        dataIndex: 'is_active',
-        width: 100,
-        render: (_: unknown, record: EmployeeIdentityItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
-          }
-          return <StatusBadge isActive={record.is_active} />
-        },
+    },
+    {
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 100,
+      render: (_: unknown, record: EmployeeIdentityItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
+        return <StatusBadge isActive={record.is_active} />
       },
-      {
-        title: '创建时间',
-        dataIndex: 'created_at',
-        width: 180,
-        render: (_: unknown, record: EmployeeIdentityItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
-          }
-          return new Date(record.created_at).toLocaleString('zh-CN')
-        },
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      width: 180,
+      render: (_: unknown, record: EmployeeIdentityItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+        return new Date(record.created_at).toLocaleString('zh-CN')
       },
-      {
-        title: '操作',
-        dataIndex: 'id',
-        width: 120,
-        render: (_: unknown, record: EmployeeIdentityItem) => {
-          if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
-          }
-          return (
-            <div style={{ display: 'flex', gap: 4 }}>
-              <Button
-                theme="borderless"
-                type="tertiary"
-                icon={<Pencil className="h-4 w-4" />}
-                size="small"
-                onClick={() => handleEdit(record)}
-              />
-              <Button
-                theme="borderless"
-                type="danger"
-                icon={<Trash2 className="h-4 w-4" />}
-                size="small"
-                onClick={() => handleDeleteClick(record)}
-              />
-            </div>
-          )
-        },
+    },
+    {
+      title: '操作',
+      dataIndex: 'id',
+      width: 120,
+      render: (_: unknown, record: EmployeeIdentityItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<Pencil className="h-4 w-4" />}
+              size="small"
+              onClick={() => handleEdit(record)}
+            />
+            <Button
+              theme="borderless"
+              type="danger"
+              icon={<Trash2 className="h-4 w-4" />}
+              size="small"
+              onClick={() => handleDeleteClick(record)}
+            />
+          </div>
+        )
       },
-    ],
-    []
-  )
-
-  // 骨架屏数据
-  const skeletonData: EmployeeIdentityItem[] = useMemo(
-    () =>
-      Array.from({ length: 5 }).map((_, i) => ({
-        id: `${SKELETON_PREFIX}${i}`,
-        employee_id: '',
-        employee_name: '',
-        employee_username: '',
-        campus_id: '',
-        campus_name: '',
-        department_id: '',
-        department_name: '',
-        position_id: '',
-        position_name: '',
-        position_level: '',
-        is_primary: false,
-        is_active: true,
-        created_at: '',
-      })),
-    []
-  )
-
-  const displayData = isLoading ? skeletonData : (data?.items || [])
-
-  // 分页配置
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
+    },
+  ]
 
   // 处理创建
   const handleCreate = () => {
@@ -344,15 +303,15 @@ export function IdentitiesPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (values: Record<string, unknown>) => {
+  const handleSubmit = (values: IdentityFormValues) => {
     if (editingItem) {
       const updateData: EmployeeIdentityUpdate = {
-        campus_id: values.campus_id as string,
-        department_id: values.department_id as string,
-        position_id: values.position_id as string,
-        is_active: values.is_active as boolean,
-        can_manage_leads: values.can_manage_leads as boolean,
-        can_access_pool: values.can_access_pool as boolean,
+        campus_id: values.campus_id || '',
+        department_id: values.department_id || '',
+        position_id: values.position_id || '',
+        is_active: !!values.is_active,
+        can_manage_leads: !!values.can_manage_leads,
+        can_access_pool: !!values.can_access_pool,
       }
       updateMutation.mutate({
         id: editingItem.id,
@@ -360,13 +319,13 @@ export function IdentitiesPage() {
       })
     } else {
       const createData: EmployeeIdentityCreate = {
-        employee_id: values.employee_id as string,
-        campus_id: values.campus_id as string,
-        department_id: values.department_id as string,
-        position_id: values.position_id as string,
-        is_active: values.is_active as boolean,
-        can_manage_leads: values.can_manage_leads as boolean,
-        can_access_pool: values.can_access_pool as boolean,
+        employee_id: values.employee_id || '',
+        campus_id: values.campus_id || '',
+        department_id: values.department_id || '',
+        position_id: values.position_id || '',
+        is_active: !!values.is_active,
+        can_manage_leads: !!values.can_manage_leads,
+        can_access_pool: !!values.can_access_pool,
       }
       createMutation.mutate(createData)
     }
@@ -435,24 +394,19 @@ export function IdentitiesPage() {
   const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">员工身份管理</h1>
-            <Text type="tertiary" size="small">
-              管理员工在各校区、部门的身份配置及权限
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="员工身份管理"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" onClick={handleCreate} icon={<Plus className="h-4 w-4" />}>
             新建身份
           </Button>
-        </div>
-
-        {/* 工具栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
             <Input
               prefix={<IconSearch />}
               placeholder="搜索员工姓名..."
@@ -478,21 +432,19 @@ export function IdentitiesPage() {
               搜索
             </Button>
           </div>
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 overflow-hidden">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={pagination}
-            loading={false}
-            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-          />
-        </div>
-      </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        />
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -589,6 +541,6 @@ export function IdentitiesPage() {
       >
         确定要删除员工"{deletingItem?.employee_name}"在"{deletingItem?.campus_name} - {deletingItem?.department_name}"的身份吗？此操作不可撤销。
       </Modal>
-    </Main>
+    </>
   )
 }

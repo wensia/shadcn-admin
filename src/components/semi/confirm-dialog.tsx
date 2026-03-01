@@ -1,6 +1,6 @@
 /**
  * Semi Design 确认对话框组件
- * 基于 Modal 的声明式确认对话框封装，替代 shadcn AlertDialog
+ * 基于 Modal 的声明式确认对话框封装，替代旧对话框实现
  */
 
 import { Modal, Button } from '@douyinfe/semi-ui-19'

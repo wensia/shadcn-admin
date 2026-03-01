@@ -3,7 +3,7 @@
  * Modal 替代 Dialog/AlertDialog
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Modal,
@@ -20,8 +20,7 @@ import { IconSearch, IconRefresh, IconTick } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { leadsApi, employeeApi, type EmployeeListItem } from '../api'
 import { apiClient } from '@/lib/api/client'
-import type { LeadStatus } from '../types'
-import { leadStatusLabels } from '../types'
+import { leadStatusLabels, type LeadStatus } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
@@ -46,6 +45,18 @@ export function BatchAssignDialog({
   const [selectedCampus, setSelectedCampus] = useState('')
   const [page, setPage] = useState(1)
   const pageSize = 5
+
+  const resetAssignDialog = useCallback(() => {
+    setSelectedAdvisor(null)
+    setSearchText('')
+    setSelectedCampus('')
+    setPage(1)
+  }, [])
+
+  const handleAssignDialogClose = useCallback(() => {
+    resetAssignDialog()
+    onOpenChange(false)
+  }, [onOpenChange, resetAssignDialog])
 
   // 获取全部校区列表（用于筛选顾问，不限当前用户权限）
   const { data: campuses = [] } = useQuery({
@@ -74,17 +85,6 @@ export function BatchAssignDialog({
     enabled: open,
   })
 
-  useEffect(() => {
-    if (!open) {
-      setSelectedAdvisor(null)
-      setSearchText('')
-      setSelectedCampus('')
-      setPage(1)
-    }
-  }, [open])
-
-  useEffect(() => { setPage(1) }, [searchText, selectedCampus])
-
   const assignMutation = useMutation({
     mutationFn: async (data: { lead_ids: string[]; advisor_id: string }) => {
       const response = await leadsApi.batchAssignLeads(data)
@@ -94,9 +94,9 @@ export function BatchAssignDialog({
       Toast.success({ content: `成功分配${selectedLeadIds.length}条线索` })
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       onSuccess()
-      onOpenChange(false)
+      handleAssignDialogClose()
     },
-    onError: (error: any) => showApiErrorToast(error, '批量分配失败'),
+    onError: (error: unknown) => showApiErrorToast(error, '批量分配失败'),
   })
 
   const handleSubmit = () => {
@@ -208,7 +208,7 @@ export function BatchAssignDialog({
     <Modal
       title="选择课程顾问"
       visible={open}
-      onCancel={() => onOpenChange(false)}
+      onCancel={handleAssignDialogClose}
       width={900}
       bodyStyle={{ padding: 0 }}
       footer={
@@ -222,7 +222,7 @@ export function BatchAssignDialog({
             <Button size="small" disabled={page >= Math.ceil((advisorData?.total || 0) / pageSize)} onClick={() => setPage((p) => p + 1)}>下一页</Button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Button onClick={() => onOpenChange(false)}>取消</Button>
+            <Button onClick={handleAssignDialogClose}>取消</Button>
             <Button
               theme="solid"
               onClick={handleSubmit}
@@ -247,7 +247,10 @@ export function BatchAssignDialog({
             <Input
               prefix={<IconSearch />}
               value={searchText}
-              onChange={(v) => setSearchText(v)}
+              onChange={(v) => {
+                setSearchText(v)
+                setPage(1)
+              }}
               placeholder="输入姓名或用户名搜索"
               style={{ width: 200 }}
             />
@@ -256,7 +259,10 @@ export function BatchAssignDialog({
             <Text type="tertiary" style={{ fontSize: 13 }}>校区</Text>
             <Select
               value={selectedCampus}
-              onChange={(v) => setSelectedCampus(v as string)}
+              onChange={(v) => {
+                setSelectedCampus(v as string)
+                setPage(1)
+              }}
               placeholder="全部校区"
               style={{ width: 150 }}
               showClear
@@ -271,7 +277,10 @@ export function BatchAssignDialog({
           <Button
             icon={<IconRefresh />}
             theme="borderless"
-            onClick={() => { setSearchText(''); setSelectedCampus(''); setPage(1); refetch() }}
+            onClick={() => {
+              resetAssignDialog()
+              refetch()
+            }}
             title="刷新"
           />
         </div>
@@ -336,7 +345,7 @@ export function BatchReleaseDialog({
       setReason('')
       setRemark('')
     },
-    onError: (error: any) => showApiErrorToast(error, '批量释放失败'),
+    onError: (error: unknown) => showApiErrorToast(error, '批量释放失败'),
   })
 
   const handleSubmit = () => {
@@ -436,7 +445,7 @@ export function BatchUpdateStatusDialog({
       onOpenChange(false)
       setSelectedStatus('')
     },
-    onError: (error: any) => showApiErrorToast(error, '批量修改状态失败'),
+    onError: (error: unknown) => showApiErrorToast(error, '批量修改状态失败'),
   })
 
   const handleSubmit = () => {
@@ -521,7 +530,7 @@ export function BatchDeleteDialog({
       onSuccess()
       onOpenChange(false)
     },
-    onError: (error: any) => showApiErrorToast(error, '批量删除失败'),
+    onError: (error: unknown) => showApiErrorToast(error, '批量删除失败'),
   })
 
   return (

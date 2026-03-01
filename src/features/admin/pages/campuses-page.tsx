@@ -5,25 +5,30 @@
 import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Pencil, Trash2, Building2 } from 'lucide-react'
-import { Main } from '@/components/layout/main'
-import { Button, Form, Input, Modal, Select, Switch, Table, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import { Button, Form, Input, Modal, Select, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { IconSearch } from '@douyinfe/semi-icons'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi } from '../api'
-import type { CampusItem, CampusCreate, CampusUpdate } from '../types'
+import type { AreaItem, CampusItem, CampusCreate, CampusUpdate } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
-const { TextArea } = Input
 
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
-const PAGE_SIZE = 20
+interface CampusFormValues extends CampusCreate {
+  address?: string
+  contact_phone?: string
+  description?: string
+  sort_order?: number
+  is_active?: boolean
+  is_area_office?: boolean
+}
 
 export function CampusesPage() {
   useDocumentTitle('校区管理')
@@ -32,7 +37,7 @@ export function CampusesPage() {
 
   // 状态管理
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [areaFilter, setAreaFilter] = useState<string>('all')
@@ -72,7 +77,7 @@ export function CampusesPage() {
     },
   })
 
-  const areas = areasData?.items || []
+  const areas = useMemo<AreaItem[]>(() => areasData?.items ?? [], [areasData?.items])
 
   // 创建校区
   const createMutation = useMutation({
@@ -117,14 +122,13 @@ export function CampusesPage() {
   })
 
   // 表格列定义
-  const columns: ColumnProps<CampusItem>[] = useMemo(
-    () => [
+  const columns: ColumnProps<CampusItem>[] = [
       {
         title: '校区名称',
         dataIndex: 'name',
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
+            return <SemiSkeletonCell width={96} />
           }
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -139,9 +143,9 @@ export function CampusesPage() {
         dataIndex: 'area_name',
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
+            return <SemiSkeletonCell width={80} />
           }
-          return record.area?.name || '-'
+          return record.area_name || '-'
         },
       },
       {
@@ -149,7 +153,7 @@ export function CampusesPage() {
         dataIndex: 'is_area_office',
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
+            return <SemiSkeletonCell width={56} />
           }
           return record.is_area_office ? (
             <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
@@ -165,7 +169,7 @@ export function CampusesPage() {
         dataIndex: 'address',
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 160, height: 16 }} loading />
+            return <SemiSkeletonCell width={160} />
           }
           const address = record.address
           if (!address) return '-'
@@ -181,7 +185,7 @@ export function CampusesPage() {
         dataIndex: 'contact_phone',
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
+            return <SemiSkeletonCell width={96} />
           }
           return record.contact_phone || '-'
         },
@@ -192,7 +196,7 @@ export function CampusesPage() {
         width: 80,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
+            return <SemiSkeletonCell width={32} />
           }
           return record.sort_order
         },
@@ -203,7 +207,7 @@ export function CampusesPage() {
         width: 100,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
+            return <SemiSkeletonCell width={56} />
           }
           return <StatusBadge isActive={record.is_active} />
         },
@@ -214,7 +218,7 @@ export function CampusesPage() {
         width: 180,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
+            return <SemiSkeletonCell width={112} />
           }
           return new Date(record.created_at).toLocaleString('zh-CN')
         },
@@ -225,7 +229,7 @@ export function CampusesPage() {
         width: 120,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
+            return <SemiSkeletonCell width={64} />
           }
           return (
             <div style={{ display: 'flex', gap: 4 }}>
@@ -247,43 +251,9 @@ export function CampusesPage() {
           )
         },
       },
-    ],
-    []
-  )
+    ]
 
-  // 骨架屏数据
-  const skeletonData: CampusItem[] = useMemo(
-    () =>
-      Array.from({ length: 5 }).map((_, i) => ({
-        id: `${SKELETON_PREFIX}${i}`,
-        area_id: '',
-        name: '',
-        address: '',
-        contact_phone: '',
-        description: '',
-        sort_order: 0,
-        is_active: true,
-        is_area_office: false,
-        created_at: '',
-        updated_at: '',
-      })),
-    []
-  )
-
-  const displayData = isLoading ? skeletonData : (data?.items || [])
-
-  // 分页配置
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 处理创建
   const handleCreate = () => {
@@ -327,14 +297,14 @@ export function CampusesPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (values: Record<string, unknown>) => {
+  const handleSubmit = (values: CampusFormValues) => {
     if (editingItem) {
       updateMutation.mutate({
         id: editingItem.id,
         data: values as CampusUpdate,
       })
     } else {
-      createMutation.mutate(values as CampusCreate)
+      createMutation.mutate(values)
     }
   }
 
@@ -361,7 +331,7 @@ export function CampusesPage() {
   const areaFormOptions = useMemo(() =>
     areas.map((area) => ({
       value: area.id,
-      label: area.name + (area.district ? ` (${area.district.name})` : ''),
+      label: area.name + (area.district_name ? ` (${area.district_name})` : ''),
     })),
     [areas]
   )
@@ -369,24 +339,19 @@ export function CampusesPage() {
   const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">校区管理</h1>
-            <Text type="tertiary" size="small">
-              管理系统中的校区信息，校区是业务开展的基本单元
-            </Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="校区管理"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" onClick={handleCreate} icon={<Plus className="h-4 w-4" />}>
             新建校区
           </Button>
-        </div>
-
-        {/* 工具栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
             <Input
               prefix={<IconSearch />}
               placeholder="搜索校区名称..."
@@ -412,21 +377,19 @@ export function CampusesPage() {
               搜索
             </Button>
           </div>
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 overflow-hidden">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={pagination}
-            loading={false}
-            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-          />
-        </div>
-      </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        />
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -522,6 +485,6 @@ export function CampusesPage() {
         确定要删除校区"{deletingItem?.name}"吗？此操作不可撤销。
         如果该校区下存在员工或部门配置，则无法删除。
       </Modal>
-    </Main>
+    </>
   )
 }

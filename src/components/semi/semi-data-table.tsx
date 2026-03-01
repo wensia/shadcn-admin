@@ -32,6 +32,8 @@ interface SemiDataTableProps<T extends { id: string }> {
   emptyText?: ReactNode
   /** 骨架屏数据工厂函数 */
   skeletonFactory?: (index: number) => Omit<T, 'id'>
+  /** 行 className */
+  rowClassName?: (record: T, index: number) => string
 }
 
 export function SemiDataTable<T extends { id: string }>({
@@ -48,25 +50,26 @@ export function SemiDataTable<T extends { id: string }>({
   rowSelection,
   emptyText = '暂无数据',
   skeletonFactory,
+  rowClassName,
 }: SemiDataTableProps<T>) {
   const { wrapperRef, scrollY } = useTableScroll()
+  const externalSelectedRowKeys = rowSelection?.selectedRowKeys
   const [internalSelectedKeys, setInternalSelectedKeys] = useState<(string | number)[]>(
-    rowSelection?.selectedRowKeys ?? []
+    externalSelectedRowKeys ?? []
   )
+  const currentSelectedKeys = externalSelectedRowKeys ?? internalSelectedKeys
 
   // 使用 ref 持有最新的回调，避免对象引用变化触发 Semi Base.componentDidUpdate 无限循环
   const rowSelectionRef = useRef(rowSelection)
-  rowSelectionRef.current = rowSelection
-
   const onRowClickRef = useRef(onRowClick)
-  onRowClickRef.current = onRowClick
 
-  // 同步外部 selectedRowKeys
   useEffect(() => {
-    if (rowSelection) {
-      setInternalSelectedKeys(rowSelection.selectedRowKeys)
-    }
-  }, [rowSelection?.selectedRowKeys])
+    rowSelectionRef.current = rowSelection
+  }, [rowSelection])
+
+  useEffect(() => {
+    onRowClickRef.current = onRowClick
+  }, [onRowClick])
 
   // 数据/页码变化时清空选中（仅在有选中项时才触发，防止空数组引用变化导致无限循环）
   useEffect(() => {
@@ -95,18 +98,22 @@ export function SemiDataTable<T extends { id: string }>({
   }, [])
 
   // 稳定的 rowSelection 对象
-  const hasRowSelection = !isLoading && !!rowSelection
+  // ⚠️ 始终提供 rowSelection（当 prop 存在时），避免 isLoading 切换导致
+  //    rowSelection 从 undefined → object 的结构性变化。Semi Table 检测到
+  //    此变化会重建列结构（添加 checkbox 列）并重新挂载 BaseRow，
+  //    导致 customRowProps 缓存失效 → 首次点击 onRow.onClick 不触发。
+  const hasRowSelection = !!rowSelection
   const selectionFixed = rowSelection?.fixed
   const selectionWidth = rowSelection?.width
   const tableRowSelection: RowSelection<T> | undefined = useMemo(() => {
     if (!hasRowSelection) return undefined
     return {
-      selectedRowKeys: internalSelectedKeys,
+      selectedRowKeys: currentSelectedKeys,
       onChange: stableSelectionChange,
       fixed: selectionFixed as 'left' | undefined,
       width: selectionWidth,
     }
-  }, [hasRowSelection, internalSelectedKeys, stableSelectionChange, selectionFixed, selectionWidth])
+  }, [currentSelectedKeys, hasRowSelection, stableSelectionChange, selectionFixed, selectionWidth])
 
   // 稳定的 onRow 回调
   const handleRow = useCallback((record: T | undefined) => ({
@@ -162,16 +169,17 @@ export function SemiDataTable<T extends { id: string }>({
           onRow={handleRow}
           pagination={false}
           empty={emptyContent}
+          rowClassName={rowClassName}
         />
       </div>
 
-      <SemiTablePagination
+        <SemiTablePagination
         total={total}
         page={page}
         pageSize={pageSize}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
-        selectedCount={isLoading ? 0 : internalSelectedKeys.length}
+        selectedCount={isLoading ? 0 : currentSelectedKeys.length}
       />
     </div>
   )

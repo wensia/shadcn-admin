@@ -1,16 +1,16 @@
-# CRM Leads页面 - shadcn-admin重构完成报告
+# CRM Leads 页面重构完成报告
 
 ## 项目概述
 
-本项目使用shadcn-admin框架重构了CRM线索管理页面(/crm/leads/),完整实现了Mira风格的密集型设计,并在Vue版本基础上进行了性能和交互优化。
+本项目在 `shadcn-admin` 中重构了 CRM 线索管理页面（`/crm/leads`），完整实现了 Mira 风格的密集型设计，并在 Vue 版本基础上进行了性能和交互优化。
 
 ## 技术栈
 
 - **框架**: React 18 + TypeScript
-- **UI库**: shadcn/ui (Radix UI + Tailwind CSS)
+- **UI库**: Semi Design (`@douyinfe/semi-ui-19`)
 - **数据管理**: TanStack Query (React Query)
-- **表格**: TanStack Table + TanStack Virtual
-- **表单**: React Hook Form + Zod
+- **表格**: SemiDataTable + Semi Table
+- **表单**: Semi Form + Zod
 - **路由**: TanStack Router
 - **样式**: Tailwind CSS (Mira风格)
 
@@ -59,7 +59,7 @@
 
 #### 5. LeadFormDialog创建/编辑表单
 - 6个表单分组(儿童、家长、备用联系人、地址、线索属性)
-- React Hook Form表单管理
+- Semi Form 表单管理
 - Zod schema验证
 - 手机号重复检查
 - 动态来源渠道字段
@@ -182,8 +182,8 @@ shadcn-admin/src/features/crm/leads/
 ```
 
 **新增文件**:
-- `shadcn-admin/src/components/data-table/simple-pagination.tsx` (约200行)
-- `shadcn-admin/src/hooks/use-debounced-value.ts` (约20行)
+- `shadcn-admin/src/components/semi/table-pagination.tsx`
+- `shadcn-admin/src/hooks/use-debounced-value.ts`
 
 **总代码量**: 约2,772行纯新增代码
 
@@ -217,7 +217,7 @@ npm install
 npm run dev
 ```
 
-访问: `http://localhost:5173/crm/leads`
+访问: `http://localhost:3457/crm/leads`
 
 ### 开发调试
 
@@ -349,7 +349,7 @@ npm run build
 - **Mira风格总结**: `MIRA_STYLE_SUMMARY.md` - 详细的Mira风格应用规范
 - **测试和优化**: `TESTING_AND_OPTIMIZATION.md` - 测试清单和优化建议
 - **API文档**: 参考后端文档
-- **shadcn/ui文档**: https://ui.shadcn.com
+- **Semi Design 文档**: https://semi.design/zh-CN/
 
 ## 贡献指南
 

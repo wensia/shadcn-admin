@@ -5,21 +5,21 @@
 import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Share2, Filter, X, Settings2, Copy, Link, Bot, Bell } from 'lucide-react'
-import { Table, Button, Input, Select, Modal, Form, Skeleton, Typography, Switch, Tag, Checkbox as SemiCheckbox } from '@douyinfe/semi-ui-19'
+import { toast } from '@/lib/toast'
+import { Plus, Pencil, Trash2, Share2, Filter, X, Settings2, Copy, Link, Bot, Bell, UserPlus } from 'lucide-react'
+import { Button, Input, Select, Modal, Form, Tabs, TabPane, Typography, Checkbox as SemiCheckbox } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
-import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import { IconSearch } from '@douyinfe/semi-icons'
 
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import adminApi, { sourceChannelApi, dingtalkRobotsApi } from '../api'
 import type { SourceChannel, DingtalkRobot } from '../types'
 import { StatusBadge, SourceChannelCategoryBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
-import { UserPlus } from 'lucide-react'
 
 const { Text } = Typography
 
@@ -55,27 +55,58 @@ const statusFilterOptions = [
   { value: 'inactive', label: '已停用' },
 ]
 
-// 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-function createSkeletonData(count: number): SourceChannel[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
-    name: '',
-    category: 'online' as const,
-    is_active: true,
-    sort_order: 0,
-  }))
+type ChannelCategoryValue = (typeof CHANNEL_CATEGORIES)[number]['value']
+type ExtraFieldType = (typeof FIELD_TYPE_OPTIONS)[number]['value']
+
+interface SourceChannelDingtalkNotifyConfig {
+  enabled: boolean
+  robot_id: string | null
+  notify_on_submit: boolean
+  notify_on_collision: boolean
+  notify_on_followup?: boolean
 }
+
+type SourceChannelConfig = Omit<NonNullable<SourceChannel['channel_config']>, 'dingtalk_notify'> & {
+  dingtalk_notify?: SourceChannelDingtalkNotifyConfig
+}
+
+type SubmitTokenInfo = NonNullable<SourceChannelConfig['submit_tokens']>[string]
 
 // 额外字段类型
 interface ExtraFieldItem {
   field_name: string
   field_label: string
-  field_type: string
+  field_type: ExtraFieldType
   required: boolean
   placeholder?: string
   options?: Array<{ label: string; value: string }>
+}
+
+interface SourceChannelFormValues {
+  name: string
+  category: ChannelCategoryValue
+  description?: string
+  sort_order?: number
+  is_active: boolean
+  'channel_config.submit_campus_id'?: string
+  'channel_config.dingtalk_notify.enabled'?: boolean
+  'channel_config.dingtalk_notify.robot_id'?: string
+  'channel_config.dingtalk_notify.notify_on_submit'?: boolean
+  'channel_config.dingtalk_notify.notify_on_collision'?: boolean
+  'channel_config.dingtalk_notify.notify_on_followup'?: boolean
+}
+
+interface SourceChannelSubmitData {
+  name: string
+  category: ChannelCategoryValue
+  description?: string
+  sort_order?: number
+  is_active: boolean
+  extra_fields: ExtraFieldItem[]
+  channel_config: {
+    submit_campus_id?: string
+    dingtalk_notify: SourceChannelDingtalkNotifyConfig
+  }
 }
 
 const PAGE_SIZE = 20
@@ -87,6 +118,7 @@ export function SourceChannelsPage() {
 
   // 状态管理
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -100,11 +132,11 @@ export function SourceChannelsPage() {
 
   // 获取来源渠道列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-source-channels', page, PAGE_SIZE, searchValue, statusFilter, categoryFilter],
+    queryKey: ['admin-source-channels', page, pageSize, searchValue, statusFilter, categoryFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = {
         page,
-        size: PAGE_SIZE,
+        size: pageSize,
       }
       if (searchValue) params.search = searchValue
       if (statusFilter !== 'all') params.is_active = statusFilter === 'active'
@@ -112,6 +144,8 @@ export function SourceChannelsPage() {
       return sourceChannelApi.getChannelsPaginated(params)
     },
   })
+
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 获取校区列表（快速录入配置需要）
   const { data: campuses = [] } = useQuery({
@@ -171,7 +205,7 @@ export function SourceChannelsPage() {
 
   // 创建来源渠道
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, any>) => sourceChannelApi.createChannel(data),
+    mutationFn: (data: SourceChannelSubmitData) => sourceChannelApi.createChannel(data),
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
@@ -184,7 +218,7 @@ export function SourceChannelsPage() {
 
   // 更新来源渠道
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
+    mutationFn: ({ id, data }: { id: string; data: SourceChannelSubmitData }) =>
       sourceChannelApi.updateChannel(id, data),
     onSuccess: () => {
       toast.success('更新成功')
@@ -212,13 +246,13 @@ export function SourceChannelsPage() {
   })
 
   // 列定义
-  const columns: ColumnProps[] = useMemo(() => [
+  const columns: ColumnProps<SourceChannel>[] = [
     {
       title: '渠道名称',
       dataIndex: 'name',
       width: 200,
-      render: (text: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
+      render: (text: string, record: SourceChannel) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
         return (
           <div className="flex items-center gap-2">
             <Share2 className="h-4 w-4 text-indigo-500" />
@@ -231,8 +265,8 @@ export function SourceChannelsPage() {
       title: '分类',
       dataIndex: 'category',
       width: 120,
-      render: (_: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
+      render: (_category: string, record: SourceChannel) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return <SourceChannelCategoryBadge category={record.category?.toUpperCase() || 'OTHER'} />
       },
     },
@@ -240,8 +274,8 @@ export function SourceChannelsPage() {
       title: '描述',
       dataIndex: 'description',
       width: 250,
-      render: (text: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 16 }} loading />
+      render: (text: string, record: SourceChannel) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
         return (
           <Text type="tertiary" ellipsis={{ showTooltip: true }} style={{ maxWidth: 250 }}>
             {text || '-'}
@@ -253,8 +287,8 @@ export function SourceChannelsPage() {
       title: '额外字段',
       dataIndex: 'extra_fields',
       width: 100,
-      render: (_: any, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
+      render: (_fields: SourceChannel['extra_fields'], record: SourceChannel) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={32} />
         const fields = record.extra_fields || record.channel_config?.fields || []
         return fields.length > 0 ? `${fields.length} 个` : '-'
       },
@@ -263,8 +297,8 @@ export function SourceChannelsPage() {
       title: '排序',
       dataIndex: 'sort_order',
       width: 80,
-      render: (text: number, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
+      render: (text: number, record: SourceChannel) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={32} />
         return text ?? 0
       },
     },
@@ -272,8 +306,8 @@ export function SourceChannelsPage() {
       title: '状态',
       dataIndex: 'is_active',
       width: 100,
-      render: (_: boolean, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
+      render: (_isActive: boolean, record: SourceChannel) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
         return <StatusBadge isActive={record.is_active ?? true} />
       },
     },
@@ -281,8 +315,8 @@ export function SourceChannelsPage() {
       title: '操作',
       dataIndex: 'id',
       width: 120,
-      render: (_: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 28 }} loading />
+      render: (_id: string, record: SourceChannel) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return (
           <div style={{ display: 'flex', gap: 4 }}>
             <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
@@ -291,26 +325,13 @@ export function SourceChannelsPage() {
         )
       },
     },
-  ], [])
-
-  // 显示数据
-  const displayData = isLoading ? createSkeletonData(5) : (data?.items || [])
-
-  // 分页配置
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize: PAGE_SIZE,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setPage(p),
-    showSizeChanger: false,
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, data?.total])
+  ]
 
   // 处理创建
   const handleCreate = () => {
     setEditingItem(null)
     setExtraFields([])
+    setDingtalkEnabled(false)
     setDialogOpen(true)
     setTimeout(() => {
       formRef.current?.reset()
@@ -355,7 +376,8 @@ export function SourceChannelsPage() {
     }
     setExtraFields(extraFieldsData)
 
-    const config = item.channel_config || {}
+    const config = (item.channel_config ?? {}) as SourceChannelConfig
+    setDingtalkEnabled(config.dingtalk_notify?.enabled ?? false)
     setDialogOpen(true)
     setTimeout(() => {
       formRef.current?.setValues({
@@ -388,7 +410,7 @@ export function SourceChannelsPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (values: Record<string, any>) => {
+  const handleSubmit = (values: SourceChannelFormValues) => {
     // 过滤掉无效的额外字段
     const validExtraFields = extraFields
       .filter(field => field.field_name.trim() && field.field_label.trim())
@@ -397,7 +419,7 @@ export function SourceChannelsPage() {
         options: field.field_type === 'select' ? field.options : undefined,
       }))
 
-    const submitData = {
+    const submitData: SourceChannelSubmitData = {
       name: values.name,
       category: values.category,
       description: values.description,
@@ -463,7 +485,7 @@ export function SourceChannelsPage() {
   }
 
   // 更新额外字段
-  const updateExtraField = (index: number, key: keyof ExtraFieldItem, value: any) => {
+  const updateExtraField = <K extends keyof ExtraFieldItem>(index: number, key: K, value: ExtraFieldItem[K]) => {
     setExtraFields(prev => prev.map((f, i) => i === index ? { ...f, [key]: value } : f))
   }
 
@@ -506,61 +528,56 @@ export function SourceChannelsPage() {
   const [dingtalkEnabled, setDingtalkEnabled] = useState(false)
 
   return (
-    <Main fixed>
-      <div className="flex flex-col gap-4 h-full">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <div>
-            <h1 className="text-2xl font-semibold">来源渠道管理</h1>
-            <p style={{ color: 'var(--semi-color-text-2)', fontSize: 14 }}>
-              管理线索来源渠道配置，支持线上、线下、推荐等多种渠道类型
-            </p>
-          </div>
+    <>
+      <DataTableLayout
+        title="来源渠道管理"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新建渠道
           </Button>
-        </div>
-
-        {/* 工具栏 */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Input
-            prefix={<IconSearch />}
-            placeholder="搜索渠道名称..."
-            value={searchValue}
-            onChange={(v) => setSearchValue(v)}
-            onEnterPress={handleSearch}
-            showClear
-            style={{ width: 220 }}
-          />
-          <Select
-            value={categoryFilter}
-            onChange={(v) => { setCategoryFilter(v as string); setPage(1) }}
-            optionList={categoryFilterOptions}
-            style={{ width: 140 }}
-            prefix={<Filter className="h-3.5 w-3.5" />}
-          />
-          <Select
-            value={statusFilter}
-            onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
-            optionList={statusFilterOptions}
-            style={{ width: 130 }}
-          />
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 min-h-0">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={pagination}
-            loading={false}
-            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-            empty={<div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-          />
-        </div>
-      </div>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索渠道名称..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+              showClear
+              style={{ width: 220 }}
+            />
+            <Select
+              value={categoryFilter}
+              onChange={(v) => { setCategoryFilter(v as string); setPage(1) }}
+              optionList={categoryFilterOptions}
+              style={{ width: 140 }}
+              prefix={<Filter className="h-3.5 w-3.5" />}
+            />
+            <Select
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
+              optionList={statusFilterOptions}
+              style={{ width: 130 }}
+            />
+          </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+          emptyText="暂无数据"
+        />
+      </DataTableLayout>
 
       {/* 创建/编辑弹窗 */}
       <Modal
@@ -626,7 +643,7 @@ export function SourceChannelsPage() {
 
                       {(() => {
                         const submitTokens = editingItem?.channel_config?.submit_tokens || {}
-                        const tokenEntries = Object.entries(submitTokens)
+                        const tokenEntries = Object.entries(submitTokens) as Array<[string, SubmitTokenInfo]>
                         if (tokenEntries.length === 0) {
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 0', textAlign: 'center', border: '1px dashed var(--semi-color-border)', borderRadius: 6, marginTop: 12 }}>
@@ -641,7 +658,7 @@ export function SourceChannelsPage() {
                             {tokenEntries.map(([tok, info]) => (
                               <div key={tok} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 12, border: '1px solid var(--semi-color-border)', borderRadius: 6 }}>
                                 <div style={{ minWidth: 0, flex: 1 }}>
-                                  <Text strong size="small">{(info as { employee_name: string }).employee_name}</Text>
+                                  <Text strong size="small">{info.employee_name}</Text>
                                   <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--semi-color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {`${window.location.origin}/lead-submit?token=${tok}`}
                                   </div>
@@ -832,6 +849,6 @@ export function SourceChannelsPage() {
         confirmText="选择并生成链接"
         filterByAdvisorPosition={false}
       />
-    </Main>
+    </>
   )
 }

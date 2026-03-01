@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, type Ref } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
   Phone, RotateCcw, Loader2, Send, RefreshCw, PhoneOff,
 } from 'lucide-react'
-import { format, addDays, setHours, setMinutes } from 'date-fns'
+import { format, setHours, setMinutes } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -32,13 +32,13 @@ import {
   IntentionLevel,
   FollowupMethod,
   FollowupResult,
+  type LeadFollowupCreate,
 } from '../leads/types'
 import type { ContinuousCallLead } from './types'
-import type { LeadFollowupCreate } from '../leads/types'
 import { LeadDetailTabs } from '../leads/components/detail/lead-detail-tabs'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { CallTimer } from './components/call-timer'
-import { followupResultOptions } from './components/followup-form'
+import { followupResultOptions } from './components/followup-options'
 
 const { Text } = Typography
 
@@ -276,6 +276,10 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 6, display: 'block',
 }
 
+type TriggerRenderProps = {
+  ref: Ref<HTMLSpanElement>
+}
+
 export function ContinuousCallPage() {
   useDocumentTitle('连续外呼')
   const queryClient = useQueryClient()
@@ -333,13 +337,6 @@ export function ContinuousCallPage() {
   const leads = useMemo(() => leadsData?.items || [], [leadsData?.items])
   const currentPhone = currentLead?.parent_phone || currentLead?.phone
 
-  // 自动选择第一个线索
-  useEffect(() => {
-    if (leads.length > 0 && !currentLead) {
-      selectLead(leads[0])
-    }
-  }, [leads, currentLead])
-
   // 进入页面时自动收缩侧边栏，离开时恢复
   useEffect(() => {
     setSidebarOpen(false)
@@ -355,6 +352,13 @@ export function ContinuousCallPage() {
       (lead.intention_level as IntentionLevel) || IntentionLevel.MEDIUM
     )
   }, [])
+
+  // 自动选择第一个线索
+  useEffect(() => {
+    if (leads.length > 0 && !currentLead) {
+      selectLead(leads[0])
+    }
+  }, [leads, currentLead, selectLead])
 
   const startCall = useCallback(async () => {
     if (!currentPhone) {
@@ -372,7 +376,7 @@ export function ContinuousCallPage() {
       } else {
         Toast.error({ content: res.message || '外呼失败' })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '外呼失败')
     } finally {
       setDialing(false)
@@ -399,7 +403,7 @@ export function ContinuousCallPage() {
       } else {
         Toast.error({ content: res.message || '挂断失败' })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '挂断失败')
     } finally {
       setHangingUp(false)
@@ -458,8 +462,8 @@ export function ContinuousCallPage() {
         try {
           await yunkeApi.hangUpCall(currentCallId)
           closeCallDrawer()
-        } catch (error) {
-          console.warn('挂断通话失败:', error)
+        } catch {
+          Toast.warning({ content: '自动挂断当前通话失败，已继续保存跟进' })
         }
       }
 
@@ -488,6 +492,7 @@ export function ContinuousCallPage() {
         result_remark: finalFollowupContent || undefined,
         next_followup_at: nextFollowupAtIso,
         send_dingtalk: sendToDingding,
+        yunke_call_id: currentCallId || undefined,
       }
 
       const res = await leadsApi.addLeadFollowup(currentLeadId, data)
@@ -497,8 +502,8 @@ export function ContinuousCallPage() {
         if (intentionLevel && intentionLevel !== currentLead.intention_level) {
           try {
             await leadsApi.updateLead(currentLeadId, { intention_level: intentionLevel })
-          } catch (error) {
-            console.warn('更新意向等级失败:', error)
+          } catch {
+            Toast.warning({ content: '意向等级更新失败，跟进记录已保存' })
           }
         }
 
@@ -517,8 +522,7 @@ export function ContinuousCallPage() {
               status: 'scheduled',
               remark: finalFollowupContent || undefined,
             })
-          } catch (error) {
-            console.error('创建预约到访记录失败:', error)
+          } catch {
             Toast.warning({ content: '跟进记录已保存，但创建预约到访记录失败' })
           }
         }
@@ -533,7 +537,7 @@ export function ContinuousCallPage() {
               remark: `跟进结果：${selectedOption?.label || followupResult}`,
             })
             Toast.success({ content: '跟进记录已保存，线索已释放到公海' })
-          } catch (error) {
+          } catch {
             Toast.warning({ content: '跟进记录已保存，但释放到公海失败' })
           }
         } else {
@@ -546,7 +550,7 @@ export function ContinuousCallPage() {
       } else {
         Toast.error({ content: res.message || '保存失败' })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '保存失败')
     } finally {
       setSaving(false)
@@ -559,7 +563,7 @@ export function ContinuousCallPage() {
   ])
 
   // 快捷编辑字段
-  const updateFieldMutation = useMutation({
+  const { mutateAsync: updateLeadField } = useMutation({
     mutationFn: async ({ field, value }: { field: string; value: string }) => {
       if (!currentLead) throw new Error('线索不存在')
       const updateData: Record<string, unknown> = {}
@@ -580,8 +584,8 @@ export function ContinuousCallPage() {
   })
 
   const handleFieldUpdate = useCallback(async (field: string, value: string) => {
-    await updateFieldMutation.mutateAsync({ field, value })
-  }, [updateFieldMutation])
+    await updateLeadField({ field, value })
+  }, [updateLeadField])
 
   // 右侧面板可拖拽调整宽度（localStorage 缓存）
   const RIGHT_PANEL_STORAGE_KEY = 'continuous-call-right-panel-width'
@@ -595,7 +599,9 @@ export function ContinuousCallPage() {
         const val = Number(cached)
         if (val >= RIGHT_PANEL_MIN && val <= RIGHT_PANEL_MAX) return val
       }
-    } catch {}
+    } catch {
+      // ignore storage read failures
+    }
     return RIGHT_PANEL_DEFAULT
   })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -630,7 +636,9 @@ export function ContinuousCallPage() {
   useEffect(() => {
     try {
       localStorage.setItem(RIGHT_PANEL_STORAGE_KEY, String(rightPanelWidth))
-    } catch {}
+    } catch {
+      // ignore storage write failures
+    }
   }, [rightPanelWidth])
 
   // 键盘事件 - 空格键外呼
@@ -735,7 +743,9 @@ export function ContinuousCallPage() {
                     <DatePicker
                       type="dateTime"
                       value={nextFollowupAt}
-                      onChange={(date: any) => setNextFollowupAt(date || undefined)}
+                      onChange={(date: Date | Date[] | undefined) => {
+                        setNextFollowupAt(date instanceof Date ? date : undefined)
+                      }}
                       disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
                       format="MM月dd日 HH:mm"
                       placeholder="选择回访时间"
@@ -756,9 +766,11 @@ export function ContinuousCallPage() {
                         <DatePicker
                           type="date"
                           value={appointmentDate}
-                          onChange={(date: any) => setAppointmentDate(date || undefined)}
+                          onChange={(date: Date | Date[] | undefined) => {
+                            setAppointmentDate(date instanceof Date ? date : undefined)
+                          }}
                           disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          triggerRender={({ ref }: any) => (
+                          triggerRender={({ ref }: TriggerRenderProps) => (
                             <span ref={ref} style={{ display: 'inline-flex' }}>
                               <Button size="small" style={{ fontSize: 12, color: appointmentDate ? undefined : 'var(--semi-color-text-2)' }}>
                                 {appointmentDate ? format(appointmentDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
@@ -768,9 +780,11 @@ export function ContinuousCallPage() {
                         />
                         <TimePicker
                           value={appointmentTime}
-                          onChange={(_time: any, timeStr: string) => setAppointmentTime(timeStr)}
+                          onChange={(_time: Date | Date[] | undefined, timeStr: string | string[]) => {
+                            setAppointmentTime(Array.isArray(timeStr) ? timeStr[0] || '10:00' : timeStr)
+                          }}
                           format="HH:mm"
-                          triggerRender={({ ref }: any) => (
+                          triggerRender={({ ref }: TriggerRenderProps) => (
                             <span ref={ref} style={{ display: 'inline-flex' }}>
                               <Button size="small" style={{ fontSize: 12, color: appointmentDate ? undefined : 'var(--semi-color-text-2)' }}>
                                 {appointmentDate ? appointmentTime : '时间'}

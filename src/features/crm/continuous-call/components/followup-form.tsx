@@ -3,15 +3,13 @@
  * 用于连续外呼页面和线索详情抽屉
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, type Ref } from 'react'
 import { format, addDays, setHours, setMinutes } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import {
   Phone, RotateCcw, Loader2, Send,
-  TrendingUp, CalendarCheck, PhoneOff, UserX,
-  Clock, Ban, PhoneMissed, GraduationCap, ChevronDown,
+  ChevronDown,
   Sparkles, X,
-  type LucideIcon
 } from 'lucide-react'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -27,43 +25,21 @@ import {
   TimePicker,
 } from '@douyinfe/semi-ui-19'
 
-import { leadsApi, getFollowupSuggestion, triggerCallPipeline } from '../../leads/api'
-import type { FollowupSuggestion, PipelineStatus } from '../../leads/api'
+import {
+  leadsApi,
+  getFollowupSuggestion,
+  triggerCallPipeline,
+  type FollowupSuggestion,
+  type PipelineStatus,
+} from '../../leads/api'
 import { visitScheduleApi } from '../../visit-schedule/api'
 import {
   IntentionLevel,
   FollowupMethod,
   FollowupResult,
+  type LeadFollowupCreate,
 } from '../../leads/types'
-import type { LeadFollowupCreate } from '../../leads/types'
-
-// Semi Design 品牌色
-const BRAND_COLORS = {
-  green: '#00b42a',   // 继续跟进 (Semi success green)
-  orange: '#ff7d00',  // 释放公海 (Semi warning orange)
-  blue: '#0077fa',    // 仅改状态 (Semi primary blue)
-} as const
-
-// 跟进结果选项
-interface FollowupResultOption {
-  value: string
-  label: string
-  icon: LucideIcon
-  color: string
-}
-
-export const followupResultOptions: FollowupResultOption[] = [
-  { value: 'can_continue', label: '可持续跟进', icon: TrendingUp, color: BRAND_COLORS.green },
-  { value: 'appointment_scheduled', label: '已预约到访', icon: CalendarCheck, color: BRAND_COLORS.green },
-  { value: 'not_connected', label: '未接通', icon: PhoneMissed, color: BRAND_COLORS.blue },
-  { value: 'temporarily_unavailable', label: '暂时不便', icon: Clock, color: BRAND_COLORS.blue },
-  { value: 'wrong_number', label: '空错号', icon: PhoneOff, color: BRAND_COLORS.orange },
-  { value: 'no_child', label: '没孩子', icon: UserX, color: BRAND_COLORS.orange },
-  { value: 'age_mismatch', label: '年龄不符', icon: Clock, color: BRAND_COLORS.orange },
-  { value: 'no_need', label: '不需要', icon: Ban, color: BRAND_COLORS.orange },
-  { value: 'hung_up', label: '秒挂', icon: PhoneMissed, color: BRAND_COLORS.orange },
-  { value: 'student', label: '学员', icon: GraduationCap, color: BRAND_COLORS.orange },
-]
+import { followupResultOptions } from './followup-options'
 
 // 跟进结果到API枚举的映射
 const resultMapping: Record<string, FollowupResult> = {
@@ -94,6 +70,19 @@ const intentionLevelOptions = [
 interface FollowupResultSelectProps {
   value: string
   onChange: (value: string) => void
+}
+
+interface SelectOptionNode {
+  value?: string
+}
+
+interface DateTriggerRenderProps {
+  value?: Date
+  ref?: Ref<HTMLSpanElement>
+}
+
+interface TimeTriggerRenderProps {
+  ref?: Ref<HTMLSpanElement>
 }
 
 export function FollowupResultSelect({ value, onChange }: FollowupResultSelectProps) {
@@ -425,8 +414,7 @@ export function FollowupForm({
               status: 'scheduled',
               remark: finalFollowupContent || undefined,
             })
-          } catch (error) {
-            console.error('创建预约到访记录失败:', error)
+          } catch {
             Toast.warning({ content: '跟进记录已保存，但创建预约到访记录失败' })
           }
         }
@@ -440,7 +428,7 @@ export function FollowupForm({
               remark: `跟进结果：${selectedOption?.label || followupResult}`,
             })
             Toast.success({ content: '跟进记录已保存，线索已释放到公海' })
-          } catch (error) {
+          } catch {
             Toast.warning({ content: '跟进记录已保存，但释放到公海失败' })
           }
         } else {
@@ -452,7 +440,7 @@ export function FollowupForm({
       } else {
         Toast.error({ content: res.message || '保存失败' })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '保存失败')
     } finally {
       setSaving(false)
@@ -564,7 +552,7 @@ export function FollowupForm({
           value={intentionLevel}
           onChange={(value) => setIntentionLevel(value as IntentionLevel)}
           style={{ flex: 1 }}
-          renderSelectedItem={(optionNode: any) => {
+          renderSelectedItem={(optionNode?: SelectOptionNode) => {
             const selected = intentionLevelOptions.find(o => o.value === optionNode?.value)
             return selected ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -594,9 +582,9 @@ export function FollowupForm({
           <DatePicker
             type="date"
             value={nextFollowupDate}
-            onChange={(date: any) => setNextFollowupDate(date || undefined)}
+            onChange={(date: Date | null) => setNextFollowupDate(date || undefined)}
             disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-            triggerRender={({ value, ref }: any) => (
+            triggerRender={({ value, ref }: DateTriggerRenderProps) => (
               <span ref={ref} style={{ display: 'inline-flex' }}>
                 <Button
                   style={{
@@ -611,9 +599,9 @@ export function FollowupForm({
           />
           <TimePicker
             value={nextFollowupTime}
-            onChange={(_time: any, timeStr: string) => setNextFollowupTime(timeStr)}
+            onChange={(_time: unknown, timeStr: string) => setNextFollowupTime(timeStr)}
             format="HH:mm"
-            triggerRender={({ ref }: any) => (
+            triggerRender={({ ref }: TimeTriggerRenderProps) => (
               <span ref={ref} style={{ display: 'inline-flex' }}>
                 <Button
                   style={{
@@ -659,9 +647,9 @@ export function FollowupForm({
               <DatePicker
                 type="date"
                 value={appointmentDate}
-                onChange={(date: any) => setAppointmentDate(date || undefined)}
+                onChange={(date: Date | null) => setAppointmentDate(date || undefined)}
                 disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-                triggerRender={({ value, ref }: any) => (
+                triggerRender={({ value, ref }: DateTriggerRenderProps) => (
                   <span ref={ref} style={{ display: 'inline-flex' }}>
                     <Button
                       style={{
@@ -676,9 +664,9 @@ export function FollowupForm({
               />
               <TimePicker
                 value={appointmentTime}
-                onChange={(_time: any, timeStr: string) => setAppointmentTime(timeStr)}
+                onChange={(_time: unknown, timeStr: string) => setAppointmentTime(timeStr)}
                 format="HH:mm"
-                triggerRender={({ ref }: any) => (
+                triggerRender={({ ref }: TimeTriggerRenderProps) => (
                   <span ref={ref} style={{ display: 'inline-flex' }}>
                     <Button
                       style={{

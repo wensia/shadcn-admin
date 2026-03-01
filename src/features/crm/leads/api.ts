@@ -1,6 +1,6 @@
 /**
  * Leads API
- * 从frontend-vue/src/api/leads.ts迁移
+ * 从旧版前端线索 API 迁移
  */
 
 import { apiClient } from '@/lib/api/client'

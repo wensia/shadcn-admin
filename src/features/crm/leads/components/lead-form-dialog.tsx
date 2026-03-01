@@ -9,12 +9,12 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal, Form, Button, Input, Select, DatePicker, Toast, Steps, Table, Tag, Card } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconInfoCircle } from '@douyinfe/semi-icons'
 import { leadsApi } from '../api'
 import { apiClient } from '@/lib/api/client'
-import type { Lead, LeadCreate, LeadUpdate, Gender, SourceChannelExtraField } from '../types'
-import { gradeLabels, LeadStatus } from '../types'
+import { gradeLabels, type Lead, type LeadCreate, type LeadStatus, type LeadUpdate, type Gender, type SourceChannelExtraField } from '../types'
 import { leadStatusStyles } from '@/lib/status-styles'
 import type { SourceChannel } from '@/features/admin/types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
@@ -74,6 +74,36 @@ interface DuplicateLeadInfo {
   activated_at?: string | null
 }
 
+interface LeadFormValues {
+  child_name?: string
+  child_gender?: Gender
+  child_birthday?: string | Date
+  grade?: string
+  school_name?: string
+  course_interests?: string
+  parent_name?: string
+  parent_phone?: string
+  parent_wechat?: string
+  parent_email?: string
+  parent_relation?: string
+  backup_contact_name?: string
+  backup_contact_phone?: string
+  backup_contact_relation?: string
+  province?: string
+  city?: string
+  district?: string
+  address_detail?: string
+  source_channel_id?: string
+  intention_level?: string
+  notes?: string
+  owner_campus_id?: string
+}
+
+type CampusOption = {
+  id: string
+  name: string
+}
+
 // 将 Date 或 string 转为 yyyy-MM-dd 字符串
 function toDateString(val: unknown): string | undefined {
   if (!val) return undefined
@@ -87,32 +117,20 @@ function toDateString(val: unknown): string | undefined {
   return undefined
 }
 
-// 后端 LeadCreate 接受的字段白名单（防止发送多余字段导致 422）
-const LEAD_CREATE_FIELDS = [
-  'child_name', 'child_gender', 'child_birthday', 'school_name', 'grade', 'course_interests',
-  'parent_name', 'parent_phone', 'parent_wechat', 'parent_email', 'parent_relation',
-  'province', 'city', 'district', 'address_detail',
-  'backup_contact_name', 'backup_contact_phone', 'backup_contact_relation',
-  'notes', 'tag',
-  'source_channel_id', 'source_extra_info', 'advisor_id', 'owner_campus_id',
-] as const
-
 export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadFormDialogProps) {
   const queryClient = useQueryClient()
-  const formApiRef = useRef<any>(null)
+  const formApiRef = useRef<FormApi>()
   const [watchedChannelId, setWatchedChannelId] = useState('')
   const [extraFieldValues, setExtraFieldValues] = useState<Record<string, string>>({})
   const [currentStep, setCurrentStep] = useState(0)
   const [duplicateLeadInfo, setDuplicateLeadInfo] = useState<DuplicateLeadInfo | null>(null)
   const isEdit = !!lead
 
-  // 打开/关闭时重置步骤
-  useEffect(() => {
-    if (open) {
-      setCurrentStep(0)
-      setDuplicateLeadInfo(null)
-    }
-  }, [open])
+  const handleDialogClose = useCallback(() => {
+    setCurrentStep(0)
+    setDuplicateLeadInfo(null)
+    onOpenChange(false)
+  }, [onOpenChange])
 
   // 获取筛选选项(校区等)
   const { data: filterOptions } = useQuery({
@@ -171,12 +189,14 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       Toast.success('创建线索成功')
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       onSuccess?.()
-      onOpenChange(false)
+      handleDialogClose()
       formApiRef.current?.reset()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       // 检查是否包含重复线索信息
-      const responseData = error?.response?.data
+      const responseData = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: { data?: { duplicate_lead?: DuplicateLeadInfo } } } }).response?.data
+        : undefined
       const duplicateLead = responseData?.data?.duplicate_lead
       if (duplicateLead) {
         setDuplicateLeadInfo(duplicateLead)
@@ -197,9 +217,9 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       queryClient.invalidateQueries({ queryKey: ['lead', lead?.id] })
       onSuccess?.()
-      onOpenChange(false)
+      handleDialogClose()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '更新失败')
     }
   })
@@ -207,8 +227,10 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
   // 当lead变化时更新表单
   useEffect(() => {
     if (!open) return
-    requestAnimationFrame(() => {
+    const frameId = requestAnimationFrame(() => {
       if (!formApiRef.current) return
+      setCurrentStep(0)
+      setDuplicateLeadInfo(null)
       if (lead) {
         formApiRef.current.setValues({
           child_name: lead.child_name || '',
@@ -252,14 +274,8 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
         setWatchedChannelId('')
       }
     })
+    return () => cancelAnimationFrame(frameId)
   }, [lead, open])
-
-  // 渠道变化时清空额外字段（新建模式）
-  useEffect(() => {
-    if (!isEdit && watchedChannelId) {
-      setExtraFieldValues({})
-    }
-  }, [watchedChannelId, isEdit])
 
 
   // 验证当前步骤字段
@@ -305,7 +321,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
   }, [currentStep, validateCurrentStep])
 
   // 提交表单
-  const handleSubmit = (values: Record<string, any>) => {
+  const handleSubmit = (values: LeadFormValues) => {
     // 验证额外字段
     for (const field of selectedChannelExtraFields) {
       if (field.required && !extraFieldValues[field.field_name]?.trim()) {
@@ -315,7 +331,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       }
     }
 
-    const sourceExtraInfo: Record<string, any> = {}
+    const sourceExtraInfo: Record<string, string> = {}
     for (const [key, value] of Object.entries(extraFieldValues)) {
       if (value?.trim()) sourceExtraInfo[key] = value.trim()
     }
@@ -328,7 +344,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     }
 
     // 构建提交数据 — 只包含后端 schema 接受的字段
-    const formattedData: Record<string, any> = {
+    const formattedData: Partial<LeadCreate & LeadUpdate> = {
       parent_phone: values.parent_phone,
       source_channel_id: values.source_channel_id,
       child_name: values.child_name || undefined,
@@ -402,7 +418,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
   )
 
   const campusOptionList = useMemo(
-    () => (filterOptions?.campuses || []).map((c: any) => ({ value: c.id, label: c.name })),
+    () => (filterOptions?.campuses || []).map((c: CampusOption) => ({ value: c.id, label: c.name })),
     [filterOptions]
   )
 
@@ -421,7 +437,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     <>
     <Modal
       visible={open}
-      onCancel={() => onOpenChange(false)}
+      onCancel={handleDialogClose}
       title={isEdit ? '编辑线索' : '新建线索'}
       footer={null}
       width={672}
@@ -444,11 +460,15 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       </div>
 
       <Form
-        getFormApi={(api: any) => { formApiRef.current = api }}
+        getFormApi={(api) => { formApiRef.current = api }}
         onSubmit={handleSubmit}
-        onValueChange={(_values: any, changedValues: any) => {
-          if (changedValues && 'source_channel_id' in changedValues) {
-            setWatchedChannelId(changedValues.source_channel_id || '')
+        onValueChange={(_values: LeadFormValues, changedValues: Partial<LeadFormValues>) => {
+          if ('source_channel_id' in changedValues) {
+            const nextChannelId = changedValues.source_channel_id || ''
+            setWatchedChannelId(nextChannelId)
+            if (!isEdit) {
+              setExtraFieldValues({})
+            }
           }
         }}
         layout="vertical"
@@ -554,7 +574,10 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                       ) : field.field_type === 'date' ? (
                         <DatePicker
                           value={extraFieldValues[field.field_name] || undefined}
-                          onChange={(_date: any, dateStr: any) => handleExtraFieldChange(field.field_name, dateStr as string || '')}
+                          onChange={(_date: Date | Date[] | undefined, dateStr: string | string[]) => {
+                            const nextValue = Array.isArray(dateStr) ? dateStr[0] || '' : dateStr || ''
+                            handleExtraFieldChange(field.field_name, nextValue)
+                          }}
                           placeholder={field.placeholder || `选择${field.field_label}`}
                           type="date"
                           style={{ width: '100%', marginBottom: 12 }}
@@ -658,7 +681,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                 label="邮箱"
                 placeholder="请输入"
                 rules={[{
-                  validator: (_rule: any, value: string) => {
+                  validator: (_rule: unknown, value: string) => {
                     if (!value) return true
                     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
                   },
@@ -722,7 +745,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
             )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Button onClick={() => onOpenChange(false)}>取消</Button>
+            <Button onClick={handleDialogClose}>取消</Button>
             {currentStep > 0 && (
               <Button onClick={handlePrev}>上一步</Button>
             )}

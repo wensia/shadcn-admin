@@ -3,14 +3,14 @@
  * 显示诺到、到访、缴费记录
  */
 
-import { useMemo, useRef, useState, useEffect } from 'react'
-import { Table, Tag, Dropdown, Button, Typography, Skeleton } from '@douyinfe/semi-ui-19'
+import { useMemo } from 'react'
+import { Tag, Dropdown, Button, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { IconMore } from '@douyinfe/semi-icons'
 import { Eye, Edit, Trash2 } from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
-import type { ConversionType, Payment, VisitSchedule } from '../types'
-import { PaymentStatus, VisitStatus } from '../types'
+import { PaymentStatus, VisitStatus, type ConversionType, type Payment, type VisitSchedule } from '../types'
 
 const { Text } = Typography
 
@@ -94,29 +94,12 @@ export function ConversionTable({
   onEdit,
   onDelete,
 }: ConversionTableProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollY, setScrollY] = useState<number>(400)
-
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const measure = () => {
-      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
-      const available = el.clientHeight - headerH
-      if (available > 100) setScrollY(available)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
   const columns = useMemo<ColumnProps<ConversionRecord>[]>(() => [
     {
       title: '类型',
       dataIndex: 'type',
       width: 80,
-      render: (_: any, record: ConversionRecord) => (
+      render: (_type: ConversionType, record: ConversionRecord) => (
         <Tag color={typeTagColors[record.type]} type="light">
           {typeLabels[record.type]}
         </Tag>
@@ -126,7 +109,7 @@ export function ConversionTable({
       title: '学生姓名',
       dataIndex: 'child_name',
       width: 100,
-      render: (_: any, record: ConversionRecord) => (
+      render: (_childName: string | undefined, record: ConversionRecord) => (
         <Text strong>{record.child_name || '-'}</Text>
       ),
     },
@@ -134,19 +117,19 @@ export function ConversionTable({
       title: '联系电话',
       dataIndex: 'parent_phone',
       width: 120,
-      render: (_: any, record: ConversionRecord) => record.parent_phone || '-',
+      render: (_phone: string | undefined, record: ConversionRecord) => record.parent_phone || '-',
     },
     {
       title: '时间',
       dataIndex: 'record_time',
       width: 150,
-      render: (_: any, record: ConversionRecord) => formatTime(record.record_time, 'YYYY-MM-DD HH:mm'),
+      render: (_recordTime: string, record: ConversionRecord) => formatTime(record.record_time, 'YYYY-MM-DD HH:mm'),
     },
     {
       title: '状态',
       dataIndex: 'status',
       width: 100,
-      render: (_: any, record: ConversionRecord) => (
+      render: (_status: string, record: ConversionRecord) => (
         <Tag color={getStatusTagColor(record.type, record.status)} type="light">
           {record.status_display}
         </Tag>
@@ -156,7 +139,7 @@ export function ConversionTable({
       title: '金额',
       dataIndex: 'amount',
       width: 120,
-      render: (_: any, record: ConversionRecord) => {
+      render: (_amount: number | undefined, record: ConversionRecord) => {
         if (record.type !== 'payment' || record.amount === undefined) return '-'
         return (
           <Text style={{ fontWeight: 500, color: '#16a34a' }}>
@@ -169,26 +152,26 @@ export function ConversionTable({
       title: '支付方式',
       dataIndex: 'payment_method_display',
       width: 100,
-      render: (_: any, record: ConversionRecord) => record.payment_method_display || '-',
+      render: (_method: string | undefined, record: ConversionRecord) => record.payment_method_display || '-',
     },
     {
       title: '校区',
       dataIndex: 'campus_name',
       width: 100,
-      render: (_: any, record: ConversionRecord) => record.campus_name || '-',
+      render: (_campusName: string | undefined, record: ConversionRecord) => record.campus_name || '-',
     },
     {
       title: '创建人',
       dataIndex: 'created_by_name',
       width: 80,
-      render: (_: any, record: ConversionRecord) => record.created_by_name || '-',
+      render: (_createdByName: string | undefined, record: ConversionRecord) => record.created_by_name || '-',
     },
     {
       title: '操作',
       dataIndex: 'actions',
       width: 60,
       fixed: 'right' as const,
-      render: (_: any, record: ConversionRecord) => (
+      render: (_actions: string, record: ConversionRecord) => (
         <Dropdown
           trigger="click"
           clickToHide
@@ -223,32 +206,18 @@ export function ConversionTable({
   ], [onView, onEdit, onDelete])
 
   return (
-    <div ref={wrapperRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
-        loading={isLoading}
-        scroll={{ y: scrollY }}
-        size="middle"
-        pagination={{
-          currentPage: page,
-          pageSize: pageSize,
-          total: total,
-          onPageChange: onPageChange,
-          onPageSizeChange: onPageSizeChange,
-          showSizeChanger: true,
-          pageSizeOpts: [10, 20, 50],
-          showTotal: true,
-          formatShowTotal: (t: number) => `共 ${t} 条`,
-        }}
-        onRow={(record) => ({
-          style: { cursor: 'pointer', fontSize: 12 },
-          onClick: () => onView?.(record as ConversionRecord),
-        })}
-        empty={<div style={{ padding: 24, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-      />
-    </div>
+    <SemiDataTable<ConversionRecord>
+      columns={columns}
+      data={data}
+      total={total}
+      page={page}
+      pageSize={pageSize}
+      isLoading={isLoading}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      onRowClick={(record) => onView?.(record)}
+      emptyText="暂无数据"
+    />
   )
 }
 

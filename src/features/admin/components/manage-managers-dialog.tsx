@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Users, UserPlus, Trash2 } from 'lucide-react'
 import { Button, Modal, Select, Tag, Typography } from '@douyinfe/semi-ui-19'
 import { IconLoading } from '@douyinfe/semi-icons'

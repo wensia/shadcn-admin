@@ -15,9 +15,6 @@ import {
   Progress,
   Toast,
   Card,
-  Tag,
-  Typography,
-  Collapsible,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
@@ -36,8 +33,6 @@ import { brandColors } from '@/features/crm/daily-control/theme'
 import leadsApi from '@/features/crm/leads/api'
 import { adminApi } from '@/features/admin/api'
 import type { MarketStaffStatItem, ChannelTotalItem } from '@/features/crm/leads/types'
-
-const { Title } = Typography
 
 // 获取时间范围辅助函数
 function getDateRange(period: string): { date_from: string; date_to: string } {
@@ -118,7 +113,7 @@ export function MarketingStatisticsPage() {
   const dateRange = useMemo(() => getDateRange(period), [period])
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['marketing-statistics', period, selectedCampusId],
+    queryKey: ['marketing-statistics', selectedCampusId, dateRange.date_from, dateRange.date_to],
     queryFn: async () => {
       const params: Record<string, string> = {}
       if (dateRange.date_from) params.date_from = dateRange.date_from
@@ -130,7 +125,7 @@ export function MarketingStatisticsPage() {
   })
 
   const statistics = data?.data
-  const staffList: MarketStaffStatItem[] = statistics?.staff_statistics || []
+  const staffList = useMemo<MarketStaffStatItem[]>(() => statistics?.staff_statistics ?? [], [statistics?.staff_statistics])
   const channelTotals: ChannelTotalItem[] = statistics?.channel_totals || []
 
   // 计算指标

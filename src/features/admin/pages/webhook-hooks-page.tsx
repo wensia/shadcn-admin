@@ -16,22 +16,24 @@ import {
   Building2,
   Plus,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Select, Modal, Form, Skeleton, Typography, Switch, Tag, TextArea } from '@douyinfe/semi-ui-19'
+import { Button, Input, Select, Modal, Form, Typography, Tag, TextArea, Tabs } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
-import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import { IconSearch } from '@douyinfe/semi-icons'
 
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { webhookHooksApi, dingtalkRobotsApi, adminApi } from '../api'
 import type {
   WebhookHook,
   WebhookHookUpdate,
   DingtalkRobot,
   CampusItem,
+  RobotInfo,
 } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
@@ -45,6 +47,20 @@ interface CampusRobotRule {
   robot_ids: string[]
 }
 
+interface WebhookExtraConfig {
+  campus_robot_map?: Array<CampusRobotRule & { campus_name?: string }>
+}
+
+interface WebhookHookFormValues {
+  name?: string
+  hook_key?: string
+  description?: string
+  message_type?: 'text' | 'markdown'
+  message_template?: string
+  is_active?: boolean
+  sort_order?: number
+}
+
 // 状态筛选选项
 const statusOptions = [
   { value: 'all', label: '全部状态' },
@@ -52,21 +68,6 @@ const statusOptions = [
   { value: 'inactive', label: '禁用' },
 ]
 
-// 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-function createSkeletonData(count: number): WebhookHook[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
-    name: '',
-    hook_key: '',
-    robot_ids: [],
-    message_type: 'text' as const,
-    is_active: true,
-    sort_order: 0,
-    trigger_count: 0,
-  }))
-}
 
 export function WebhookHooksPage() {
   const queryClient = useQueryClient()
@@ -116,8 +117,8 @@ export function WebhookHooksPage() {
     },
   })
 
-  const robots = robotsData || []
-  const campuses = campusesData?.items || []
+  const robots = useMemo<DingtalkRobot[]>(() => robotsData ?? [], [robotsData])
+  const campuses = useMemo<CampusItem[]>(() => campusesData?.items ?? [], [campusesData?.items])
 
   // 机器人选项
   const robotOptions = useMemo(() => {
@@ -183,13 +184,13 @@ export function WebhookHooksPage() {
   })
 
   // 列定义
-  const columns: ColumnProps[] = useMemo(() => [
+  const columns: ColumnProps<WebhookHook>[] = [
     {
       title: '钩子名称',
       dataIndex: 'name',
       width: 200,
-      render: (text: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 160, height: 16 }} loading />
+      render: (_text: string, record: WebhookHook) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={160} />
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div className="flex items-center gap-2">
@@ -203,35 +204,35 @@ export function WebhookHooksPage() {
         )
       },
     },
-    {
-      title: '描述',
-      dataIndex: 'description',
-      width: 250,
-      render: (text: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 16 }} loading />
-        return (
-          <Text type="tertiary" ellipsis={{ showTooltip: true }} style={{ maxWidth: 250 }}>
+      {
+        title: '描述',
+        dataIndex: 'description',
+        width: 250,
+        render: (text: string, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
+          return (
+            <Text type="tertiary" ellipsis={{ showTooltip: true }} style={{ maxWidth: 250 }}>
             {text || '-'}
           </Text>
         )
       },
     },
-    {
-      title: '关联机器人',
-      dataIndex: 'robots',
-      width: 200,
-      render: (_: any, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 20 }} loading />
-        const hookRobots = record.robots || []
-        if (hookRobots.length === 0) {
-          return <Tag size="small">未配置</Tag>
-        }
-        return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {hookRobots.slice(0, 2).map((robot: any) => (
-              <Tag key={robot.id} size="small" color={robot.is_active ? 'blue' : 'grey'}>
-                <Bot className="h-3 w-3 mr-1 inline" />
-                {robot.name}
+      {
+        title: '关联机器人',
+        dataIndex: 'robots',
+        width: 200,
+        render: (_value: RobotInfo[] | undefined, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
+          const hookRobots = record.robots || []
+          if (hookRobots.length === 0) {
+            return <Tag size="small">未配置</Tag>
+          }
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {hookRobots.slice(0, 2).map((robot) => (
+                <Tag key={robot.id} size="small" color={robot.is_active ? 'blue' : 'grey'}>
+                  <Bot className="h-3 w-3 mr-1 inline" />
+                  {robot.name}
               </Tag>
             ))}
             {hookRobots.length > 2 && (
@@ -241,16 +242,16 @@ export function WebhookHooksPage() {
         )
       },
     },
-    {
-      title: '校区匹配',
-      dataIndex: 'extra_config',
-      width: 140,
-      render: (_: any, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
-        const rules = (record.extra_config as { campus_robot_map?: CampusRobotRule[] })?.campus_robot_map || []
-        if (rules.length === 0) {
-          return <Tag size="small">未配置</Tag>
-        }
+      {
+        title: '校区匹配',
+        dataIndex: 'extra_config',
+        width: 140,
+        render: (_value: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+          const rules = (record.extra_config as WebhookExtraConfig | undefined)?.campus_robot_map || []
+          if (rules.length === 0) {
+            return <Tag size="small">未配置</Tag>
+          }
         return (
           <Tag size="small" color="grey">
             <Building2 className="h-3 w-3 mr-1 inline" />
@@ -259,105 +260,71 @@ export function WebhookHooksPage() {
         )
       },
     },
-    {
-      title: '消息格式',
-      dataIndex: 'message_type',
-      width: 100,
-      render: (text: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
-        return (
-          <Tag size="small" color={text === 'markdown' ? 'blue' : 'grey'}>
+      {
+        title: '消息格式',
+        dataIndex: 'message_type',
+        width: 100,
+        render: (text: string, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+          return (
+            <Tag size="small" color={text === 'markdown' ? 'blue' : 'grey'}>
             {text === 'markdown' ? 'Markdown' : '文本'}
           </Tag>
         )
       },
     },
-    {
-      title: '触发次数',
-      dataIndex: 'trigger_count',
-      width: 100,
-      render: (text: number, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 48, height: 16 }} loading />
-        return <Text strong>{text || 0}</Text>
-      },
+      {
+        title: '触发次数',
+        dataIndex: 'trigger_count',
+        width: 100,
+        render: (text: number, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={48} />
+          return <Text strong>{text || 0}</Text>
+        },
     },
-    {
-      title: '状态',
-      dataIndex: 'is_active',
-      width: 80,
-      render: (_: boolean, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
-        return <StatusBadge isActive={record.is_active} />
-      },
+      {
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 80,
+        render: (_value: boolean, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
+          return <StatusBadge isActive={record.is_active} />
+        },
     },
-    {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      width: 160,
-      render: (text: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 16 }} loading />
-        return <Text type="tertiary">{formatTime(text)}</Text>
-      },
+      {
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 160,
+        render: (text: string, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
+          return <Text type="tertiary">{formatTime(text)}</Text>
+        },
     },
-    {
-      title: '操作',
-      dataIndex: 'id',
-      width: 150,
-      fixed: 'right' as const,
-      render: (_: string, record: any) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 28 }} loading />
-        return (
-          <div style={{ display: 'flex', gap: 4 }}>
+      {
+        title: '操作',
+        dataIndex: 'id',
+        width: 150,
+        fixed: 'right' as const,
+        render: (_value: string, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+          return (
+            <div style={{ display: 'flex', gap: 4 }}>
             <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
             <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTestClick(record)} />
             <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} size="small" onClick={() => handleCopyHookKey(record.hook_key)} />
             <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
           </div>
-        )
+          )
+        },
       },
-    },
-  ], [])
+  ]
 
-  // 分页数据
-  const allHooks = data?.items || []
-  const filteredHooks = useMemo(() => {
-    let result = allHooks
-    if (searchValue) {
-      const keyword = searchValue.toLowerCase()
-      result = result.filter(
-        (hook) =>
-          hook.name.toLowerCase().includes(keyword) ||
-          hook.hook_key.toLowerCase().includes(keyword) ||
-          hook.description?.toLowerCase().includes(keyword)
-      )
-    }
-    return result
-  }, [allHooks, searchValue])
-
-  const paginatedHooks = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return filteredHooks.slice(start, start + pageSize)
-  }, [filteredHooks, page, pageSize])
-
-  const displayData = isLoading ? createSkeletonData(5) : paginatedHooks
-
-  // 分页配置
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: filteredHooks.length,
-    onPageChange: (p: number) => setPage(p),
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, filteredHooks.length])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 打开编辑对话框
   const handleEdit = (item: WebhookHook) => {
     setEditingItem(item)
-    const campusRules = (item.extra_config as { campus_robot_map?: Array<{ campus_id: string; campus_name?: string; robot_ids: string[] }> })?.campus_robot_map || []
+    const campusRules = (item.extra_config as WebhookExtraConfig | undefined)?.campus_robot_map || []
     setCampusRobotRules(campusRules.map(rule => ({
       campus_id: rule.campus_id || '',
       robot_ids: rule.robot_ids || [],
@@ -429,7 +396,7 @@ export function WebhookHooksPage() {
   }
 
   // 提交表单
-  const handleSubmit = (values: Record<string, any>) => {
+  const handleSubmit = (values: WebhookHookFormValues) => {
     if (!editingItem?.id) return
 
     // 处理校区机器人映射规则
@@ -471,60 +438,52 @@ export function WebhookHooksPage() {
   }
 
   // 更新校区规则
-  const updateCampusRule = (index: number, key: keyof CampusRobotRule, value: any) => {
+  const updateCampusRule = (
+    index: number,
+    key: keyof CampusRobotRule,
+    value: CampusRobotRule[keyof CampusRobotRule]
+  ) => {
     setCampusRobotRules(prev => prev.map((r, i) => i === index ? { ...r, [key]: value } : r))
   }
 
   return (
-    <Main fixed>
-      <div className="flex flex-col gap-4 h-full">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <div>
-            <h1 className="text-2xl font-semibold">钩子配置管理</h1>
-            <p style={{ color: 'var(--semi-color-text-2)', fontSize: 14 }}>
-              配置Webhook钩子的机器人和消息模板
-            </p>
+    <>
+      <DataTableLayout
+        title="钩子配置管理"
+        total={data?.total}
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索钩子名称或标识..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+              showClear
+              style={{ width: 260 }}
+            />
+            <Select
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as string)}
+              optionList={statusOptions}
+              style={{ width: 130 }}
+            />
           </div>
-          <div style={{ padding: '8px 12px', background: 'var(--semi-color-fill-0)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Info className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
-            <Text type="tertiary" size="small">钩子已预定义，点击配置按钮设置机器人和消息模板</Text>
-          </div>
-        </div>
-
-        {/* 搜索栏 */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Input
-            prefix={<IconSearch />}
-            placeholder="搜索钩子名称或标识..."
-            value={searchValue}
-            onChange={(v) => setSearchValue(v)}
-            onEnterPress={handleSearch}
-            showClear
-            style={{ width: 260 }}
-          />
-          <Select
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as string)}
-            optionList={statusOptions}
-            style={{ width: 130 }}
-          />
-          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 min-h-0">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={filteredHooks.length > 0 ? pagination : false}
-            loading={false}
-            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-            empty={<div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-          />
-        </div>
-      </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        />
+      </DataTableLayout>
 
       {/* 编辑对话框 */}
       <Modal
@@ -548,7 +507,7 @@ export function WebhookHooksPage() {
           style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
         >
           <Tabs defaultActiveKey="basic" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 24px' }}>
-            <TabPane tab="基本配置" itemKey="basic">
+            <Tabs.TabPane tab="基本配置" itemKey="basic">
               <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16, paddingBottom: 24 }}>
                 <Form.Input field="name" label="钩子名称" placeholder="钩子名称" disabled />
                 <Form.Input field="hook_key" label="钩子标识" placeholder="唯一标识" disabled />
@@ -580,9 +539,9 @@ export function WebhookHooksPage() {
                 </Text>
                 <Form.Switch field="is_active" label="启用状态" extraText="设置该钩子是否启用" />
               </div>
-            </TabPane>
+            </Tabs.TabPane>
 
-            <TabPane tab={<span>校区匹配规则{campusRobotRules.length > 0 && <span style={{ marginLeft: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>({campusRobotRules.length})</span>}</span>} itemKey="campus-rules">
+            <Tabs.TabPane tab={<span>校区匹配规则{campusRobotRules.length > 0 && <span style={{ marginLeft: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>({campusRobotRules.length})</span>}</span>} itemKey="campus-rules">
               <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16, paddingBottom: 24 }}>
                 <div style={{ padding: '8px 12px', background: 'var(--semi-color-fill-0)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                   <Info className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
@@ -623,7 +582,7 @@ export function WebhookHooksPage() {
                   新增匹配规则
                 </Button>
               </div>
-            </TabPane>
+            </Tabs.TabPane>
           </Tabs>
         </Form>
       </Modal>
@@ -692,6 +651,6 @@ export function WebhookHooksPage() {
           </div>
         </div>
       </Modal>
-    </Main>
+    </>
   )
 }

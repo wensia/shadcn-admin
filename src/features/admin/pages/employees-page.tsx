@@ -5,13 +5,15 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Pencil, Trash2, User, KeyRound, X, CheckCircle, AlertCircle, Copy, Shield, Eye, EyeOff, AlertTriangle, Key, XCircle, MoreHorizontal, UserCheck, UserX } from 'lucide-react'
-import { Main } from '@/components/layout/main'
-import { Table, Button, Input, Select, Modal, Form, Tag, Skeleton, Typography, Switch, Dropdown, Checkbox, Tooltip } from '@douyinfe/semi-ui-19'
+import { Button, Input, Select, Modal, Form, Tag, Typography, Switch, Dropdown, Checkbox } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi, apiKeysApi } from '../api'
 import { DEFAULT_API_SCOPES, type EmployeeItem, type EmployeeUpdate, type EmployeeIdentityItem, type ApiKeyCreateResponse } from '../types'
 import { EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
@@ -50,9 +52,21 @@ interface IdentityFormData {
   is_active: boolean
 }
 
-// 骨架屏前缀
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+interface EmployeeFormValues {
+  username: string
+  name: string
+  email: string
+  phone: string
+  is_active: boolean
+  is_superuser: boolean
+  joined_at: string
+}
+
+interface ApiKeyFormValues {
+  name: string
+  expires_in_days: number
+}
+
 
 export function EmployeesPage() {
   useDocumentTitle('员工管理')
@@ -165,7 +179,7 @@ export function EmployeesPage() {
   const [areaOptionsMap, setAreaOptionsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({})
 
   // 加载地区列表（按大区）
-  const loadDistrictsForRegion = async (regionId: string) => {
+  const loadDistrictsForRegion = useCallback(async (regionId: string) => {
     if (districtOptionsMap[regionId]) return
     try {
       const response = await adminApi.getDistricts({ region_id: regionId, size: 100 })
@@ -175,10 +189,10 @@ export function EmployeesPage() {
     } catch (error) {
       showApiErrorToast(error, '加载地区失败')
     }
-  }
+  }, [districtOptionsMap])
 
   // 加载片区列表（按地区）
-  const loadAreasForDistrict = async (districtId: string) => {
+  const loadAreasForDistrict = useCallback(async (districtId: string) => {
     if (areaOptionsMap[districtId]) return
     try {
       const response = await adminApi.getAreas({ district_id: districtId, size: 100 })
@@ -188,7 +202,7 @@ export function EmployeesPage() {
     } catch (error) {
       showApiErrorToast(error, '加载片区失败')
     }
-  }
+  }, [areaOptionsMap])
 
   // 获取员工身份信息
   const employeeIds = data?.items?.map(e => e.id) || []
@@ -353,7 +367,7 @@ export function EmployeesPage() {
 
   // ========== 身份管理相关函数 ==========
 
-  const loadDepartmentsForCampus = async (campusId: string): Promise<Record<string, string>> => {
+  const loadDepartmentsForCampus = useCallback(async (campusId: string): Promise<Record<string, string>> => {
     if (departmentOptionsMap[campusId]) {
       const existingMap: Record<string, string> = {}
       departmentOptionsMap[campusId].forEach(d => {
@@ -377,9 +391,9 @@ export function EmployeesPage() {
       showApiErrorToast(error, '加载部门失败')
     }
     return {}
-  }
+  }, [departmentOptionsMap])
 
-  const loadPositionsForDepartment = async (departmentId: string, campusDeptIdOverride?: string) => {
+  const loadPositionsForDepartment = useCallback(async (departmentId: string, campusDeptIdOverride?: string) => {
     const campusDeptId = campusDeptIdOverride || deptToCampusDeptMap[departmentId]
     if (!campusDeptId) return
     if (positionOptionsMap[departmentId]) return
@@ -391,7 +405,7 @@ export function EmployeesPage() {
     } catch (error) {
       showApiErrorToast(error, '加载职位失败')
     }
-  }
+  }, [deptToCampusDeptMap, positionOptionsMap])
 
   const handleIdentityScopeChange = (index: number, scopeType: ScopeType) => {
     setIdentities(prev => {
@@ -545,14 +559,13 @@ export function EmployeesPage() {
   }
 
   // Semi Table 列定义
-  const columns: ColumnProps<EmployeeItem>[] = useMemo(
-    () => [
+  const columns: ColumnProps<EmployeeItem>[] = [
       {
         title: '用户名',
         dataIndex: 'username',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+            return <SemiSkeletonCell width={80} />
           }
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -567,7 +580,7 @@ export function EmployeesPage() {
         dataIndex: 'name',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+            return <SemiSkeletonCell width={64} />
           }
           return record.name
         },
@@ -577,7 +590,7 @@ export function EmployeesPage() {
         dataIndex: 'phone',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+            return <SemiSkeletonCell width={96} />
           }
           return record.phone || '-'
         },
@@ -587,7 +600,7 @@ export function EmployeesPage() {
         dataIndex: 'campus',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+            return <SemiSkeletonCell width={64} />
           }
           const ids = employeeIdentitiesMap[record.id] || []
           const activeIdentity = ids.find(i => i.is_active) || ids[0]
@@ -622,7 +635,7 @@ export function EmployeesPage() {
         dataIndex: 'position',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+            return <SemiSkeletonCell width={80} />
           }
           const ids = employeeIdentitiesMap[record.id] || []
           const activeIdentity = ids.find(i => i.is_active) || ids[0]
@@ -637,7 +650,7 @@ export function EmployeesPage() {
         dataIndex: 'is_superuser',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+            return <SemiSkeletonCell width={64} />
           }
           return <SuperuserBadge isSuperuser={record.is_superuser} />
         },
@@ -647,7 +660,7 @@ export function EmployeesPage() {
         dataIndex: 'is_active',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
+            return <SemiSkeletonCell width={56} />
           }
           return <EmployeeStatusBadge isActive={record.is_active} />
         },
@@ -657,7 +670,7 @@ export function EmployeesPage() {
         dataIndex: 'api_key_status',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+            return <SemiSkeletonCell width={80} />
           }
           if (record.has_api_key) {
             return (
@@ -677,7 +690,7 @@ export function EmployeesPage() {
         dataIndex: 'joined_at',
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+            return <SemiSkeletonCell width={96} />
           }
           return record.joined_at
             ? new Date(record.joined_at).toLocaleDateString('zh-CN')
@@ -691,7 +704,7 @@ export function EmployeesPage() {
         width: 60,
         render: (_: unknown, record: EmployeeItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+            return <SemiSkeletonCell width={32} />
           }
           return (
             <Dropdown
@@ -776,40 +789,9 @@ export function EmployeesPage() {
           )
         },
       },
-    ],
-    [employeeIdentitiesMap, toggleStatusMutation]
-  )
+    ]
 
-  // 骨架屏数据
-  const skeletonData: EmployeeItem[] = useMemo(
-    () =>
-      Array.from({ length: 5 }).map((_, i) => ({
-        id: `${SKELETON_PREFIX}${i}`,
-        username: '',
-        name: '',
-        email: '',
-        phone: '',
-        is_active: true,
-        is_superuser: false,
-        has_api_key: false,
-      })),
-    []
-  )
-
-  const displayData = isLoading ? skeletonData : (data?.items || [])
-
-  // Semi Table 分页
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: setPage,
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 处理创建
   const handleCreate = () => {
@@ -885,7 +867,7 @@ export function EmployeesPage() {
       showApiErrorToast(error, '加载身份信息失败')
       setIdentities([{ scope_type: 'campus', campus_id: '', region_id: '', district_id: '', area_id: '', department_id: '', position_id: '', is_active: true }])
     }
-  }, [])
+  }, [loadAreasForDistrict, loadDepartmentsForCampus, loadDistrictsForRegion, loadPositionsForDepartment])
 
   // 处理重置密码
   const handleResetPassword = (item: EmployeeItem) => {
@@ -906,7 +888,7 @@ export function EmployeesPage() {
   }
 
   // 处理表单提交
-  const handleFormSubmit = async (values: Record<string, any>) => {
+  const handleFormSubmit = async (values: EmployeeFormValues) => {
     const validIdentities = identities.filter(isIdentityComplete)
 
     if (editingItem) {
@@ -998,7 +980,7 @@ export function EmployeesPage() {
     }, 0)
   }
 
-  const handleApiKeyCreateSubmit = (values: Record<string, any>) => {
+  const handleApiKeyCreateSubmit = (values: ApiKeyFormValues) => {
     if (!selectedApiKeyEmployee) return
     createApiKeyMutation.mutate({
       employeeId: selectedApiKeyEmployee.id,
@@ -1077,22 +1059,19 @@ export function EmployeesPage() {
   }
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">员工管理</h1>
-            <Text type="tertiary" size="small">管理系统中的员工账号和权限</Text>
-          </div>
+    <>
+      <DataTableLayout
+        title="员工管理"
+        total={data?.total}
+        headerActions={
           <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新建员工
           </Button>
-        </div>
-
-        {/* 工具栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div className="flex items-center gap-2">
             <Input
               prefix={<IconSearch />}
               placeholder="搜索用户名、姓名、手机号..."
@@ -1123,25 +1102,19 @@ export function EmployeesPage() {
             />
             <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<IconRefresh />}
-            onClick={() => refetch()}
-          />
-        </div>
-
-        {/* 表格 */}
-        <div className="flex-1 overflow-hidden">
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={pagination}
-            style={{ height: '100%' }}
-          />
-        </div>
-      </div>
+        }
+      >
+        <SemiDataTable
+          columns={columns}
+          data={items}
+          total={data?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+        />
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -1759,6 +1732,6 @@ export function EmployeesPage() {
         确定要删除员工「{deletingItem?.name}」吗？此操作不可撤销。
         删除后该员工将无法登录系统。
       </Modal>
-    </Main>
+    </>
   )
 }

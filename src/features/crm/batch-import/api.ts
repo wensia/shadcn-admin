@@ -1,6 +1,6 @@
 /**
  * 批量导入 API
- * 从 frontend-vue/src/api/batchImport.ts 迁移
+ * 从旧版前端批量导入 API 迁移
  */
 
 import { apiClient } from '@/lib/api/client'
