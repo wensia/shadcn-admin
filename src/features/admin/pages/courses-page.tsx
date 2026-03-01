@@ -157,8 +157,7 @@ export function CoursesPage() {
   })
 
   // 列定义
-  const columns: ColumnProps<Course>[] = useMemo(
-    () => [
+  const columns: ColumnProps<Course>[] = [
       {
         title: '课程名称',
         dataIndex: 'name',
@@ -243,9 +242,7 @@ export function CoursesPage() {
           )
         },
       },
-    ],
-    [copyMutation.isPending]
-  )
+    ]
 
   // 打开新增对话框
   const handleCreate = () => {

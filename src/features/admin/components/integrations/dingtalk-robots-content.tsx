@@ -4,21 +4,19 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle } from 'lucide-react'
+import { Bot, Plus, Pencil, Trash2, Play, CheckCircle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-import { Table, Button, Input, Modal, Form, Select, Switch, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
+import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { dingtalkRobotsApi } from '../../api'
-import type { DingtalkRobot, DingtalkRobotCreate, DingtalkRobotUpdate, DingtalkSecurityType } from '../../types'
-import { SECURITY_TYPE_OPTIONS } from '../../types'
+import { SECURITY_TYPE_OPTIONS, type DingtalkRobot, type DingtalkRobotCreate, type DingtalkRobotUpdate, type DingtalkSecurityType } from '../../types'
 import { StatusBadge } from '../status-badge'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
-const { TextArea } = Input
 
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
@@ -146,8 +144,7 @@ export function DingtalkRobotsContent() {
   }
 
   // 列定义
-  const columns: ColumnProps<DingtalkRobot>[] = useMemo(
-    () => [
+  const columns: ColumnProps<DingtalkRobot>[] = [
       {
         title: '机器人名称',
         dataIndex: 'name',
@@ -231,9 +228,7 @@ export function DingtalkRobotsContent() {
           )
         },
       },
-    ],
-    []
-  )
+    ]
 
   // 表格数据
   const tableData = isLoading ? createSkeletonData(5) : (data?.items || [])

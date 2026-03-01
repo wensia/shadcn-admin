@@ -12,7 +12,6 @@ import {
   Input,
   Progress,
   Toast,
-  Typography,
   TextArea,
 } from '@douyinfe/semi-ui-19'
 import {
@@ -27,8 +26,6 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 import { batchImportApi } from '../api'
 import type { UploadResponse } from '../types'
-
-const { Text } = Typography
 
 // 处理阶段类型
 type Phase = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed'
@@ -73,18 +70,24 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
 
     const status = progressData.data.status
     if (status === 'completed') {
-      setPhase('completed')
-      setProcessingBatchId(null)
-      setUploadResult(prev => prev ? {
-        ...prev,
-        success_count: progressData.data.success_count,
-        failed_count: progressData.data.failed_count,
-        status: 'completed',
-      } : null)
+      const timer = window.setTimeout(() => {
+        setPhase('completed')
+        setProcessingBatchId(null)
+        setUploadResult(prev => prev ? {
+          ...prev,
+          success_count: progressData.data.success_count,
+          failed_count: progressData.data.failed_count,
+          status: 'completed',
+        } : null)
+      }, 0)
+      return () => window.clearTimeout(timer)
     } else if (status === 'failed') {
-      setPhase('failed')
-      setProcessingBatchId(null)
-      setErrorMessage(progressData.data.error_message || '处理失败')
+      const timer = window.setTimeout(() => {
+        setPhase('failed')
+        setProcessingBatchId(null)
+        setErrorMessage(progressData.data.error_message || '处理失败')
+      }, 0)
+      return () => window.clearTimeout(timer)
     }
   }, [progressData])
 
@@ -129,6 +132,7 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
       setErrorMessage(error.message || '上传失败')
     },
   })
+  const { mutate: submitUpload } = uploadMutation
 
   // 重置状态
   const resetState = useCallback(() => {
@@ -210,8 +214,8 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
 
   // 提交上传
   const handleSubmit = useCallback(() => {
-    uploadMutation.mutate()
-  }, [uploadMutation])
+    submitUpload()
+  }, [submitUpload])
 
   // 重试
   const handleRetry = useCallback(() => {

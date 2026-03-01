@@ -43,6 +43,14 @@
     "zod": "^4.2.0",
     "zustand": "^5.0.9"
   },
+  "overrides": {
+    "date-fns-tz": {
+      "date-fns": "2.30.0"
+    },
+    "@douyinfe/semi-foundation": {
+      "date-fns": "2.30.0"
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@faker-js/faker": "^10.1.0",

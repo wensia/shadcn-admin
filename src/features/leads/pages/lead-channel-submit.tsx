@@ -244,7 +244,7 @@ function StatsPanel({ token }: { token: string }) {
 
   useEffect(() => {
     if (!token) return
-    setLoading(true)
+    const startTimer = window.setTimeout(() => setLoading(true), 0)
     fetchChannelStats(token)
       .then((res) => {
         setStats(res)
@@ -252,6 +252,7 @@ function StatsPanel({ token }: { token: string }) {
       })
       .catch((err) => setError(err instanceof Error ? err.message : '加载失败'))
       .finally(() => setLoading(false))
+    return () => window.clearTimeout(startTimer)
   }, [token])
 
   if (loading) {
@@ -380,8 +381,8 @@ export function LeadChannelSubmit() {
   /* ─── Token validation ─── */
   useEffect(() => {
     if (!token) {
-      setPhase('invalid')
-      return
+      const timer = window.setTimeout(() => setPhase('invalid'), 0)
+      return () => window.clearTimeout(timer)
     }
     validateChannelToken(token)
       .then((res: ValidateTokenResponse) => {

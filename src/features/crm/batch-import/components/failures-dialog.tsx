@@ -12,8 +12,6 @@ import {
   Table,
   Select,
   Toast,
-  Skeleton,
-  Spin,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
@@ -22,8 +20,7 @@ import {
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { batchImportApi } from '../api'
-import type { BatchImportItem, ImportFailureItem, FailureType } from '../types'
-import { failureTypeLabels } from '../types'
+import { failureTypeLabels, type BatchImportItem, type ImportFailureItem, type FailureType } from '../types'
 
 interface FailuresDialogProps {
   open: boolean
@@ -32,7 +29,7 @@ interface FailuresDialogProps {
 }
 
 // 失败类型颜色
-const failureTypeColorMap: Record<FailureType, string> = {
+const failureTypeColorMap: Record<FailureType, 'grey' | 'red' | 'orange'> = {
   duplicate: 'grey',
   duplicate_in_file: 'grey',
   validation_error: 'red',
@@ -91,7 +88,10 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
   // 重置分页状态
   useEffect(() => {
     if (open && batch) {
-      setPagination({ page: 1, pageSize: 20 })
+      const timer = window.setTimeout(() => {
+        setPagination({ page: 1, pageSize: 20 })
+      }, 0)
+      return () => window.clearTimeout(timer)
     }
   }, [open, batch])
 
@@ -137,7 +137,7 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
       dataIndex: 'failure_type',
       width: 100,
       render: (type: FailureType) => (
-        <Tag color={failureTypeColorMap[type] || 'grey' as any} type="light">
+        <Tag color={failureTypeColorMap[type] || 'grey'} type="light">
           {failureTypeLabels[type] || type}
         </Tag>
       ),
@@ -187,7 +187,7 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
           {Object.entries(typeCounts).map(([type, count]) => (
             <Tag
               key={type}
-              color={failureTypeColorMap[type as FailureType] || 'grey' as any}
+              color={failureTypeColorMap[type as FailureType] || 'grey'}
               type="light"
             >
               {failureTypeLabels[type as FailureType] || type}

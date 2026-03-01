@@ -4,11 +4,11 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle } from 'lucide-react'
+import { Bot, Plus, Pencil, Trash2, Play, CheckCircle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Form, Button, Modal, Input, TextArea, Select, Switch, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
+import { Form, Button, Modal, Input, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch } from '@douyinfe/semi-icons'
@@ -16,13 +16,22 @@ import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { dingtalkRobotsApi } from '../api'
-import type { DingtalkRobot, DingtalkRobotCreate, DingtalkRobotUpdate, DingtalkSecurityType } from '../types'
-import { SECURITY_TYPE_OPTIONS } from '../types'
+import { SECURITY_TYPE_OPTIONS, type DingtalkRobot, type DingtalkRobotCreate, type DingtalkRobotUpdate, type DingtalkSecurityType } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
 
+interface DingtalkRobotFormValues {
+  name: string
+  description?: string
+  webhook: string
+  security_type: DingtalkSecurityType
+  secret_key?: string
+  keywords?: string
+  is_active: boolean
+  sort_order: number
+}
 
 export function DingtalkRobotsPage() {
   const queryClient = useQueryClient()
@@ -131,8 +140,7 @@ export function DingtalkRobotsPage() {
   }
 
   // 列定义
-  const columns: ColumnProps<DingtalkRobot>[] = useMemo(
-    () => [
+  const columns: ColumnProps<DingtalkRobot>[] = [
       {
         title: '机器人名称',
         dataIndex: 'name',
@@ -224,9 +232,7 @@ export function DingtalkRobotsPage() {
           )
         },
       },
-    ],
-    []
-  )
+    ]
 
   const items = useMemo(() => data?.items ?? [], [data?.items])
 
@@ -316,7 +322,7 @@ export function DingtalkRobotsPage() {
   }
 
   // 提交表单
-  const handleSubmit = (values: Record<string, any>) => {
+  const handleSubmit = (values: DingtalkRobotFormValues) => {
     // 检查是否已测试成功
     if (!editingItem && !testStatus.success) {
       toast.error('请先测试连接成功后再保存')
