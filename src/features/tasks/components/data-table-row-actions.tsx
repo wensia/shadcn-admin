@@ -1,83 +1,67 @@
-import { DotsHorizontalIcon } from '@radix-ui/react-icons'
-import { type Row } from '@tanstack/react-table'
+import { Dropdown, Button, RadioGroup, Radio } from '@douyinfe/semi-ui-19'
+import { IconMore } from '@douyinfe/semi-icons'
 import { Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { labels } from '../data/data'
-import { taskSchema } from '../data/schema'
+import { taskSchema, type Task } from '../data/schema'
 import { useTasks } from './tasks-provider'
 
-type DataTableRowActionsProps<TData> = {
-  row: Row<TData>
+type DataTableRowActionsProps = {
+  row: Task
 }
 
-export function DataTableRowActions<TData>({
-  row,
-}: DataTableRowActionsProps<TData>) {
-  const task = taskSchema.parse(row.original)
-
+export function DataTableRowActions({ row }: DataTableRowActionsProps) {
+  const task = taskSchema.parse(row)
   const { setOpen, setCurrentRow } = useTasks()
 
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant='ghost'
-          className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'
-        >
-          <DotsHorizontalIcon className='h-4 w-4' />
-          <span className='sr-only'>Open menu</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align='end' className='w-[160px]'>
-        <DropdownMenuItem
-          onClick={() => {
-            setCurrentRow(task)
-            setOpen('update')
-          }}
-        >
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled>Make a copy</DropdownMenuItem>
-        <DropdownMenuItem disabled>Favorite</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={task.label}>
-              {labels.map((label) => (
-                <DropdownMenuRadioItem key={label.value} value={label.value}>
-                  {label.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            setCurrentRow(task)
-            setOpen('delete')
-          }}
-        >
-          Delete
-          <DropdownMenuShortcut>
-            <Trash2 size={16} />
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Dropdown
+      trigger='click'
+      position='bottomRight'
+      clickToHide
+      render={
+        <Dropdown.Menu>
+          <Dropdown.Item
+            onClick={() => {
+              setCurrentRow(task)
+              setOpen('update')
+            }}
+          >
+            Edit
+          </Dropdown.Item>
+          <Dropdown.Item disabled>Make a copy</Dropdown.Item>
+          <Dropdown.Item disabled>Favorite</Dropdown.Item>
+          <Dropdown.Divider />
+          <Dropdown.Title>Labels</Dropdown.Title>
+          {labels.map((label) => (
+            <Dropdown.Item
+              key={label.value}
+              active={task.label === label.value}
+            >
+              {label.label}
+            </Dropdown.Item>
+          ))}
+          <Dropdown.Divider />
+          <Dropdown.Item
+            type='danger'
+            onClick={() => {
+              setCurrentRow(task)
+              setOpen('delete')
+            }}
+          >
+            <span className='flex items-center justify-between w-full'>
+              Delete
+              <Trash2 size={16} />
+            </span>
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      }
+    >
+      <Button
+        theme='borderless'
+        type='tertiary'
+        icon={<IconMore />}
+        size='small'
+      />
+    </Dropdown>
   )
 }

@@ -2,22 +2,11 @@
  * API密钥管理 - Tab 内容组件
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import {
   Key,
   Plus,
-  Search,
-  RefreshCw,
   Trash2,
   Copy,
   CheckCircle,
@@ -30,65 +19,21 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Checkbox, Tooltip } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { apiKeysApi } from '../../api'
 import type { EmployeeApiKeyInfo, ApiKeyCreateResponse, ApiKeyInfo } from '../../types'
 import { DEFAULT_API_SCOPES } from '../../types'
 import { formatTime } from '@/lib/utils/time'
 
-// 创建密钥表单验证
-const createFormSchema = z.object({
-  name: z.string().min(1, '请输入密钥名称').max(100, '名称最多100个字符'),
-  expires_in_days: z.coerce.number().int().min(1, '至少1天').max(3650, '最长10年').default(365),
-  scopes: z.record(z.array(z.string())).default({}),
-})
-
-type CreateFormData = z.infer<typeof createFormSchema>
+const { Text } = Typography
 
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+
 function createSkeletonData(count: number): EmployeeApiKeyInfo[] {
   return Array.from({ length: count }, (_, i) => ({
     employee_id: `${SKELETON_PREFIX}${i}`,
@@ -109,6 +54,7 @@ const PERMISSION_LABELS: Record<string, string> = {
 
 export function ApiKeysContent() {
   const queryClient = useQueryClient()
+  const createFormRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -126,16 +72,6 @@ export function ApiKeysContent() {
   const [employeeSearchValue, setEmployeeSearchValue] = useState('')
   const [configSelectedEmployee, setConfigSelectedEmployee] = useState<EmployeeApiKeyInfo | null>(null)
 
-  // 表单
-  const createForm = useForm<CreateFormData>({
-    resolver: zodResolver(createFormSchema),
-    defaultValues: {
-      name: '',
-      expires_in_days: 365,
-      scopes: {},
-    },
-  })
-
   // 查询已配置密钥的员工列表
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-api-keys', page, pageSize, searchValue],
@@ -143,7 +79,7 @@ export function ApiKeysContent() {
       const params: { page?: number; size?: number; search?: string; has_api_key?: boolean } = {
         page,
         size: pageSize,
-        has_api_key: true, // 只查询已配置密钥的用户
+        has_api_key: true,
       }
       if (searchValue) params.search = searchValue
       return apiKeysApi.list(params)
@@ -157,12 +93,12 @@ export function ApiKeysContent() {
       const params: { page?: number; size?: number; search?: string; has_api_key?: boolean } = {
         page: 1,
         size: 50,
-        has_api_key: false, // 只查询未配置密钥的用户
+        has_api_key: false,
       }
       if (employeeSearchValue) params.search = employeeSearchValue
       return apiKeysApi.list(params)
     },
-    enabled: configDialogOpen, // 只在对话框打开时查询
+    enabled: configDialogOpen,
   })
 
   const employees = data?.items || []
@@ -170,7 +106,7 @@ export function ApiKeysContent() {
 
   // 创建密钥
   const createMutation = useMutation({
-    mutationFn: (data: { employeeId: string; formData: CreateFormData }) =>
+    mutationFn: (data: { employeeId: string; formData: { name: string; expires_in_days: number; scopes: Record<string, string[]> } }) =>
       apiKeysApi.create(data.employeeId, {
         name: data.formData.name,
         scopes: Object.keys(data.formData.scopes).length > 0 ? data.formData.scopes : undefined,
@@ -179,7 +115,6 @@ export function ApiKeysContent() {
     onSuccess: (response) => {
       setCreatedKey(response)
       setKeyResultDialogOpen(true)
-      createForm.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
     },
     onError: (error: Error) => {
@@ -232,7 +167,7 @@ export function ApiKeysContent() {
   // 渲染权限标签
   const renderScopes = (apiKey?: ApiKeyInfo) => {
     if (!apiKey?.scopes || Object.keys(apiKey.scopes).length === 0) {
-      return <Badge variant="outline">无权限</Badge>
+      return <Tag>无权限</Tag>
     }
 
     const scopeEntries = Object.entries(apiKey.scopes)
@@ -244,191 +179,193 @@ export function ApiKeysContent() {
         {displayScopes.map(([scope, permissions]) => {
           const scopeInfo = DEFAULT_API_SCOPES[scope as keyof typeof DEFAULT_API_SCOPES]
           return (
-            <Badge key={scope} variant="secondary" className="text-xs">
+            <Tag key={scope} color="blue" size="small">
               {scopeInfo?.description || scope}
-              <span className="ml-1 text-muted-foreground">
+              <span className="ml-1 opacity-60">
                 ({permissions.length})
               </span>
-            </Badge>
+            </Tag>
           )
         })}
         {remainingCount > 0 && (
-          <Badge variant="outline" className="text-xs">
+          <Tag size="small">
             +{remainingCount}
-          </Badge>
+          </Tag>
         )}
       </div>
     )
   }
 
   // 列定义
-  const columns: ColumnDef<EmployeeApiKeyInfo>[] = useMemo(
+  const columns: ColumnProps<EmployeeApiKeyInfo>[] = useMemo(
     () => [
       {
-        accessorKey: 'name',
-        header: '员工信息',
-        size: 180,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-10 w-36" />
+        title: '员工信息',
+        dataIndex: 'name',
+        width: 180,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={2} style={{ width: 144 }} />
           }
           return (
             <div>
-              <div className="font-medium">{row.original.name}</div>
-              <div className="text-sm text-muted-foreground">{row.original.username}</div>
+              <div className="font-medium">{record.name}</div>
+              <Text type="tertiary" size="small">{record.username}</Text>
             </div>
           )
         },
       },
       {
-        id: 'api_key_status',
-        header: 'API密钥状态',
-        size: 140,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-20" />
+        title: 'API密钥状态',
+        dataIndex: 'api_key_status',
+        width: 140,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           }
-          if (!row.original.has_api_key) {
-            return <Badge variant="outline">未创建</Badge>
+          if (!record.has_api_key) {
+            return <Tag>未创建</Tag>
           }
-          const apiKey = row.original.api_key
+          const apiKey = record.api_key
           if (apiKey?.is_expired) {
             return (
-              <Badge variant="destructive" className="gap-1">
-                <XCircle className="h-3 w-3" />
+              <Tag color="red" size="small">
+                <XCircle className="h-3 w-3 mr-1 inline" />
                 已过期
-              </Badge>
+              </Tag>
             )
           }
           return (
-            <Badge variant="default" className="gap-1">
-              <CheckCircle className="h-3 w-3" />
+            <Tag color="green" size="small">
+              <CheckCircle className="h-3 w-3 mr-1 inline" />
               有效
-            </Badge>
+            </Tag>
           )
         },
       },
       {
-        accessorKey: 'api_key.name',
-        header: '密钥名称',
-        size: 150,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-24" />
+        title: '密钥名称',
+        dataIndex: 'api_key.name',
+        width: 150,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
           }
-          if (!row.original.has_api_key) {
-            return <span className="text-muted-foreground">-</span>
+          if (!record.has_api_key) {
+            return <Text type="tertiary">-</Text>
           }
           return (
             <div className="flex items-center gap-2">
-              <Key className="h-4 w-4 text-muted-foreground" />
-              <span>{row.original.api_key?.name || '-'}</span>
+              <Key className="h-4 w-4 text-gray-400" />
+              <span>{record.api_key?.name || '-'}</span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'api_key.prefix',
-        header: '密钥前缀',
-        size: 120,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-20" />
+        title: '密钥前缀',
+        dataIndex: 'api_key.prefix',
+        width: 120,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           }
-          if (!row.original.api_key?.prefix) {
-            return <span className="text-muted-foreground">-</span>
+          if (!record.api_key?.prefix) {
+            return <Text type="tertiary">-</Text>
           }
           return (
-            <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-              {row.original.api_key.prefix}...
+            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">
+              {record.api_key.prefix}...
             </code>
           )
         },
       },
       {
-        id: 'scopes',
-        header: '权限范围',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '权限范围',
+        dataIndex: 'scopes',
+        width: 200,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
-          if (!row.original.has_api_key) {
-            return <span className="text-muted-foreground">-</span>
+          if (!record.has_api_key) {
+            return <Text type="tertiary">-</Text>
           }
-          return renderScopes(row.original.api_key)
+          return renderScopes(record.api_key)
         },
       },
       {
-        accessorKey: 'api_key.expires_at',
-        header: '过期时间',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
+        title: '过期时间',
+        dataIndex: 'api_key.expires_at',
+        width: 160,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
-          if (!row.original.api_key?.expires_at) {
-            return <span className="text-muted-foreground">-</span>
+          if (!record.api_key?.expires_at) {
+            return <Text type="tertiary">-</Text>
           }
           return (
             <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3 text-muted-foreground" />
-              <span className={row.original.api_key.is_expired ? 'text-destructive' : ''}>
-                {formatTime(row.original.api_key.expires_at)}
+              <Clock className="h-3 w-3 text-gray-400" />
+              <span className={record.api_key.is_expired ? 'text-red-500' : ''}>
+                {formatTime(record.api_key.expires_at)}
               </span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'api_key.last_used_at',
-        header: '最后使用',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
+        title: '最后使用',
+        dataIndex: 'api_key.last_used_at',
+        width: 160,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
-          if (!row.original.api_key?.last_used_at) {
-            return <span className="text-muted-foreground">从未使用</span>
+          if (!record.api_key?.last_used_at) {
+            return <Text type="tertiary">从未使用</Text>
           }
-          return formatTime(row.original.api_key.last_used_at)
+          return formatTime(record.api_key.last_used_at)
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 140,
-        cell: ({ row }) => {
-          if (row.original.employee_id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-24" />
+        title: '操作',
+        dataIndex: 'actions',
+        width: 140,
+        render: (_: unknown, record: EmployeeApiKeyInfo) => {
+          if (isSkeletonRow(record.employee_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
           }
-
           return (
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleScopesClick(row.original)}
-                title="编辑权限"
-              >
-                <Shield className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRegenerateClick(row.original)}
-                title="重新生成"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-                title="删除"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <Tooltip content="编辑权限">
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<Shield className="h-4 w-4" />}
+                  size="small"
+                  onClick={() => handleScopesClick(record)}
+                />
+              </Tooltip>
+              <Tooltip content="重新生成">
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<IconRefresh />}
+                  size="small"
+                  onClick={() => handleRegenerateClick(record)}
+                />
+              </Tooltip>
+              <Tooltip content="删除">
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<Trash2 className="h-4 w-4 text-red-500" />}
+                  size="small"
+                  onClick={() => handleDeleteClick(record)}
+                />
+              </Tooltip>
             </div>
           )
         },
@@ -440,13 +377,19 @@ export function ApiKeysContent() {
   // 表格数据
   const tableData = isLoading ? createSkeletonData(5) : employees
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    getRowId: (row) => row.employee_id,
-  })
+  // 分页配置
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total,
+    onPageChange: setPage,
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
+      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, total])
 
   // 处理函数
   const handleSearch = () => {
@@ -509,433 +452,372 @@ export function ApiKeysContent() {
     }
   }
 
+  // 创建表单中的权限 scope 状态
+  const [createScopes, setCreateScopes] = useState<Record<string, string[]>>({})
+
+  const toggleCreateScope = (scope: string, permission: string) => {
+    setCreateScopes((prev) => {
+      const current = prev[scope] || []
+      if (current.includes(permission)) {
+        const newPermissions = current.filter((p) => p !== permission)
+        if (newPermissions.length === 0) {
+          const { [scope]: _, ...rest } = prev
+          return rest
+        }
+        return { ...prev, [scope]: newPermissions }
+      } else {
+        return { ...prev, [scope]: [...current, permission] }
+      }
+    })
+  }
+
+  const handleCreateSubmit = (values: { name: string; expires_in_days: number }) => {
+    if (!configSelectedEmployee) return
+    createMutation.mutate(
+      {
+        employeeId: configSelectedEmployee.employee_id,
+        formData: { ...values, scopes: createScopes },
+      },
+      {
+        onSuccess: (response) => {
+          setCreatedKey(response)
+          setConfigDialogOpen(false)
+          setConfigSelectedEmployee(null)
+          setEmployeeSearchValue('')
+          setCreateScopes({})
+          setKeyResultDialogOpen(true)
+          queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
+          queryClient.invalidateQueries({ queryKey: ['admin-api-keys-available'] })
+        },
+      }
+    )
+  }
+
   return (
     <>
       <div className="flex h-full flex-col gap-4">
         {/* 工具栏 */}
         <div className="flex items-center gap-2">
           <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索姓名或用户名..."
-                className="pl-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索姓名或用户名..."
+              style={{ width: 256 }}
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+            />
+            <Button theme="outline" onClick={handleSearch}>搜索</Button>
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<IconRefresh />}
+              onClick={() => refetch()}
+            />
           </div>
-          <Button onClick={() => setConfigDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
+          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setConfigDialogOpen(true)}>
             配置密钥
           </Button>
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {total > 0 && (
-          <SimplePagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey="employee_id"
+            pagination={total > 0 ? pagination : false}
+            loading={false}
+            empty="暂无数据"
           />
-        )}
+        </div>
       </div>
 
       {/* 密钥结果对话框 */}
-      <Dialog open={keyResultDialogOpen} onOpenChange={setKeyResultDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              API密钥已生成
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>重要提示</AlertTitle>
-              <AlertDescription>
-                请立即复制并安全保存此API密钥，它只会显示一次！关闭此对话框后将无法再次查看完整密钥。
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-3">
-              <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
-                <span className="text-sm font-medium">员工：</span>
-                <span>{createdKey?.name}（{createdKey?.username}）</span>
-              </div>
-              <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
-                <span className="text-sm font-medium">密钥名称：</span>
-                <span>{createdKey?.info.name}</span>
-              </div>
-              <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
-                <span className="text-sm font-medium">API密钥：</span>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <code className="bg-muted px-2 py-1 rounded text-sm break-all flex-1">
-                      {showKey ? createdKey?.api_key : '••••••••••••••••••••••••••••••••'}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowKey(!showKey)}
-                    >
-                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleCopyToClipboard(createdKey?.api_key || '')}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    复制API密钥
-                  </Button>
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-500" />
+            API密钥已生成
+          </div>
+        }
+        visible={keyResultDialogOpen}
+        onCancel={() => {
+          setKeyResultDialogOpen(false)
+          setCreatedKey(null)
+          setShowKey(false)
+        }}
+        footer={
+          <Button theme="solid" type="primary" onClick={() => {
+            setKeyResultDialogOpen(false)
+            setCreatedKey(null)
+            setShowKey(false)
+          }}>
+            我已安全保存
+          </Button>
+        }
+        width={550}
+      >
+        <div className="space-y-4">
+          <div className="rounded-md border border-red-200 bg-red-50 p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
+              <div>
+                <div className="font-medium text-red-800">重要提示</div>
+                <div className="text-sm text-red-700">
+                  请立即复制并安全保存此API密钥，它只会显示一次！关闭此对话框后将无法再次查看完整密钥。
                 </div>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => {
-              setKeyResultDialogOpen(false)
-              setCreatedKey(null)
-              setShowKey(false)
-            }}>
-              我已安全保存
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <span className="text-sm font-medium">员工：</span>
+              <span>{createdKey?.name}（{createdKey?.username}）</span>
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <span className="text-sm font-medium">密钥名称：</span>
+              <span>{createdKey?.info.name}</span>
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+              <span className="text-sm font-medium">API密钥：</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <code className="bg-gray-100 px-2 py-1 rounded text-sm break-all flex-1">
+                    {showKey ? createdKey?.api_key : '••••••••••••••••••••••••••••••••'}
+                  </code>
+                  <Button
+                    theme="borderless"
+                    type="tertiary"
+                    icon={showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    size="small"
+                    onClick={() => setShowKey(!showKey)}
+                  />
+                </div>
+                <Button
+                  theme="outline"
+                  block
+                  icon={<Copy className="h-4 w-4" />}
+                  onClick={() => handleCopyToClipboard(createdKey?.api_key || '')}
+                >
+                  复制API密钥
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* 编辑权限对话框 */}
-      <Dialog open={scopesDialogOpen} onOpenChange={setScopesDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>编辑API密钥权限</DialogTitle>
-            <DialogDescription>
-              修改员工 {selectedEmployee?.name} 的API密钥权限范围
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 space-y-3">
-            {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
-              <div key={scope} className="border rounded-lg p-3">
-                <div className="font-medium mb-2">{info.description}</div>
-                <div className="flex flex-wrap gap-2">
-                  {info.permissions.map((permission) => {
-                    const isChecked = selectedScopes[scope]?.includes(permission)
-                    return (
-                      <label
-                        key={permission}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() => toggleScope(scope, permission)}
-                        />
-                        <span className="text-sm">
-                          {PERMISSION_LABELS[permission] || permission}
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
+      <Modal
+        title="编辑API密钥权限"
+        visible={scopesDialogOpen}
+        onCancel={() => setScopesDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setScopesDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={handleScopesSubmit} loading={updateScopesMutation.isPending}>
+              保存权限
+            </Button>
           </div>
-          <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-            <Button type="button" variant="outline" onClick={() => setScopesDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleScopesSubmit} disabled={updateScopesMutation.isPending}>
-              {updateScopesMutation.isPending ? '保存中...' : '保存权限'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        width={600}
+        style={{ maxHeight: '90vh' }}
+      >
+        <div className="text-sm text-gray-500 mb-4">
+          修改员工 {selectedEmployee?.name} 的API密钥权限范围
+        </div>
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+          {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
+            <div key={scope} className="border rounded-lg p-3">
+              <div className="font-medium mb-2">{info.description}</div>
+              <div className="flex flex-wrap gap-2">
+                {info.permissions.map((permission) => {
+                  const isChecked = selectedScopes[scope]?.includes(permission)
+                  return (
+                    <Checkbox
+                      key={permission}
+                      checked={isChecked}
+                      onChange={() => toggleScope(scope, permission)}
+                    >
+                      {PERMISSION_LABELS[permission] || permission}
+                    </Checkbox>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除员工 {selectedEmployee?.name} 的API密钥吗？删除后，使用该密钥的所有应用将无法访问API。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除员工 {selectedEmployee?.name} 的API密钥吗？删除后，使用该密钥的所有应用将无法访问API。
+      </Modal>
 
       {/* 配置密钥对话框 */}
-      <Dialog open={configDialogOpen} onOpenChange={(open) => {
-        setConfigDialogOpen(open)
-        if (!open) {
+      <Modal
+        title="配置 API 密钥"
+        visible={configDialogOpen}
+        onCancel={() => {
+          setConfigDialogOpen(false)
           setConfigSelectedEmployee(null)
           setEmployeeSearchValue('')
-          createForm.reset()
-        }
-      }}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>配置 API 密钥</DialogTitle>
-            <DialogDescription>
-              {configSelectedEmployee
-                ? `为员工 ${configSelectedEmployee.name}（${configSelectedEmployee.username}）创建 API 密钥`
-                : '选择一个员工来配置 API 密钥'}
-            </DialogDescription>
-          </DialogHeader>
+          setCreateScopes({})
+        }}
+        footer={configSelectedEmployee ? (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => {
+              setConfigDialogOpen(false)
+              setConfigSelectedEmployee(null)
+              setEmployeeSearchValue('')
+              setCreateScopes({})
+            }}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => createFormRef.current?.submitForm()} loading={createMutation.isPending}>
+              创建密钥
+            </Button>
+          </div>
+        ) : null}
+        width={700}
+        style={{ maxHeight: '90vh' }}
+      >
+        <div className="text-sm text-gray-500 mb-4">
+          {configSelectedEmployee
+            ? `为员工 ${configSelectedEmployee.name}（${configSelectedEmployee.username}）创建 API 密钥`
+            : '选择一个员工来配置 API 密钥'}
+        </div>
 
-          {!configSelectedEmployee ? (
-            // 员工选择步骤
-            <div className="flex-1 overflow-hidden px-6 pb-6 flex flex-col gap-4">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="搜索员工姓名或用户名..."
-                  className="pl-8"
-                  value={employeeSearchValue}
-                  onChange={(e) => setEmployeeSearchValue(e.target.value)}
-                />
-              </div>
-              <div className="flex-1 overflow-auto border rounded-md">
-                {isLoadingAvailable ? (
-                  <div className="p-4 space-y-2">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : (availableEmployees?.items || []).length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    {employeeSearchValue ? '未找到匹配的员工' : '所有员工都已配置 API 密钥'}
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {(availableEmployees?.items || []).map((emp) => (
-                      <div
-                        key={emp.employee_id}
-                        className="p-3 hover:bg-muted/50 cursor-pointer flex items-center justify-between"
-                        onClick={() => {
-                          setConfigSelectedEmployee(emp)
-                          createForm.reset({
+        {!configSelectedEmployee ? (
+          <div className="flex flex-col gap-4">
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索员工姓名或用户名..."
+              value={employeeSearchValue}
+              onChange={(v) => setEmployeeSearchValue(v)}
+            />
+            <div className="max-h-[400px] overflow-auto border rounded-md">
+              {isLoadingAvailable ? (
+                <div className="p-4 space-y-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton.Paragraph key={i} rows={1} style={{ width: '100%' }} />
+                  ))}
+                </div>
+              ) : (availableEmployees?.items || []).length === 0 ? (
+                <div className="p-8 text-center text-gray-400">
+                  {employeeSearchValue ? '未找到匹配的员工' : '所有员工都已配置 API 密钥'}
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {(availableEmployees?.items || []).map((emp) => (
+                    <div
+                      key={emp.employee_id}
+                      className="p-3 hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                      onClick={() => {
+                        setConfigSelectedEmployee(emp)
+                        setCreateScopes({})
+                        setTimeout(() => {
+                          createFormRef.current?.setValues({
                             name: `${emp.name}的API密钥`,
                             expires_in_days: 365,
-                            scopes: {},
                           })
-                        }}
-                      >
-                        <div>
-                          <div className="font-medium">{emp.name}</div>
-                          <div className="text-sm text-muted-foreground">{emp.username}</div>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          选择
-                        </Button>
+                        }, 0)
+                      }}
+                    >
+                      <div>
+                        <div className="font-medium">{emp.name}</div>
+                        <Text type="tertiary" size="small">{emp.username}</Text>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {(availableEmployees?.total || 0) > 50 && (
-                <div className="text-sm text-muted-foreground text-center">
-                  显示前 50 个结果，请使用搜索缩小范围
+                      <Button theme="outline" size="small">选择</Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          ) : (
-            // 创建密钥表单
-            <Form {...createForm}>
-              <form
-                onSubmit={createForm.handleSubmit((data) => {
-                  createMutation.mutate(
-                    { employeeId: configSelectedEmployee.employee_id, formData: data },
-                    {
-                      onSuccess: (response) => {
-                        setCreatedKey(response)
-                        setConfigDialogOpen(false)
-                        setConfigSelectedEmployee(null)
-                        setEmployeeSearchValue('')
-                        setKeyResultDialogOpen(true)
-                        createForm.reset()
-                        queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
-                        queryClient.invalidateQueries({ queryKey: ['admin-api-keys-available'] })
-                      },
-                    }
-                  )
-                })}
-                className="flex flex-col flex-1 min-h-0"
+            {(availableEmployees?.total || 0) > 50 && (
+              <div className="text-sm text-gray-400 text-center">
+                显示前 50 个结果，请使用搜索缩小范围
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                onClick={() => setConfigSelectedEmployee(null)}
               >
-                <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setConfigSelectedEmployee(null)}
-                    >
-                      ← 返回选择
-                    </Button>
-                  </div>
+                ← 返回选择
+              </Button>
+            </div>
 
-                  <FormField
-                    control={createForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>密钥名称</FormLabel>
-                        <FormControl>
-                          <Input placeholder="请输入密钥名称" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <Form
+              getFormApi={(api) => { createFormRef.current = api }}
+              onSubmit={handleCreateSubmit}
+              labelPosition="top"
+              initValues={{
+                name: `${configSelectedEmployee.name}的API密钥`,
+                expires_in_days: 365,
+              }}
+            >
+              <Form.Input
+                field="name"
+                label="密钥名称"
+                placeholder="请输入密钥名称"
+                rules={[{ required: true, message: '请输入密钥名称' }]}
+              />
+              <Form.InputNumber
+                field="expires_in_days"
+                label="有效期（天）"
+                min={1}
+                max={3650}
+                extraText="最短1天，最长10年（3650天）"
+                rules={[{ required: true, message: '请输入有效期' }]}
+              />
+            </Form>
 
-                  <FormField
-                    control={createForm.control}
-                    name="expires_in_days"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>有效期（天）</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={1} max={3650} {...field} />
-                        </FormControl>
-                        <FormDescription>最短1天，最长10年（3650天）</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="space-y-2">
-                    <FormLabel>权限范围</FormLabel>
-                    <FormDescription>选择此 API 密钥可访问的功能和权限</FormDescription>
-                    <div className="space-y-3 mt-2">
-                      {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
-                        <div key={scope} className="border rounded-lg p-3">
-                          <div className="font-medium mb-2">{info.description}</div>
-                          <div className="flex flex-wrap gap-2">
-                            {info.permissions.map((permission) => {
-                              const currentScopes = createForm.watch('scopes')
-                              const isChecked = currentScopes[scope]?.includes(permission)
-                              return (
-                                <label
-                                  key={permission}
-                                  className="flex items-center gap-2 cursor-pointer"
-                                >
-                                  <Checkbox
-                                    checked={isChecked}
-                                    onCheckedChange={(checked) => {
-                                      const current = currentScopes[scope] || []
-                                      if (checked) {
-                                        createForm.setValue('scopes', {
-                                          ...currentScopes,
-                                          [scope]: [...current, permission],
-                                        })
-                                      } else {
-                                        const newPermissions = current.filter((p) => p !== permission)
-                                        if (newPermissions.length === 0) {
-                                          const { [scope]: _, ...rest } = currentScopes
-                                          createForm.setValue('scopes', rest)
-                                        } else {
-                                          createForm.setValue('scopes', {
-                                            ...currentScopes,
-                                            [scope]: newPermissions,
-                                          })
-                                        }
-                                      }
-                                    }}
-                                  />
-                                  <span className="text-sm">
-                                    {PERMISSION_LABELS[permission] || permission}
-                                  </span>
-                                </label>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
+            <div className="space-y-2">
+              <div className="text-sm font-medium">权限范围</div>
+              <div className="text-xs text-gray-500">选择此 API 密钥可访问的功能和权限</div>
+              <div className="space-y-3 mt-2">
+                {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
+                  <div key={scope} className="border rounded-lg p-3">
+                    <div className="font-medium mb-2">{info.description}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {info.permissions.map((permission) => {
+                        const isChecked = createScopes[scope]?.includes(permission)
+                        return (
+                          <Checkbox
+                            key={permission}
+                            checked={isChecked}
+                            onChange={() => toggleCreateScope(scope, permission)}
+                          >
+                            {PERMISSION_LABELS[permission] || permission}
+                          </Checkbox>
+                        )
+                      })}
                     </div>
                   </div>
-                </div>
-
-                <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setConfigDialogOpen(false)
-                      setConfigSelectedEmployee(null)
-                      setEmployeeSearchValue('')
-                    }}
-                  >
-                    取消
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? '创建中...' : '创建密钥'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          )}
-        </DialogContent>
-      </Dialog>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   )
 }

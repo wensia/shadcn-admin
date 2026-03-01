@@ -2,93 +2,32 @@
  * 校区部门配置页面
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Trash2, Search, Building2, Network, Filter, RefreshCw, Users, Eye } from 'lucide-react'
+import { Plus, Trash2, Building2, Network, Users, Eye } from 'lucide-react'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Form, Button, Modal, Input, Select, Table, Skeleton, Typography, Tag, Tooltip } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { adminApi } from '../api'
 import type { CampusDepartmentItem, CampusDepartmentCreate, ManagerType } from '../types'
-import { Badge } from '@/components/ui/badge'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { StatusBadge } from '../components/status-badge'
 import { ManageManagersDialog } from '../components/manage-managers-dialog'
 import { ViewDepartmentEmployeesDialog } from '../components/view-department-employees-dialog'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-// 表单验证 schema
-const formSchema = z.object({
-  campus_id: z.string().min(1, '请选择校区'),
-  department_id: z.string().min(1, '请选择部门'),
-  sort_order: z.number().min(0, '排序值不能小于0').default(0),
-  is_active: z.boolean().default(true),
-})
+const { Text } = Typography
 
-type FormData = z.infer<typeof formSchema>
+const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 
 export function CampusDepartmentsPage() {
   useDocumentTitle('校区部门配置')
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -103,17 +42,6 @@ export function CampusDepartmentsPage() {
   const [selectedDepartment, setSelectedDepartment] = useState<CampusDepartmentItem | null>(null)
   const [employeesDialogOpen, setEmployeesDialogOpen] = useState(false)
   const [viewingDepartment, setViewingDepartment] = useState<CampusDepartmentItem | null>(null)
-
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      campus_id: '',
-      department_id: '',
-      sort_order: 0,
-      is_active: true,
-    },
-  })
 
   // 获取校区部门配置列表
   const { data, isLoading, refetch } = useQuery({
@@ -164,7 +92,6 @@ export function CampusDepartmentsPage() {
     onSuccess: () => {
       toast.success('配置成功')
       setDialogOpen(false)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-campus-departments'] })
     },
     onError: (error: Error) => {
@@ -186,165 +113,159 @@ export function CampusDepartmentsPage() {
     },
   })
 
+  // 负责人类型标签
+  const typeLabels: Record<ManagerType, string> = {
+    manager: '经理',
+    deputy: '副经理',
+    supervisor: '主管',
+  }
+
+  // 负责人类型颜色
+  const typeColors: Record<ManagerType, 'blue' | 'cyan' | 'grey'> = {
+    manager: 'blue',
+    deputy: 'cyan',
+    supervisor: 'grey',
+  }
+
   // 表格列定义
-  const columns: ColumnDef<CampusDepartmentItem>[] = useMemo(
+  const columns: ColumnProps<CampusDepartmentItem>[] = useMemo(
     () => [
       {
-        accessorKey: 'campus_name',
-        header: '校区',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-24" />
+        title: '校区',
+        dataIndex: 'campus_name',
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
           }
           return (
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-teal-500" />
-              <span className="font-medium">{row.original.campus_name || '-'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Building2 className="h-4 w-4" style={{ color: '#14b8a6' }} />
+              <span style={{ fontWeight: 500 }}>{record!.campus_name || '-'}</span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'department_name',
-        header: '部门',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-24" />
+        title: '部门',
+        dataIndex: 'department_name',
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
           }
           return (
-            <div className="flex items-center gap-2">
-              <Network className="h-4 w-4 text-purple-500" />
-              <span>{row.original.department_name || '-'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Network className="h-4 w-4" style={{ color: '#a855f7' }} />
+              <span>{record!.department_name || '-'}</span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'managers',
-        header: '负责人',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-5 w-32" />
+        title: '负责人',
+        dataIndex: 'managers',
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
           }
-          const managers = row.original.managers || []
+          const managers = record!.managers || []
           if (managers.length === 0) {
-            return <span className="text-muted-foreground text-sm">未配置</span>
-          }
-
-          // 负责人类型对应的颜色
-          const typeVariants: Record<ManagerType, 'default' | 'secondary' | 'outline'> = {
-            manager: 'default',
-            deputy: 'secondary',
-            supervisor: 'outline',
-          }
-          const typeLabels: Record<ManagerType, string> = {
-            manager: '经理',
-            deputy: '副经理',
-            supervisor: '主管',
+            return <Text type="tertiary" size="small">未配置</Text>
           }
 
           return (
-            <TooltipProvider>
-              <div className="flex flex-wrap gap-1">
-                {managers.slice(0, 3).map((m) => (
-                  <Tooltip key={m.id}>
-                    <TooltipTrigger asChild>
-                      <Badge
-                        variant={typeVariants[m.manager_type]}
-                        className="text-xs cursor-default"
-                      >
-                        {m.employee?.name || '未知'}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{typeLabels[m.manager_type]}: {m.employee?.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-                {managers.length > 3 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="text-xs cursor-default">
-                        +{managers.length - 3}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        {managers.slice(3).map((m) => (
-                          <p key={m.id}>{typeLabels[m.manager_type]}: {m.employee?.name}</p>
-                        ))}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            </TooltipProvider>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {managers.slice(0, 3).map((m) => (
+                <Tooltip key={m.id} content={`${typeLabels[m.manager_type]}: ${m.employee?.name}`}>
+                  <Tag
+                    color={typeColors[m.manager_type]}
+                    size="small"
+                    style={{ cursor: 'default' }}
+                  >
+                    {m.employee?.name || '未知'}
+                  </Tag>
+                </Tooltip>
+              ))}
+              {managers.length > 3 && (
+                <Tooltip content={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {managers.slice(3).map((m) => (
+                      <div key={m.id}>{typeLabels[m.manager_type]}: {m.employee?.name}</div>
+                    ))}
+                  </div>
+                }>
+                  <Tag size="small" style={{ cursor: 'default' }}>
+                    +{managers.length - 3}
+                  </Tag>
+                </Tooltip>
+              )}
+            </div>
           )
         },
       },
       {
-        accessorKey: 'sort_order',
-        header: '排序',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-8" />
+        title: '排序',
+        dataIndex: 'sort_order',
+        width: 80,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
           }
-          return row.original.sort_order ?? '-'
+          return record!.sort_order ?? '-'
         },
       },
       {
-        accessorKey: 'is_active',
-        header: '状态',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-5 w-14" />
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 100,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
           }
-          return <StatusBadge isActive={row.original.is_active} />
+          return <StatusBadge isActive={record!.is_active} />
         },
       },
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-28" />
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 180,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
           }
-          return new Date(row.original.created_at).toLocaleString('zh-CN')
+          return new Date(record!.created_at).toLocaleString('zh-CN')
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-8 w-16" />
+        title: '操作',
+        dataIndex: 'id',
+        width: 140,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
           }
           return (
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', gap: 4 }}>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleViewEmployees(row.original)}
-                title="查看员工"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Eye className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleViewEmployees(record!)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleManageManagers(row.original)}
-                title="负责人管理"
-              >
-                <Users className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Users className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleManageManagers(record!)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-                title="删除"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+                theme="borderless"
+                type="danger"
+                icon={<Trash2 className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleDeleteClick(record!)}
+              />
             </div>
           )
         },
@@ -357,7 +278,7 @@ export function CampusDepartmentsPage() {
   const skeletonData: CampusDepartmentItem[] = useMemo(
     () =>
       Array.from({ length: 5 }).map((_, i) => ({
-        id: `__skeleton__${i}`,
+        id: `${SKELETON_PREFIX}${i}`,
         campus_id: '',
         department_id: '',
         sort_order: 0,
@@ -368,23 +289,25 @@ export function CampusDepartmentsPage() {
     []
   )
 
-  const tableData = isLoading ? skeletonData : (data?.items || [])
+  const displayData = isLoading ? skeletonData : (data?.items || [])
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+  // 分页
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total: data?.total || 0,
+    onPageChange: (p: number) => setPage(p),
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, data?.total])
 
   // 处理创建
   const handleCreate = () => {
-    form.reset({
-      campus_id: '',
-      department_id: '',
-      sort_order: 0,
-      is_active: true,
-    })
     setDialogOpen(true)
+    setTimeout(() => { formRef.current?.reset() }, 0)
   }
 
   // 处理删除点击
@@ -413,8 +336,13 @@ export function CampusDepartmentsPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (data: FormData) => {
-    createMutation.mutate(data as CampusDepartmentCreate)
+  const handleSubmit = (values: Record<string, any>) => {
+    createMutation.mutate({
+      campus_id: values.campus_id,
+      department_id: values.department_id,
+      sort_order: values.sort_order ?? 0,
+      is_active: true,
+    } as CampusDepartmentCreate)
   }
 
   // 处理搜索
@@ -423,6 +351,26 @@ export function CampusDepartmentsPage() {
     refetch()
   }
 
+  // 校区下拉选项
+  const campusFilterOptions = useMemo(() => [
+    { value: 'all', label: '全部校区' },
+    ...campuses.map((c) => ({ value: c.id, label: c.name })),
+  ], [campuses])
+
+  const departmentFilterOptions = useMemo(() => [
+    { value: 'all', label: '全部部门' },
+    ...departments.map((d) => ({ value: d.id, label: d.name })),
+  ], [departments])
+
+  const campusFormOptions = useMemo(() =>
+    campuses.map((c) => ({
+      value: c.id,
+      label: c.name + (c.area ? ` (${c.area.name})` : ''),
+    })), [campuses])
+
+  const departmentFormOptions = useMemo(() =>
+    departments.map((d) => ({ value: d.id, label: d.name })), [departments])
+
   return (
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
@@ -430,258 +378,116 @@ export function CampusDepartmentsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">校区部门配置</h1>
-            <p className="text-sm text-muted-foreground">
+            <Text type="tertiary" size="small">
               配置校区与部门的关联关系，决定每个校区有哪些部门
-            </p>
+            </Text>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             添加配置
           </Button>
         </div>
 
         {/* 工具栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative min-w-[200px] max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-8"
-              />
-            </div>
-            <Select value={campusFilter} onValueChange={(value) => { setCampusFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[160px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="筛选校区" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部校区</SelectItem>
-                {campuses.map((campus) => (
-                  <SelectItem key={campus.id} value={campus.id}>
-                    {campus.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={departmentFilter} onValueChange={(value) => { setDepartmentFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[160px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="筛选部门" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部部门</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+              showClear
+              style={{ width: 200 }}
+            />
+            <Select
+              value={campusFilter}
+              onChange={(v) => { setCampusFilter(v as string); setPage(1) }}
+              optionList={campusFilterOptions}
+              style={{ width: 160 }}
+            />
+            <Select
+              value={departmentFilter}
+              onChange={(v) => { setDepartmentFilter(v as string); setPage(1) }}
+              optionList={departmentFilterOptions}
+              style={{ width: 160 }}
+            />
+            <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {data && data.total > 0 && (
-          <SimplePagination
-            page={page}
-            pageSize={pageSize}
-            total={data.total}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
-            isLoading={isLoading}
-          />
-        )}
+        <Table
+          columns={columns}
+          dataSource={displayData}
+          rowKey="id"
+          pagination={pagination}
+          loading={false}
+          style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+        />
       </div>
 
       {/* 创建对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>添加校区部门配置</DialogTitle>
-            <DialogDescription>
-              为校区添加部门，建立校区与部门的关联关系
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-              <FormField
-                control={form.control}
-                name="campus_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>选择校区</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择校区" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {campuses.map((campus) => (
-                          <SelectItem key={campus.id} value={campus.id}>
-                            {campus.name}
-                            {campus.area && ` (${campus.area.name})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="department_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>选择部门</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择部门" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id}>
-                            {dept.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sort_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>排序值</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="请输入排序值"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending ? '保存中...' : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title="添加校区部门配置"
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => formRef.current?.submitForm()} loading={createMutation.isPending}>
+              保存
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleSubmit}
+          labelPosition="top"
+        >
+          <Form.Select
+            field="campus_id"
+            label="选择校区"
+            placeholder="请选择校区"
+            optionList={campusFormOptions}
+            rules={[{ required: true, message: '请选择校区' }]}
+            style={{ width: '100%' }}
+          />
+          <Form.Select
+            field="department_id"
+            label="选择部门"
+            placeholder="请选择部门"
+            optionList={departmentFormOptions}
+            rules={[{ required: true, message: '请选择部门' }]}
+            style={{ width: '100%' }}
+          />
+          <Form.InputNumber
+            field="sort_order"
+            label="排序值"
+            initValue={0}
+            min={0}
+            style={{ width: '100%' }}
+          />
+        </Form>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除「{deletingItem?.campus_name} - {deletingItem?.department_name}」的配置吗？
-              此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除「{deletingItem?.campus_name} - {deletingItem?.department_name}」的配置吗？此操作不可撤销。
+      </Modal>
 
       {/* 负责人管理对话框 */}
       <ManageManagersDialog

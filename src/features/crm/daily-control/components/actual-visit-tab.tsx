@@ -1,54 +1,23 @@
 /**
- * 到访 Tab - 显示实际到访的线索列表
+ * 到访 Tab - Semi Design 版
  * 状态: visited
  */
 
-import { useState, useEffect, useMemo } from 'react'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table'
-import { Wallet, MoreHorizontal, RefreshCw, Plus, Pencil } from 'lucide-react'
-import { toast } from 'sonner'
-
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { cn } from '@/lib/utils'
-
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Button, Card, Skeleton, Table, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
+import { IconPlus, IconRefresh, IconMore, IconEdit, IconCreditCard } from '@douyinfe/semi-icons'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
   getVisitSchedules,
   type VisitScheduleItem,
-  visitScheduleStatusLabels,
-  visitScheduleStatusColors,
 } from '../api'
 import { VisitScheduleDialog } from './visit-schedule-dialog'
 import { CopyableCell } from './copyable-cell'
-import { ColumnToggle } from './column-toggle'
+import { SemiTablePagination } from '@/components/semi/table-pagination'
 
 // 星期映射
 const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
-// 格式化日期带星期
 function formatDateWithWeekday(dateStr: string | undefined): string {
   if (!dateStr) return '-'
   try {
@@ -60,26 +29,16 @@ function formatDateWithWeekday(dateStr: string | undefined): string {
   }
 }
 
-// 骨架屏占位数据标识
+// 骨架屏
 const SKELETON_ID_PREFIX = '__skeleton__'
-
 function createSkeletonData(count: number): VisitScheduleItem[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_ID_PREFIX}${i}`,
-    lead_id: '',
-    student_name: '',
-    phone: '',
-    visit_date: '',
-    visit_time: '',
-    advisor_name: '',
-    campus_name: '',
-    status: 'visited' as const,
-    course_names: [],
-    remark: '',
-    created_at: '',
+    lead_id: '', student_name: '', phone: '', visit_date: '', visit_time: '',
+    advisor_name: '', campus_name: '', status: 'visited' as const,
+    course_names: [], remark: '', created_at: '',
   }))
 }
-
 function isSkeletonRow(id: string): boolean {
   return id.startsWith(SKELETON_ID_PREFIX)
 }
@@ -99,26 +58,30 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<VisitScheduleItem | null>(null)
 
-  // 加载数据
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(400)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const measure = () => {
+      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+      const available = el.clientHeight - headerH
+      if (available > 100) setScrollY(available)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const fetchData = async () => {
     setIsLoading(true)
     try {
-      const params: any = {
-        page,
-        size: pageSize,
-        status: 'visited',
-      }
-
-      if (dateFrom) {
-        params.visit_date_from = dateFrom
-      }
-      if (dateTo) {
-        params.visit_date_to = dateTo
-      }
-      if (creatorCampusId) {
-        params.creator_campus_id = creatorCampusId
-      }
-
+      const params: any = { page, size: pageSize, status: 'visited' }
+      if (dateFrom) params.visit_date_from = dateFrom
+      if (dateTo) params.visit_date_to = dateTo
+      if (creatorCampusId) params.creator_campus_id = creatorCampusId
       const result = await getVisitSchedules(params)
       if (result) {
         setData(result.items || [])
@@ -126,312 +89,144 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
       }
     } catch (error) {
       console.error('获取到访列表失败:', error)
-      toast.error('获取到访列表失败')
+      Toast.error('获取到访列表失败')
     } finally {
       setIsLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
+  useEffect(() => { fetchData() }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
 
-  // 编辑
-  const handleEdit = (item: VisitScheduleItem) => {
-    setEditData(item)
-    setDialogOpen(true)
-  }
+  const handleEdit = (item: VisitScheduleItem) => { setEditData(item); setDialogOpen(true) }
+  const handleCreate = () => { setEditData(null); setDialogOpen(true) }
+  const handleRegisterPayment = (_item: VisitScheduleItem) => { Toast.info('缴费登记功能开发中') }
 
-  // 新建
-  const handleCreate = () => {
-    setEditData(null)
-    setDialogOpen(true)
-  }
+  const displayData = useMemo(() => isLoading ? createSkeletonData(pageSize) : data, [isLoading, data, pageSize])
 
-  // 登记缴费
-  const handleRegisterPayment = (item: VisitScheduleItem) => {
-    // TODO: 打开缴费登记弹窗
-    toast.info('缴费登记功能开发中')
-  }
-
-  // 显示数据
-  const displayData = useMemo(() => {
-    return isLoading ? createSkeletonData(pageSize) : data
-  }, [isLoading, data, pageSize])
-
-  // 列名映射（用于列可见性控制显示）
-  const columnLabels: Record<string, string> = {
-    student_name: '学生姓名',
-    phone: '联系电话',
-    visit_date: '到访日期',
-    visit_time: '到访时间',
-    advisor_name: '接待顾问',
-    course_names: '体验课程',
-    status: '状态',
-    remark: '备注',
-    actions: '操作',
-  }
-
-  // 表格列定义
-  const columns = useMemo<ColumnDef<VisitScheduleItem>[]>(
-    () => [
-      {
-        accessorKey: 'student_name',
-        header: '学生姓名',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          const item = row.original
-          return (
-            <div className="flex items-center gap-1">
-              <span className="font-medium">{item.student_name || '-'}</span>
-              {item.lead_deleted && (
-                <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-50 text-red-600 border-red-200">
-                  线索已删
-                </Badge>
-              )}
-            </div>
-          )
-        },
-        size: 120,
+  const columns: ColumnProps<VisitScheduleItem>[] = [
+    {
+      title: '学生姓名', dataIndex: 'student_name', width: 120,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 500 }}>{record.student_name || '-'}</span>
+            {record.lead_deleted && <Tag size="small" color="red">线索已删</Tag>}
+          </div>
+        )
       },
-      {
-        accessorKey: 'phone',
-        header: '联系电话',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-28" />
-          }
-          return <span>{row.original.phone || '-'}</span>
-        },
-        size: 120,
+    },
+    {
+      title: '联系电话', dataIndex: 'phone', width: 120,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+        return <span>{record.phone || '-'}</span>
       },
-      {
-        accessorKey: 'visit_date',
-        header: '到访日期',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-28" />
-          }
-          return <span>{formatDateWithWeekday(row.original.visit_date)}</span>
-        },
-        size: 120,
+    },
+    {
+      title: '到访日期', dataIndex: 'visit_date', width: 120,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+        return <span>{formatDateWithWeekday(record.visit_date)}</span>
       },
-      {
-        accessorKey: 'visit_time',
-        header: '到访时间',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          return <span>{row.original.visit_time?.substring(0, 5) || '-'}</span>
-        },
-        size: 80,
+    },
+    {
+      title: '到访时间', dataIndex: 'visit_time', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+        return <span>{record.visit_time?.substring(0, 5) || '-'}</span>
       },
-      {
-        accessorKey: 'advisor_name',
-        header: '接待顾问',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          return <span>{row.original.advisor_name || '-'}</span>
-        },
-        size: 80,
+    },
+    {
+      title: '接待顾问', dataIndex: 'advisor_name', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+        return <span>{record.advisor_name || '-'}</span>
       },
-      {
-        accessorKey: 'course_names',
-        header: '体验课程',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-32" />
-          }
-          const courses = row.original.course_names
-          const content = courses?.join('、')
-          return content ? (
-            <CopyableCell content={content} maxWidthClass="max-w-[150px]" />
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )
-        },
-        size: 150,
+    },
+    {
+      title: '体验课程', dataIndex: 'course_names', width: 150,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 120 }} />
+        const content = record.course_names?.join('、')
+        return content ? <CopyableCell content={content} maxWidthClass="max-w-[150px]" /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
       },
-      {
-        accessorKey: 'status',
-        header: '状态',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
-          }
-          const status = row.original.status
-          return (
-            <Badge variant="outline" className={cn('text-xs', visitScheduleStatusColors[status])}>
-              {visitScheduleStatusLabels[status]}
-            </Badge>
-          )
-        },
-        size: 80,
+    },
+    {
+      title: '备注', dataIndex: 'remark', width: 120,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 90 }} />
+        return record.remark ? <CopyableCell content={record.remark} maxWidthClass="max-w-[120px]" /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
       },
-      {
-        accessorKey: 'remark',
-        header: '备注',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
-          }
-          const remark = row.original.remark
-          return remark ? (
-            <CopyableCell content={remark} maxWidthClass="max-w-[120px]" className="text-muted-foreground" />
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )
-        },
-        size: 120,
+    },
+    {
+      title: '导入状态', dataIndex: 'is_counted', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+        return <Tag size="small" color={record.is_counted ? 'green' : 'grey'}>{record.is_counted ? '已导入' : '待导入'}</Tag>
       },
-      {
-        id: 'actions',
-        header: '操作',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-8 w-8" />
-          }
-          const item = row.original
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleEdit(item)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  编辑
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleRegisterPayment(item)}>
-                  <Wallet className="mr-2 h-4 w-4 text-green-600" />
-                  登记缴费
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
-        },
-        size: 60,
+    },
+    {
+      title: '操作', dataIndex: 'actions', width: 60, fixed: 'right' as const,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+        return (
+          <Dropdown
+            trigger="click"
+            clickToHide
+            position="bottomRight"
+            render={
+              <Dropdown.Menu>
+                <Dropdown.Item icon={<IconEdit />} onClick={() => handleEdit(record)}>编辑</Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item icon={<IconCreditCard style={{ color: 'var(--semi-color-success)' }} />} onClick={() => handleRegisterPayment(record)}>登记缴费</Dropdown.Item>
+              </Dropdown.Menu>
+            }
+          >
+            <Button theme="borderless" icon={<IconMore />} size="small" />
+          </Dropdown>
+        )
       },
-    ],
-    [isLoading]
-  )
-
-  const table = useReactTable({
-    data: displayData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    pageCount: Math.ceil(total / pageSize),
-  })
+    },
+  ]
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
-      <CardHeader className="flex flex-shrink-0 flex-row items-center justify-between space-y-0 px-4 py-3">
-        <CardTitle className="text-base font-medium">到访列表</CardTitle>
-        <div className="flex items-center gap-2">
-          <Button size="sm" className="h-8 gap-1" onClick={handleCreate}>
-            <Plus className="h-4 w-4" />
-            新建到访
-          </Button>
-          <ColumnToggle table={table} columnLabels={columnLabels} />
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={fetchData}>
-            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-          </Button>
+    <Card
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 16px' }}
+      header={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
+          <span style={{ fontSize: 16, fontWeight: 500 }}>到访列表</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>新建到访</Button>
+            <Button icon={<IconRefresh spin={isLoading} />} onClick={fetchData} />
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4 pt-0">
-        {/* 数据表 */}
-        <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-card">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const isActionsColumn = header.id === 'actions'
-                    return (
-                      <TableHead
-                        key={header.id}
-                        style={{ width: header.getSize() }}
-                        className={cn(
-                          "text-xs font-semibold",
-                          isActionsColumn && "sticky right-0 z-20 bg-card shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map((row) => {
-                  const isImported = row.original.is_counted
-                  return (
-                    <TableRow key={row.id} className={cn(isImported && "bg-green-50/50")}>
-                      {row.getVisibleCells().map((cell) => {
-                        const isActionsColumn = cell.column.id === 'actions'
-                        return (
-                          <TableCell
-                            key={cell.id}
-                            style={{ width: cell.column.getSize() }}
-                            className={cn(
-                              "py-2 text-xs",
-                              isActionsColumn && "sticky right-0 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]",
-                              isActionsColumn && (isImported ? "bg-green-50/50" : "bg-card")
-                            )}
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        )
-                      })}
-                    </TableRow>
-                  )
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                    暂无到访记录
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        <SimplePagination
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size)
-            setPage(1)
-          }}
-          className="flex-shrink-0"
-          isLoading={isLoading}
+      }
+    >
+      <div ref={wrapperRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={displayData}
+          rowKey="id"
+          pagination={false}
+          scroll={{ y: scrollY }}
+          style={{ fontSize: 12 }}
+          size="middle"
+          rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
+          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无到访记录</div>}
         />
-      </CardContent>
-
-      {/* 新建/编辑到访弹窗 */}
+      </div>
+      <div style={{ flexShrink: 0, paddingTop: 16 }}>
+        <SemiTablePagination
+          page={page} pageSize={pageSize} total={total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        />
+      </div>
       <VisitScheduleDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        defaultStatus="visited"
-        onSuccess={fetchData}
-        editData={editData}
+        open={dialogOpen} onOpenChange={setDialogOpen}
+        defaultStatus="visited" onSuccess={fetchData} editData={editData}
       />
     </Card>
   )

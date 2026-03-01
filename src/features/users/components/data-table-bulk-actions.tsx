@@ -1,138 +1,140 @@
 import { useState } from 'react'
-import { type Table } from '@tanstack/react-table'
-import { Trash2, UserX, UserCheck, Mail } from 'lucide-react'
+import { Button, Tooltip, Tag, Divider } from '@douyinfe/semi-ui-19'
+import { Trash2, UserX, UserCheck, Mail, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { sleep } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
+import { cn } from '@/lib/utils'
 import { type User } from '../data/schema'
 import { UsersMultiDeleteDialog } from './users-multi-delete-dialog'
 
-type DataTableBulkActionsProps<TData> = {
-  table: Table<TData>
+type DataTableBulkActionsProps = {
+  selectedRows: User[]
+  onClearSelection: () => void
+  entityName: string
 }
 
-export function DataTableBulkActions<TData>({
-  table,
-}: DataTableBulkActionsProps<TData>) {
+export function DataTableBulkActions({
+  selectedRows,
+  onClearSelection,
+  entityName,
+}: DataTableBulkActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const selectedRows = table.getFilteredSelectedRowModel().rows
+  const selectedCount = selectedRows.length
 
   const handleBulkStatusChange = (status: 'active' | 'inactive') => {
-    const selectedUsers = selectedRows.map((row) => row.original as User)
     toast.promise(sleep(2000), {
       loading: `${status === 'active' ? 'Activating' : 'Deactivating'} users...`,
       success: () => {
-        table.resetRowSelection()
-        return `${status === 'active' ? 'Activated' : 'Deactivated'} ${selectedUsers.length} user${selectedUsers.length > 1 ? 's' : ''}`
+        onClearSelection()
+        return `${status === 'active' ? 'Activated' : 'Deactivated'} ${selectedCount} user${selectedCount > 1 ? 's' : ''}`
       },
       error: `Error ${status === 'active' ? 'activating' : 'deactivating'} users`,
     })
-    table.resetRowSelection()
   }
 
   const handleBulkInvite = () => {
-    const selectedUsers = selectedRows.map((row) => row.original as User)
     toast.promise(sleep(2000), {
       loading: 'Inviting users...',
       success: () => {
-        table.resetRowSelection()
-        return `Invited ${selectedUsers.length} user${selectedUsers.length > 1 ? 's' : ''}`
+        onClearSelection()
+        return `Invited ${selectedCount} user${selectedCount > 1 ? 's' : ''}`
       },
       error: 'Error inviting users',
     })
-    table.resetRowSelection()
   }
+
+  if (selectedCount === 0) return null
 
   return (
     <>
-      <BulkActionsToolbar table={table} entityName='user'>
-        <Tooltip>
-          <TooltipTrigger asChild>
+      <div
+        className={cn(
+          'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl',
+          'transition-all delay-100 duration-300 ease-out hover:scale-105'
+        )}
+      >
+        <div
+          className={cn(
+            'p-2 shadow-xl',
+            'rounded-xl border',
+            'bg-background/95 backdrop-blur-lg supports-backdrop-filter:bg-background/60',
+            'flex items-center gap-x-2'
+          )}
+        >
+          <Tooltip content='Clear selection (Escape)'>
             <Button
-              variant='outline'
-              size='icon'
+              theme='borderless'
+              type='tertiary'
+              icon={<X size={14} />}
+              size='small'
+              onClick={onClearSelection}
+              style={{ borderRadius: '50%', width: 24, height: 24, padding: 0 }}
+            />
+          </Tooltip>
+
+          <Divider layout='vertical' style={{ height: 20 }} />
+
+          <div className='flex items-center gap-x-1 text-sm'>
+            <Tag color='dark' size='large' shape='circle'>
+              {selectedCount}
+            </Tag>
+            <span className='hidden sm:inline'>
+              {entityName}
+              {selectedCount > 1 ? 's' : ''}
+            </span>{' '}
+            selected
+          </div>
+
+          <Divider layout='vertical' style={{ height: 20 }} />
+
+          <Tooltip content='Invite selected users'>
+            <Button
+              theme='outline'
+              size='small'
+              icon={<Mail size={16} />}
               onClick={handleBulkInvite}
-              className='size-8'
-              aria-label='Invite selected users'
-              title='Invite selected users'
-            >
-              <Mail />
-              <span className='sr-only'>Invite selected users</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Invite selected users</p>
-          </TooltipContent>
-        </Tooltip>
+              style={{ width: 32, height: 32 }}
+            />
+          </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
+          <Tooltip content='Activate selected users'>
             <Button
-              variant='outline'
-              size='icon'
+              theme='outline'
+              size='small'
+              icon={<UserCheck size={16} />}
               onClick={() => handleBulkStatusChange('active')}
-              className='size-8'
-              aria-label='Activate selected users'
-              title='Activate selected users'
-            >
-              <UserCheck />
-              <span className='sr-only'>Activate selected users</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Activate selected users</p>
-          </TooltipContent>
-        </Tooltip>
+              style={{ width: 32, height: 32 }}
+            />
+          </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
+          <Tooltip content='Deactivate selected users'>
             <Button
-              variant='outline'
-              size='icon'
+              theme='outline'
+              size='small'
+              icon={<UserX size={16} />}
               onClick={() => handleBulkStatusChange('inactive')}
-              className='size-8'
-              aria-label='Deactivate selected users'
-              title='Deactivate selected users'
-            >
-              <UserX />
-              <span className='sr-only'>Deactivate selected users</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Deactivate selected users</p>
-          </TooltipContent>
-        </Tooltip>
+              style={{ width: 32, height: 32 }}
+            />
+          </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
+          <Tooltip content='Delete selected users'>
             <Button
-              variant='destructive'
-              size='icon'
+              type='danger'
+              theme='solid'
+              size='small'
+              icon={<Trash2 size={16} />}
               onClick={() => setShowDeleteConfirm(true)}
-              className='size-8'
-              aria-label='Delete selected users'
-              title='Delete selected users'
-            >
-              <Trash2 />
-              <span className='sr-only'>Delete selected users</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Delete selected users</p>
-          </TooltipContent>
-        </Tooltip>
-      </BulkActionsToolbar>
+              style={{ width: 32, height: 32 }}
+            />
+          </Tooltip>
+        </div>
+      </div>
 
       <UsersMultiDeleteDialog
-        table={table}
+        selectedCount={selectedCount}
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
+        onSuccess={onClearSelection}
       />
     </>
   )

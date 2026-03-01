@@ -1,33 +1,21 @@
 /**
- * 录音详情弹窗
- * 顶部音频播放器 + 下方标签页（转写文本 / AI 分析）
+ * 录音详情弹窗 - 双列布局
+ * 顶部：通话信息条
+ * 左列：音频播放器 + 转写文本
+ * 右列：AI 分析
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { SideSheet, Button, Tag, Slider, Skeleton, Dropdown, Toast, Spin } from '@douyinfe/semi-ui-19'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Play, Pause, Volume2, VolumeX, Phone, SkipBack, SkipForward, Download, FileText, BrainCircuit, Loader2, Copy, FileJson, FileType } from 'lucide-react'
-import { Slider } from '@/components/ui/slider'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+  Play, Pause, Volume2, VolumeX, SkipBack, SkipForward,
+  Download, FileText, BrainCircuit, Copy, FileJson, FileType,
+  ArrowRight, Clock, Building2, Baby, RotateCcw, RefreshCw,
+} from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
 import { copyToClipboard } from '@/lib/utils'
 
-import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { callRecordsApi } from '../../api'
 import { TranscriptViewer } from './transcript-viewer'
@@ -39,6 +27,14 @@ interface RecordDetailModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
+
+/** Semi 原生色（使用 CSS 变量） */
+const BRAND = {
+  cardBorder: 'var(--semi-color-border)',
+}
+
+/** 倍速选项 */
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
 /**
  * 将转写文本格式化为可读对话文本
@@ -66,6 +62,29 @@ function formatPlayTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
+/**
+ * 格式化通话时长（秒 -> 分秒）
+ */
+function formatDurationDisplay(seconds: number | null | undefined): string {
+  if (seconds == null) return '-'
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  if (mins === 0) return `${secs}秒`
+  return `${mins}分${secs > 0 ? `${secs}秒` : ''}`
+}
+
+/**
+ * 获取通话结果颜色
+ */
+function getCallResultColor(result: string | null | undefined): string {
+  if (!result) return 'grey'
+  const r = result.toLowerCase()
+  if (r.includes('接通') || r.includes('answered') || r.includes('connected')) return 'green'
+  if (r.includes('未接') || r.includes('missed') || r.includes('no answer')) return 'red'
+  if (r.includes('忙') || r.includes('busy')) return 'orange'
+  return 'grey'
+}
+
 export function RecordDetailModal({ record: recordProp, open, onOpenChange }: RecordDetailModalProps) {
   const queryClient = useQueryClient()
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -74,6 +93,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
+  const [playbackRate, setPlaybackRate] = useState(1)
 
   // 懒加载完整记录（含 transcript 和 ai_analysis）
   const [fullRecord, setFullRecord] = useState<CallRecord | null>(null)
@@ -91,13 +111,12 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     }
   }, [open, recordProp?.id])
 
-  // 头部信息使用列表数据（recordProp），内容面板使用完整数据（fullRecord）
   const record = recordProp
 
   // 是否正在轮询分析状态
   const isPolling = (fullRecord?.ai_analysis_status ?? record?.ai_analysis_status) === 'processing'
 
-  // 轮询 AI 分析状态（每 3 秒，仅在 processing 状态时启用）
+  // 轮询 AI 分析状态
   useQuery({
     queryKey: ['analysis-status', record?.id],
     queryFn: () => callRecordsApi.getAnalysisStatus(record!.id),
@@ -108,57 +127,38 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
       if (data.status === 'completed' && data.analysis) {
         setFullRecord((prev) =>
           prev
-            ? {
-                ...prev,
-                ai_analysis: data.analysis,
-                ai_analysis_status: 'completed',
-                ai_analyzed_at: data.analyzed_at,
-              }
+            ? { ...prev, ai_analysis: data.analysis, ai_analysis_status: 'completed', ai_analyzed_at: data.analyzed_at }
             : prev
         )
-        toast.success('AI 分析完成')
+        Toast.success('AI 分析完成')
         queryClient.invalidateQueries({ queryKey: ['call-records'] })
       } else if (data.status === 'failed') {
-        setFullRecord((prev) =>
-          prev
-            ? { ...prev, ai_analysis_status: 'failed' }
-            : prev
-        )
-        toast.error(`分析失败: ${data.error || '未知错误'}`)
+        setFullRecord((prev) => prev ? { ...prev, ai_analysis_status: 'failed' } : prev)
+        Toast.error(`分析失败: ${data.error || '未知错误'}`)
       }
       return data
     }, [queryClient]),
   })
 
-  // 从录音 URL 中提取 voiceId（有转写文本说明有录音）
   const hasTranscript = record?.has_transcript || (fullRecord?.transcript && fullRecord.transcript.length > 0)
-  const voiceId = (record?.has_recording || hasTranscript)
-    ? record?.record_id || ''
-    : ''
+  const voiceId = (record?.has_recording || hasTranscript) ? record?.record_id || '' : ''
 
-  // 获取录音 URL
   const { data: recordUrlData, isLoading: isLoadingUrl } = useQuery({
     queryKey: ['record-url', voiceId],
     queryFn: () => callRecordsApi.getRecordUrl(voiceId),
     enabled: !!voiceId && open,
-    staleTime: 30 * 60 * 1000, // 30 分钟缓存
+    staleTime: 30 * 60 * 1000,
   })
 
   const audioUrl = recordUrlData?.url || ''
 
-  // AI 分析 mutation（提交异步任务，立即返回）
   const analyzeMutation = useMutation({
     mutationFn: () => callRecordsApi.analyzeCallRecord(record!.id),
     onSuccess: () => {
-      // 立即将本地状态设为 processing，触发轮询
-      setFullRecord((prev) =>
-        prev
-          ? { ...prev, ai_analysis_status: 'processing' }
-          : prev
-      )
+      setFullRecord((prev) => prev ? { ...prev, ai_analysis_status: 'processing' } : prev)
     },
     onError: (error: Error) => {
-      toast.error(`提交分析失败: ${error.message}`)
+      Toast.error(`提交分析失败: ${error.message}`)
     },
   })
 
@@ -168,13 +168,12 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
       setIsPlaying(false)
       setCurrentTime(0)
       setDuration(0)
+      setPlaybackRate(1)
     }
   }, [open])
 
-  // 处理播放/暂停
   const togglePlay = () => {
     if (!audioRef.current) return
-
     if (isPlaying) {
       audioRef.current.pause()
     } else {
@@ -183,36 +182,30 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     setIsPlaying(!isPlaying)
   }
 
-  // 快退 10 秒
   const skipBackward = () => {
     if (!audioRef.current) return
     audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10)
   }
 
-  // 快进 10 秒
   const skipForward = () => {
     if (!audioRef.current) return
     audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 10)
   }
 
-  // 处理进度条拖动
-  const handleSeek = (value: number[]) => {
+  const handleSeek = (val: number) => {
     if (!audioRef.current) return
-    const time = value[0]
-    audioRef.current.currentTime = time
-    setCurrentTime(time)
+    audioRef.current.currentTime = val
+    setCurrentTime(val)
   }
 
-  // 处理音量调整
-  const handleVolumeChange = (value: number[]) => {
-    if (!audioRef.current) return
-    const vol = value[0]
-    audioRef.current.volume = vol
-    setVolume(vol)
-    setIsMuted(vol === 0)
+  const handleVolumeChange = (val: number) => {
+    if (!audioRef.current || !Number.isFinite(val)) return
+    const clamped = Math.max(0, Math.min(1, val))
+    audioRef.current.volume = clamped
+    setVolume(clamped)
+    setIsMuted(clamped === 0)
   }
 
-  // 处理静音
   const toggleMute = () => {
     if (!audioRef.current) return
     const newMuted = !isMuted
@@ -220,7 +213,20 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     setIsMuted(newMuted)
   }
 
-  // 处理转写文本点击跳转
+  const resetPlayback = () => {
+    if (!audioRef.current) return
+    audioRef.current.currentTime = 0
+    setCurrentTime(0)
+  }
+
+  const cyclePlaybackRate = () => {
+    if (!audioRef.current) return
+    const idx = PLAYBACK_RATES.indexOf(playbackRate)
+    const next = PLAYBACK_RATES[(idx + 1) % PLAYBACK_RATES.length]
+    audioRef.current.playbackRate = next
+    setPlaybackRate(next)
+  }
+
   const handleTranscriptSeek = (time: number) => {
     if (!audioRef.current) return
     audioRef.current.currentTime = time
@@ -231,234 +237,393 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     }
   }
 
-  // 有转写文本说明有录音，或者 has_recording 为 true
   const hasRecording = record?.has_recording || hasTranscript
-
   const fullTranscript = fullRecord?.transcript
   const hasFullTranscript = fullTranscript && fullTranscript.length > 0
-
-  const renderTranscriptPanel = () => (
-    <div className="flex-1 min-h-0 flex flex-col">
-      {/* 播放器 + 工具栏 */}
-      <div className="shrink-0 border-b px-4 py-2 space-y-2">
-        {hasRecording && (
-          <>
-            {isLoadingUrl ? (
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                <Skeleton className="h-1.5 flex-1 rounded" />
-                <Skeleton className="h-4 w-16" />
-              </div>
-            ) : audioUrl ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <audio
-                  ref={audioRef}
-                  src={audioUrl}
-                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                  onDurationChange={(e) => setDuration(e.currentTarget.duration)}
-                  onEnded={() => setIsPlaying(false)}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                />
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={skipBackward} aria-label="快退 10 秒">
-                    <SkipBack className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                  <Button variant="default" size="icon" className="h-8 w-8 rounded-full shrink-0" onClick={togglePlay} aria-label={isPlaying ? '暂停播放' : '开始播放'}>
-                    {isPlaying ? <Pause className="h-3.5 w-3.5" aria-hidden="true" /> : <Play className="h-3.5 w-3.5 ml-0.5" aria-hidden="true" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={skipForward} aria-label="快进 10 秒">
-                    <SkipForward className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                  <span className="w-[34px] shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
-                    {formatPlayTime(currentTime)}
-                  </span>
-                </div>
-
-                <div className="flex min-w-[140px] flex-1 items-center gap-2">
-                  <Slider value={[currentTime]} max={duration || 100} step={0.1} onValueChange={handleSeek} className="min-w-0 flex-1 cursor-pointer" />
-                  <span className="w-[34px] shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                    {formatPlayTime(duration)}
-                  </span>
-                </div>
-
-                <div className="ml-auto flex shrink-0 items-center gap-2">
-                  <div className="hidden h-4 w-px bg-border sm:block" />
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={toggleMute} aria-label={isMuted || volume === 0 ? '取消静音' : '静音'}>
-                    {isMuted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" aria-hidden="true" /> : <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />}
-                  </Button>
-                  <Slider value={[isMuted ? 0 : volume]} max={1} step={0.1} onValueChange={handleVolumeChange} className="w-14 cursor-pointer shrink-0 sm:w-16" />
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" asChild>
-                    <a href={audioUrl} download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`} aria-label="下载录音">
-                      <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground text-xs py-1">
-                无法获取录音地址
-              </div>
-            )}
-          </>
-        )}
-        {hasFullTranscript && (
-          <div className="flex items-center justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
-                  <Copy className="mr-1 h-3 w-3" aria-hidden="true" />
-                  复制
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={async () => {
-                    const text = formatTranscriptText(fullTranscript || [])
-                    const ok = await copyToClipboard(text)
-                    if (ok) toast.success('已复制格式化对话文本')
-                  }}
-                >
-                  <FileType className="mr-2 h-4 w-4" aria-hidden="true" />
-                  复制对话文本
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={async () => {
-                    const json = JSON.stringify(fullTranscript || [], null, 2)
-                    const ok = await copyToClipboard(json)
-                    if (ok) toast.success('已复制原始 JSON')
-                  }}
-                >
-                  <FileJson className="mr-2 h-4 w-4" aria-hidden="true" />
-                  复制原始 JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-h-0 overflow-hidden relative">
-        {isDetailLoading ? (
-          <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" aria-hidden="true" />
-            加载转写文本...
-          </div>
-        ) : hasFullTranscript ? (
-          <TranscriptViewer
-            transcript={fullTranscript || []}
-            currentTime={currentTime}
-            onSeek={handleTranscriptSeek}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
-            {hasRecording ? '暂无转写文本' : '此通话无录音'}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-
-  // 使用 fullRecord 的分析状态（如果已加载），否则回退到列表数据
   const analysisStatus = fullRecord?.ai_analysis_status ?? record?.ai_analysis_status
 
-  const renderAnalysisPanel = () => (
-    <div className="flex-1 min-h-0 flex flex-col">
-      {analysisStatus === 'completed' && (
-        <div className="px-4 py-1.5 shrink-0 border-b flex items-center justify-end gap-2">
-          <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-            已分析
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={() => analyzeMutation.mutate()}
-            disabled={analyzeMutation.isPending || isPolling || isDetailLoading}
-          >
-            {analyzeMutation.isPending || isPolling ? (
-              <>
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
-                分析中…
-              </>
-            ) : (
-              '重新分析'
-            )}
-          </Button>
-        </div>
-      )}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {isDetailLoading ? (
-          <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" aria-hidden="true" />
-            加载 AI 分析...
-          </div>
-        ) : fullRecord ? (
-          <AIAnalysisPanel
-            record={fullRecord}
-            isAnalyzing={analyzeMutation.isPending || isPolling}
-            onAnalyze={() => analyzeMutation.mutate()}
-          />
-        ) : record ? (
-          <AIAnalysisPanel
-            record={record}
-            isAnalyzing={analyzeMutation.isPending || isPolling}
-            onAnalyze={() => analyzeMutation.mutate()}
-          />
-        ) : null}
-      </div>
-    </div>
-  )
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!fixed !inset-0 !translate-x-0 !translate-y-0 !top-0 !left-0 !h-screen !w-screen !max-w-none !rounded-none overflow-hidden p-0 flex flex-col gap-0">
-        {/* 头部：通话信息 */}
-        <div className="shrink-0 border-b">
-          <DialogHeader className="px-5 pr-12 pt-4 pb-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <DialogTitle className="flex items-center gap-2 text-base">
-                <Phone className="h-4 w-4" aria-hidden="true" />
-                通话详情
-              </DialogTitle>
-              <DialogDescription className="mt-0 flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
-                {record && (
-                  <>
-                    <span className="max-w-[120px] truncate text-xs sm:max-w-[160px]">{record.staff_name || '未知员工'}</span>
-                    <span className="text-muted-foreground text-xs">&rarr;</span>
-                    <span className="max-w-[140px] truncate font-mono text-xs sm:max-w-[180px]">{record.callee || record.caller || '-'}</span>
-                    <Badge variant="secondary" className="h-5 text-[11px]">{formatTime(record.call_time)}</Badge>
-                  </>
-                )}
-              </DialogDescription>
+    <SideSheet
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      placement="right"
+      width="100vw"
+      title={record ? (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: '6px 16px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--semi-color-text-0)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {record.staff_name || '未知员工'}
+            </span>
+            <ArrowRight style={{ height: 14, width: 14, color: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+            <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {record.callee || record.caller || '-'}
+            </span>
+          </div>
+          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+          <Tag size="small" color={getCallResultColor(record.call_result) as any} style={{ height: 20, fontSize: 11 }}>
+            {record.call_result || '未知'}
+          </Tag>
+          <Tag size="small" color="blue" style={{ height: 20, fontSize: 11 }}>
+            {record.call_type || '未知'}
+          </Tag>
+          <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
+            {formatDurationDisplay(record.duration)}
+          </span>
+          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            <Building2 style={{ height: 12, width: 12, flexShrink: 0 }} />
+            <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {record.department || '-'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            <Clock style={{ height: 12, width: 12, flexShrink: 0 }} />
+            <span>{formatTime(record.call_time) || '-'}</span>
+          </div>
+          {record.lead_child_name && (
+            <>
+              <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <Baby style={{ height: 12, width: 12, color: ('var(--semi-color-primary)' as any), flexShrink: 0 }} />
+                <span style={{ color: ('var(--semi-color-primary)' as any), fontWeight: 500 }}>{record.lead_child_name}</span>
+              </div>
+            </>
+          )}
+        </div>
+      ) : '通话详情'}
+      closable
+      closeOnEsc
+      headerStyle={{ background: 'var(--semi-color-bg-0)', borderBottom: `1px solid ${BRAND.cardBorder}`, padding: '10px 20px' }}
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
+    >
+
+      {/* ====== 主体：左右双列 ====== */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+
+        {/* ===== 左列：播放器 + 转写文本（占 1/3） ===== */}
+        <div style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          borderRight: `1px solid ${BRAND.cardBorder}`,
+          overflow: 'hidden',
+        }}>
+          {/* 左列标题栏 */}
+          <div style={{
+            flexShrink: 0,
+            padding: '8px 16px',
+            borderBottom: `1px solid ${BRAND.cardBorder}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#fff',
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
+              <FileText style={{ height: 14, width: 14 }} aria-hidden="true" />
+              转写文本
+            </span>
+            {/* 复制按钮 */}
+            {hasFullTranscript && (
+              <Dropdown
+                trigger="click"
+                position="bottomRight"
+                render={
+                  <Dropdown.Menu>
+                    <Dropdown.Item
+                      onClick={async () => {
+                        const text = formatTranscriptText(fullTranscript || [])
+                        const ok = await copyToClipboard(text)
+                        if (ok) Toast.success('已复制格式化对话文本')
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FileType style={{ height: 14, width: 14 }} aria-hidden="true" />
+                        复制对话文本
+                      </span>
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      onClick={async () => {
+                        const json = JSON.stringify(fullTranscript || [], null, 2)
+                        const ok = await copyToClipboard(json)
+                        if (ok) Toast.success('已复制原始 JSON')
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FileJson style={{ height: 14, width: 14 }} aria-hidden="true" />
+                        复制原始 JSON
+                      </span>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                }
+              >
+                <span>
+                  <Button
+                    theme="borderless"
+                    size="small"
+                    icon={<Copy style={{ height: 12, width: 12 }} />}
+                    style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                  >
+                    复制
+                  </Button>
+                </span>
+              </Dropdown>
+            )}
+          </div>
+
+          {/* 音频播放器 */}
+          {hasRecording && (
+            <div style={{
+              flexShrink: 0,
+              padding: '8px 16px 10px',
+              borderBottom: `1px solid ${BRAND.cardBorder}`,
+              background: '#fff',
+            }}>
+              {isLoadingUrl ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0' }}>
+                  <Skeleton.Avatar size="small" style={{ flexShrink: 0 }} />
+                  <Skeleton.Paragraph rows={1} style={{ flex: 1 }} />
+                </div>
+              ) : audioUrl ? (
+                <>
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl}
+                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                    onDurationChange={(e) => setDuration(e.currentTarget.duration)}
+                    onEnded={() => setIsPlaying(false)}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                  />
+
+                  {/* 进度条 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <span style={{ width: 36, flexShrink: 0, textAlign: 'right', fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
+                      {formatPlayTime(currentTime)}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Slider
+                        min={0}
+                        value={currentTime}
+                        max={duration || 100}
+                        step={0.1}
+                        onChange={(val) => handleSeek(val as number)}
+                        tipFormatter={null}
+                      />
+                    </div>
+                    <span style={{ width: 36, flexShrink: 0, fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
+                      {formatPlayTime(duration)}
+                    </span>
+                  </div>
+
+                  {/* 操作按钮 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Button
+                        theme="borderless"
+                        type="tertiary"
+                        size="small"
+                        icon={<SkipBack style={{ height: 14, width: 14 }} />}
+                        onClick={skipBackward}
+                        aria-label="快退 10 秒"
+                        style={{ height: 28, width: 28, padding: 0 }}
+                      />
+                      <Button
+                        type="primary"
+                        theme="solid"
+                        onClick={togglePlay}
+                        aria-label={isPlaying ? '暂停播放' : '开始播放'}
+                        icon={isPlaying
+                          ? <Pause style={{ height: 15, width: 15 }} />
+                          : <Play style={{ height: 15, width: 15, marginLeft: 1 }} />
+                        }
+                        style={{
+                          height: 34,
+                          width: 34,
+                          borderRadius: '50%',
+                          padding: 0,
+                        }}
+                      />
+                      <Button
+                        theme="borderless"
+                        type="tertiary"
+                        size="small"
+                        icon={<SkipForward style={{ height: 14, width: 14 }} />}
+                        onClick={skipForward}
+                        aria-label="快进 10 秒"
+                        style={{ height: 28, width: 28, padding: 0 }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Button
+                        theme="borderless"
+                        type="tertiary"
+                        size="small"
+                        onClick={cyclePlaybackRate}
+                        aria-label={`当前倍速 ${playbackRate}x`}
+                        style={{
+                          height: 26,
+                          padding: '0 8px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          fontVariantNumeric: 'tabular-nums',
+                          borderRadius: 4,
+                          color: playbackRate !== 1 ? 'var(--semi-color-primary)' : undefined,
+                        }}
+                      >
+                        {playbackRate}x
+                      </Button>
+                      <Button
+                        theme="borderless"
+                        type="tertiary"
+                        size="small"
+                        icon={<RotateCcw style={{ height: 13, width: 13 }} />}
+                        onClick={resetPlayback}
+                        aria-label="还原到开头"
+                        style={{ height: 26, padding: '0 6px', fontSize: 11 }}
+                      >
+                        还原
+                      </Button>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <a
+                        href={audioUrl}
+                        download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}
+                        aria-label="下载录音"
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Button
+                          theme="borderless"
+                          type="tertiary"
+                          size="small"
+                          icon={<Download style={{ height: 13, width: 13 }} />}
+                          style={{ height: 26, padding: '0 6px', fontSize: 11 }}
+                        >
+                          下载
+                        </Button>
+                      </a>
+                      <div style={{ height: 14, width: 1, background: 'var(--semi-color-border)', margin: '0 4px' }} />
+                      <Button
+                        theme="borderless"
+                        type="tertiary"
+                        size="small"
+                        icon={isMuted || volume === 0 ? <VolumeX style={{ height: 13, width: 13 }} /> : <Volume2 style={{ height: 13, width: 13 }} />}
+                        onClick={toggleMute}
+                        aria-label={isMuted || volume === 0 ? '取消静音' : '静音'}
+                        style={{ height: 26, width: 26, padding: 0 }}
+                      />
+                      <Slider
+                        value={isMuted ? 0 : volume}
+                        max={1}
+                        step={0.1}
+                        onChange={(val) => handleVolumeChange(val as number)}
+                        tipFormatter={null}
+                        style={{ width: 60, flexShrink: 0 }}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', color: 'var(--semi-color-text-2)', fontSize: 12, padding: '6px 0' }}>
+                  无法获取录音地址
+                </div>
+              )}
             </div>
-          </DialogHeader>
+          )}
+
+          {/* 转写文本 */}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+            {isDetailLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, color: 'var(--semi-color-text-2)' }}>
+                <Spin style={{ marginRight: 8 }} />
+                加载转写文本...
+              </div>
+            ) : hasFullTranscript ? (
+              <TranscriptViewer
+                transcript={fullTranscript || []}
+                currentTime={currentTime}
+                onSeek={handleTranscriptSeek}
+              />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, color: 'var(--semi-color-text-2)' }}>
+                {hasRecording ? '暂无转写文本' : '此通话无录音'}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 内容区：标签页切换 */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <Tabs defaultValue="transcript" className="flex h-full min-h-0 flex-col gap-0">
-            <div className="shrink-0 border-b px-3 py-2">
-              <TabsList className="grid h-8 w-full grid-cols-2">
-                <TabsTrigger value="transcript" className="gap-1.5 text-xs">
-                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                  转写文本
-                </TabsTrigger>
-                <TabsTrigger value="analysis" className="gap-1.5 text-xs">
-                  <BrainCircuit className="h-3.5 w-3.5" aria-hidden="true" />
-                  AI 分析
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            <TabsContent value="transcript" className="m-0 flex flex-1 min-h-0 flex-col overflow-hidden">
-              {renderTranscriptPanel()}
-            </TabsContent>
-            <TabsContent value="analysis" className="m-0 flex flex-1 min-h-0 flex-col overflow-hidden">
-              {renderAnalysisPanel()}
-            </TabsContent>
-          </Tabs>
+        {/* ===== 右列：AI 分析（占 2/3） ===== */}
+        <div style={{
+          flex: 2,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* 右列标题栏 */}
+          <div style={{
+            flexShrink: 0,
+            padding: '8px 16px',
+            borderBottom: `1px solid ${BRAND.cardBorder}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#fff',
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
+              <BrainCircuit style={{ height: 14, width: 14 }} aria-hidden="true" />
+              AI 分析
+            </span>
+            <Button
+              theme="borderless"
+              size="small"
+              icon={analysisStatus === 'completed'
+                ? <RefreshCw style={{ height: 12, width: 12 }} />
+                : <BrainCircuit style={{ height: 12, width: 12 }} />
+              }
+              onClick={() => analyzeMutation.mutate()}
+              disabled={analyzeMutation.isPending || isPolling || isDetailLoading || !hasFullTranscript}
+              style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+            >
+              {analyzeMutation.isPending || isPolling ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Spin size="small" />
+                  分析中
+                </span>
+              ) : analysisStatus === 'completed' ? '重新分析' : 'AI 分析'}
+            </Button>
+          </div>
+
+          {/* AI 分析内容 */}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            {isDetailLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, color: 'var(--semi-color-text-2)' }}>
+                <Spin style={{ marginRight: 8 }} />
+                加载 AI 分析...
+              </div>
+            ) : fullRecord ? (
+              <AIAnalysisPanel
+                record={fullRecord}
+                isAnalyzing={analyzeMutation.isPending || isPolling}
+                onAnalyze={() => analyzeMutation.mutate()}
+              />
+            ) : record ? (
+              <AIAnalysisPanel
+                record={record}
+                isAnalyzing={analyzeMutation.isPending || isPolling}
+                onAnalyze={() => analyzeMutation.mutate()}
+              />
+            ) : null}
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </SideSheet>
   )
 }

@@ -10,45 +10,22 @@ import { Bell, Plus, Pencil, Trash2, Power, PowerOff, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
+import { Table, Button, Input, Modal, Tag, Switch, Skeleton, Typography, TextArea } from '@douyinfe/semi-ui-19'
+import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
 import { adminApi } from '../api'
 import type { DailyNoticeItem, DailyNoticeCreate, DailyNoticeUpdate } from '../types'
 import { formatTime } from '@/lib/utils/time'
+
+const { Text } = Typography
+
+// 骨架屏
+const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+const SKELETON_DATA: { id: string }[] = Array.from({ length: 3 }, (_, i) => ({
+  id: `${SKELETON_PREFIX}${i}`,
+}))
 
 export function DailyNoticesPage() {
   useDocumentTitle('每日通知')
@@ -180,236 +157,263 @@ export function DailyNoticesPage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending
 
+  // Semi Table 列定义
+  const columns: ColumnProps<DailyNoticeItem>[] = [
+    {
+      title: '标题',
+      dataIndex: 'title',
+      width: 250,
+      render: (_text: string, record: DailyNoticeItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-orange-500" />
+            <span className="font-medium">{record.title}</span>
+          </div>
+        )
+      },
+    },
+    {
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 100,
+      render: (_text: boolean, record: DailyNoticeItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
+        }
+        return record.is_active ? (
+          <Tag color="green" size="small">生效中</Tag>
+        ) : (
+          <Tag size="small">未启用</Tag>
+        )
+      },
+    },
+    {
+      title: '创建者',
+      dataIndex: 'created_by_name',
+      width: 120,
+      render: (_text: string, record: DailyNoticeItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+        }
+        return <Text type="tertiary">{record.created_by_name || '-'}</Text>
+      },
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updated_at',
+      width: 170,
+      render: (_text: string, record: DailyNoticeItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+        }
+        return <Text type="tertiary">{formatTime(record.updated_at)}</Text>
+      },
+    },
+    {
+      title: '操作',
+      dataIndex: 'actions',
+      width: 160,
+      render: (_text: unknown, record: DailyNoticeItem) => {
+        if (isSkeletonRow(record.id)) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+        }
+        return (
+          <div className="flex items-center gap-1">
+            <Button theme="borderless" type="tertiary" size="small" icon={<Eye className="h-4 w-4" />} onClick={() => handlePreview(record)} />
+            <Button theme="borderless" type="tertiary" size="small" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
+            {record.is_active ? (
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<PowerOff className="h-4 w-4 text-orange-500" />}
+                onClick={() => deactivateMutation.mutate(record.id)}
+                disabled={deactivateMutation.isPending}
+              />
+            ) : (
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<Power className="h-4 w-4 text-green-600" />}
+                onClick={() => activateMutation.mutate(record.id)}
+                disabled={activateMutation.isPending}
+              />
+            )}
+            <Button
+              theme="borderless"
+              type="danger"
+              size="small"
+              icon={<Trash2 className="h-4 w-4" />}
+              onClick={() => handleDeleteClick(record)}
+            />
+          </div>
+        )
+      },
+    },
+  ]
+
+  const tableData = isLoading ? SKELETON_DATA : notices
+
   return (
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
         {/* 标题 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Bell className="h-6 w-6 text-muted-foreground" />
+            <Bell className="h-6 w-6" style={{ color: 'var(--semi-color-text-2)' }} />
             <div>
               <h1 className="text-2xl font-bold">每日通知</h1>
-              <p className="text-sm text-muted-foreground">
+              <Text type="tertiary" size="small">
                 配置 CRM 用户每日登录弹窗通知，同时只能有一条生效
-              </p>
+              </Text>
             </div>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新建通知
           </Button>
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead style={{ width: 250 }}>标题</TableHead>
-                <TableHead style={{ width: 100 }}>状态</TableHead>
-                <TableHead style={{ width: 120 }}>创建者</TableHead>
-                <TableHead style={{ width: 170 }}>更新时间</TableHead>
-                <TableHead style={{ width: 160 }}>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-28" /></TableCell>
-                  </TableRow>
-                ))
-              ) : notices.length > 0 ? (
-                notices.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Bell className="h-4 w-4 text-orange-500" />
-                        <span className="font-medium">{item.title}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {item.is_active ? (
-                        <Badge variant="default" className="bg-green-600">生效中</Badge>
-                      ) : (
-                        <Badge variant="secondary">未启用</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {item.created_by_name || '-'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatTime(item.updated_at)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handlePreview(item)} title="预览">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} title="编辑">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {item.is_active ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deactivateMutation.mutate(item.id)}
-                            disabled={deactivateMutation.isPending}
-                            title="停用"
-                          >
-                            <PowerOff className="h-4 w-4 text-orange-500" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => activateMutation.mutate(item.id)}
-                            disabled={activateMutation.isPending}
-                            title="激活"
-                          >
-                            <Power className="h-4 w-4 text-green-600" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item)} title="删除">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    暂无通知，点击「新建通知」创建
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns as any}
+            dataSource={tableData}
+            rowKey="id"
+            pagination={false}
+            empty={
+              <div className="py-6 text-center" style={{ color: 'var(--semi-color-text-2)' }}>
+                暂无通知，点击「新建通知」创建
+              </div>
+            }
+            size="middle"
+          />
         </div>
       </div>
 
       {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="flex max-h-[85vh] flex-col p-0 sm:max-w-[600px]">
-          <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
-            <DialogTitle>{editingItem ? '编辑通知' : '新建通知'}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? '修改通知内容' : '创建新的每日通知，内容支持 Markdown 格式'}
-            </DialogDescription>
-          </DialogHeader>
+      <Modal
+        title={editingItem ? '编辑通知' : '新建通知'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={handleSubmit} loading={isSaving}>
+              保存
+            </Button>
+          </div>
+        }
+        width={600}
+        style={{ maxHeight: '85vh' }}
+      >
+        <Text type="tertiary" size="small">
+          {editingItem ? '修改通知内容' : '创建新的每日通知，内容支持 Markdown 格式'}
+        </Text>
 
-          <div className="flex-1 overflow-y-auto px-6 space-y-4">
-            <div className="space-y-2">
-              <Label>标题</Label>
-              <Input
-                placeholder="请输入通知标题"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                maxLength={200}
-              />
-            </div>
+        <div className="mt-4 space-y-4">
+          <div className="space-y-2">
+            <Text strong size="small">标题</Text>
+            <Input
+              placeholder="请输入通知标题"
+              value={formTitle}
+              onChange={(v) => setFormTitle(v)}
+              maxLength={200}
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label>内容（支持 Markdown）</Label>
-              <Tabs defaultValue="edit">
-                <TabsList className="w-fit">
-                  <TabsTrigger value="edit">编辑</TabsTrigger>
-                  <TabsTrigger value="preview">预览</TabsTrigger>
-                </TabsList>
-                <TabsContent value="edit" className="mt-2">
-                  <Textarea
+          <div className="space-y-2">
+            <Text strong size="small">内容（支持 Markdown）</Text>
+            <Tabs defaultActiveKey="edit">
+              <TabPane tab="编辑" itemKey="edit">
+                <div className="mt-2">
+                  <TextArea
                     placeholder="请输入通知内容，支持 Markdown 格式..."
                     value={formContent}
-                    onChange={(e) => setFormContent(e.target.value)}
-                    className="min-h-[200px] font-mono text-sm"
+                    onChange={(v) => setFormContent(v)}
+                    autosize={{ minRows: 8 }}
+                    style={{ fontFamily: 'monospace', fontSize: 14 }}
                   />
-                </TabsContent>
-                <TabsContent value="preview" className="mt-2">
+                </div>
+              </TabPane>
+              <TabPane tab="预览" itemKey="preview">
+                <div className="mt-2">
                   <div className="min-h-[200px] rounded-md border p-4">
                     {formContent ? (
                       <div className="prose prose-sm dark:prose-invert max-w-none">
                         <ReactMarkdown>{formContent}</ReactMarkdown>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">暂无内容</p>
+                      <Text type="tertiary" size="small">暂无内容</Text>
                     )}
                   </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            {!editingItem && (
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <Label>立即生效</Label>
-                  <p className="text-sm text-muted-foreground">
-                    开启后将立即生效，并停用其他通知
-                  </p>
                 </div>
-                <Switch
-                  checked={formIsActive}
-                  onCheckedChange={setFormIsActive}
-                />
-              </div>
-            )}
+              </TabPane>
+            </Tabs>
           </div>
 
-          <DialogFooter className="shrink-0 border-t px-6 pt-4 pb-6">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? '保存中...' : '保存'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {!editingItem && (
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Text strong size="small">立即生效</Text>
+                <div>
+                  <Text type="tertiary" size="small">
+                    开启后将立即生效，并停用其他通知
+                  </Text>
+                </div>
+              </div>
+              <Switch
+                checked={formIsActive}
+                onChange={setFormIsActive}
+              />
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* 预览对话框 */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="flex max-h-[80vh] flex-col p-0 sm:max-w-[500px]">
-          <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
-            <DialogTitle>{previewItem?.title}</DialogTitle>
-            <DialogDescription>通知预览 - 用户看到的效果</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="flex-1 px-6">
-            <div className="prose prose-sm dark:prose-invert max-w-none pb-4">
-              <ReactMarkdown>{previewItem?.content ?? ''}</ReactMarkdown>
-            </div>
-          </ScrollArea>
-          <DialogFooter className="shrink-0 border-t px-6 pt-4 pb-6">
-            <Button onClick={() => setPreviewDialogOpen(false)} className="w-full sm:w-auto">
-              已知晓
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title={previewItem?.title}
+        visible={previewDialogOpen}
+        onCancel={() => setPreviewDialogOpen(false)}
+        footer={
+          <Button theme="solid" type="primary" onClick={() => setPreviewDialogOpen(false)}>
+            已知晓
+          </Button>
+        }
+        width={500}
+        style={{ maxHeight: '80vh' }}
+      >
+        <Text type="tertiary" size="small">通知预览 - 用户看到的效果</Text>
+        <div className="mt-4 prose prose-sm dark:prose-invert max-w-none" style={{ maxHeight: '50vh', overflow: 'auto' }}>
+          <ReactMarkdown>{previewItem?.content ?? ''}</ReactMarkdown>
+        </div>
+      </Modal>
 
       {/* 删除确认 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除通知「{deletingItem?.title}」吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="danger"
               onClick={() => deletingItem && deleteMutation.mutate(deletingItem.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              loading={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除通知「{deletingItem?.title}」吗？此操作不可撤销。
+      </Modal>
     </Main>
   )
 }

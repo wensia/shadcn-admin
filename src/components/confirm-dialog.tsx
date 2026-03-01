@@ -1,28 +1,24 @@
-import { cn } from '@/lib/utils'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+/**
+ * 确认对话框 - Semi Design 版本
+ * 基于 Modal 实现，保留原接口
+ */
+
+import { Modal, Button } from '@douyinfe/semi-ui-19'
+import type { ReactNode } from 'react'
 
 type ConfirmDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  title: React.ReactNode
+  title: ReactNode
   disabled?: boolean
-  desc: React.JSX.Element | string
+  desc: JSX.Element | string
   cancelBtnText?: string
-  confirmText?: React.ReactNode
+  confirmText?: ReactNode
   destructive?: boolean
   handleConfirm: () => void
   isLoading?: boolean
   className?: string
-  children?: React.ReactNode
+  children?: ReactNode
 }
 
 export function ConfirmDialog(props: ConfirmDialogProps) {
@@ -30,38 +26,47 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
     title,
     desc,
     children,
-    className,
     confirmText,
     cancelBtnText,
     destructive,
     isLoading,
     disabled = false,
     handleConfirm,
-    ...actions
+    open,
+    onOpenChange,
   } = props
+
   return (
-    <AlertDialog {...actions}>
-      <AlertDialogContent className={className}>
-        <AlertDialogHeader className='text-start'>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div>{desc}</div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        {children}
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>
-            {cancelBtnText ?? 'Cancel'}
-          </AlertDialogCancel>
+    <Modal
+      title={title}
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      closeOnEsc
+      maskClosable={!isLoading}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button
-            variant={destructive ? 'destructive' : 'default'}
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
+            {cancelBtnText ?? '取消'}
+          </Button>
+          <Button
+            theme="solid"
+            type={destructive ? 'danger' : 'primary'}
             onClick={handleConfirm}
+            loading={isLoading}
             disabled={disabled || isLoading}
           >
-            {confirmText ?? 'Continue'}
+            {confirmText ?? '确认'}
           </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+        </div>
+      }
+    >
+      <div style={{ color: 'var(--semi-color-text-1)', fontSize: 14 }}>
+        {desc}
+      </div>
+      {children}
+    </Modal>
   )
 }

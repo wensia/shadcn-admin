@@ -1,41 +1,16 @@
 /**
- * 线索详情 Tabs 组件
- * 可复用于 LeadDetailSheet 和 ContinuousCallPage
+ * 线索详情 Tabs 组件 - Semi Design 版本
  * 包含：概览、跟进记录、订单记录、统计图表、变更历史 五个 Tab
  */
 
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { cn, copyToClipboard } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
+import { Tabs, TabPane, Table, Tag, Tooltip, Button, Select, Card, Toast } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconCopy, IconTick } from '@douyinfe/semi-icons'
+import { Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
+import { copyToClipboard } from '@/lib/utils'
 import { formatTime } from '@/lib/utils/time'
-import { Receipt, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { leadsApi } from '../../api'
 import type { Lead, LeadFollowup } from '../../types'
@@ -57,9 +32,7 @@ import { FollowupFrequencyChart } from './charts/followup-frequency-chart'
 import { FollowupMethodPie } from './charts/followup-method-pie'
 import { FollowupResultPie } from './charts/followup-result-pie'
 
-/**
- * 跟进内容单元格组件 - 支持悬浮展示完整内容和复制
- */
+/** 跟进内容单元格 - 支持悬浮展示完整内容和复制 */
 function FollowupContentCell({ content }: { content: string }) {
   const [copied, setCopied] = useState(false)
 
@@ -68,64 +41,44 @@ function FollowupContentCell({ content }: { content: string }) {
     const success = await copyToClipboard(content)
     if (success) {
       setCopied(true)
-      toast.success('已复制')
+      Toast.success('已复制')
       setTimeout(() => setCopied(false), 2000)
-    } else {
-      toast.error('复制失败')
-    }
+    } else { Toast.error('复制失败') }
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="truncate block cursor-pointer">{content}</span>
-      </TooltipTrigger>
-      <TooltipContent side="top" align="start" className="max-w-[300px]">
-        <div className="flex items-start gap-2">
-          <p className="text-xs whitespace-pre-wrap break-words flex-1">{content}</p>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 shrink-0 -mr-1 -mt-0.5"
+    <Tooltip
+      content={
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 300 }}>
+          <p style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, margin: 0 }}>{content}</p>
+          <button
+            type="button"
             onClick={handleCopy}
+            style={{ flexShrink: 0, background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: 'inherit' }}
           >
-            {copied ? (
-              <Check className="h-3 w-3 text-green-500" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
-          </Button>
+            {copied ? <IconTick style={{ fontSize: 12, color: 'var(--semi-color-success)' }} /> : <IconCopy style={{ fontSize: 12 }} />}
+          </button>
         </div>
-      </TooltipContent>
+      }
+      position="topLeft"
+    >
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', cursor: 'pointer' }}>{content}</span>
     </Tooltip>
   )
 }
 
 interface LeadDetailTabsProps {
-  /** 线索ID */
   leadId: string
-  /** 线索数据（如果外部已有数据可直接传入，避免重复请求） */
   lead?: Lead | null
-  /** 是否正在加载线索数据 */
   isLoading?: boolean
-  /** 默认激活的 Tab */
   defaultTab?: 'overview' | 'followups' | 'orders' | 'statistics' | 'history'
-  /** 自定义类名 */
   className?: string
-  /** 是否使用 ScrollArea（在 Sheet 中需要，在 Card 中可能不需要） */
   useScrollArea?: boolean
-  /** 固定高度（用于 ScrollArea） */
   height?: string
-  /** 字段更新回调 */
   onFieldUpdate?: (field: string, value: string) => Promise<void>
-  /** 是否精简模式（隐藏邮箱、微信号、课程兴趣等不常用字段） */
   compact?: boolean
 }
 
-/**
- * 线索详情 Tabs 组件
- * 统一展示线索的概览、跟进记录、统计图表、变更历史
- */
 export function LeadDetailTabs({
   leadId,
   lead: externalLead,
@@ -137,436 +90,226 @@ export function LeadDetailTabs({
   onFieldUpdate,
   compact = false,
 }: LeadDetailTabsProps) {
-  const s = useStyleClasses()
   const [activeTab, setActiveTab] = useState(defaultTab)
-
-  // 跟进记录分页状态
   const [followupPage, setFollowupPage] = useState(1)
   const [followupPageSize, setFollowupPageSize] = useState(5)
 
   // 如果外部没有传入 lead 数据，则内部获取
   const { data: internalLead, isLoading: internalLoading } = useQuery({
     queryKey: ['lead', leadId],
-    queryFn: async () => {
-      const response = await leadsApi.getLead(leadId, true)
-      return response.data
-    },
+    queryFn: async () => { const response = await leadsApi.getLead(leadId, true); return response.data },
     enabled: !!leadId && !externalLead,
   })
 
   const lead = externalLead ?? internalLead
   const isLoading = externalLoading ?? internalLoading
 
-  // 获取跟进记录 - 统计图表和跟进记录 Tab 都需要
+  // 获取跟进记录
   const { data: followupsResponse, isLoading: isFollowupsLoading } = useQuery({
     queryKey: ['lead-followups', leadId],
-    queryFn: async () => {
-      const response = await leadsApi.getLeadFollowups(leadId, { page: 1, size: 100 })
-      return response
-    },
+    queryFn: async () => await leadsApi.getLeadFollowups(leadId, { page: 1, size: 100 }),
     enabled: !!leadId && (activeTab === 'followups' || activeTab === 'statistics'),
   })
 
-  // 跟进记录分页计算
   const followupsPaginated = useMemo(() => {
-    const allFollowups = followupsResponse?.data || []
-    const total = allFollowups.length
+    const all = followupsResponse?.data || []
+    const total = all.length
     const totalPages = Math.ceil(total / followupPageSize)
-    const startIndex = (followupPage - 1) * followupPageSize
-    const items = allFollowups.slice(startIndex, startIndex + followupPageSize)
+    const items = all.slice((followupPage - 1) * followupPageSize, followupPage * followupPageSize)
     return { items, total, totalPages }
   }, [followupsResponse?.data, followupPage, followupPageSize])
 
   // 获取信息变更记录
   const { data: infoChangeLogs, isLoading: isInfoChangeLoading } = useQuery({
     queryKey: ['lead-info-changes', leadId],
-    queryFn: async () => {
-      const response = await leadsApi.getLeadInfoChangeLogs(leadId, { page: 1, size: 50 })
-      return response
-    },
+    queryFn: async () => await leadsApi.getLeadInfoChangeLogs(leadId, { page: 1, size: 50 }),
     enabled: !!leadId && activeTab === 'history',
   })
 
   // 获取归属变更记录
   const { data: ownershipChangeLogs, isLoading: isOwnershipChangeLoading } = useQuery({
     queryKey: ['lead-ownership-changes', leadId],
-    queryFn: async () => {
-      const response = await leadsApi.getLeadOwnershipChangeLogs(leadId, { page: 1, size: 50 })
-      return response
-    },
+    queryFn: async () => await leadsApi.getLeadOwnershipChangeLogs(leadId, { page: 1, size: 50 }),
     enabled: !!leadId && activeTab === 'history',
   })
 
   // 获取订单记录
   const { data: ordersResponse, isLoading: isOrdersLoading } = useQuery({
     queryKey: ['lead-orders', leadId],
-    queryFn: async () => {
-      const response = await orderApi.getLeadOrders(leadId)
-      return response
-    },
+    queryFn: async () => await orderApi.getLeadOrders(leadId),
     enabled: !!leadId && activeTab === 'orders',
   })
 
-  // 计算统计数据
   const statistics = useLeadStatistics(lead || null, followupsResponse?.data)
 
-  // 内容包装器 - 根据 useScrollArea 决定是否使用 ScrollArea
-  const ContentWrapper = useScrollArea
-    ? ({ children }: { children: React.ReactNode }) => (
-        <ScrollArea className={height}>{children}</ScrollArea>
-      )
-    : ({ children }: { children: React.ReactNode }) => (
-        <div className={cn(height, 'overflow-auto')}>{children}</div>
-      )
+  // 跟进记录表格 columns
+  const followupColumns: ColumnProps<LeadFollowup>[] = [
+    { title: '跟进时间', dataIndex: 'followup_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{formatTime(text as string)}</span> },
+    { title: '跟进方式', dataIndex: 'method', width: 80, render: (text) => <span style={{ fontSize: 13 }}>{followupMethodLabels[text as keyof typeof followupMethodLabels] || text}</span> },
+    { title: '跟进结果', dataIndex: 'result', width: 90, render: (text, record) => text ? <FollowupResultBadge result={text as string} /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span> },
+    {
+      title: '跟进内容', dataIndex: 'content',
+      render: (text) => text ? <FollowupContentCell content={text as string} /> : '-',
+    },
+    {
+      title: '跟进人', dataIndex: 'followup_by_name', width: 80,
+      render: (text, record) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+          {(text as string) || '-'}
+          {record?.source === 'ai_auto' && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 3, padding: '0 4px', fontSize: 10, fontWeight: 500, background: '#faf5ff', color: '#9333ea' }} title="AI 通话分析自动生成">AI</span>
+          )}
+        </span>
+      ),
+    },
+  ]
+
+  // 订单表格 columns
+  const orderColumns: ColumnProps<Order>[] = [
+    { title: '订单编号', dataIndex: 'order_no', width: 120, render: (text) => <span style={{ fontSize: 13, fontWeight: 500 }}>{text as string}</span> },
+    { title: '实付金额', dataIndex: 'actual_amount', width: 80, render: (text) => <span style={{ fontSize: 13, fontWeight: 500, color: '#ea580c', textAlign: 'right', display: 'block' }}>¥{Number(text).toFixed(2)}</span> },
+    { title: '支付状态', dataIndex: 'payment_status', width: 80, render: (text, record) => <Tag size="small" color={text === 'paid' ? 'green' : undefined}>{record?.payment_status_display}</Tag> },
+    { title: '支付时间', dataIndex: 'payment_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{text ? formatTime(text as string) : '-'}</span> },
+    { title: '创建时间', dataIndex: 'created_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{formatTime(text as string)}</span> },
+  ]
+
+  const wrapperStyle: React.CSSProperties = useScrollArea
+    ? { height: '100%', overflow: 'auto' }
+    : { overflow: 'auto' }
 
   return (
     <Tabs
-      value={activeTab}
-      onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-      className={cn('flex flex-col flex-1 min-h-0', className)}
+      activeKey={activeTab}
+      onChange={(key) => setActiveTab(key as typeof activeTab)}
+      className={className}
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: '100%' }}
+      tabBarStyle={{ paddingLeft: 16, paddingRight: 16, flexShrink: 0 }}
+      contentStyle={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 0 }}
     >
-      <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 h-auto shrink-0">
-        <TabsTrigger
-          value="overview"
-          className={cn(
-            s.text.xs,
-            'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
-            'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-            'data-[state=active]:text-foreground data-[state=active]:font-semibold',
-            'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
-            'after:bg-transparent data-[state=active]:after:bg-primary'
-          )}
-        >
-          概览
-        </TabsTrigger>
-        <TabsTrigger
-          value="followups"
-          className={cn(
-            s.text.xs,
-            'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
-            'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-            'data-[state=active]:text-foreground data-[state=active]:font-semibold',
-            'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
-            'after:bg-transparent data-[state=active]:after:bg-primary'
-          )}
-        >
-          跟进记录
-          <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
-            {lead?.followup_count || 0}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger
-          value="orders"
-          className={cn(
-            s.text.xs,
-            'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
-            'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-            'data-[state=active]:text-foreground data-[state=active]:font-semibold',
-            'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
-            'after:bg-transparent data-[state=active]:after:bg-primary'
-          )}
-        >
-          订单记录
-          {ordersResponse?.data && ordersResponse.data.length > 0 && (
-            <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
-              {ordersResponse.data.length}
-            </Badge>
-          )}
-        </TabsTrigger>
-        <TabsTrigger
-          value="statistics"
-          className={cn(
-            s.text.xs,
-            'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
-            'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-            'data-[state=active]:text-foreground data-[state=active]:font-semibold',
-            'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
-            'after:bg-transparent data-[state=active]:after:bg-primary'
-          )}
-        >
-          统计图表
-        </TabsTrigger>
-        <TabsTrigger
-          value="history"
-          className={cn(
-            s.text.xs,
-            'relative rounded-none border-none bg-transparent px-4 py-2 shadow-none',
-            'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-            'data-[state=active]:text-foreground data-[state=active]:font-semibold',
-            'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5',
-            'after:bg-transparent data-[state=active]:after:bg-primary'
-          )}
-        >
-          变更历史
-        </TabsTrigger>
-      </TabsList>
-
-      {/* ==================== 概览 Tab ==================== */}
-      <TabsContent value="overview" className="flex-1 m-0 min-h-0 overflow-hidden">
-        <ContentWrapper>
-          <div className="p-4">
+      {/* ===== 概览 Tab ===== */}
+      <TabPane tab="概览" itemKey="overview">
+        <div style={wrapperStyle}>
+          <div style={{ padding: 16 }}>
             {isLoading ? (
-              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
-                加载中...
-              </div>
+              <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '32px 0' }}>加载中...</div>
             ) : lead ? (
               <LeadInfoDisplay lead={lead} isOverdue={statistics.isOverdue} onFieldUpdate={onFieldUpdate} compact={compact} />
             ) : (
-              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
-                暂无数据
-              </div>
+              <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '32px 0' }}>暂无数据</div>
             )}
           </div>
-        </ContentWrapper>
-      </TabsContent>
+        </div>
+      </TabPane>
 
-      {/* ==================== 跟进记录 Tab ==================== */}
-      <TabsContent value="followups" className="flex-1 m-0 min-h-0 overflow-hidden">
-        <div className="flex flex-col h-full">
-          {/* 跟进记录区域 - 占50%高度 */}
-          <div className="flex-1 min-h-0 flex flex-col border-b">
-            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
-              <h4 className={cn(s.text.sm, 'font-medium')}>跟进记录</h4>
-              {followupsPaginated.total > 0 && (
-                <span className={cn(s.text.xs, 'text-muted-foreground')}>
-                  共 {followupsPaginated.total} 条
-                </span>
+      {/* ===== 跟进记录 Tab ===== */}
+      <TabPane
+        tab={
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            跟进记录
+            <Tag size="small">{lead?.followup_count || 0}</Tag>
+          </span>
+        }
+        itemKey="followups"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* 跟进记录表格区域 */}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--semi-color-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)' }}>
+              <span style={{ fontSize: 14, fontWeight: 500 }}>跟进记录</span>
+              {followupsPaginated.total > 0 && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>共 {followupsPaginated.total} 条</span>}
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+              {isFollowupsLoading ? (
+                <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>加载中...</div>
+              ) : !followupsPaginated.items.length ? (
+                <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>暂无跟进记录</div>
+              ) : (
+                <Table columns={followupColumns} dataSource={followupsPaginated.items} rowKey="id" pagination={false} size="small" />
               )}
             </div>
-            <ScrollArea className="flex-1">
-              <div className="p-4">
-                {isFollowupsLoading ? (
-                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
-                    加载中...
-                  </div>
-                ) : !followupsPaginated.items.length ? (
-                  <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
-                    暂无跟进记录
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className={cn(s.text.xs, 'w-[140px]')}>跟进时间</TableHead>
-                        <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进方式</TableHead>
-                        <TableHead className={cn(s.text.xs, 'w-[90px]')}>跟进结果</TableHead>
-                        <TableHead className={cn(s.text.xs)}>跟进内容</TableHead>
-                        <TableHead className={cn(s.text.xs, 'w-[80px]')}>跟进人</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {followupsPaginated.items.map((followup: LeadFollowup) => (
-                        <TableRow key={followup.id}>
-                          <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                            {formatTime(followup.followup_at)}
-                          </TableCell>
-                          <TableCell className={s.text.xs}>
-                            {followupMethodLabels[followup.method] || followup.method}
-                          </TableCell>
-                          <TableCell className={s.text.xs}>
-                            {followup.result ? (
-                              <FollowupResultBadge
-                                result={followup.result}
-                                className={cn(s.text.xs, s.roundedBadge, s.height.badge)}
-                              />
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className={cn(s.text.xs, 'max-w-[200px]')}>
-                            {followup.content ? (
-                              <FollowupContentCell content={followup.content} />
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell className={s.text.xs}>
-                            <span className="flex items-center gap-1">
-                              {followup.followup_by_name || '-'}
-                              {followup.source === 'ai_auto' && (
-                                <span className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] font-medium bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400" title="AI 通话分析自动生成">AI</span>
-                              )}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
-            </ScrollArea>
-            {/* 跟进记录分页器 */}
             {followupsPaginated.total > 0 && (
-              <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20">
-                <div className={cn('flex items-center gap-2', s.text.xs)}>
-                  <span className="text-muted-foreground">每页</span>
-                  <Select
-                    value={`${followupPageSize}`}
-                    onValueChange={(value) => {
-                      setFollowupPageSize(Number(value))
-                      setFollowupPage(1)
-                    }}
-                  >
-                    <SelectTrigger className="h-7 w-[60px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[5, 10, 20].map((size) => (
-                        <SelectItem key={size} value={`${size}`} className="text-xs">
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-muted-foreground">条</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <span style={{ color: 'var(--semi-color-text-2)' }}>每页</span>
+                  <Select value={followupPageSize} onChange={(val) => { setFollowupPageSize(val as number); setFollowupPage(1) }} optionList={[5, 10, 20].map(s => ({ label: String(s), value: s }))} style={{ width: 70 }} size="small" />
+                  <span style={{ color: 'var(--semi-color-text-2)' }}>条</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setFollowupPage(followupPage - 1)}
-                    disabled={followupPage <= 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className={cn(s.text.xs, 'px-2')}>
-                    {followupPage} / {followupsPaginated.totalPages || 1}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setFollowupPage(followupPage + 1)}
-                    disabled={followupPage >= followupsPaginated.totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Button size="small" theme="light" disabled={followupPage <= 1} onClick={() => setFollowupPage(followupPage - 1)} icon={<ChevronLeft style={{ width: 16, height: 16 }} />} />
+                  <span style={{ fontSize: 12, padding: '0 8px' }}>{followupPage} / {followupsPaginated.totalPages || 1}</span>
+                  <Button size="small" theme="light" disabled={followupPage >= followupsPaginated.totalPages} onClick={() => setFollowupPage(followupPage + 1)} icon={<ChevronRight style={{ width: 16, height: 16 }} />} />
                 </div>
               </div>
             )}
           </div>
-
-          {/* 通话记录区域（本地数据，含AI分析）- 可折叠，默认折叠 */}
+          {/* 通话记录 - 可折叠 */}
           {leadId && (
-            <div className="flex-shrink-0 flex flex-col border-t">
+            <div style={{ flexShrink: 0, borderTop: '1px solid var(--semi-color-border)' }}>
               <LeadCallRecords leadId={leadId} showHeader collapsible defaultCollapsed />
             </div>
           )}
         </div>
-      </TabsContent>
+      </TabPane>
 
-      {/* ==================== 订单记录 Tab ==================== */}
-      <TabsContent value="orders" className="flex-1 m-0 min-h-0 overflow-hidden">
-        <ContentWrapper>
-          <div className="p-4">
+      {/* ===== 订单记录 Tab ===== */}
+      <TabPane
+        tab={
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            订单记录
+            {ordersResponse?.data && ordersResponse.data.length > 0 && <Tag size="small">{ordersResponse.data.length}</Tag>}
+          </span>
+        }
+        itemKey="orders"
+      >
+        <div style={wrapperStyle}>
+          <div style={{ padding: 16 }}>
             {isOrdersLoading ? (
-              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-8')}>
-                加载中...
-              </div>
+              <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '32px 0' }}>加载中...</div>
             ) : !ordersResponse?.data?.length ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Receipt className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className={cn(s.text.sm, 'text-muted-foreground')}>暂无订单记录</p>
-                <p className={cn(s.text.xs, 'text-muted-foreground/60 mt-1')}>该线索还没有关联的缴费订单</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', textAlign: 'center' }}>
+                <Receipt style={{ width: 48, height: 48, color: 'var(--semi-color-text-3)', marginBottom: 16 }} />
+                <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>暂无订单记录</p>
+                <p style={{ fontSize: 12, color: 'var(--semi-color-text-3)', marginTop: 4 }}>该线索还没有关联的缴费订单</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={cn(s.text.xs, 'w-[120px]')}>订单编号</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[80px] text-right')}>实付金额</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[80px]')}>支付状态</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[140px]')}>支付时间</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[140px]')}>创建时间</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ordersResponse.data.map((order: Order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className={cn(s.text.xs, 'font-medium')}>
-                        {order.order_no}
-                      </TableCell>
-                      <TableCell className={cn(s.text.xs, 'text-right font-medium text-orange-600')}>
-                        ¥{Number(order.actual_amount).toFixed(2)}
-                      </TableCell>
-                      <TableCell className={s.text.xs}>
-                        <Badge
-                          variant={order.payment_status === 'paid' ? 'default' : 'secondary'}
-                          className={cn(
-                            s.text.xs, s.roundedBadge, s.height.badge,
-                            order.payment_status === 'paid' && 'bg-green-500 hover:bg-green-500/80'
-                          )}
-                        >
-                          {order.payment_status_display}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                        {order.payment_at ? formatTime(order.payment_at) : '-'}
-                      </TableCell>
-                      <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                        {formatTime(order.created_at)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Table columns={orderColumns} dataSource={ordersResponse.data} rowKey="id" pagination={false} size="small" />
             )}
           </div>
-        </ContentWrapper>
-      </TabsContent>
+        </div>
+      </TabPane>
 
-      {/* ==================== 统计图表 Tab ==================== */}
-      <TabsContent value="statistics" className="flex-1 m-0 min-h-0 overflow-hidden">
-        <ContentWrapper>
-          <div className="p-4 space-y-4">
-            {/* 跟进频率趋势 */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className={s.text.sm}>跟进频率趋势</CardTitle>
-                <CardDescription className={s.text.xs}>最近30天的跟进活动</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FollowupFrequencyChart data={statistics.followupFrequencyData} />
-              </CardContent>
+      {/* ===== 统计图表 Tab ===== */}
+      <TabPane tab="统计图表" itemKey="statistics">
+        <div style={wrapperStyle}>
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Card title={<span style={{ fontSize: 14 }}>跟进频率趋势</span>} headerLine>
+              <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)', marginBottom: 8 }}>最近30天的跟进活动</div>
+              <FollowupFrequencyChart data={statistics.followupFrequencyData} />
             </Card>
-
-            {/* 跟进方式分布 + 跟进结果分布 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className={s.text.sm}>跟进方式分布</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FollowupMethodPie data={statistics.methodDistribution} />
-                </CardContent>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Card title={<span style={{ fontSize: 14 }}>跟进方式分布</span>} headerLine>
+                <FollowupMethodPie data={statistics.methodDistribution} />
               </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className={s.text.sm}>跟进结果分布</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FollowupResultPie data={statistics.resultDistribution} />
-                </CardContent>
+              <Card title={<span style={{ fontSize: 14 }}>跟进结果分布</span>} headerLine>
+                <FollowupResultPie data={statistics.resultDistribution} />
               </Card>
             </div>
           </div>
-        </ContentWrapper>
-      </TabsContent>
+        </div>
+      </TabPane>
 
-      {/* ==================== 变更历史 Tab ==================== */}
-      <TabsContent value="history" className="flex-1 m-0 min-h-0 overflow-hidden">
-        <ContentWrapper>
-          <div className="p-4">
+      {/* ===== 变更历史 Tab ===== */}
+      <TabPane tab="变更历史" itemKey="history">
+        <div style={wrapperStyle}>
+          <div style={{ padding: 16 }}>
             <ChangeHistoryTimeline
               infoChanges={infoChangeLogs?.data || []}
               ownershipChanges={ownershipChangeLogs?.data || []}
               isLoading={isInfoChangeLoading || isOwnershipChangeLoading}
             />
           </div>
-        </ContentWrapper>
-      </TabsContent>
+        </div>
+      </TabPane>
     </Tabs>
   )
 }

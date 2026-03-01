@@ -8,13 +8,13 @@ import { useState, useEffect, useRef } from 'react'
 interface CallTimerProps {
   /** 通话开始时间（时间戳） */
   startTime: number | null
-  /** 自定义类名 */
-  className?: string
+  /** 自定义样式 */
+  style?: React.CSSProperties
 }
 
-export function CallTimer({ startTime, className }: CallTimerProps) {
+export function CallTimer({ startTime, style }: CallTimerProps) {
   const [duration, setDuration] = useState('00:00')
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (startTime) {
@@ -40,5 +40,5 @@ export function CallTimer({ startTime, className }: CallTimerProps) {
     }
   }, [startTime])
 
-  return <p className={className}>{duration}</p>
+  return <span style={{ fontVariantNumeric: 'tabular-nums', ...style }}>{duration}</span>
 }

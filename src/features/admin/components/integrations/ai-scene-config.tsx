@@ -4,27 +4,12 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Settings2, FileText, CircleDot } from 'lucide-react'
+import { Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Table, Select, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { aiConfigApi } from '../../api'
 import {
   AI_PROVIDER_OPTIONS,
@@ -33,8 +18,18 @@ import {
   type AIPromptItem,
 } from '../../types'
 
+const { Text } = Typography
+
 const getProviderLabel = (provider: string) =>
   AI_PROVIDER_OPTIONS.find((p) => p.value === provider)?.label || provider
+
+// 场景行的类型
+interface SceneRow {
+  key: string
+  label: string
+  description: string
+  needsPrompt: boolean
+}
 
 export function AISceneConfigContent() {
   const queryClient = useQueryClient()
@@ -110,151 +105,147 @@ export function AISceneConfigContent() {
 
   const isLoading = scenesLoading || configsLoading || promptsLoading
 
+  const configOptionList = [
+    { value: '__none__', label: '未配置（使用默认）' },
+    ...(allConfigs?.items.map((config) => ({
+      value: config.id,
+      label: `${config.name} (${getProviderLabel(config.provider)})`,
+    })) || []),
+  ]
+
+  const columns: ColumnProps<SceneRow>[] = [
+    {
+      title: '场景',
+      dataIndex: 'label',
+      width: 200,
+      render: (_: unknown, record: SceneRow) => {
+        if (isLoading) {
+          return (
+            <div>
+              <Skeleton.Paragraph rows={1} style={{ width: 96, marginBottom: 4 }} />
+              <Skeleton.Paragraph rows={1} style={{ width: 144 }} />
+            </div>
+          )
+        }
+        return (
+          <div>
+            <div className="text-sm font-medium">{record.label}</div>
+            <Text type="tertiary" size="small" style={{ marginTop: 2, display: 'block' }}>
+              {record.description}
+            </Text>
+          </div>
+        )
+      },
+    },
+    {
+      title: '模型',
+      dataIndex: 'config',
+      width: 280,
+      render: (_: unknown, record: SceneRow) => {
+        if (isLoading) {
+          return <Skeleton.Paragraph rows={1} style={{ width: '100%' }} />
+        }
+        const currentConfig = sceneMapping?.[record.key] as AISceneConfig | undefined
+        return (
+          <Select
+            value={currentConfig?.config_id || '__none__'}
+            onChange={(value) => handleSceneChange(record.key, value as string)}
+            disabled={setSceneMutation.isPending}
+            size="small"
+            style={{ width: '100%' }}
+            optionList={configOptionList}
+          />
+        )
+      },
+    },
+    {
+      title: 'Prompt',
+      dataIndex: 'prompt',
+      width: 280,
+      render: (_: unknown, record: SceneRow) => {
+        if (isLoading) {
+          return <Skeleton.Paragraph rows={1} style={{ width: '100%' }} />
+        }
+        const scenePrompts = promptsByScene[record.key] || []
+        const activePrompt = scenePrompts.find((p) => p.is_active)
+
+        if (!record.needsPrompt) {
+          return <Text type="tertiary" size="small">--</Text>
+        }
+
+        if (scenePrompts.length === 0) {
+          return (
+            <Text type="tertiary" size="small">
+              暂无 Prompt，请先在 Prompt 管理中创建
+            </Text>
+          )
+        }
+
+        const promptOptionList = [
+          { value: '__none__', label: '未选择' },
+          ...scenePrompts.map((prompt) => ({
+            value: prompt.id,
+            label: `v${prompt.version} - ${prompt.name}${prompt.is_active ? ' (当前)' : ''}`,
+          })),
+        ]
+
+        return (
+          <Select
+            value={activePrompt?.id || '__none__'}
+            onChange={(value) => handlePromptChange(value as string)}
+            disabled={activatePromptMutation.isPending}
+            size="small"
+            style={{ width: '100%' }}
+            optionList={promptOptionList}
+          />
+        )
+      },
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 80,
+      align: 'center' as const,
+      render: (_: unknown, record: SceneRow) => {
+        if (isLoading) {
+          return <Skeleton.Paragraph rows={1} style={{ width: 40 }} />
+        }
+        const currentConfig = sceneMapping?.[record.key] as AISceneConfig | undefined
+        const scenePrompts = promptsByScene[record.key] || []
+        const activePrompt = scenePrompts.find((p) => p.is_active)
+        const isConfigured = !!currentConfig?.config_id
+        const isPromptReady = !record.needsPrompt || !!activePrompt
+
+        return isConfigured && isPromptReady ? (
+          <Tag size="small" color="blue" style={{ fontSize: 10 }}>
+            就绪
+          </Tag>
+        ) : (
+          <Tag size="small" type="light" style={{ fontSize: 10 }}>
+            待配置
+          </Tag>
+        )
+      },
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <Settings2 className="h-4 w-4 text-muted-foreground" />
+        <Settings2 className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
         <h3 className="text-sm font-medium">场景配置</h3>
-        <span className="text-xs text-muted-foreground">
+        <Text type="tertiary" size="small">
           为每个 AI 场景指定模型和 Prompt
-        </span>
+        </Text>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[200px]">场景</TableHead>
-              <TableHead className="w-[280px]">模型</TableHead>
-              <TableHead className="w-[280px]">Prompt</TableHead>
-              <TableHead className="w-[80px] text-center">状态</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              // 骨架屏
-              Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-5 w-24 mb-1" />
-                    <Skeleton className="h-3 w-36" />
-                  </TableCell>
-                  <TableCell><Skeleton className="h-8 w-full" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-full" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
-                </TableRow>
-              ))
-            ) : (
-              AI_SCENES.map((scene) => {
-                const currentConfig = sceneMapping?.[scene.key] as
-                  | AISceneConfig
-                  | undefined
-                const scenePrompts = promptsByScene[scene.key] || []
-                const activePrompt = scenePrompts.find((p) => p.is_active)
-                const isConfigured = !!currentConfig?.config_id
-                const isPromptReady = !scene.needsPrompt || !!activePrompt
-
-                return (
-                  <TableRow key={scene.key}>
-                    {/* 场景信息 */}
-                    <TableCell>
-                      <div className="text-sm font-medium">{scene.label}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {scene.description}
-                      </div>
-                    </TableCell>
-
-                    {/* 模型选择 */}
-                    <TableCell>
-                      <Select
-                        value={currentConfig?.config_id || '__none__'}
-                        onValueChange={(value) =>
-                          handleSceneChange(scene.key, value)
-                        }
-                        disabled={setSceneMutation.isPending}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="选择模型配置" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">
-                            <span className="text-muted-foreground">
-                              未配置（使用默认）
-                            </span>
-                          </SelectItem>
-                          {allConfigs?.items.map((config) => (
-                            <SelectItem key={config.id} value={config.id}>
-                              {config.name}
-                              <span className="ml-1 text-muted-foreground">
-                                ({getProviderLabel(config.provider)})
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-
-                    {/* Prompt 选择 */}
-                    <TableCell>
-                      {scene.needsPrompt ? (
-                        scenePrompts.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">
-                            暂无 Prompt，请先在 Prompt 管理中创建
-                          </span>
-                        ) : (
-                          <Select
-                            value={activePrompt?.id || '__none__'}
-                            onValueChange={handlePromptChange}
-                            disabled={activatePromptMutation.isPending}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="选择 Prompt 版本" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">
-                                <span className="text-muted-foreground">
-                                  未选择
-                                </span>
-                              </SelectItem>
-                              {scenePrompts.map((prompt) => (
-                                <SelectItem key={prompt.id} value={prompt.id}>
-                                  <span className="flex items-center gap-1.5">
-                                    <span>v{prompt.version} - {prompt.name}</span>
-                                    {prompt.is_active && (
-                                      <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-                                        当前
-                                      </Badge>
-                                    )}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* 状态 */}
-                    <TableCell className="text-center">
-                      {isConfigured && isPromptReady ? (
-                        <Badge variant="default" className="text-[10px] px-1.5 py-0 font-normal">
-                          就绪
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
-                          待配置
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <Table
+        columns={columns}
+        dataSource={AI_SCENES as unknown as SceneRow[]}
+        rowKey="key"
+        pagination={false}
+        loading={false}
+      />
     </div>
   )
 }

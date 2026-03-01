@@ -1,16 +1,6 @@
 import { useRef, useState } from 'react'
+import { Popover, Tooltip } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 
 type LongTextProps = {
   children: React.ReactNode
@@ -44,29 +34,25 @@ export function LongText({
   return (
     <>
       <div className='hidden sm:block'>
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div ref={refCallback} className={cn('truncate', className)}>
-                {children}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className={contentClassName}>{children}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip content={<span className={contentClassName}>{children}</span>}>
+          <div ref={refCallback} className={cn('truncate', className)}>
+            {children}
+          </div>
+        </Tooltip>
       </div>
       <div className='sm:hidden'>
-        <Popover>
-          <PopoverTrigger asChild>
-            <div ref={refCallback} className={cn('truncate', className)}>
-              {children}
+        <Popover
+          content={
+            <div className={cn('w-fit p-2', contentClassName)}>
+              <p>{children}</p>
             </div>
-          </PopoverTrigger>
-          <PopoverContent className={cn('w-fit', contentClassName)}>
-            <p>{children}</p>
-          </PopoverContent>
+          }
+          trigger='click'
+          showArrow
+        >
+          <div ref={refCallback} className={cn('truncate', className)}>
+            {children}
+          </div>
         </Popover>
       </div>
     </>

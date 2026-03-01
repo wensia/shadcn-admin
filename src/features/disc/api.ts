@@ -70,6 +70,11 @@ export async function getTempDiscRecordDetail(id: string): Promise<ApiResponse<T
   return apiClient.get(`${HR_BASE}/temp-disc-records/${id}`)
 }
 
+/** 更新临时 DISC 记录（姓名/手机号） */
+export async function updateTempDiscRecord(id: string, data: { name?: string; phone?: string }): Promise<ApiResponse<TempDISCRecordDetail>> {
+  return apiClient.patch(`${HR_BASE}/temp-disc-records/${id}`, data)
+}
+
 /** 触发 DISC AI 分析 */
 export async function triggerDiscAIAnalysis(id: string, force = false): Promise<ApiResponse<{
   success: boolean

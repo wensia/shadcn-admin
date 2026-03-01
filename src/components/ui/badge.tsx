@@ -4,9 +4,9 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 /**
- * Anthropic 品牌色:
- * - Orange: #d97757 (主要强调色)
- * - Green: #788c5d (次要强调色)
+ * 状态色:
+ * - Orange: #f97316 (警告/待处理)
+ * - Green: #788c5d (成功/已完成)
  * - Mid Gray: #b0aea5 (次要元素)
  * - Light Gray: #e8e6dc (微妙背景)
  * - Dark: #141413 (主要文本)
@@ -25,9 +25,9 @@ const badgeVariants = cva(
           'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20',
         outline:
           'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
-        // Anthropic 品牌色状态样式 - 浅色背景 + 品牌色文字
+        // 状态样式 - 浅色背景 + 状态色文字
         'status-orange':
-          'border-[#d97757]/30 bg-[#d97757]/10 text-[#d97757]',
+          'border-[#f97316]/30 bg-[#f97316]/10 text-[#f97316]',
         'status-green':
           'border-[#788c5d]/30 bg-[#788c5d]/10 text-[#788c5d]',
         'status-gray':
@@ -36,12 +36,12 @@ const badgeVariants = cva(
           'border-red-300 bg-red-50 text-red-600',
         // 深色实心样式
         'status-orange-solid':
-          'border-transparent bg-[#d97757] text-white',
+          'border-transparent bg-[#f97316] text-white',
         'status-green-solid':
           'border-transparent bg-[#788c5d] text-white',
         'status-gray-solid':
           'border-transparent bg-[#b0aea5] text-white',
-        // 职位级别样式 - 使用 Anthropic 品牌色，与状态tag风格一致
+        // 职位级别样式
         // Level 1 - 专员级 - Light Gray
         'position-staff':
           'border-[#b0aea5]/30 bg-[#e8e6dc]/50 text-[#141413]',
@@ -53,7 +53,7 @@ const badgeVariants = cva(
           'border-[#6a9bcc]/30 bg-[#6a9bcc]/10 text-[#6a9bcc]',
         // Level 4 - 总监级 - Orange
         'position-director':
-          'border-[#d97757]/30 bg-[#d97757]/10 text-[#d97757]',
+          'border-[#f97316]/30 bg-[#f97316]/10 text-[#f97316]',
         // Level 5-6 - 高管级 - Dark
         'position-executive':
           'border-[#141413]/30 bg-[#141413]/10 text-[#141413]',

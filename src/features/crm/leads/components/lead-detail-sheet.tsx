@@ -1,51 +1,35 @@
 /**
- * 线索详情Sheet组件
- * 使用 LeadDetailTabs 复用组件展示详情内容
+ * 线索详情 SideSheet - Semi Design 版本
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle
-} from '@/components/ui/sheet'
+  SideSheet,
+  Modal,
+  Button,
+  Tag,
+  Typography,
+  Toast,
+  Popover,
+  Spin,
+  Space,
+} from '@douyinfe/semi-ui-19'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
-import {
-  Phone,
-  PhoneOff,
-  Edit,
-  Plus,
-  X,
-  Star,
-  Loader2,
-} from 'lucide-react'
+  IconEdit,
+  IconPhone,
+  IconClose,
+  IconPlus,
+  IconStar,
+} from '@douyinfe/semi-icons'
 import { leadsApi, yunkeApi } from '../api'
 import type { Lead } from '../types'
 import { IntentionLevel, intentionLevelLabels } from '../types'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
 import { LeadStatusBadge, IntentionLevelBadge } from './status-badges'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-
-// 详情 Tabs 组件
 import { LeadDetailTabs } from './detail/lead-detail-tabs'
-// 跟进表单组件
 import { FollowupForm } from '../../continuous-call/components/followup-form'
+
+const { Text, Title } = Typography
 
 interface LeadDetailSheetProps {
   leadId: string | null
@@ -60,18 +44,17 @@ export function LeadDetailSheet({
   open,
   onOpenChange,
   onEdit,
-  onCreateFollowup
+  onCreateFollowup,
 }: LeadDetailSheetProps) {
-  const s = useStyleClasses()
   const queryClient = useQueryClient()
 
-  // ==================== 跟进表单对话框状态 ====================
+  // 跟进表单
   const [followupDialogOpen, setFollowupDialogOpen] = useState(false)
 
-  // ==================== 意向等级快捷编辑 ====================
+  // 意向等级编辑
   const [intentionPopoverOpen, setIntentionPopoverOpen] = useState(false)
 
-  // ==================== 外呼状态 ====================
+  // 外呼状态
   const [isInCall, setIsInCall] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
   const [currentCallId, setCurrentCallId] = useState<string | null>(null)
@@ -79,14 +62,12 @@ export function LeadDetailSheet({
   const callTimerRef = useRef<number | null>(null)
   const callStartTimeRef = useRef<Date | null>(null)
 
-  // 格式化通话时长
   const formatCallDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  // 开始计时
   const startCallTimer = useCallback(() => {
     setIsInCall(true)
     callStartTimeRef.current = new Date()
@@ -97,7 +78,6 @@ export function LeadDetailSheet({
     }, 1000)
   }, [])
 
-  // 停止计时
   const stopCallTimer = useCallback(() => {
     if (callTimerRef.current) {
       clearInterval(callTimerRef.current)
@@ -109,7 +89,6 @@ export function LeadDetailSheet({
     callStartTimeRef.current = null
   }, [])
 
-  // 外呼
   const makeOutboundCall = useCallback(async (phone: string) => {
     if (!phone || isInCall || outboundLoading) return false
     setOutboundLoading(true)
@@ -118,33 +97,28 @@ export function LeadDetailSheet({
       if (response.data?.call_id) {
         setCurrentCallId(response.data.call_id)
         startCallTimer()
-        toast.success('拨号成功')
+        Toast.success({ content: '拨号成功' })
         return true
       }
-      toast.error('拨号失败')
+      Toast.error({ content: '拨号失败' })
       return false
     } catch {
-      toast.error('外呼失败')
+      Toast.error({ content: '外呼失败' })
       return false
     } finally {
       setOutboundLoading(false)
     }
   }, [isInCall, outboundLoading, startCallTimer])
 
-  // 挂断
   const hangUpCall = useCallback(async () => {
     if (currentCallId) {
-      try {
-        await yunkeApi.hangUpCall(currentCallId)
-      } catch {
-        // 静默失败
-      }
+      try { await yunkeApi.hangUpCall(currentCallId) } catch { /* 静默 */ }
     }
     stopCallTimer()
-    toast.success('通话已挂断')
+    Toast.success({ content: '通话已挂断' })
   }, [currentCallId, stopCallTimer])
 
-  // 获取线索详情（仅用于 Header 区域显示状态和操作按钮）
+  // 获取线索详情
   const { data: lead, isLoading } = useQuery({
     queryKey: ['lead', leadId],
     queryFn: async () => {
@@ -152,236 +126,220 @@ export function LeadDetailSheet({
       const response = await leadsApi.getLead(leadId, true)
       return response.data
     },
-    enabled: !!leadId && open
+    enabled: !!leadId && open,
   })
 
-  // ==================== 快捷编辑字段 ====================
+  // 快捷编辑字段
   const updateFieldMutation = useMutation({
     mutationFn: async ({ field, value }: { field: string; value: string }) => {
       if (!leadId) throw new Error('线索ID不存在')
-
-      // 构建更新数据，处理特殊字段类型
       const updateData: Record<string, unknown> = {}
-
       if (field === 'age') {
         updateData[field] = value ? parseInt(value, 10) : null
       } else if (field === 'course_interests') {
-        // 课程兴趣是数组，用中文逗号或英文逗号分隔
-        updateData[field] = value ? value.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+        updateData[field] = value ? value.split(/[,，]/).map((s) => s.trim()).filter(Boolean) : []
       } else {
         updateData[field] = value || null
       }
-
       const response = await leadsApi.updateLead(leadId, updateData)
       return response.data
     },
     onSuccess: () => {
-      // 刷新线索数据
       queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
       queryClient.invalidateQueries({ queryKey: ['leads'] })
     },
   })
 
-  // 字段更新处理函数
-  const handleFieldUpdate = useCallback(async (field: string, value: string) => {
-    await updateFieldMutation.mutateAsync({ field, value })
-  }, [updateFieldMutation])
+  const handleFieldUpdate = useCallback(
+    async (field: string, value: string) => {
+      await updateFieldMutation.mutateAsync({ field, value })
+    },
+    [updateFieldMutation]
+  )
 
-  // ==================== 快捷键监听 ====================
+  // 快捷键
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // 检查焦点是否在可编辑元素上
       const el = document.activeElement as HTMLElement
-      const isEditable = el?.tagName === 'INPUT' ||
-        el?.tagName === 'TEXTAREA' ||
-        el?.isContentEditable
-
-      // 空格键外呼
+      const isEditable = el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable
       if (event.code === 'Space' && !isEditable && open && !isInCall && !outboundLoading && lead?.parent_phone) {
         event.preventDefault()
         makeOutboundCall(lead.parent_phone)
       }
-
-      // ESC 键挂断（阻止关闭抽屉）
       if (event.key === 'Escape' && isInCall) {
         event.preventDefault()
         event.stopPropagation()
         hangUpCall()
       }
     }
-
     if (open) {
-      // 使用 capture 阶段监听，确保在 Sheet 组件之前处理 ESC 键
       window.addEventListener('keydown', handleKeyDown, true)
       return () => window.removeEventListener('keydown', handleKeyDown, true)
     }
   }, [open, isInCall, outboundLoading, lead?.parent_phone, makeOutboundCall, hangUpCall])
 
-  // 清理计时器
   useEffect(() => {
     return () => {
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current)
-      }
+      if (callTimerRef.current) clearInterval(callTimerRef.current)
     }
   }, [])
 
-  if (!lead && !isLoading) {
-    return null
-  }
+  if (!lead && !isLoading) return null
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl md:max-w-[70%] lg:max-w-3xl xl:max-w-4xl p-0 flex flex-col [&>button]:hidden">
-        {/* ==================== Header 区域 ==================== */}
-        <SheetHeader className="px-4 py-2.5 border-b shrink-0">
-          <SheetTitle className="sr-only">线索详情</SheetTitle>
-          <SheetDescription className="sr-only">查看和管理线索信息</SheetDescription>
-          <div className="flex items-center gap-2">
-            {/* 状态标签 */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {lead && (
-                <LeadStatusBadge status={lead.status} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
-              )}
-              {/* 意向等级 - 支持快捷编辑 */}
-              {lead && (
-                <Popover open={intentionPopoverOpen} onOpenChange={setIntentionPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
-                      title="点击修改意向等级"
-                    >
-                      {lead.intention_level ? (
-                        <IntentionLevelBadge level={lead.intention_level} className={cn(s.text.xs, s.height.badge, s.roundedBadge)} />
-                      ) : (
-                        <span className={cn('text-muted-foreground border border-dashed rounded px-2 py-0.5', s.text.xs)}>
-                          设置意向
-                        </span>
-                      )}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-1" align="start">
-                    <div className="flex flex-col gap-0.5">
-                      {Object.entries(intentionLevelLabels).map(([value, label]) => (
-                        <button
-                          key={value}
-                          type="button"
-                          className={cn(
-                            'flex items-center gap-2 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors text-left',
-                            lead.intention_level === value && 'bg-accent'
-                          )}
-                          onClick={async () => {
-                            await handleFieldUpdate('intention_level', value)
-                            setIntentionPopoverOpen(false)
-                          }}
-                        >
-                          <IntentionLevelBadge level={value as IntentionLevel} className="text-xs" />
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-              {lead?.is_starred && (
-                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-              )}
-            </div>
-
-            {/* 操作按钮 */}
-            <div className={cn('flex items-center ml-auto', s.gap.buttons)}>
-              {lead && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onEdit?.(lead)}
-                    className={cn(s.height.controlSm, s.text.xs)}
-                  >
-                    <Edit className="mr-1 h-3 w-3" />
-                    编辑
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={isInCall ? "destructive" : "outline"}
-                    onClick={() => isInCall ? hangUpCall() : makeOutboundCall(lead.parent_phone || '')}
-                    disabled={outboundLoading || (!isInCall && !lead?.parent_phone)}
-                    className={cn(s.height.controlSm, s.text.xs)}
-                  >
-                    {outboundLoading ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    ) : isInCall ? (
-                      <PhoneOff className="mr-1 h-3 w-3" />
-                    ) : (
-                      <Phone className="mr-1 h-3 w-3" />
-                    )}
-                    {isInCall ? `挂断 ${formatCallDuration(callDuration)}` : '外呼'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setFollowupDialogOpen(true)}
-                    className={cn(s.height.controlSm, s.text.xs)}
-                  >
-                    <Plus className="mr-1 h-3 w-3" />
-                    新建跟进
-                  </Button>
-                </>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                className="h-8 w-8 p-0 shrink-0"
+    <>
+      <SideSheet
+        title={null}
+        visible={open}
+        onCancel={() => onOpenChange(false)}
+        placement="right"
+        width="min(70%, 960px)"
+        bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}
+        headerStyle={{ padding: 0, borderBottom: 'none' }}
+        closable={false}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 16px',
+            borderBottom: '1px solid var(--semi-color-border)',
+            flexShrink: 0,
+          }}
+        >
+          {/* 状态标签 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {lead && <LeadStatusBadge status={lead.status} />}
+            {lead && (
+              <Popover
+                visible={intentionPopoverOpen}
+                onVisibleChange={setIntentionPopoverOpen}
+                trigger="click"
+                position="bottomLeft"
+                content={
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: 4 }}>
+                    {Object.entries(intentionLevelLabels).map(([value, label]) => (
+                      <div
+                        key={value}
+                        style={{
+                          padding: '6px 12px',
+                          cursor: 'pointer',
+                          borderRadius: 4,
+                          background: lead.intention_level === value ? 'var(--semi-color-fill-0)' : 'transparent',
+                        }}
+                        onClick={async () => {
+                          await handleFieldUpdate('intention_level', value)
+                          setIntentionPopoverOpen(false)
+                        }}
+                      >
+                        <IntentionLevelBadge level={value as IntentionLevel} />
+                      </div>
+                    ))}
+                  </div>
+                }
               >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+                <span style={{ cursor: 'pointer' }} title="点击修改意向等级">
+                  {lead.intention_level ? (
+                    <IntentionLevelBadge level={lead.intention_level} />
+                  ) : (
+                    <Tag style={{ border: '1px dashed var(--semi-color-border)' }}>
+                      设置意向
+                    </Tag>
+                  )}
+                </span>
+              </Popover>
+            )}
+            {lead?.is_starred && (
+              <IconStar style={{ color: '#fadb14', fontSize: 16 }} />
+            )}
           </div>
-        </SheetHeader>
 
-        {/* ==================== Tabs 区域 ==================== */}
+          {/* 操作按钮 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            {lead && (
+              <>
+                <Button
+                  icon={<IconEdit />}
+                  theme="light"
+                  onClick={() => onEdit?.(lead)}
+                >
+                  编辑
+                </Button>
+                <Button
+                  icon={<IconPhone />}
+                  theme={isInCall ? 'solid' : 'light'}
+                  type={isInCall ? 'danger' : 'primary'}
+                  onClick={() => isInCall ? hangUpCall() : makeOutboundCall(lead.parent_phone || '')}
+                  disabled={outboundLoading || (!isInCall && !lead?.parent_phone)}
+                  loading={outboundLoading}
+                >
+                  {isInCall ? `挂断 ${formatCallDuration(callDuration)}` : '外呼'}
+                </Button>
+                <Button
+                  icon={<IconPlus />}
+                  theme="solid"
+                  onClick={() => setFollowupDialogOpen(true)}
+                >
+                  新建跟进
+                </Button>
+              </>
+            )}
+            <Button
+              icon={<IconClose />}
+              theme="borderless"
+              onClick={() => onOpenChange(false)}
+            />
+          </div>
+        </div>
+
+        {/* Tabs 区域 */}
         {leadId && (
-          <LeadDetailTabs
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <LeadDetailTabs
+              leadId={leadId}
+              lead={lead}
+              isLoading={isLoading}
+              useScrollArea={true}
+              height="h-full"
+              onFieldUpdate={handleFieldUpdate}
+            />
+          </div>
+        )}
+      </SideSheet>
+
+      {/* 新建跟进对话框 */}
+      <Modal
+        title="新建跟进记录"
+        visible={followupDialogOpen}
+        onCancel={() => setFollowupDialogOpen(false)}
+        footer={null}
+        width={520}
+        bodyStyle={{ maxHeight: '70vh', overflow: 'auto' }}
+      >
+        <Text type="tertiary" style={{ fontSize: 13, marginBottom: 8, display: 'block' }}>
+          {lead?.child_name || lead?.parent_phone || '线索'}
+        </Text>
+        {leadId && (
+          <FollowupForm
             leadId={leadId}
-            lead={lead}
-            isLoading={isLoading}
-            useScrollArea={true}
-            height="h-full"
-            onFieldUpdate={handleFieldUpdate}
+            advisorId={lead?.advisor_id}
+            initialIntentionLevel={lead?.intention_level as IntentionLevel}
+            asCard={false}
+            showReleaseToPool={true}
+            submitText="保存跟进"
+            enableAiSuggestion={true}
+            onSuccess={() => {
+              setFollowupDialogOpen(false)
+              queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
+              queryClient.invalidateQueries({ queryKey: ['lead-followups', leadId] })
+              queryClient.invalidateQueries({ queryKey: ['leads'] })
+            }}
+            onCancel={() => setFollowupDialogOpen(false)}
           />
         )}
-      </SheetContent>
-
-      {/* ==================== 新建跟进对话框 ==================== */}
-      <Dialog open={followupDialogOpen} onOpenChange={setFollowupDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>新建跟进记录</DialogTitle>
-            <DialogDescription>
-              {lead?.child_name || lead?.parent_phone || '线索'}
-            </DialogDescription>
-          </DialogHeader>
-          {leadId && (
-            <FollowupForm
-              leadId={leadId}
-              advisorId={lead?.advisor_id}
-              initialIntentionLevel={lead?.intention_level as IntentionLevel}
-              asCard={false}
-              showReleaseToPool={true}
-              submitText="保存跟进"
-              enableAiSuggestion={true}
-              onSuccess={() => {
-                setFollowupDialogOpen(false)
-                // 刷新线索数据和跟进记录
-                queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
-                queryClient.invalidateQueries({ queryKey: ['lead-followups', leadId] })
-                queryClient.invalidateQueries({ queryKey: ['leads'] })
-              }}
-              onCancel={() => setFollowupDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </Sheet>
+      </Modal>
+    </>
   )
 }

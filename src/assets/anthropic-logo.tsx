@@ -1,6 +1,37 @@
 import { type SVGProps } from 'react'
 import { cn } from '@/lib/utils'
 
+/**
+ * 几何 G 字 Logo - Semi Design 蓝色主色
+ *
+ * 构建方式：图层叠加（避免复杂弧线路径方向问题）
+ * - Layer 1: 白色实心圆 (R=13) → 外圆
+ * - Layer 2: 蓝色实心圆 (R=8) → 挖空内圆形成环形
+ * - Layer 3: 蓝色三角形 → 右上方开口（~52° 缺口）
+ * - Layer 4: 白色横杠路径 → 右侧弧形边缘贴合外圆
+ */
+
+const BG_COLOR = '#0064FA'
+
+/** G 字图标的 SVG 内部元素（可复用） */
+function GLetterMark() {
+  return (
+    <>
+      {/* 外圆 */}
+      <circle cx='20' cy='20' r='13' fill='white' />
+      {/* 内圆（挖空） */}
+      <circle cx='20' cy='20' r='8' fill={BG_COLOR} />
+      {/* 右上缺口（~52° 开口） */}
+      <polygon points='20,20 34,20 30,7' fill={BG_COLOR} />
+      {/* 横杠（右侧贴合外圆弧线） */}
+      <path
+        d='M 20 20 L 33 20 A 13 13 0 0 1 32 25 L 20 25 Z'
+        fill='white'
+      />
+    </>
+  )
+}
+
 interface AnthropicLogoProps extends SVGProps<SVGSVGElement> {
   showText?: boolean
 }
@@ -21,18 +52,14 @@ export function AnthropicLogo({
         className={cn('size-10', className)}
         {...props}
       >
-        <title>Anthropic</title>
-        {/* Anthropic 风格的 A 字母 Logo */}
-        <rect width='40' height='40' rx='8' fill='#d97757' />
-        <path
-          d='M20 8L10 32H14.5L16.5 27H23.5L25.5 32H30L20 8ZM18 23L20 17L22 23H18Z'
-          fill='#faf9f5'
-        />
+        <title>RMF CRM</title>
+        <rect width='40' height='40' rx='8' fill={BG_COLOR} />
+        <GLetterMark />
       </svg>
       {showText && (
         <span
           className='text-xl font-semibold tracking-tight'
-          style={{ fontFamily: 'Poppins, Arial, sans-serif', color: '#141413' }}
+          style={{ color: 'var(--semi-color-text-0, #141413)' }}
         >
           RMF CRM
         </span>
@@ -56,17 +83,12 @@ export function AnthropicWordmark({
       {...props}
     >
       <title>RMF CRM</title>
-      {/* Logo Icon */}
-      <rect width='40' height='40' rx='8' fill='#d97757' />
-      <path
-        d='M20 8L10 32H14.5L16.5 27H23.5L25.5 32H30L20 8ZM18 23L20 17L22 23H18Z'
-        fill='#faf9f5'
-      />
-      {/* Text */}
+      <rect width='40' height='40' rx='8' fill={BG_COLOR} />
+      <GLetterMark />
       <text
         x='52'
         y='28'
-        fill='#141413'
+        fill='currentColor'
         fontFamily='Poppins, Arial, sans-serif'
         fontSize='20'
         fontWeight='600'

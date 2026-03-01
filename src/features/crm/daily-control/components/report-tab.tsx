@@ -1,32 +1,14 @@
 /**
- * 日控报表 Tab
+ * 日控报表 Tab - Semi Design 版
  * 展示每个课程顾问的诺到、到访、缴费统计
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
+import { Table, Select, Skeleton } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { getDailyControlReport, type AdvisorDailyControlStats } from '../api'
 import { brandColors } from '../theme'
-
-// 获取校区列表的 API
 import { apiClient } from '@/lib/api/client'
 
 interface ReportTabProps {
@@ -35,8 +17,24 @@ interface ReportTabProps {
 }
 
 export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
-  const s = useStyleClasses()
   const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
+
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(400)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const measure = () => {
+      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+      const available = el.clientHeight - headerH
+      if (available > 100) setScrollY(available)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // 获取校区列表
   const { data: campusesData } = useQuery({
@@ -73,28 +71,31 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
     totalPaymentAmount: reportData?.total_payment_amount || 0,
   }
 
-  // 计算到访率
   const getVisitRate = (promised: number, visited: number) => {
     const total = promised + visited
     if (total === 0) return '-'
     return `${Math.round((visited / total) * 100)}%`
   }
 
+  const campusOptions = [
+    { value: 'all', label: '全部校区' },
+    ...campuses.map((campus: { id: string; name: string }) => ({
+      value: campus.id,
+      label: campus.name,
+    })),
+  ]
+
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-9 w-40" />
-        </div>
-        <div className="rounded-lg border">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Skeleton.Paragraph rows={1} style={{ width: 160 }} />
+        <div style={{ borderRadius: 8, border: '1px solid var(--semi-color-border)' }}>
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 border-b last:border-b-0">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-20" />
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderBottom: '1px solid var(--semi-color-border)' }}>
+              <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+              <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+              <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+              <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
             </div>
           ))}
         </div>
@@ -104,71 +105,82 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center py-12 text-muted-foreground">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, color: 'var(--semi-color-text-2)' }}>
         加载失败，请重试
       </div>
     )
   }
 
+  const columns: ColumnProps<AdvisorDailyControlStats>[] = [
+    { title: '顾问姓名', dataIndex: 'advisor_name', width: 120, render: (text) => <span style={{ fontWeight: 500 }}>{text}</span> },
+    { title: '所属校区', dataIndex: 'campus_name', width: 120, render: (text) => <span style={{ color: 'var(--semi-color-text-2)' }}>{text || '-'}</span> },
+    {
+      title: <span style={{ color: brandColors.orange }}>诺到</span>,
+      dataIndex: 'promised_count', width: 80, align: 'center' as const,
+      render: (text) => <span style={{ fontWeight: 500, color: text > 0 ? brandColors.orange : undefined }}>{text}</span>,
+    },
+    {
+      title: <span style={{ color: brandColors.blue }}>到访</span>,
+      dataIndex: 'visited_count', width: 80, align: 'center' as const,
+      render: (text) => <span style={{ fontWeight: 500, color: text > 0 ? brandColors.blue : undefined }}>{text}</span>,
+    },
+    {
+      title: '到访率', dataIndex: 'visit_rate', width: 80, align: 'center' as const,
+      render: (_text, record) => {
+        if (!record) return '-'
+        return <span style={{ color: 'var(--semi-color-text-2)' }}>{getVisitRate(record.promised_count, record.visited_count)}</span>
+      },
+    },
+    {
+      title: <span style={{ color: brandColors.green }}>缴费笔数</span>,
+      dataIndex: 'payment_count', width: 80, align: 'center' as const,
+      render: (text) => <span style={{ fontWeight: 500, color: text > 0 ? brandColors.green : undefined }}>{text}</span>,
+    },
+    {
+      title: '缴费金额', dataIndex: 'payment_amount', width: 120, align: 'right' as const,
+      render: (text) => {
+        return text > 0
+          ? <span style={{ fontWeight: 500, color: brandColors.orange }}>¥{Number(text).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>
+          : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
+      },
+    },
+  ]
+
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* 筛选栏 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className={cn(s.text.sm, 'text-muted-foreground')}>校区：</span>
-            <Select value={selectedCampusId} onValueChange={setSelectedCampusId}>
-              <SelectTrigger className="w-40 h-9">
-                <SelectValue placeholder="全部校区" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部校区</SelectItem>
-                {campuses.map((campus: { id: string; name: string }) => (
-                  <SelectItem key={campus.id} value={campus.id}>
-                    {campus.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>校区：</span>
+          <Select
+            value={selectedCampusId}
+            onChange={(v) => setSelectedCampusId(v as string)}
+            optionList={campusOptions}
+            style={{ width: 160 }}
+          />
         </div>
 
         {/* 汇总统计 */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className={cn(s.text.xs, 'text-muted-foreground')}>顾问数</span>
-            <span className={cn(s.text.sm, 'font-semibold')}>{summary.totalAdvisors}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>顾问数</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalAdvisors}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(s.text.xs)}
-              style={{ color: brandColors.orange }}
-            >
-              诺到
-            </span>
-            <span className={cn(s.text.sm, 'font-semibold')}>{summary.totalPromised}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: brandColors.orange }}>诺到</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalPromised}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(s.text.xs)}
-              style={{ color: brandColors.blue }}
-            >
-              到访
-            </span>
-            <span className={cn(s.text.sm, 'font-semibold')}>{summary.totalVisited}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: brandColors.blue }}>到访</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalVisited}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(s.text.xs)}
-              style={{ color: brandColors.green }}
-            >
-              缴费
-            </span>
-            <span className={cn(s.text.sm, 'font-semibold')}>{summary.totalPaymentCount}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: brandColors.green }}>缴费</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalPaymentCount}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={cn(s.text.xs, 'text-muted-foreground')}>金额</span>
-            <span className={cn(s.text.sm, 'font-semibold text-orange-600')}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>金额</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: brandColors.orange }}>
               ¥{Number(summary.totalPaymentAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -176,73 +188,16 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
       </div>
 
       {/* 表格 */}
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30">
-              <TableHead className={cn(s.text.xs, 'font-semibold w-[120px]')}>顾问姓名</TableHead>
-              <TableHead className={cn(s.text.xs, 'font-semibold w-[120px]')}>所属校区</TableHead>
-              <TableHead className={cn(s.text.xs, 'font-semibold w-[80px] text-center')}>
-                <span style={{ color: brandColors.orange }}>诺到</span>
-              </TableHead>
-              <TableHead className={cn(s.text.xs, 'font-semibold w-[80px] text-center')}>
-                <span style={{ color: brandColors.blue }}>到访</span>
-              </TableHead>
-              <TableHead className={cn(s.text.xs, 'font-semibold w-[80px] text-center')}>到访率</TableHead>
-              <TableHead className={cn(s.text.xs, 'font-semibold w-[80px] text-center')}>
-                <span style={{ color: brandColors.green }}>缴费笔数</span>
-              </TableHead>
-              <TableHead className={cn(s.text.xs, 'font-semibold w-[120px] text-right')}>缴费金额</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {stats.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              stats.map((row: AdvisorDailyControlStats) => (
-                <TableRow key={row.advisor_id} className="hover:bg-muted/30">
-                  <TableCell className={cn(s.text.sm, 'font-medium')}>
-                    {row.advisor_name}
-                  </TableCell>
-                  <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                    {row.campus_name || '-'}
-                  </TableCell>
-                  <TableCell className={cn(s.text.sm, 'text-center font-medium')}>
-                    <span style={{ color: row.promised_count > 0 ? brandColors.orange : undefined }}>
-                      {row.promised_count}
-                    </span>
-                  </TableCell>
-                  <TableCell className={cn(s.text.sm, 'text-center font-medium')}>
-                    <span style={{ color: row.visited_count > 0 ? brandColors.blue : undefined }}>
-                      {row.visited_count}
-                    </span>
-                  </TableCell>
-                  <TableCell className={cn(s.text.xs, 'text-center text-muted-foreground')}>
-                    {getVisitRate(row.promised_count, row.visited_count)}
-                  </TableCell>
-                  <TableCell className={cn(s.text.sm, 'text-center font-medium')}>
-                    <span style={{ color: row.payment_count > 0 ? brandColors.green : undefined }}>
-                      {row.payment_count}
-                    </span>
-                  </TableCell>
-                  <TableCell className={cn(s.text.sm, 'text-right font-medium')}>
-                    {row.payment_amount > 0 ? (
-                      <span className="text-orange-600">
-                        ¥{Number(row.payment_amount).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      <div ref={wrapperRef} style={{ flex: 1, minHeight: 0 }}>
+        <Table
+          columns={columns}
+          dataSource={stats}
+          rowKey="advisor_id"
+          pagination={false}
+          scroll={{ y: scrollY }}
+          size="middle"
+          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+        />
       </div>
     </div>
   )

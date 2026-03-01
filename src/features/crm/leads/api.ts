@@ -257,6 +257,7 @@ const leadsApi = {
     priority_max?: number
     sort_by?: string
     sort_order?: string
+    compact?: boolean
   }): Promise<ApiResponse<{
     items: any[]
     total: number

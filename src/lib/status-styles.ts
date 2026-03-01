@@ -1,12 +1,12 @@
 /**
  * 全局状态样式配置
- * 使用 Anthropic 品牌色统一管理线索状态、跟进结果、意向等级的标签样式
+ * 使用 Semi Design 配色统一管理线索状态、跟进结果、意向等级的标签样式
  *
- * Anthropic 品牌色:
- * - Orange: #d97757 (主要强调色) - 用于需要关注/行动/进行中的状态
- * - Green: #788c5d (次要强调色) - 用于成功/正向的状态
- * - Gray: #b0aea5 (次要元素) - 用于中性/已完成的状态
- * - Red: 危险色 - 用于无效/负面的状态
+ * Semi Design 配色:
+ * - Orange: #ff7d00 (warning) - 用于需要关注/行动/进行中的状态
+ * - Green: #00b42a (success) - 用于成功/正向的状态
+ * - Gray: #86909c (text-2) - 用于中性/已完成的状态
+ * - Red: #f53f3f (danger) - 用于无效/负面的状态
  */
 
 import {
@@ -14,7 +14,8 @@ import {
   FollowupResult,
   IntentionLevel,
 } from '@/features/crm/leads/types'
-import type { StatusColor } from '@/components/ui/status-badge'
+// 状态颜色类型（与 StatusBadge 组件共享）
+export type StatusColor = 'orange' | 'green' | 'gray' | 'red'
 
 // 样式配置接口
 export interface StatusStyleConfig {

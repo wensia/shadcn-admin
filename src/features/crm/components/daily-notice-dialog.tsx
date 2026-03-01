@@ -1,21 +1,12 @@
 /**
- * CRM 每日通知弹窗
+ * CRM 每日通知弹窗 - Semi Design 版
  * 用户进入 CRM 时弹出，点击「已知晓」后今日不再提示
  */
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Modal, Button } from '@douyinfe/semi-ui-19'
 import { getActiveDailyNotice } from '../daily-notice-api'
 
 const KEY_PREFIX = 'daily_notice_dismissed_'
@@ -75,28 +66,22 @@ export function DailyNoticeDialog() {
   if (!noticeData) return null
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) handleDismiss()
-      }}
+    <Modal
+      visible={open}
+      onCancel={handleDismiss}
+      title={noticeData.title}
+      footer={
+        <Button theme="solid" onClick={handleDismiss}>
+          已知晓
+        </Button>
+      }
+      width={500}
+      style={{ maxHeight: '80vh' }}
+      bodyStyle={{ overflow: 'auto', maxHeight: 'calc(80vh - 120px)' }}
     >
-      <DialogContent className="flex max-h-[80vh] flex-col p-0 sm:max-w-[500px]">
-        <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
-          <DialogTitle>{noticeData.title}</DialogTitle>
-          <DialogDescription>每日通知</DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="flex-1 px-6">
-          <div className="prose prose-sm dark:prose-invert max-w-none pb-4">
-            <ReactMarkdown>{noticeData.content}</ReactMarkdown>
-          </div>
-        </ScrollArea>
-        <DialogFooter className="shrink-0 border-t px-6 pt-4 pb-6">
-          <Button onClick={handleDismiss} className="w-full sm:w-auto">
-            已知晓
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="prose prose-sm dark:prose-invert" style={{ maxWidth: 'none' }}>
+        <ReactMarkdown>{noticeData.content}</ReactMarkdown>
+      </div>
+    </Modal>
   )
 }

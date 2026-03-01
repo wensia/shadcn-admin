@@ -2,112 +2,29 @@
  * 钉钉机器人管理页面
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Bot, Plus, Pencil, Trash2, Search, Play, CheckCircle, AlertCircle, X, RefreshCw } from 'lucide-react'
+import { Bot, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Form, Button, Modal, Input, TextArea, Select, Switch, Table, Skeleton, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { dingtalkRobotsApi } from '../api'
 import type { DingtalkRobot, DingtalkRobotCreate, DingtalkRobotUpdate, DingtalkSecurityType } from '../types'
 import { SECURITY_TYPE_OPTIONS } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
-// 表单验证模式
-const formSchema = z.object({
-  name: z.string().min(1, '请输入机器人名称').max(50, '名称最多50个字符'),
-  description: z.string().max(200, '描述最多200个字符').optional(),
-  webhook: z.string()
-    .min(1, '请输入Webhook地址')
-    .regex(/^https:\/\/oapi\.dingtalk\.com\/robot\/send\?access_token=/, 'Webhook地址必须是钉钉机器人的有效地址'),
-  security_type: z.enum(['sign', 'keyword', 'ip']),
-  secret_key: z.string().optional(),
-  keywords: z.string().optional(),
-  is_active: z.boolean().default(true),
-  sort_order: z.coerce.number().int().min(0).default(0),
-}).refine((data) => {
-  if (data.security_type === 'sign' && !data.secret_key) {
-    return false
-  }
-  return true
-}, {
-  message: '使用加签验证时必须提供密钥',
-  path: ['secret_key'],
-}).refine((data) => {
-  if (data.security_type === 'keyword' && !data.keywords) {
-    return false
-  }
-  return true
-}, {
-  message: '使用关键词验证时必须提供关键词',
-  path: ['keywords'],
-})
-
-type FormData = z.infer<typeof formSchema>
+const { Text } = Typography
 
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+
 function createSkeletonData(count: number): DingtalkRobot[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_PREFIX}${i}`,
@@ -125,6 +42,7 @@ function createSkeletonData(count: number): DingtalkRobot[] {
 
 export function DingtalkRobotsPage() {
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -136,28 +54,12 @@ export function DingtalkRobotsPage() {
   const [editingItem, setEditingItem] = useState<DingtalkRobot | null>(null)
   const [deletingItem, setDeletingItem] = useState<DingtalkRobot | null>(null)
   const [testingItem, setTestingItem] = useState<DingtalkRobot | null>(null)
+  const [securityType, setSecurityType] = useState<string>('sign')
   const [testStatus, setTestStatus] = useState<{ tested: boolean; success: boolean; message: string }>({
     tested: false,
     success: false,
     message: '',
   })
-
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      webhook: '',
-      security_type: 'sign',
-      secret_key: '',
-      keywords: '',
-      is_active: true,
-      sort_order: 0,
-    },
-  })
-
-  const securityType = form.watch('security_type')
 
   // 查询数据
   const { data, isLoading, refetch } = useQuery({
@@ -178,7 +80,6 @@ export function DingtalkRobotsPage() {
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
-      form.reset()
       setTestStatus({ tested: false, success: false, message: '' })
       queryClient.invalidateQueries({ queryKey: ['admin-dingtalk-robots'] })
     },
@@ -195,7 +96,6 @@ export function DingtalkRobotsPage() {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       setTestStatus({ tested: false, success: false, message: '' })
       queryClient.invalidateQueries({ queryKey: ['admin-dingtalk-robots'] })
     },
@@ -247,97 +147,95 @@ export function DingtalkRobotsPage() {
   }
 
   // 列定义
-  const columns: ColumnDef<DingtalkRobot>[] = useMemo(
+  const columns: ColumnProps<DingtalkRobot>[] = useMemo(
     () => [
       {
-        accessorKey: 'name',
-        header: '机器人名称',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '机器人名称',
+        dataIndex: 'name',
+        width: 200,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
           }
           return (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <Bot className="h-4 w-4 text-blue-500" />
-                <span className="font-medium">{row.original.name}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Bot className="h-4 w-4" style={{ color: '#3b82f6' }} />
+                <span style={{ fontWeight: 500 }}>{record!.name}</span>
               </div>
-              {row.original.description && (
-                <span className="text-xs text-muted-foreground">{row.original.description}</span>
+              {record!.description && (
+                <Text type="tertiary" size="small">{record!.description}</Text>
               )}
             </div>
           )
         },
       },
       {
-        accessorKey: 'is_active',
-        header: '状态',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 100,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
           }
-          return <StatusBadge isActive={row.original.is_active} />
+          return <StatusBadge isActive={record!.is_active} />
         },
       },
       {
-        accessorKey: 'security_type',
-        header: '安全设置',
-        size: 120,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
+        title: '安全设置',
+        dataIndex: 'security_type',
+        width: 120,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
           }
           return (
-            <Badge variant="secondary">
-              {getSecurityTypeLabel(row.original.security_type)}
-            </Badge>
+            <Tag>{getSecurityTypeLabel(record!.security_type)}</Tag>
           )
         },
       },
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 160,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
           }
-          return formatTime(row.original.created_at)
+          return formatTime(record!.created_at)
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 150,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-24" />
+        title: '操作',
+        dataIndex: 'id',
+        width: 150,
+        render: (_, record) => {
+          if (isSkeletonRow(record!.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
           }
           return (
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', gap: 4 }}>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Pencil className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleEdit(record!)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleTestClick(row.original)}
-              >
-                <Play className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Play className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleTestClick(record!)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+                theme="borderless"
+                type="danger"
+                icon={<Trash2 className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleDeleteClick(record!)}
+              />
             </div>
           )
         },
@@ -347,47 +245,51 @@ export function DingtalkRobotsPage() {
   )
 
   // 表格数据
-  const tableData = isLoading ? createSkeletonData(5) : (data?.items || [])
+  const displayData = isLoading ? createSkeletonData(5) : (data?.items || [])
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-  })
+  // 分页
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total: data?.total || 0,
+    onPageChange: (p: number) => setPage(p),
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, data?.total])
 
   // 打开新增对话框
   const handleCreate = () => {
     setEditingItem(null)
-    form.reset({
-      name: '',
-      description: '',
-      webhook: '',
-      security_type: 'sign',
-      secret_key: '',
-      keywords: '',
-      is_active: true,
-      sort_order: 0,
-    })
+    setSecurityType('sign')
     setTestStatus({ tested: false, success: false, message: '' })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.reset()
+      formRef.current?.setValues({ security_type: 'sign', is_active: true, sort_order: 0 })
+    }, 0)
   }
 
   // 打开编辑对话框
   const handleEdit = (item: DingtalkRobot) => {
     setEditingItem(item)
-    form.reset({
-      name: item.name,
-      description: item.description || '',
-      webhook: item.webhook,
-      security_type: item.security_type,
-      secret_key: item.secret_key || '',
-      keywords: item.keywords?.join(', ') || '',
-      is_active: item.is_active,
-      sort_order: item.sort_order,
-    })
+    setSecurityType(item.security_type)
     setTestStatus({ tested: false, success: false, message: '' })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        name: item.name,
+        description: item.description || '',
+        webhook: item.webhook,
+        security_type: item.security_type,
+        secret_key: item.secret_key || '',
+        keywords: item.keywords?.join(', ') || '',
+        is_active: item.is_active,
+        sort_order: item.sort_order,
+      })
+    }, 0)
   }
 
   // 点击删除按钮
@@ -411,9 +313,9 @@ export function DingtalkRobotsPage() {
 
   // 测试表单中的连接
   const handleFormTest = async () => {
-    const values = form.getValues()
+    const values = formRef.current?.getValues()
+    if (!values) return
 
-    // 基本验证
     if (!values.webhook || !values.security_type) {
       toast.error('请先填写完整的机器人配置')
       return
@@ -421,10 +323,10 @@ export function DingtalkRobotsPage() {
 
     const testData = {
       webhook: values.webhook,
-      security_type: values.security_type,
+      security_type: values.security_type as DingtalkSecurityType,
       secret_key: values.security_type === 'sign' ? values.secret_key : undefined,
       keywords: values.security_type === 'keyword' && values.keywords
-        ? values.keywords.split(',').map(k => k.trim()).filter(Boolean)
+        ? (values.keywords as string).split(',').map((k: string) => k.trim()).filter(Boolean)
         : undefined,
     }
 
@@ -444,7 +346,7 @@ export function DingtalkRobotsPage() {
   }
 
   // 提交表单
-  const handleSubmit = (data: FormData) => {
+  const handleSubmit = (values: Record<string, any>) => {
     // 检查是否已测试成功
     if (!editingItem && !testStatus.success) {
       toast.error('请先测试连接成功后再保存')
@@ -452,17 +354,17 @@ export function DingtalkRobotsPage() {
     }
 
     const formData: DingtalkRobotCreate = {
-      name: data.name,
-      description: data.description,
-      webhook: data.webhook,
-      security_type: data.security_type,
-      secret_key: data.security_type === 'sign' ? data.secret_key : undefined,
-      keywords: data.security_type === 'keyword' && data.keywords
-        ? data.keywords.split(',').map(k => k.trim()).filter(Boolean)
+      name: values.name,
+      description: values.description,
+      webhook: values.webhook,
+      security_type: values.security_type,
+      secret_key: values.security_type === 'sign' ? values.secret_key : undefined,
+      keywords: values.security_type === 'keyword' && values.keywords
+        ? (values.keywords as string).split(',').map((k: string) => k.trim()).filter(Boolean)
         : undefined,
       supported_msg_types: ['text', 'markdown'],
-      is_active: data.is_active,
-      sort_order: data.sort_order,
+      is_active: values.is_active,
+      sort_order: values.sort_order,
     }
 
     if (editingItem) {
@@ -477,6 +379,16 @@ export function DingtalkRobotsPage() {
     setPage(1)
   }
 
+  // security_type 选项
+  const securityTypeOptions = useMemo(() =>
+    SECURITY_TYPE_OPTIONS.map((opt) => ({
+      value: opt.value,
+      label: opt.label,
+    })), []
+  )
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+
   return (
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
@@ -484,347 +396,198 @@ export function DingtalkRobotsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">钉钉机器人管理</h1>
-            <p className="text-sm text-muted-foreground">
+            <Text type="tertiary" size="small">
               管理钉钉群机器人配置
-            </p>
+            </Text>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新增机器人
           </Button>
         </div>
 
         {/* 搜索栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索机器人名称..."
-                className="pl-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索机器人名称..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+              showClear
+              style={{ width: 250 }}
+            />
+            <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {data && data.total > 0 && (
-          <SimplePagination
-            page={page}
-            pageSize={pageSize}
-            total={data.total}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
-          />
-        )}
+        <Table
+          columns={columns}
+          dataSource={displayData}
+          rowKey="id"
+          pagination={pagination}
+          loading={false}
+          style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+        />
       </div>
 
       {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>{editingItem ? '编辑机器人' : '新增机器人'}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? '修改钉钉机器人配置' : '创建一个新的钉钉机器人'}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>机器人名称</FormLabel>
-                      <FormControl>
-                        <Input placeholder="请输入机器人名称" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>描述</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="请输入描述（可选）" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="webhook"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Webhook地址</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="security_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>安全设置</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="请选择安全设置类型" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {SECURITY_TYPE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              <div className="flex flex-col">
-                                <span>{opt.label}</span>
-                                <span className="text-xs text-muted-foreground">{opt.description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {securityType === 'sign' && (
-                  <FormField
-                    control={form.control}
-                    name="secret_key"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>加签密钥</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="请输入加签密钥" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-                {securityType === 'keyword' && (
-                  <FormField
-                    control={form.control}
-                    name="keywords"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>关键词</FormLabel>
-                        <FormControl>
-                          <Input placeholder="多个关键词用逗号分隔" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          消息内容必须包含至少一个关键词才能发送成功
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>启用状态</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          设置该机器人是否启用
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+      <Modal
+        title={editingItem ? '编辑机器人' : '新增机器人'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        style={{ maxWidth: 600 }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={() => formRef.current?.submitForm()}
+              loading={isPending}
+              disabled={!editingItem && !testStatus.success}
+            >
+              保存
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleSubmit}
+          labelPosition="top"
+          onValueChange={(values) => {
+            if (values.security_type !== securityType) {
+              setSecurityType(values.security_type as string)
+            }
+          }}
+        >
+          <Form.Input
+            field="name"
+            label="机器人名称"
+            placeholder="请输入机器人名称"
+            rules={[{ required: true, message: '请输入机器人名称' }]}
+          />
+          <Form.TextArea
+            field="description"
+            label="描述"
+            placeholder="请输入描述（可选）"
+          />
+          <Form.Input
+            field="webhook"
+            label="Webhook地址"
+            placeholder="https://oapi.dingtalk.com/robot/send?access_token=..."
+            rules={[
+              { required: true, message: '请输入Webhook地址' },
+              { pattern: /^https:\/\/oapi\.dingtalk\.com\/robot\/send\?access_token=/, message: 'Webhook地址必须是钉钉机器人的有效地址' },
+            ]}
+          />
+          <Form.Select
+            field="security_type"
+            label="安全设置"
+            optionList={securityTypeOptions}
+            rules={[{ required: true, message: '请选择安全设置类型' }]}
+            style={{ width: '100%' }}
+          />
+          {securityType === 'sign' && (
+            <Form.Input
+              field="secret_key"
+              label="加签密钥"
+              placeholder="请输入加签密钥"
+              mode="password"
+              rules={[{ required: true, message: '使用加签验证时必须提供密钥' }]}
+            />
+          )}
+          {securityType === 'keyword' && (
+            <Form.Input
+              field="keywords"
+              label="关键词"
+              placeholder="多个关键词用逗号分隔"
+              extraText="消息内容必须包含至少一个关键词才能发送成功"
+              rules={[{ required: true, message: '使用关键词验证时必须提供关键词' }]}
+            />
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 8, border: '1px solid var(--semi-color-border)', padding: 12, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontWeight: 500 }}>启用状态</div>
+              <Text type="tertiary" size="small">设置该机器人是否启用</Text>
+            </div>
+            <Form.Switch field="is_active" noLabel />
+          </div>
 
-                {/* 测试连接区域 */}
-                <div className="rounded-lg border p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">测试连接</div>
-                      <div className="text-sm text-muted-foreground">
-                        {editingItem ? '修改配置后建议重新测试' : '必须测试成功后才能保存'}
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant={testStatus.tested && testStatus.success ? 'default' : 'outline'}
-                      onClick={handleFormTest}
-                      disabled={testMutation.isPending}
-                    >
-                      {testMutation.isPending ? (
-                        '测试中...'
-                      ) : testStatus.tested && testStatus.success ? (
-                        <>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          测试成功
-                        </>
-                      ) : (
-                        <>
-                          <Play className="mr-2 h-4 w-4" />
-                          测试连接
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  {testStatus.tested && (
-                    <Alert variant={testStatus.success ? 'default' : 'destructive'}>
-                      {testStatus.success ? (
-                        <CheckCircle className="h-4 w-4" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4" />
-                      )}
-                      <AlertDescription>{testStatus.message}</AlertDescription>
-                    </Alert>
-                  )}
-                </div>
+          {/* 测试连接区域 */}
+          <div style={{ borderRadius: 8, border: '1px solid var(--semi-color-border)', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>测试连接</div>
+                <Text type="tertiary" size="small">
+                  {editingItem ? '修改配置后建议重新测试' : '必须测试成功后才能保存'}
+                </Text>
               </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending || (!editingItem && !testStatus.success)}
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? '保存中...'
-                    : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+              <Button
+                theme={testStatus.tested && testStatus.success ? 'solid' : 'outline'}
+                type={testStatus.tested && testStatus.success ? 'primary' : 'tertiary'}
+                onClick={handleFormTest}
+                loading={testMutation.isPending}
+                icon={testStatus.tested && testStatus.success ? <CheckCircle className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              >
+                {testStatus.tested && testStatus.success ? '测试成功' : '测试连接'}
+              </Button>
+            </div>
+            {testStatus.tested && (
+              <Banner
+                type={testStatus.success ? 'success' : 'danger'}
+                description={testStatus.message}
+              />
+            )}
+          </div>
+        </Form>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除机器人「{deletingItem?.name}」吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除机器人「{deletingItem?.name}」吗？此操作不可撤销。
+      </Modal>
 
       {/* 测试对话框 */}
-      <AlertDialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>测试机器人</AlertDialogTitle>
-            <AlertDialogDescription>
-              将发送测试消息到钉钉群
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 py-4">
-            <div className="flex gap-2">
-              <span className="font-medium">机器人：</span>
-              <span>{testingItem?.name}</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="font-medium">安全设置：</span>
-              <span>{getSecurityTypeLabel(testingItem?.security_type || '')}</span>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleTestSubmit}
-              disabled={testMutation.isPending}
-            >
+      <Modal
+        title="测试机器人"
+        visible={testDialogOpen}
+        onCancel={() => setTestDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setTestDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={handleTestSubmit} loading={testMutation.isPending}>
               {testMutation.isPending ? '发送中...' : '发送测试消息'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <span style={{ fontWeight: 500 }}>机器人：</span>
+            <span>{testingItem?.name}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <span style={{ fontWeight: 500 }}>安全设置：</span>
+            <span>{getSecurityTypeLabel(testingItem?.security_type || '')}</span>
+          </div>
+        </div>
+      </Modal>
     </Main>
   )
 }

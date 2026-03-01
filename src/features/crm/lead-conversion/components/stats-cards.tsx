@@ -1,13 +1,13 @@
 /**
- * 统计卡片组件
+ * 统计卡片组件 (Semi Design)
  * 显示诺到、到访、缴费的统计数据
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Card, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import { Calendar, CheckCircle, CreditCard, DollarSign } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { ConversionStats } from '../types'
+
+const { Text } = Typography
 
 interface StatsCardsProps {
   stats?: ConversionStats
@@ -21,49 +21,47 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       value: stats?.scheduled_month ?? 0,
       total: stats?.scheduled_total ?? 0,
       icon: Calendar,
-      iconClassName: 'text-blue-500',
-      bgClassName: 'bg-blue-50 dark:bg-blue-950'
+      iconColor: '#3b82f6',
+      bgColor: '#eff6ff',
     },
     {
       title: '本月到访',
       value: stats?.visited_month ?? 0,
       total: stats?.visited_total ?? 0,
       icon: CheckCircle,
-      iconClassName: 'text-green-500',
-      bgClassName: 'bg-green-50 dark:bg-green-950'
+      iconColor: '#00b42a',
+      bgColor: '#f0fdf4',
     },
     {
       title: '本月缴费',
       value: stats?.payment_month ?? 0,
       total: stats?.payment_total ?? 0,
       icon: CreditCard,
-      iconClassName: 'text-purple-500',
-      bgClassName: 'bg-purple-50 dark:bg-purple-950'
+      iconColor: '#a855f7',
+      bgColor: '#faf5ff',
     },
     {
       title: '本月缴费金额',
       value: stats?.payment_amount_month ?? 0,
       total: stats?.payment_amount_total ?? 0,
       icon: DollarSign,
-      iconClassName: 'text-amber-500',
-      bgClassName: 'bg-amber-50 dark:bg-amber-950',
-      isCurrency: true
-    }
+      iconColor: '#ff7d00',
+      bgColor: '#fffbeb',
+      isCurrency: true,
+    },
   ]
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {cards.map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-24 mb-1" />
-              <Skeleton className="h-3 w-16" />
-            </CardContent>
+          <Card key={index} bodyStyle={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Skeleton.Title style={{ width: 80, height: 16 }} />
+              <Skeleton.Avatar shape="circle" style={{ width: 32, height: 32 }} />
+            </div>
+            <Skeleton.Title style={{ width: 96, height: 32, marginBottom: 4 }} />
+            <Skeleton.Title style={{ width: 64, height: 12 }} />
           </Card>
         ))}
       </div>
@@ -71,38 +69,36 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(4, 1fr)' }}>
       {cards.map((card) => {
         const Icon = card.icon
         return (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card key={card.title} bodyStyle={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text type="tertiary" style={{ fontSize: 14, fontWeight: 500 }}>
                 {card.title}
-              </CardTitle>
-              <div className={cn('rounded-full p-2', card.bgClassName)}>
-                <Icon className={cn('h-4 w-4', card.iconClassName)} />
+              </Text>
+              <div style={{ borderRadius: '50%', padding: 8, backgroundColor: card.bgColor }}>
+                <Icon style={{ width: 16, height: 16, color: card.iconColor }} />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {card.isCurrency ? (
-                  <>
-                    <span className="text-lg font-normal text-muted-foreground mr-0.5">¥</span>
-                    {card.value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </>
-                ) : (
-                  card.value.toLocaleString()
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                累计: {card.isCurrency ? (
-                  <>¥{card.total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
-                ) : (
-                  card.total.toLocaleString()
-                )}
-              </p>
-            </CardContent>
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>
+              {card.isCurrency ? (
+                <>
+                  <span style={{ fontSize: 18, fontWeight: 400, color: 'var(--semi-color-text-2)', marginRight: 2 }}>¥</span>
+                  {card.value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </>
+              ) : (
+                card.value.toLocaleString()
+              )}
+            </div>
+            <Text type="tertiary" style={{ fontSize: 12 }}>
+              累计: {card.isCurrency ? (
+                <>¥{card.total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+              ) : (
+                card.total.toLocaleString()
+              )}
+            </Text>
           </Card>
         )
       })}

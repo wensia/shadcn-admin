@@ -2,67 +2,16 @@
  * 员工身份管理页面
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, UserCog, Filter, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, UserCog } from 'lucide-react'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Button, Form, Input, Modal, Select, Switch, Table, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { adminApi } from '../api'
 import type {
   EmployeeIdentityItem,
@@ -76,27 +25,21 @@ import type {
 import { StatusBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-// 表单验证 schema
-const formSchema = z.object({
-  employee_id: z.string().min(1, '请选择员工'),
-  campus_id: z.string().min(1, '请选择校区'),
-  department_id: z.string().min(1, '请选择部门'),
-  position_id: z.string().min(1, '请选择职位'),
-  is_active: z.boolean().default(true),
-  can_manage_leads: z.boolean().default(true),
-  can_access_pool: z.boolean().default(true),
-})
+const { Text } = Typography
 
-type FormData = z.infer<typeof formSchema>
+const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 
-const pageSize = 20
+const PAGE_SIZE = 20
 
 export function IdentitiesPage() {
   useDocumentTitle('员工身份管理')
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [searchValue, setSearchValue] = useState('')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('')
   const [campusFilter, setCampusFilter] = useState<string>('all')
@@ -106,22 +49,8 @@ export function IdentitiesPage() {
   const [editingItem, setEditingItem] = useState<EmployeeIdentityItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<EmployeeIdentityItem | null>(null)
 
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      employee_id: '',
-      campus_id: '',
-      department_id: '',
-      position_id: '',
-      is_active: true,
-      can_manage_leads: true,
-      can_access_pool: true,
-    },
-  })
-
-  // 监听表单中的 campus_id 变化，用于动态加载部门
-  const formCampusId = form.watch('campus_id')
+  // 表单中选择的校区 ID，用于动态加载部门
+  const [formCampusId, setFormCampusId] = useState<string>('')
 
   // 获取员工身份列表
   const { data, isLoading, refetch } = useQuery({
@@ -187,24 +116,12 @@ export function IdentitiesPage() {
   const positions: PositionItem[] = positionsData?.items || []
   const campusDepartments: CampusDepartmentItem[] = campusDepartmentsData?.items || []
 
-  // 当校区变化时，清空部门选择
-  useEffect(() => {
-    if (formCampusId && dialogOpen) {
-      // 如果是编辑模式且校区未变，不清空部门
-      if (editingItem && formCampusId === editingItem.campus_id) {
-        return
-      }
-      form.setValue('department_id', '')
-    }
-  }, [formCampusId])
-
   // 创建身份
   const createMutation = useMutation({
     mutationFn: (data: EmployeeIdentityCreate) => adminApi.createEmployeeIdentity(data),
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-identities'] })
     },
     onError: (error: Error) => {
@@ -220,7 +137,6 @@ export function IdentitiesPage() {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-identities'] })
     },
     onError: (error: Error) => {
@@ -243,106 +159,103 @@ export function IdentitiesPage() {
   })
 
   // 表格列定义
-  const columns: ColumnDef<EmployeeIdentityItem>[] = useMemo(
+  const columns: ColumnProps<EmployeeIdentityItem>[] = useMemo(
     () => [
       {
-        accessorKey: 'employee_name',
-        header: '员工姓名',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-20" />
+        title: '员工姓名',
+        dataIndex: 'employee_name',
+        render: (_: unknown, record: EmployeeIdentityItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
           }
           return (
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <UserCog className="h-4 w-4 text-blue-500" />
-              <span className="font-medium">{row.original.employee_name}</span>
+              <Text strong>{record.employee_name}</Text>
             </div>
           )
         },
       },
       {
-        id: 'org_scope',
-        header: '所属组织',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-20" />
+        title: '所属组织',
+        dataIndex: 'org_scope',
+        render: (_: unknown, record: EmployeeIdentityItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
           }
-          const item = row.original
-          const scope = item.scope_type || 'campus'
-          if (scope === 'region' && item.region_name) return `大区:${item.region_name}`
-          if (scope === 'district' && item.district_name) return `地区:${item.district_name}`
-          if (scope === 'area' && item.area_name) return `片区:${item.area_name}`
-          return item.campus_name || '-'
+          const scope = record.scope_type || 'campus'
+          if (scope === 'region' && record.region_name) return `大区:${record.region_name}`
+          if (scope === 'district' && record.district_name) return `地区:${record.district_name}`
+          if (scope === 'area' && record.area_name) return `片区:${record.area_name}`
+          return record.campus_name || '-'
         },
       },
       {
-        accessorKey: 'department_name',
-        header: '部门',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-16" />
+        title: '部门',
+        dataIndex: 'department_name',
+        render: (_: unknown, record: EmployeeIdentityItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
           }
-          return row.original.department_name || '-'
+          return record.department_name || '-'
         },
       },
       {
-        accessorKey: 'position_name',
-        header: '职位',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-16" />
+        title: '职位',
+        dataIndex: 'position_name',
+        render: (_: unknown, record: EmployeeIdentityItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
           }
-          return row.original.position_name || '-'
+          return record.position_name || '-'
         },
       },
       {
-        accessorKey: 'is_active',
-        header: '状态',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-5 w-14" />
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 100,
+        render: (_: unknown, record: EmployeeIdentityItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
           }
-          return <StatusBadge isActive={row.original.is_active} />
+          return <StatusBadge isActive={record.is_active} />
         },
       },
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-28" />
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 180,
+        render: (_: unknown, record: EmployeeIdentityItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
           }
-          return new Date(row.original.created_at).toLocaleString('zh-CN')
+          return new Date(record.created_at).toLocaleString('zh-CN')
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return (
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
-              </div>
-            )
+        title: '操作',
+        dataIndex: 'id',
+        width: 120,
+        render: (_: unknown, record: EmployeeIdentityItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
           }
           return (
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: 4 }}>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Pencil className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleEdit(record)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+                theme="borderless"
+                type="danger"
+                icon={<Trash2 className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleDeleteClick(record)}
+              />
             </div>
           )
         },
@@ -351,11 +264,11 @@ export function IdentitiesPage() {
     []
   )
 
-  // 生成骨架屏数据
+  // 骨架屏数据
   const skeletonData: EmployeeIdentityItem[] = useMemo(
     () =>
       Array.from({ length: 5 }).map((_, i) => ({
-        id: `__skeleton__${i}`,
+        id: `${SKELETON_PREFIX}${i}`,
         employee_id: '',
         employee_name: '',
         employee_username: '',
@@ -373,42 +286,48 @@ export function IdentitiesPage() {
     []
   )
 
-  const tableData = isLoading ? skeletonData : (data?.items || [])
+  const displayData = isLoading ? skeletonData : (data?.items || [])
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+  // 分页配置
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total: data?.total || 0,
+    onPageChange: (p: number) => setPage(p),
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, data?.total])
 
   // 处理创建
   const handleCreate = () => {
     setEditingItem(null)
-    form.reset({
-      employee_id: '',
-      campus_id: '',
-      department_id: '',
-      position_id: '',
-      is_active: true,
-      can_manage_leads: true,
-      can_access_pool: true,
-    })
+    setFormCampusId('')
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.reset()
+      formRef.current?.setValues({ is_active: true, can_manage_leads: true, can_access_pool: true })
+    }, 0)
   }
 
   // 处理编辑
   const handleEdit = (item: EmployeeIdentityItem) => {
     setEditingItem(item)
-    form.reset({
-      employee_id: item.employee_id,
-      campus_id: item.campus_id,
-      department_id: item.department_id,
-      position_id: item.position_id,
-      is_active: item.is_active,
-      can_manage_leads: (item as Record<string, unknown>).can_manage_leads as boolean ?? true,
-      can_access_pool: (item as Record<string, unknown>).can_access_pool as boolean ?? true,
-    })
+    setFormCampusId(item.campus_id)
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        employee_id: item.employee_id,
+        campus_id: item.campus_id,
+        department_id: item.department_id,
+        position_id: item.position_id,
+        is_active: item.is_active,
+        can_manage_leads: (item as Record<string, unknown>).can_manage_leads as boolean ?? true,
+        can_access_pool: (item as Record<string, unknown>).can_access_pool as boolean ?? true,
+      })
+    }, 0)
   }
 
   // 处理删除点击
@@ -425,15 +344,15 @@ export function IdentitiesPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (data: FormData) => {
+  const handleSubmit = (values: Record<string, unknown>) => {
     if (editingItem) {
       const updateData: EmployeeIdentityUpdate = {
-        campus_id: data.campus_id,
-        department_id: data.department_id,
-        position_id: data.position_id,
-        is_active: data.is_active,
-        can_manage_leads: data.can_manage_leads,
-        can_access_pool: data.can_access_pool,
+        campus_id: values.campus_id as string,
+        department_id: values.department_id as string,
+        position_id: values.position_id as string,
+        is_active: values.is_active as boolean,
+        can_manage_leads: values.can_manage_leads as boolean,
+        can_access_pool: values.can_access_pool as boolean,
       }
       updateMutation.mutate({
         id: editingItem.id,
@@ -441,13 +360,13 @@ export function IdentitiesPage() {
       })
     } else {
       const createData: EmployeeIdentityCreate = {
-        employee_id: data.employee_id,
-        campus_id: data.campus_id,
-        department_id: data.department_id,
-        position_id: data.position_id,
-        is_active: data.is_active,
-        can_manage_leads: data.can_manage_leads,
-        can_access_pool: data.can_access_pool,
+        employee_id: values.employee_id as string,
+        campus_id: values.campus_id as string,
+        department_id: values.department_id as string,
+        position_id: values.position_id as string,
+        is_active: values.is_active as boolean,
+        can_manage_leads: values.can_manage_leads as boolean,
+        can_access_pool: values.can_access_pool as boolean,
       }
       createMutation.mutate(createData)
     }
@@ -464,7 +383,56 @@ export function IdentitiesPage() {
     }
   }
 
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0
+  // 校区变化时清空部门
+  const handleCampusChange = (campusId: string) => {
+    setFormCampusId(campusId)
+    // 如果是编辑模式且校区未变，不清空部门
+    if (editingItem && campusId === editingItem.campus_id) {
+      return
+    }
+    formRef.current?.setValue('department_id', '')
+  }
+
+  // 筛选选项
+  const campusFilterOptions = useMemo(() => [
+    { value: 'all', label: '全部校区' },
+    ...campuses.map((c) => ({ value: c.id, label: c.name })),
+  ], [campuses])
+
+  const statusOptions = [
+    { value: 'all', label: '全部状态' },
+    { value: 'active', label: '已启用' },
+    { value: 'inactive', label: '已停用' },
+  ]
+
+  // 表单下拉选项
+  const employeeOptions = useMemo(() =>
+    employees.map((emp) => ({
+      value: emp.id,
+      label: emp.name + (emp.username ? ` (${emp.username})` : ''),
+    })),
+    [employees]
+  )
+
+  const campusOptions = useMemo(() =>
+    campuses.map((c) => ({ value: c.id, label: c.name })),
+    [campuses]
+  )
+
+  const departmentOptions = useMemo(() =>
+    campusDepartments.map((cd) => ({
+      value: cd.department_id,
+      label: cd.department_name,
+    })),
+    [campusDepartments]
+  )
+
+  const positionOptions = useMemo(() =>
+    positions.map((pos) => ({ value: pos.id, label: pos.name })),
+    [positions]
+  )
+
+  const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
     <Main fixed>
@@ -473,360 +441,154 @@ export function IdentitiesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">员工身份管理</h1>
-            <p className="text-sm text-muted-foreground">
+            <Text type="tertiary" size="small">
               管理员工在各校区、部门的身份配置及权限
-            </p>
+            </Text>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button theme="solid" type="primary" onClick={handleCreate} icon={<Plus className="h-4 w-4" />}>
             新建身份
           </Button>
         </div>
 
         {/* 工具栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative min-w-[200px] max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索员工姓名..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-8"
-              />
-            </div>
-            <Select value={campusFilter} onValueChange={(value) => { setCampusFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[160px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="筛选校区" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部校区</SelectItem>
-                {campuses.map((campus) => (
-                  <SelectItem key={campus.id} value={campus.id}>
-                    {campus.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="筛选状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="active">已启用</SelectItem>
-                <SelectItem value="inactive">已停用</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索员工姓名..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+              showClear
+              style={{ width: 250 }}
+            />
+            <Select
+              value={campusFilter}
+              onChange={(v) => { setCampusFilter(v as string); setPage(1) }}
+              optionList={campusFilterOptions}
+              style={{ width: 160 }}
+            />
+            <Select
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
+              optionList={statusOptions}
+              style={{ width: 130 }}
+            />
+            <Button theme="outline" onClick={handleSearch}>
               搜索
             </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {totalPages > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={displayData}
+            rowKey="id"
+            pagination={pagination}
+            loading={false}
+            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
           />
-        )}
+        </div>
       </div>
 
       {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>
-              {editingItem ? '编辑身份' : '新建身份'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingItem
-                ? '修改员工身份信息及权限配置'
-                : '为员工创建新的身份，配置其所属校区、部门和职位'}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                {/* 员工选择 */}
-                <FormField
-                  control={form.control}
-                  name="employee_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>员工</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                        disabled={!!editingItem}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="请选择员工" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {employees.map((emp) => (
-                            <SelectItem key={emp.id} value={emp.id}>
-                              {emp.name}
-                              {emp.username && ` (${emp.username})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* 校区选择 */}
-                <FormField
-                  control={form.control}
-                  name="campus_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>校区</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="请选择校区" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {campuses.map((campus) => (
-                            <SelectItem key={campus.id} value={campus.id}>
-                              {campus.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* 部门选择 - 根据校区动态加载 */}
-                <FormField
-                  control={form.control}
-                  name="department_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>部门</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                        disabled={!formCampusId}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={formCampusId ? '请选择部门' : '请先选择校区'} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {campusDepartments.map((cd) => (
-                            <SelectItem key={cd.department_id} value={cd.department_id}>
-                              {cd.department_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* 职位选择 */}
-                <FormField
-                  control={form.control}
-                  name="position_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>职位</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="请选择职位" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {positions.map((pos) => (
-                            <SelectItem key={pos.id} value={pos.id}>
-                              {pos.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* 启用状态 */}
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>启用状态</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          设置该身份是否启用
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                {/* 线索管理权限 */}
-                <FormField
-                  control={form.control}
-                  name="can_manage_leads"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>线索管理权限</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          允许该身份管理线索数据
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                {/* 公海访问权限 */}
-                <FormField
-                  control={form.control}
-                  name="can_access_pool"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>公海访问权限</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          允许该身份访问公海线索池
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? '保存中...'
-                    : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title={editingItem ? '编辑身份' : '新建身份'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => formRef.current?.submitForm()} loading={isPending}>
+              保存
+            </Button>
+          </div>
+        }
+        style={{ maxWidth: 520 }}
+      >
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleSubmit}
+          labelPosition="top"
+        >
+          <Form.Select
+            field="employee_id"
+            label="员工"
+            placeholder="请选择员工"
+            optionList={employeeOptions}
+            rules={[{ required: true, message: '请选择员工' }]}
+            disabled={!!editingItem}
+            filter
+            style={{ width: '100%' }}
+          />
+          <Form.Select
+            field="campus_id"
+            label="校区"
+            placeholder="请选择校区"
+            optionList={campusOptions}
+            rules={[{ required: true, message: '请选择校区' }]}
+            onChange={(v) => handleCampusChange(v as string)}
+            filter
+            style={{ width: '100%' }}
+          />
+          <Form.Select
+            field="department_id"
+            label="部门"
+            placeholder={formCampusId ? '请选择部门' : '请先选择校区'}
+            optionList={departmentOptions}
+            rules={[{ required: true, message: '请选择部门' }]}
+            disabled={!formCampusId}
+            style={{ width: '100%' }}
+          />
+          <Form.Select
+            field="position_id"
+            label="职位"
+            placeholder="请选择职位"
+            optionList={positionOptions}
+            rules={[{ required: true, message: '请选择职位' }]}
+            filter
+            style={{ width: '100%' }}
+          />
+          <Form.Switch
+            field="is_active"
+            label="启用状态"
+            checkedText="启用"
+            uncheckedText="停用"
+          />
+          <Form.Switch
+            field="can_manage_leads"
+            label="线索管理权限"
+            checkedText="允许"
+            uncheckedText="禁止"
+          />
+          <Form.Switch
+            field="can_access_pool"
+            label="公海访问权限"
+            checkedText="允许"
+            uncheckedText="禁止"
+          />
+        </Form>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除员工「{deletingItem?.employee_name}」在「{deletingItem?.campus_name} - {deletingItem?.department_name}」的身份吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除员工"{deletingItem?.employee_name}"在"{deletingItem?.campus_name} - {deletingItem?.department_name}"的身份吗？此操作不可撤销。
+      </Modal>
     </Main>
   )
 }

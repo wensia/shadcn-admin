@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Main } from '@/components/layout/main'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { SideSheet } from '@douyinfe/semi-ui-19'
 import { AIChatContainer } from '../components/ai-chat/ai-chat-container'
 import { ChatSessionSidebar } from '../components/ai-chat/chat-session-sidebar'
 import { useChatSessions } from '../components/ai-chat/use-chat-sessions'
@@ -47,24 +47,26 @@ export function YunkeAIAssistantPage() {
           />
         )}
 
-        {/* 移动端：Sheet 抽屉侧边栏 */}
+        {/* 移动端：SideSheet 抽屉侧边栏 */}
         {isMobile && (
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetContent side="left" className="w-[280px] p-0">
-              <SheetHeader className="sr-only">
-                <SheetTitle>对话列表</SheetTitle>
-              </SheetHeader>
-              <ChatSessionSidebar
-                sessions={sessions}
-                currentSessionId={currentSessionId}
-                onNewChat={() => { handleNewChat(); setSidebarOpen(false) }}
-                onSelectSession={(id) => { selectSession(id); setSidebarOpen(false) }}
-                onDeleteSession={deleteSession}
-                onRenameSession={renameSession}
-                isLoading={isLoading}
-              />
-            </SheetContent>
-          </Sheet>
+          <SideSheet
+            visible={sidebarOpen}
+            onCancel={() => setSidebarOpen(false)}
+            placement="left"
+            width={280}
+            bodyStyle={{ padding: 0 }}
+            title="对话列表"
+          >
+            <ChatSessionSidebar
+              sessions={sessions}
+              currentSessionId={currentSessionId}
+              onNewChat={() => { handleNewChat(); setSidebarOpen(false) }}
+              onSelectSession={(id) => { selectSession(id); setSidebarOpen(false) }}
+              onDeleteSession={deleteSession}
+              onRenameSession={renameSession}
+              isLoading={isLoading}
+            />
+          </SideSheet>
         )}
 
         <div className="flex-1 min-w-0">

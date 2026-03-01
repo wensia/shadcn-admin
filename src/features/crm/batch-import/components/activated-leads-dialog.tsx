@@ -1,41 +1,25 @@
 /**
  * 激活线索弹窗
- * 从 frontend-vue/src/components/crm/ActivatedLeadsModal.vue 迁移
+ * Semi Design 重构
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Download, Loader2 } from 'lucide-react'
+import {
+  Modal,
+  Button,
+  Tag,
+  Table,
+  Select,
+  Toast,
+} from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import {
+  IconDownload,
+} from '@douyinfe/semi-icons'
 import { format } from 'date-fns'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
 import { batchImportApi } from '../api'
 import type { BatchImportItem, ActivatedLeadItem } from '../types'
 
@@ -45,10 +29,28 @@ interface ActivatedLeadsDialogProps {
   batch: BatchImportItem | null
 }
 
-
 export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLeadsDialogProps) {
-  const s = useStyleClasses()
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 })
+
+  // 表格全高
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(300)
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const measure = () => {
+      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+      const available = el.clientHeight - headerH
+      if (available > 100) setScrollY(available)
+    }
+    const timer = setTimeout(measure, 100)
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => {
+      clearTimeout(timer)
+      ro.disconnect()
+    }
+  }, [open])
 
   // 重置分页状态
   useEffect(() => {
@@ -89,147 +91,114 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
       link.download = `激活线索_${batch.batch_name}.xlsx`
       link.click()
       window.URL.revokeObjectURL(url)
-      toast.success('下载成功')
+      Toast.success('下载成功')
     } catch (error: unknown) {
       showApiErrorToast(error, '下载失败')
     }
   }, [batch])
 
+  // 表格列定义
+  const columns = useMemo<ColumnProps<ActivatedLeadItem>[]>(() => [
+    { title: '行号', dataIndex: 'row_number', width: 60 },
+    { title: '孩子姓名', dataIndex: 'child_name', width: 100, render: (t: string) => t || '-' },
+    { title: '家长姓名', dataIndex: 'parent_name', width: 100, render: (t: string) => t || '-' },
+    { title: '家长电话', dataIndex: 'parent_phone', width: 120, render: (t: string) => t || '-' },
+    { title: '年级', dataIndex: 'grade', width: 80, render: (t: string) => t || '-' },
+    { title: '意向课程', dataIndex: 'intended_course', width: 100, render: (t: string) => t || '-' },
+    { title: '课程顾问', dataIndex: 'advisor_name', width: 100, render: (t: string) => t || '-' },
+    { title: '所属校区', dataIndex: 'campus_name', width: 100, render: (t: string) => t || '-' },
+    {
+      title: '激活时间',
+      dataIndex: 'activated_at',
+      width: 140,
+      render: (t: string) => t ? format(new Date(t), 'yyyy-MM-dd HH:mm') : '-',
+    },
+    {
+      title: '变更信息',
+      dataIndex: 'changes',
+      width: 200,
+      render: (_: unknown, record: ActivatedLeadItem) => {
+        const tags = []
+        if (record.status_change) tags.push({ label: `状态: ${record.status_change}`, key: 'status' })
+        if (record.campus_change) tags.push({ label: `校区: ${record.campus_change}`, key: 'campus' })
+        if (record.advisor_change) tags.push({ label: `顾问: ${record.advisor_change}`, key: 'advisor' })
+
+        if (tags.length === 0) return '-'
+
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {tags.map(tag => (
+              <Tag key={tag.key} type="ghost" size="small">{tag.label}</Tag>
+            ))}
+          </div>
+        )
+      },
+    },
+  ], [])
+
   if (!batch) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[80vh] flex flex-col">
-        <DialogHeader className="shrink-0">
-          <DialogTitle className="flex items-center justify-between pr-8">
-            <span>激活线索 - {batch.batch_name}</span>
-            <Button variant="outline" size="sm" className={s.height.controlSm} onClick={handleDownload}>
-              <Download className={cn("mr-2", s.size.icon)} />
-              下载激活线索
-            </Button>
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* 激活线索表格 */}
-        <div className="flex-1 overflow-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10">
-              <TableRow>
-                <TableHead className="w-[60px]">行号</TableHead>
-                <TableHead className="w-[100px]">孩子姓名</TableHead>
-                <TableHead className="w-[100px]">家长姓名</TableHead>
-                <TableHead className="w-[120px]">家长电话</TableHead>
-                <TableHead className="w-[80px]">年级</TableHead>
-                <TableHead className="w-[100px]">意向课程</TableHead>
-                <TableHead className="w-[100px]">课程顾问</TableHead>
-                <TableHead className="w-[100px]">所属校区</TableHead>
-                <TableHead className="w-[140px]">激活时间</TableHead>
-                <TableHead className="w-[160px]">变更信息</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-24 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                  </TableCell>
-                </TableRow>
-              ) : leadsList.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                    暂无激活线索
-                  </TableCell>
-                </TableRow>
-              ) : (
-                leadsList.map((item: ActivatedLeadItem) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.row_number}</TableCell>
-                    <TableCell>{item.child_name || '-'}</TableCell>
-                    <TableCell>{item.parent_name || '-'}</TableCell>
-                    <TableCell>{item.parent_phone || '-'}</TableCell>
-                    <TableCell>{item.grade || '-'}</TableCell>
-                    <TableCell>{item.intended_course || '-'}</TableCell>
-                    <TableCell>{item.advisor_name || '-'}</TableCell>
-                    <TableCell>{item.campus_name || '-'}</TableCell>
-                    <TableCell>
-                      {item.activated_at
-                        ? format(new Date(item.activated_at), 'yyyy-MM-dd HH:mm')
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className={cn("flex flex-wrap", s.gap.buttons)}>
-                        {item.status_change && (
-                          <Badge variant="outline" className={cn(s.height.badge, s.text.xs)}>
-                            状态: {item.status_change}
-                          </Badge>
-                        )}
-                        {item.campus_change && (
-                          <Badge variant="outline" className={cn(s.height.badge, s.text.xs)}>
-                            校区: {item.campus_change}
-                          </Badge>
-                        )}
-                        {item.advisor_change && (
-                          <Badge variant="outline" className={cn(s.height.badge, s.text.xs)}>
-                            顾问: {item.advisor_change}
-                          </Badge>
-                        )}
-                        {!item.status_change && !item.campus_change && !item.advisor_change && '-'}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+    <Modal
+      visible={open}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 24 }}>
+          <span>激活线索 - {batch.batch_name}</span>
+          <Button icon={<IconDownload />} onClick={handleDownload}>
+            下载激活线索
+          </Button>
         </div>
+      }
+      onCancel={() => onOpenChange(false)}
+      width={1000}
+      footer={null}
+      style={{ maxHeight: '80vh' }}
+      bodyStyle={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(80vh - 60px)', overflow: 'hidden' }}
+    >
+      {/* 激活线索表格 */}
+      <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={leadsList}
+          rowKey="id"
+          pagination={false}
+          scroll={{ y: scrollY }}
+          loading={isLoading}
+          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无激活线索</div>}
+        />
+      </div>
 
-        {/* 分页 */}
-        <div className="border-t pt-3 flex items-center justify-between shrink-0">
-          <span className={cn("text-muted-foreground", s.text.xs)}>
-            共 {totalCount} 条激活线索
-          </span>
-          <div className={cn("flex items-center", s.gap.tight)}>
-            <Select
-              value={String(pagination.pageSize)}
-              onValueChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
+      {/* 分页 */}
+      <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, marginTop: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+          共 {totalCount} 条激活线索
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Select
+            value={pagination.pageSize}
+            onChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
+            optionList={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
+            style={{ width: 80 }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Button
+              disabled={pagination.page <= 1}
+              onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
             >
-              <SelectTrigger className={cn("w-[100px]", s.height.controlSm)}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[10, 20, 50, 100].map((size) => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className={s.height.controlSm}
-                disabled={pagination.page <= 1}
-                onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
-              >
-                上一页
-              </Button>
-              <span className={cn("px-2", s.text.xs)}>
-                第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className={s.height.controlSm}
-                disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
-                onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
-              >
-                下一页
-              </Button>
-            </div>
+              上一页
+            </Button>
+            <span style={{ padding: '0 8px', fontSize: 12 }}>
+              第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
+            </span>
+            <Button
+              disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
+              onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+            >
+              下一页
+            </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   )
 }

@@ -7,26 +7,13 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Users, Building2, Network } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Modal, Table, Tag, Typography } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { adminApi } from '../api'
 import type { CampusDepartmentItem, EmployeeIdentityItem } from '../types'
 import { PositionNameBadge, PositionLevelBadge } from './status-badge'
+
+const { Text } = Typography
 
 interface ViewDepartmentEmployeesDialogProps {
   open: boolean
@@ -81,105 +68,129 @@ export function ViewDepartmentEmployeesDialog({
     })
   }, [employeesData?.items])
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            部门员工列表
-          </DialogTitle>
-          <DialogDescription>
-            {campusDepartment
-              ? `「${campusDepartment.campus_name} - ${campusDepartment.department_name}」的在职员工列表`
-              : '查看部门员工'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto py-4">
-          {/* 部门信息摘要 */}
-          {campusDepartment && (
-            <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-              <div className="flex items-center gap-2 text-sm">
-                <Building2 className="h-4 w-4 text-teal-500" />
-                <span className="font-medium">{campusDepartment.campus_name}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Network className="h-4 w-4 text-purple-500" />
-                <span className="font-medium">{campusDepartment.department_name}</span>
-              </div>
-              <Badge variant="secondary" className="ml-auto">
-                共 {employees.length} 人
-              </Badge>
-            </div>
-          )}
-
-          {/* 员工列表 */}
-          {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                  <Skeleton className="h-6 w-14" />
-                </div>
-              ))}
-            </div>
-          ) : employees.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground border rounded-lg border-dashed">
-              <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-              <p>该部门暂无在职员工</p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[140px]">姓名</TableHead>
-                    <TableHead className="w-[120px]">用户名</TableHead>
-                    <TableHead className="w-[140px]">职位</TableHead>
-                    <TableHead className="w-[80px]">职级</TableHead>
-                    <TableHead className="w-[100px]">入职日期</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees.map((employee: EmployeeIdentityItem) => (
-                    <TableRow key={employee.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-medium text-primary">
-                              {employee.employee_name?.charAt(0) || '?'}
-                            </span>
-                          </div>
-                          <span className="font-medium truncate">{employee.employee_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {employee.employee_username}
-                      </TableCell>
-                      <TableCell>
-                        <PositionNameBadge positionName={employee.position_name} />
-                      </TableCell>
-                      <TableCell>
-                        <PositionLevelBadge level={parseInt(employee.position_level) || 1} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {employee.employee_joined_at
-                          ? new Date(employee.employee_joined_at).toLocaleDateString('zh-CN')
-                          : '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+  // Semi Table 列定义
+  const columns: ColumnProps<EmployeeIdentityItem>[] = [
+    {
+      title: '姓名',
+      dataIndex: 'employee_name',
+      width: 140,
+      render: (_text: string, record: EmployeeIdentityItem) => (
+        <div className="flex items-center gap-2">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+            style={{ backgroundColor: 'var(--semi-color-primary-light-default)' }}
+          >
+            <span className="text-xs font-medium" style={{ color: 'var(--semi-color-primary)' }}>
+              {record.employee_name?.charAt(0) || '?'}
+            </span>
+          </div>
+          <span className="font-medium truncate">{record.employee_name}</span>
         </div>
-      </DialogContent>
-    </Dialog>
+      ),
+    },
+    {
+      title: '用户名',
+      dataIndex: 'employee_username',
+      width: 120,
+      render: (text: string) => (
+        <Text type="tertiary">{text}</Text>
+      ),
+    },
+    {
+      title: '职位',
+      dataIndex: 'position_name',
+      width: 140,
+      render: (text: string) => (
+        <PositionNameBadge positionName={text} />
+      ),
+    },
+    {
+      title: '职级',
+      dataIndex: 'position_level',
+      width: 80,
+      render: (text: string) => (
+        <PositionLevelBadge level={parseInt(text) || 1} />
+      ),
+    },
+    {
+      title: '入职日期',
+      dataIndex: 'employee_joined_at',
+      width: 100,
+      render: (text: string) => (
+        <Text type="tertiary">
+          {text ? new Date(text).toLocaleDateString('zh-CN') : '-'}
+        </Text>
+      ),
+    },
+  ]
+
+  return (
+    <Modal
+      title={
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          部门员工列表
+        </div>
+      }
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      footer={null}
+      width={800}
+      style={{ maxHeight: '85vh' }}
+    >
+      <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 16 }}>
+        {campusDepartment
+          ? `「${campusDepartment.campus_name} - ${campusDepartment.department_name}」的在职员工列表`
+          : '查看部门员工'}
+      </Text>
+
+      <div style={{ maxHeight: 'calc(85vh - 160px)', overflowY: 'auto' }}>
+        {/* 部门信息摘要 */}
+        {campusDepartment && (
+          <div className="flex items-center gap-4 mb-4 pb-4 border-b">
+            <div className="flex items-center gap-2 text-sm">
+              <Building2 className="h-4 w-4" style={{ color: '#14b8a6' }} />
+              <span className="font-medium">{campusDepartment.campus_name}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Network className="h-4 w-4" style={{ color: '#a855f7' }} />
+              <span className="font-medium">{campusDepartment.department_name}</span>
+            </div>
+            <Tag color="grey" type="light" style={{ marginLeft: 'auto' }}>
+              共 {employees.length} 人
+            </Tag>
+          </div>
+        )}
+
+        {/* 员工列表 */}
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                <div className="h-10 w-10 rounded-full bg-[var(--semi-color-fill-0)] animate-pulse" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-4 w-24 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
+                  <div className="h-3 w-32 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
+                </div>
+                <div className="h-6 w-14 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : employees.length === 0 ? (
+          <div className="text-center py-12 border rounded-lg border-dashed" style={{ color: 'var(--semi-color-text-2)' }}>
+            <Users className="h-12 w-12 mx-auto mb-3" style={{ opacity: 0.5 }} />
+            <p>该部门暂无在职员工</p>
+          </div>
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={employees}
+            rowKey="id"
+            pagination={false}
+            size="small"
+          />
+        )}
+      </div>
+    </Modal>
   )
 }

@@ -1,10 +1,9 @@
 /**
- * Admin 状态标签组件
- * 使用柔和的颜色风格，更加美观
+ * Admin 状态标签组件 - Semi Design 版本
+ * 使用 Semi Tag + 自定义色值
  */
 
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { Tag } from '@douyinfe/semi-ui-19'
 import { Check, X, CircleDot } from 'lucide-react'
 
 interface StatusBadgeProps {
@@ -13,181 +12,118 @@ interface StatusBadgeProps {
   showIcon?: boolean
 }
 
-// 启用/停用状态标签 - 使用柔和的绿色和灰色
-export function StatusBadge({ isActive, className, showIcon = true }: StatusBadgeProps) {
+// 启用/停用状态标签
+export function StatusBadge({ isActive, showIcon = true }: StatusBadgeProps) {
   return (
-    <Badge
-      variant={isActive ? 'status-emerald' : 'status-slate'}
-      className={cn(
-        'gap-1.5 px-2.5 py-1 text-xs font-medium',
-        className
-      )}
+    <Tag
+      size="small"
+      shape="round"
+      style={
+        isActive
+          ? { backgroundColor: 'rgba(120,140,93,0.1)', color: '#788c5d', borderColor: 'rgba(120,140,93,0.3)' }
+          : { backgroundColor: 'rgba(176,174,165,0.1)', color: '#b0aea5', borderColor: 'rgba(176,174,165,0.3)' }
+      }
     >
-      {showIcon && (
-        isActive ? (
-          <CircleDot className="h-3 w-3" />
-        ) : (
-          <X className="h-3 w-3" />
-        )
-      )}
-      {isActive ? '启用' : '停用'}
-    </Badge>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500 }}>
+        {showIcon && (isActive ? <CircleDot size={12} /> : <X size={12} />)}
+        {isActive ? '启用' : '停用'}
+      </span>
+    </Tag>
   )
 }
 
 // 员工状态标签 - 在职/离职
-export function EmployeeStatusBadge({ isActive, className, showIcon = true }: StatusBadgeProps) {
+export function EmployeeStatusBadge({ isActive, showIcon = true }: StatusBadgeProps) {
   return (
-    <Badge
-      variant={isActive ? 'status-green' : 'status-amber'}
-      className={cn(
-        'gap-1.5 px-2.5 py-1 text-xs font-medium',
-        className
-      )}
+    <Tag
+      size="small"
+      shape="round"
+      style={
+        isActive
+          ? { backgroundColor: 'rgba(120,140,93,0.1)', color: '#788c5d', borderColor: 'rgba(120,140,93,0.3)' }
+          : { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }
+      }
     >
-      {showIcon && (
-        isActive ? (
-          <Check className="h-3 w-3" />
-        ) : (
-          <X className="h-3 w-3" />
-        )
-      )}
-      {isActive ? '在职' : '离职'}
-    </Badge>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500 }}>
+        {showIcon && (isActive ? <Check size={12} /> : <X size={12} />)}
+        {isActive ? '在职' : '离职'}
+      </span>
+    </Tag>
   )
 }
 
-// 来源渠道分类标签 - 使用不同颜色区分
-const categoryStyles = {
-  ONLINE: { variant: 'status-blue' as const, label: '线上渠道' },
-  OFFLINE: { variant: 'status-purple' as const, label: '线下渠道' },
-  REFERRAL: { variant: 'status-emerald' as const, label: '推荐渠道' },
-  EVENT: { variant: 'status-amber' as const, label: '活动渠道' },
-  OTHER: { variant: 'status-slate' as const, label: '其他渠道' },
+// 来源渠道分类标签
+const categoryStyles: Record<string, { style: React.CSSProperties; label: string }> = {
+  ONLINE: { style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' }, label: '线上渠道' },
+  OFFLINE: { style: { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }, label: '线下渠道' },
+  REFERRAL: { style: { backgroundColor: 'rgba(120,140,93,0.1)', color: '#788c5d', borderColor: 'rgba(120,140,93,0.3)' }, label: '推荐渠道' },
+  EVENT: { style: { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }, label: '活动渠道' },
+  OTHER: { style: { backgroundColor: 'rgba(176,174,165,0.1)', color: '#b0aea5', borderColor: 'rgba(176,174,165,0.3)' }, label: '其他渠道' },
 }
 
-interface CategoryBadgeProps {
-  category: string
-  className?: string
-}
-
-export function SourceChannelCategoryBadge({ category, className }: CategoryBadgeProps) {
-  const style = categoryStyles[category as keyof typeof categoryStyles] || categoryStyles.OTHER
+export function SourceChannelCategoryBadge({ category }: { category: string }) {
+  const config = categoryStyles[category] || categoryStyles.OTHER
   return (
-    <Badge
-      variant={style.variant}
-      className={cn('px-2.5 py-1 text-xs font-medium', className)}
-    >
-      {style.label}
-    </Badge>
+    <Tag size="small" shape="round" style={{ ...config.style, fontSize: 12, fontWeight: 500 }}>
+      {config.label}
+    </Tag>
   )
 }
 
-// 职位级别标签 - 使用渐进色彩表示层级
-const levelStyles = {
-  1: { variant: 'status-slate' as const, label: '普通员工' },
-  2: { variant: 'status-blue' as const, label: '主管' },
-  3: { variant: 'status-cyan' as const, label: '经理' },
-  4: { variant: 'status-purple' as const, label: '总监' },
-  5: { variant: 'status-amber' as const, label: '高管' },
+// 职位级别标签
+const levelStyles: Record<number, { style: React.CSSProperties; label: string }> = {
+  1: { style: { backgroundColor: 'rgba(176,174,165,0.1)', color: '#b0aea5', borderColor: 'rgba(176,174,165,0.3)' }, label: '普通员工' },
+  2: { style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' }, label: '主管' },
+  3: { style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' }, label: '经理' },
+  4: { style: { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }, label: '总监' },
+  5: { style: { backgroundColor: 'rgba(20,20,19,0.1)', color: '#141413', borderColor: 'rgba(20,20,19,0.3)' }, label: '高管' },
 }
 
-interface PositionLevelBadgeProps {
-  level: number
-  className?: string
-}
-
-export function PositionLevelBadge({ level, className }: PositionLevelBadgeProps) {
-  const style = levelStyles[level as keyof typeof levelStyles] || levelStyles[1]
+export function PositionLevelBadge({ level }: { level: number }) {
+  const config = levelStyles[level] || levelStyles[1]
   return (
-    <Badge
-      variant={style.variant}
-      className={cn('px-2.5 py-1 text-xs font-medium', className)}
-    >
-      {style.label}
-    </Badge>
+    <Tag size="small" shape="round" style={{ ...config.style, fontSize: 12, fontWeight: 500 }}>
+      {config.label}
+    </Tag>
   )
 }
 
-// 超级管理员标签 - 使用醒目的红色
-export function SuperuserBadge({
-  isSuperuser,
-  className
-}: {
-  isSuperuser: boolean
-  className?: string
-}) {
+// 超级管理员标签
+export function SuperuserBadge({ isSuperuser }: { isSuperuser: boolean }) {
   if (!isSuperuser) return null
   return (
-    <Badge
-      variant="status-red"
-      className={cn('px-2.5 py-1 text-xs font-medium', className)}
+    <Tag
+      size="small"
+      shape="round"
+      style={{ backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', fontSize: 12, fontWeight: 500 }}
     >
       超级管理员
-    </Badge>
+    </Tag>
   )
 }
 
-// ============================================================================
-// 职位名称标签 - 使用 Anthropic 品牌色，与状态tag风格一致
-// Anthropic Brand Colors:
-// - Dark: #141413, Light: #faf9f5
-// - Mid Gray: #b0aea5, Light Gray: #e8e6dc
-// - Orange: #d97757, Blue: #6a9bcc, Green: #788c5d
-// ============================================================================
-
-type PositionVariant = 'position-staff' | 'position-supervisor' | 'position-manager' | 'position-director' | 'position-executive'
-
-/**
- * 职位关键词到 Badge variant 的映射
- * 按优先级排序（高级别优先匹配）
- */
-const positionKeywordVariants: Array<{ keywords: string[]; variant: PositionVariant }> = [
-  // Level 5-6 - 高管级
-  { keywords: ['总裁', '副总裁', '总经理', 'CEO', 'COO', 'CFO'], variant: 'position-executive' },
-  // Level 4 - 总监级
-  { keywords: ['总监', '副总监'], variant: 'position-director' },
-  // Level 3 - 经理级
-  { keywords: ['经理', '副经理'], variant: 'position-manager' },
-  // Level 2 - 主管级
-  { keywords: ['主管', '组长'], variant: 'position-supervisor' },
-  // Level 1 - 专员级
-  { keywords: ['专员', '助理', '顾问'], variant: 'position-staff' },
+// 职位名称标签
+const positionKeywordVariants: Array<{ keywords: string[]; style: React.CSSProperties }> = [
+  { keywords: ['总裁', '副总裁', '总经理', 'CEO', 'COO', 'CFO'], style: { backgroundColor: 'rgba(20,20,19,0.1)', color: '#141413', borderColor: 'rgba(20,20,19,0.3)' } },
+  { keywords: ['总监', '副总监'], style: { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' } },
+  { keywords: ['经理', '副经理'], style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' } },
+  { keywords: ['主管', '组长'], style: { backgroundColor: 'rgba(120,140,93,0.1)', color: '#788c5d', borderColor: 'rgba(120,140,93,0.3)' } },
+  { keywords: ['专员', '助理', '顾问'], style: { backgroundColor: 'rgba(232,230,220,0.5)', color: '#141413', borderColor: 'rgba(176,174,165,0.3)' } },
 ]
 
-/**
- * 根据职位名称获取 Badge variant
- * 支持模糊匹配
- */
-function getPositionVariant(positionName: string): PositionVariant {
-  for (const { keywords, variant } of positionKeywordVariants) {
-    for (const keyword of keywords) {
-      if (positionName.includes(keyword)) {
-        return variant
-      }
+function getPositionStyle(name: string): React.CSSProperties {
+  for (const { keywords, style } of positionKeywordVariants) {
+    for (const kw of keywords) {
+      if (name.includes(kw)) return style
     }
   }
-  // 默认使用专员级样式
-  return 'position-staff'
+  return { backgroundColor: 'rgba(232,230,220,0.5)', color: '#141413', borderColor: 'rgba(176,174,165,0.3)' }
 }
 
-interface PositionNameBadgeProps {
-  positionName: string
-  className?: string
-}
-
-/**
- * 职位名称标签组件 - 使用 Badge 组件，与状态tag风格一致
- */
-export function PositionNameBadge({ positionName, className }: PositionNameBadgeProps) {
-  const variant = getPositionVariant(positionName)
-
+export function PositionNameBadge({ positionName }: { positionName: string }) {
   return (
-    <Badge
-      variant={variant}
-      className={cn('px-2.5 py-1 text-xs font-medium', className)}
-    >
+    <Tag size="small" shape="round" style={{ ...getPositionStyle(positionName), fontSize: 12, fontWeight: 500 }}>
       {positionName}
-    </Badge>
+    </Tag>
   )
 }

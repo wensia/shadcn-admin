@@ -1,84 +1,44 @@
 /**
- * InfoItem 信息项组件
+ * InfoItem 信息项组件 - Semi Design 版本
  * 渲染为表格单元格 (td)，用于在 InfoGrid 内展示
  * 支持快捷编辑功能
  */
 
 import * as React from 'react'
-import { Copy, Check, Pencil, Loader2, Plus, Search } from 'lucide-react'
-import { cn, copyToClipboard } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
-import { toast } from 'sonner'
+import { Popover, Input, Select, Button, Toast, Spin, AutoComplete } from '@douyinfe/semi-ui-19'
+import { DatePicker } from '@douyinfe/semi-ui-19'
+import { IconCopy, IconTick, IconEdit, IconLoading, IconPlus, IconSearch } from '@douyinfe/semi-icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from '@/components/ui/command'
-import { Button } from '@/components/ui/button'
-import { FormDatePicker } from '@/components/date-picker'
-import { DateTimePicker } from '@/components/date-time-picker'
+import { copyToClipboard } from '@/lib/utils'
 import { apiClient } from '@/lib/api/client'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
+const { TextArea } = Input
+
 // 异步 Select 配置
 interface AsyncSelectConfig {
-  /** API 端点路径（如 /admin/schools） */
   apiEndpoint: string
-  /** 搜索参数名（默认 search） */
   searchParam?: string
-  /** 响应中 items 的字段名 */
   itemsKey?: string
-  /** 选项 label 字段（默认 name） */
   labelKey?: string
-  /** 选项 value 字段（默认 name，用于保存） */
   valueKey?: string
-  /** 是否允许创建新选项 */
   creatable?: boolean
-  /** 创建 API 端点（默认同 apiEndpoint） */
   createEndpoint?: string
-  /** 创建时的字段名（默认 name） */
   createFieldName?: string
 }
 
 interface InfoItemProps {
   label: string
   value?: string | React.ReactNode
-  /** 原始值，用于编辑时的初始值 */
   rawValue?: string
-  span?: 1 | 2 // 跨列数
+  span?: 1 | 2
   copyable?: boolean
   highlight?: boolean
   className?: string
-  // 编辑相关 props
   editable?: boolean
   fieldType?: 'text' | 'number' | 'select' | 'date' | 'datetime' | 'async-select'
-  /** 文本输入最大长度 */
   maxLength?: number
   options?: Array<{ label: string; value: string }>
-  /** 异步 Select 配置 */
   asyncSelectConfig?: AsyncSelectConfig
   onSave?: (value: string) => Promise<void>
 }
@@ -98,7 +58,6 @@ export function InfoItem({
   asyncSelectConfig,
   onSave,
 }: InfoItemProps) {
-  const s = useStyleClasses()
   const queryClient = useQueryClient()
   const [copied, setCopied] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
@@ -137,7 +96,6 @@ export function InfoItem({
     },
   })
 
-  // 打开编辑时初始化值
   React.useEffect(() => {
     if (isEditing) {
       setEditValue(rawValue || (typeof value === 'string' ? value : '') || '')
@@ -147,27 +105,24 @@ export function InfoItem({
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
     if (!value || typeof value !== 'string') return
-
     const success = await copyToClipboard(value)
     if (success) {
       setCopied(true)
-      toast.success('已复制到剪贴板')
+      Toast.success('已复制到剪贴板')
       setTimeout(() => setCopied(false), 2000)
     } else {
-      toast.error('复制失败')
+      Toast.error('复制失败')
     }
   }
 
   const handleSave = async () => {
     if (!onSave) return
-
     setIsSaving(true)
     try {
       await onSave(editValue)
       setIsEditing(false)
-      toast.success('保存成功')
+      Toast.success('保存成功')
     } catch (error: any) {
       showApiErrorToast(error, '保存失败')
     } finally {
@@ -185,7 +140,6 @@ export function InfoItem({
     }
   }
 
-  // span=2 时合并列
   const colSpan = span === 2 ? 3 : 1
 
   // 渲染编辑控件
@@ -193,34 +147,29 @@ export function InfoItem({
     switch (fieldType) {
       case 'select':
         return (
-          <Select value={editValue} onValueChange={setEditValue}>
-            <SelectTrigger className="h-8 text-xs w-full">
-              <SelectValue placeholder="请选择" />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            value={editValue}
+            onChange={(val) => setEditValue(val as string)}
+            optionList={options.map((opt) => ({ label: opt.label, value: opt.value }))}
+            style={{ width: '100%' }}
+          />
         )
       case 'date':
         return (
-          <FormDatePicker
-            value={editValue}
-            onChange={(val) => setEditValue(val || '')}
-            placeholder="选择日期"
+          <DatePicker
+            value={editValue || undefined}
+            onChange={(date, dateStr) => setEditValue(dateStr as string || '')}
+            type="date"
+            style={{ width: '100%' }}
           />
         )
       case 'datetime':
         return (
-          <DateTimePicker
-            value={editValue}
-            onChange={(val) => setEditValue(val || '')}
-            placeholder="选择日期时间"
-            showQuickButtons={false}
+          <DatePicker
+            value={editValue || undefined}
+            onChange={(date, dateStr) => setEditValue(dateStr as string || '')}
+            type="dateTime"
+            style={{ width: '100%' }}
           />
         )
       case 'number':
@@ -228,272 +177,163 @@ export function InfoItem({
           <Input
             type="number"
             value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
+            onChange={(val) => setEditValue(val)}
             onKeyDown={handleKeyDown}
-            className="h-8 text-xs"
-            autoFocus
+            autofocus
           />
         )
-      case 'async-select':
+      case 'async-select': {
         if (!asyncSelectConfig) return null
         const labelKey = asyncSelectConfig.labelKey || 'name'
         const valueKey = asyncSelectConfig.valueKey || 'name'
-        const showCreateOption = asyncSelectConfig.creatable && searchQuery && !asyncOptions.some(
-          (opt: any) => opt[labelKey]?.toLowerCase() === searchQuery.toLowerCase()
-        )
+        const optList = asyncOptions.map((opt: any) => ({
+          label: opt[labelKey],
+          value: opt[valueKey],
+        }))
         return (
-          <Command className="border rounded-md" shouldFilter={false}>
-            <div className="flex items-center border-b px-2">
-              <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <CommandInput
-                placeholder="搜索或输入新值..."
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-                className="h-8 text-xs border-0 focus:ring-0"
-              />
-            </div>
-            <CommandList
-              className="max-h-[200px] overflow-y-auto"
-              onWheel={(e) => {
-                // 修复 cmdk 阻止滚轮事件的问题
-                e.stopPropagation()
-                const target = e.currentTarget
-                target.scrollTop += e.deltaY
-              }}
-            >
-              {isLoadingOptions ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <>
-                  <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
-                    {searchQuery ? '未找到匹配项' : '输入关键词搜索'}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {asyncOptions.map((opt: any) => (
-                      <CommandItem
-                        key={opt.id || opt[valueKey]}
-                        value={opt[valueKey]}
-                        onSelect={() => {
-                          setEditValue(opt[valueKey])
-                          setSearchQuery('')
-                        }}
-                        className={cn(
-                          "text-xs cursor-pointer",
-                          editValue === opt[valueKey] && "bg-accent"
-                        )}
-                      >
-                        {opt[labelKey]}
-                        {editValue === opt[valueKey] && (
-                          <Check className="ml-auto h-3.5 w-3.5" />
-                        )}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  {showCreateOption && (
-                    <>
-                      <CommandSeparator />
-                      <CommandGroup>
-                        <CommandItem
-                          onSelect={async () => {
-                            setIsCreating(true)
-                            try {
-                              await createMutation.mutateAsync(searchQuery)
-                              setEditValue(searchQuery)
-                              setSearchQuery('')
-                              toast.success(`"${searchQuery}" 创建成功`)
-                            } catch (e: any) {
-                              toast.error(e?.message || '创建失败')
-                            } finally {
-                              setIsCreating(false)
-                            }
-                          }}
-                          className="text-xs cursor-pointer"
-                          disabled={isCreating}
-                        >
-                          {isCreating ? (
-                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Plus className="mr-1.5 h-3.5 w-3.5" />
-                          )}
-                          创建 "{searchQuery}"
-                        </CommandItem>
-                      </CommandGroup>
-                    </>
-                  )}
-                </>
-              )}
-            </CommandList>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Select
+              filter
+              remote
+              onSearch={(val) => setSearchQuery(val)}
+              value={editValue}
+              onChange={(val) => { setEditValue(val as string); setSearchQuery('') }}
+              optionList={optList}
+              loading={isLoadingOptions}
+              style={{ width: '100%' }}
+              placeholder="搜索或输入新值..."
+              emptyContent={searchQuery ? '未找到匹配项' : '输入关键词搜索'}
+            />
+            {asyncSelectConfig.creatable && searchQuery && !asyncOptions.some(
+              (opt: any) => opt[labelKey]?.toLowerCase() === searchQuery.toLowerCase()
+            ) && (
+              <Button
+                size="small"
+                theme="light"
+                icon={isCreating ? <IconLoading /> : <IconPlus />}
+                disabled={isCreating}
+                onClick={async () => {
+                  setIsCreating(true)
+                  try {
+                    await createMutation.mutateAsync(searchQuery)
+                    setEditValue(searchQuery)
+                    setSearchQuery('')
+                    Toast.success(`"${searchQuery}" 创建成功`)
+                  } catch (e: any) {
+                    Toast.error(e?.message || '创建失败')
+                  } finally {
+                    setIsCreating(false)
+                  }
+                }}
+              >
+                创建 "{searchQuery}"
+              </Button>
+            )}
             {editValue && (
-              <div className="border-t px-2 py-1.5 text-xs text-muted-foreground">
-                已选择: <span className="font-medium text-foreground">{editValue}</span>
+              <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                已选择: <span style={{ fontWeight: 500, color: 'var(--semi-color-text-0)' }}>{editValue}</span>
               </div>
             )}
-          </Command>
+          </div>
         )
+      }
       default:
         return (
           <Input
-            type="text"
             value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
+            onChange={(val) => setEditValue(val)}
             onKeyDown={handleKeyDown}
-            className="h-8 text-xs"
             maxLength={maxLength}
-            autoFocus
+            autofocus
           />
         )
     }
   }
 
-  // 渲染值区域（可编辑或只读）
+  // 渲染值区域
   const renderValue = () => {
-    const displayValue = value || <span className="text-muted-foreground">-</span>
+    const displayValue = value || <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
 
     if (editable && onSave) {
-      const triggerButton = (
-        <button
-          type="button"
-          className={cn(
-            'group flex items-center gap-1.5 text-left',
-            'rounded px-1 -mx-1 py-0.5 -my-0.5',
-            'hover:bg-muted/50 transition-colors cursor-pointer',
-            isSaving && 'pointer-events-none'
-          )}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground text-xs">保存中...</span>
-            </>
-          ) : (
-            <>
-              <span className="break-words">{displayValue}</span>
-              <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-            </>
-          )}
-        </button>
-      )
-
       return (
-        <Popover open={isEditing} onOpenChange={setIsEditing}>
-          {/* 编辑弹窗关闭时显示提示 */}
-          {!isEditing ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  {triggerButton}
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                点击编辑
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <PopoverTrigger asChild>
-              {triggerButton}
-            </PopoverTrigger>
-          )}
-          <PopoverContent
-            className={cn("p-3 relative", fieldType === 'datetime' ? 'w-auto' : fieldType === 'async-select' ? 'w-72 p-2' : 'w-64')}
-            align="start"
-            // 使用 modal 模式防止页面重新渲染时焦点丢失导致 Popover 关闭
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            onCloseAutoFocus={(e) => e.preventDefault()}
-            onPointerDownOutside={(e) => {
-              // 保存过程中阻止关闭
-              if (isSaving) {
-                e.preventDefault()
-                return
-              }
-              // 阻止点击 DateTimePicker 弹窗时关闭外层 Popover
-              const target = e.target as HTMLElement
-              if (target?.closest('[data-radix-popper-content-wrapper]')) {
-                e.preventDefault()
-              }
-            }}
-            onInteractOutside={(e) => {
-              // 保存过程中阻止关闭
-              if (isSaving) {
-                e.preventDefault()
-                return
-              }
-              // 阻止点击 DateTimePicker 弹窗时关闭外层 Popover
-              const target = e.target as HTMLElement
-              if (target?.closest('[data-radix-popper-content-wrapper]')) {
-                e.preventDefault()
-              }
-            }}
-            onFocusOutside={(e) => {
-              // 防止焦点移出时关闭 Popover（计时器更新导致的焦点问题）
-              e.preventDefault()
-            }}
-            onEscapeKeyDown={(e) => {
-              // 保存过程中阻止 ESC 关闭
-              if (isSaving) {
-                e.preventDefault()
-              }
-            }}
-          >
-            {/* 保存中的遮罩层 */}
-            {isSaving && (
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-md">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-xs">保存中...</span>
+        <Popover
+          visible={isEditing}
+          onVisibleChange={(visible) => {
+            if (isSaving && !visible) return
+            setIsEditing(visible)
+          }}
+          trigger="click"
+          position="bottomLeft"
+          content={
+            <div style={{ padding: 12, width: fieldType === 'async-select' ? 280 : fieldType === 'datetime' ? 'auto' : 240, position: 'relative' }}>
+              {isSaving && (
+                <div style={{
+                  position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', zIndex: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4,
+                }}>
+                  <Spin size="small" />
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--semi-color-text-2)' }}>{label}</div>
+                {renderEditControl()}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button size="small" theme="light" onClick={() => setIsEditing(false)} disabled={isSaving}>取消</Button>
+                  <Button size="small" theme="solid" onClick={handleSave} disabled={isSaving}>
+                    {isSaving && <IconLoading spin style={{ marginRight: 4 }} />}
+                    保存
+                  </Button>
                 </div>
               </div>
-            )}
-            <div className="space-y-3">
-              <div className="text-xs font-medium text-muted-foreground">{label}</div>
-              {renderEditControl()}
-              <div className="flex justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setIsEditing(false)}
-                  className="h-7 text-xs"
-                  disabled={isSaving}
-                >
-                  取消
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  className="h-7 text-xs"
-                  disabled={isSaving}
-                >
-                  {isSaving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                  保存
-                </Button>
-              </div>
             </div>
-          </PopoverContent>
+          }
+        >
+            <button
+              type="button"
+              title="点击编辑"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, textAlign: 'left',
+                borderRadius: 4, padding: '2px 4px', margin: '-2px -4px',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                transition: 'background 0.2s', fontSize: 'inherit', color: 'inherit',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <IconLoading spin style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }} />
+                  <span style={{ color: 'var(--semi-color-text-2)', fontSize: 12 }}>保存中...</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ wordBreak: 'break-word' }}>{displayValue}</span>
+                  <IconEdit style={{ fontSize: 12, color: 'var(--semi-color-text-2)', opacity: 0, transition: 'opacity 0.2s' }} className="info-item-edit-icon" />
+                </>
+              )}
+            </button>
         </Popover>
       )
     }
 
     return (
-      <div className="flex items-center gap-1.5">
-        <span className="break-words">{displayValue}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ wordBreak: 'break-word' }}>{displayValue}</span>
         {copyable && value && typeof value === 'string' && (
           <button
             type="button"
             onClick={handleCopy}
-            className={cn(
-              'inline-flex items-center justify-center shrink-0',
-              'h-5 w-5 rounded hover:bg-muted transition-colors',
-              'text-muted-foreground hover:text-foreground'
-            )}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              width: 20, height: 20, borderRadius: 4, border: 'none', cursor: 'pointer',
+              background: 'transparent', color: 'var(--semi-color-text-2)', transition: 'background 0.2s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             title="复制"
           >
-            {copied ? (
-              <Check className="h-3.5 w-3.5 text-green-500" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
+            {copied ? <IconTick style={{ fontSize: 14, color: 'var(--semi-color-success)' }} /> : <IconCopy style={{ fontSize: 14 }} />}
           </button>
         )}
       </div>
@@ -503,21 +343,29 @@ export function InfoItem({
   return (
     <>
       <td
-        className={cn(
-          'py-1.5 pr-3 text-muted-foreground whitespace-nowrap align-top',
-          span === 2 && 'w-auto',
-          className
-        )}
+        className={className}
+        style={{
+          padding: '6px 12px',
+          color: 'var(--semi-color-text-2)',
+          whiteSpace: 'nowrap',
+          verticalAlign: 'top',
+          borderBottom: '1px solid var(--semi-color-border)',
+          borderRight: '1px solid var(--semi-color-border)',
+          background: 'var(--semi-color-fill-0)',
+          ...(span === 2 ? { width: 'auto' } : {}),
+        }}
         colSpan={span === 2 ? 1 : undefined}
       >
         {label}
       </td>
       <td
-        className={cn(
-          'py-1.5 align-top',
-          span === 2 && 'pr-0',
-          highlight && 'text-destructive font-medium'
-        )}
+        style={{
+          padding: '6px 12px',
+          verticalAlign: 'top',
+          borderBottom: '1px solid var(--semi-color-border)',
+          borderRight: '1px solid var(--semi-color-border)',
+          ...(highlight ? { color: '#ef4444', fontWeight: 500 } : {}),
+        }}
         colSpan={span === 2 ? colSpan : undefined}
       >
         {renderValue()}

@@ -5,19 +5,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  getSortedRowModel,
-  SortingState,
-} from '@tanstack/react-table'
 import { toast } from 'sonner'
 import {
   Download,
   Search,
-  RefreshCw,
   Pencil,
   Users,
   Eye,
@@ -25,36 +16,10 @@ import {
   Activity,
   Bell,
 } from 'lucide-react'
+import { Table, Button, Input, Select, Modal, Checkbox, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import { IconRefresh } from '@douyinfe/semi-icons'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
 import { leadAccessStatsApi } from '../api'
 import { LeadAccessNotifyDialog } from '../components/lead-access-notify-dialog'
 import type {
@@ -64,6 +29,8 @@ import type {
   BatchUpdateLimit,
 } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+
+const { Text } = Typography
 
 // 时间范围选项
 const TIME_RANGE_OPTIONS = [
@@ -77,6 +44,7 @@ const TIME_RANGE_OPTIONS = [
 
 // 骨架屏数据 - 在组件外部创建，避免每次渲染都创建新数组
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 const SKELETON_DATA: AdvisorAccessStatistics[] = Array.from({ length: 10 }, (_, i) => ({
   user_id: `${SKELETON_PREFIX}${i}`,
   user_name: '',
@@ -99,8 +67,7 @@ export function LeadAccessStatsPage() {
   const [filters, setFilters] = useState<AccessStatsFilters>({
     time_range: 'today',
   })
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
   // 编辑弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -155,6 +122,14 @@ export function LeadAccessStatsPage() {
   // 表格数据
   const tableData = isLoading ? SKELETON_DATA : filteredData
 
+  // 选中的行数据
+  const selectedRows = useMemo(() => {
+    return filteredData.filter((item) => {
+      const key = `${item.user_id}_${item.campus_name || ''}`
+      return selectedRowKeys.includes(key)
+    })
+  }, [filteredData, selectedRowKeys])
+
   // 批量更新访问限制
   const batchUpdateMutation = useMutation({
     mutationFn: (updates: BatchUpdateLimit[]) =>
@@ -163,7 +138,7 @@ export function LeadAccessStatsPage() {
       toast.success(`成功更新 ${result.update_count} 条记录`)
       setEditDialogOpen(false)
       setBatchEditDialogOpen(false)
-      setRowSelection({})
+      setSelectedRowKeys([])
       queryClient.invalidateQueries({ queryKey: ['lead-access-stats'] })
     },
     onError: (error: Error) => {
@@ -178,127 +153,103 @@ export function LeadAccessStatsPage() {
     setEditDialogOpen(true)
   }, [])
 
-  // 表格列定义 - 依赖 handleEditLimit
-  const columns: ColumnDef<AdvisorAccessStatistics>[] = useMemo(
+  // Semi Table 列定义
+  const columns: ColumnProps<AdvisorAccessStatistics>[] = useMemo(
     () => [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && 'indeterminate')
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="全选"
-          />
-        ),
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-4" />
+        title: '顾问姓名',
+        dataIndex: 'user_name',
+        render: (_text: string, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           }
-          return (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="选择行"
-            />
-          )
-        },
-        enableSorting: false,
-      },
-      {
-        accessorKey: 'user_name',
-        header: '顾问姓名',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          return <span className="font-medium">{row.original.user_name}</span>
+          return <span className="font-medium">{record.user_name}</span>
         },
       },
       {
-        accessorKey: 'campus_name',
-        header: '所属校区',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-28" />
+        title: '所属校区',
+        dataIndex: 'campus_name',
+        render: (_text: string, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
-          return row.original.campus_name
+          return record.campus_name
         },
       },
       {
-        accessorKey: 'district_name',
-        header: '地区',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-20" />
+        title: '地区',
+        dataIndex: 'district_name',
+        render: (_text: string, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           }
-          return row.original.district_name || '-'
+          return record.district_name || '-'
         },
       },
       {
-        accessorKey: 'view_count',
-        header: '查看线索数',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-12" />
+        title: '查看线索数',
+        dataIndex: 'view_count',
+        sorter: (a: AdvisorAccessStatistics, b: AdvisorAccessStatistics) => (a?.view_count ?? 0) - (b?.view_count ?? 0),
+        render: (_text: number, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
           }
-          const count = row.original.view_count
+          const count = record.view_count
           return (
             <span
               className={
-                count > 0 ? 'text-green-600 font-medium' : 'text-muted-foreground'
+                count > 0 ? 'text-green-600 font-medium' : ''
               }
+              style={count <= 0 ? { color: 'var(--semi-color-text-2)' } : undefined}
             >
               {count}
             </span>
           )
         },
-        enableSorting: true,
       },
       {
-        accessorKey: 'total_access',
-        header: '总访问次数',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-12" />
+        title: '总访问次数',
+        dataIndex: 'total_access',
+        sorter: (a: AdvisorAccessStatistics, b: AdvisorAccessStatistics) => (a?.total_access ?? 0) - (b?.total_access ?? 0),
+        render: (_text: number, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
           }
-          return row.original.total_access
+          return record.total_access
         },
-        enableSorting: true,
       },
       {
-        accessorKey: 'daily_limit',
-        header: '每日限制',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-16" />
+        title: '每日限制',
+        dataIndex: 'daily_limit',
+        render: (_text: number, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
           return (
             <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-1 gap-1"
-              onClick={() => handleEditLimit(row.original)}
+              theme="borderless"
+              type="tertiary"
+              size="small"
+              icon={<Pencil className="h-3 w-3" />}
+              iconPosition="right"
+              onClick={() => handleEditLimit(record)}
             >
-              <span>{row.original.daily_limit}</span>
-              <Pencil className="h-3 w-3" />
+              {record.daily_limit}
             </Button>
           )
         },
       },
       {
-        id: 'usage_rate',
-        header: '使用率',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-12" />
+        title: '使用率',
+        dataIndex: 'usage_rate',
+        render: (_text: unknown, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
           }
           const rate =
-            row.original.daily_limit > 0
+            record.daily_limit > 0
               ? Math.round(
-                  (row.original.total_access / row.original.daily_limit) * 100
+                  (record.total_access / record.daily_limit) * 100
                 )
               : 0
 
@@ -310,15 +261,15 @@ export function LeadAccessStatsPage() {
         },
       },
       {
-        id: 'remaining',
-        header: '今日剩余',
-        cell: ({ row }) => {
-          if (row.original.user_id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-12" />
+        title: '今日剩余',
+        dataIndex: 'remaining',
+        render: (_text: unknown, record: AdvisorAccessStatistics) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
           }
           const remaining = Math.max(
             0,
-            row.original.daily_limit - row.original.total_access
+            record.daily_limit - record.total_access
           )
 
           let colorClass = 'text-green-600'
@@ -332,33 +283,13 @@ export function LeadAccessStatsPage() {
     [handleEditLimit]
   )
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      rowSelection,
-    },
-    enableRowSelection: (row) =>
-      !row.original.user_id?.startsWith(SKELETON_PREFIX),
-    // 使用 user_id + campus_name 组合作为唯一键，避免同一用户多校区时 key 重复
-    getRowId: (row, index) => `${row.user_id}_${row.campus_name || index}`,
-  })
-
-  // 获取选中的行 - 使用 table 的 API
-  const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
-
   // 处理筛选变化
   const handleFilterChange = useCallback((key: keyof AccessStatsFilters, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value === 'all' ? undefined : value,
     }))
-    setRowSelection({}) // 清空选择
+    setSelectedRowKeys([])
   }, [])
 
   // 保存单个限制
@@ -464,6 +395,15 @@ export function LeadAccessStatsPage() {
     }
   }, [refetch])
 
+  // Semi Table rowSelection
+  const rowSelection = useMemo(() => ({
+    selectedRowKeys,
+    onChange: (keys: string[]) => setSelectedRowKeys(keys),
+    getCheckboxProps: (record: AdvisorAccessStatistics) => ({
+      disabled: isSkeletonRow(record.user_id),
+    }),
+  }), [selectedRowKeys])
+
   return (
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
@@ -471,17 +411,15 @@ export function LeadAccessStatsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">线索查看统计</h1>
-            <p className="text-sm text-muted-foreground">
+            <Text type="tertiary" size="small">
               监控和管理顾问访问线索的频次和限制
-            </p>
+            </Text>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setNotifyDialogOpen(true)}>
-              <Bell className="mr-2 h-4 w-4" />
+            <Button theme="outline" icon={<Bell className="h-4 w-4" />} onClick={() => setNotifyDialogOpen(true)}>
               通知设置
             </Button>
-            <Button onClick={handleExport} disabled={exportLoading}>
-              <Download className="mr-2 h-4 w-4" />
+            <Button theme="solid" type="primary" icon={<Download className="h-4 w-4" />} onClick={handleExport} disabled={exportLoading}>
               {exportLoading ? '导出中...' : '导出数据'}
             </Button>
           </div>
@@ -489,63 +427,55 @@ export function LeadAccessStatsPage() {
 
         {/* 统计卡片 */}
         <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-blue-100 p-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">总顾问数</p>
-                  <p className="text-2xl font-bold">{summary.total_users}</p>
-                </div>
+          <div className="rounded-lg border bg-card p-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-blue-100 p-2">
+                <Users className="h-5 w-5 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-green-100 p-2">
-                  <Activity className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">活跃顾问数</p>
-                  <p className="text-2xl font-bold">
-                    {summary.active_users}
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      ({activeRate}%)
-                    </span>
-                  </p>
-                </div>
+              <div>
+                <Text type="tertiary" size="small">总顾问数</Text>
+                <p className="text-2xl font-bold">{summary.total_users}</p>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-purple-100 p-2">
-                  <Eye className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">总查看线索数</p>
-                  <p className="text-2xl font-bold">{summary.total_views}</p>
-                </div>
+            </div>
+          </div>
+          <div className="rounded-lg border bg-card p-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-green-100 p-2">
+                <Activity className="h-5 w-5 text-green-600" />
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-orange-100 p-2">
-                  <MousePointer className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">总访问次数</p>
-                  <p className="text-2xl font-bold">{summary.total_access}</p>
-                </div>
+              <div>
+                <Text type="tertiary" size="small">活跃顾问数</Text>
+                <p className="text-2xl font-bold">
+                  {summary.active_users}
+                  <Text type="tertiary" size="small" className="ml-2">
+                    ({activeRate}%)
+                  </Text>
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+          <div className="rounded-lg border bg-card p-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-purple-100 p-2">
+                <Eye className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <Text type="tertiary" size="small">总查看线索数</Text>
+                <p className="text-2xl font-bold">{summary.total_views}</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-lg border bg-card p-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-orange-100 p-2">
+                <MousePointer className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <Text type="tertiary" size="small">总访问次数</Text>
+                <p className="text-2xl font-bold">{summary.total_access}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 工具栏 */}
@@ -553,190 +483,130 @@ export function LeadAccessStatsPage() {
           <div className="flex flex-wrap items-center gap-2 flex-1">
             <Select
               value={filters.time_range || 'today'}
-              onValueChange={(value) => handleFilterChange('time_range', value)}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="时间范围" />
-              </SelectTrigger>
-              <SelectContent>
-                {TIME_RANGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="relative min-w-[200px] max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索顾问姓名..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="pl-8"
-              />
-            </div>
+              onChange={(value) => handleFilterChange('time_range', value as string)}
+              optionList={TIME_RANGE_OPTIONS}
+              style={{ width: 140 }}
+            />
+            <Input
+              prefix={<Search className="h-4 w-4" />}
+              placeholder="搜索顾问姓名..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              style={{ width: 200 }}
+            />
             {selectedRows.length > 0 && (
-              <Button variant="outline" onClick={handleOpenBatchEdit}>
+              <Button theme="outline" onClick={handleOpenBatchEdit}>
                 批量修改限制 ({selectedRows.length})
               </Button>
             )}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <Button
+            theme="borderless"
+            type="tertiary"
+            icon={<IconRefresh />}
+            onClick={() => refetch()}
+          />
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey={(record) => `${record.user_id}_${record.campus_name || ''}`}
+            rowSelection={rowSelection as any}
+            pagination={false}
+            empty={<div className="py-6 text-center" style={{ color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+            size="middle"
+          />
         </div>
       </div>
 
       {/* 单个编辑弹窗 */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>修改访问限制</DialogTitle>
-            <DialogDescription>
-              修改顾问每日访问线索的限制次数
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-4">
-              <Label className="w-20 text-right">顾问姓名</Label>
-              <span>{editingUser?.user_name}</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Label className="w-20 text-right">当前限制</Label>
-              <span>{editingUser?.daily_limit} 次/天</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Label htmlFor="daily-limit" className="w-20 text-right">
-                新的限制
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="daily-limit"
-                  type="number"
-                  min={0}
-                  max={9999}
-                  value={editDailyLimit}
-                  onChange={(e) => setEditDailyLimit(parseInt(e.target.value) || 0)}
-                  className="w-32"
-                />
-                <span className="text-muted-foreground">次/天</span>
-              </div>
+      <Modal
+        title="修改访问限制"
+        visible={editDialogOpen}
+        onCancel={() => setEditDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setEditDialogOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={handleSaveSingleLimit}
+              loading={batchUpdateMutation.isPending}
+            >
+              确定
+            </Button>
+          </div>
+        }
+        width={400}
+      >
+        <div className="space-y-4 py-2">
+          <Text type="tertiary" size="small">修改顾问每日访问线索的限制次数</Text>
+          <div className="flex items-center gap-4">
+            <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>顾问姓名</span>
+            <span>{editingUser?.user_name}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>当前限制</span>
+            <span>{editingUser?.daily_limit} 次/天</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>新的限制</span>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                value={String(editDailyLimit)}
+                onChange={(v) => setEditDailyLimit(parseInt(v) || 0)}
+                style={{ width: 128 }}
+              />
+              <Text type="tertiary">次/天</Text>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              取消
-            </Button>
-            <Button
-              onClick={handleSaveSingleLimit}
-              disabled={batchUpdateMutation.isPending}
-            >
-              {batchUpdateMutation.isPending ? '保存中...' : '确定'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </Modal>
 
       {/* 批量编辑弹窗 */}
-      <Dialog open={batchEditDialogOpen} onOpenChange={setBatchEditDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>批量修改访问限制</DialogTitle>
-            <DialogDescription>
-              为选中的顾问统一设置每日访问限制
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-4">
-              <Label className="w-20 text-right">选中顾问</Label>
-              <span>已选择 {selectedRows.length} 名顾问</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Label htmlFor="batch-daily-limit" className="w-20 text-right">
-                每日限制
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="batch-daily-limit"
-                  type="number"
-                  min={0}
-                  max={9999}
-                  value={batchDailyLimit}
-                  onChange={(e) =>
-                    setBatchDailyLimit(parseInt(e.target.value) || 0)
-                  }
-                  className="w-32"
-                />
-                <span className="text-muted-foreground">次/天</span>
-              </div>
+      <Modal
+        title="批量修改访问限制"
+        visible={batchEditDialogOpen}
+        onCancel={() => setBatchEditDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setBatchEditDialogOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={handleSaveBatchLimit}
+              loading={batchUpdateMutation.isPending}
+            >
+              确定修改
+            </Button>
+          </div>
+        }
+        width={400}
+      >
+        <div className="space-y-4 py-2">
+          <Text type="tertiary" size="small">为选中的顾问统一设置每日访问限制</Text>
+          <div className="flex items-center gap-4">
+            <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>选中顾问</span>
+            <span>已选择 {selectedRows.length} 名顾问</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>每日限制</span>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                value={String(batchDailyLimit)}
+                onChange={(v) => setBatchDailyLimit(parseInt(v) || 0)}
+                style={{ width: 128 }}
+              />
+              <Text type="tertiary">次/天</Text>
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBatchEditDialogOpen(false)}
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleSaveBatchLimit}
-              disabled={batchUpdateMutation.isPending}
-            >
-              {batchUpdateMutation.isPending ? '保存中...' : '确定修改'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </Modal>
 
       {/* 通知设置弹窗 */}
       <LeadAccessNotifyDialog

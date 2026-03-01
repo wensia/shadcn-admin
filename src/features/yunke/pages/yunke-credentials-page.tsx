@@ -1,24 +1,14 @@
 /**
- * 云客账号凭证管理页面
+ * 云客账号凭证管理页面 - Semi Design
  *
  * 管理云客登录凭证（手机号、密码、公司信息），支持 CRUD 操作和自动登录
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import {
   Phone,
   Building2,
-  Search,
   RefreshCw,
   Plus,
   Pencil,
@@ -34,113 +24,18 @@ import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Skeleton } from '@/components/ui/skeleton'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Table, Button, Input, Select, Modal, Form, Tag, Skeleton, Dropdown, Typography } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconSearch } from '@douyinfe/semi-icons'
+import { SemiTablePagination } from '@/components/semi/table-pagination'
+import { isSkeletonRow, createSkeletonData } from '@/lib/table-utils'
 import { yunkeCredentialsApi } from '../api'
 import { dingtalkRobotsApi } from '@/features/admin/api'
 import type { YunkeCredential } from '../types'
-import type { DingtalkRobot } from '@/features/admin/types'
 import { formatTime } from '@/lib/utils/time'
 
-// 创建表单验证
-const createFormSchema = z.object({
-  phone: z
-    .string()
-    .min(11, '手机号必须是11位')
-    .max(11, '手机号必须是11位')
-    .regex(/^1\d{10}$/, '请输入正确的手机号'),
-  password: z.string().min(1, '密码不能为空'),
-  company_code: z.string().min(1, '公司代码不能为空'),
-  company_name: z.string().min(1, '公司名称不能为空'),
-  domain: z.string().optional(),
-})
-
-// 更新表单验证
-const updateFormSchema = z.object({
-  phone: z
-    .string()
-    .min(11, '手机号必须是11位')
-    .max(11, '手机号必须是11位')
-    .regex(/^1\d{10}$/, '请输入正确的手机号'),
-  password: z.string().optional(),
-  company_code: z.string().min(1, '公司代码不能为空'),
-  company_name: z.string().min(1, '公司名称不能为空'),
-  domain: z.string().optional(),
-  notify_robot_id: z.string().optional(),
-})
-
-type CreateFormData = z.infer<typeof createFormSchema>
-type UpdateFormData = z.infer<typeof updateFormSchema>
-
-// 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-function createSkeletonData(count: number): YunkeCredential[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
-    phone: '',
-    company_id: '',
-    company_code: null,
-    company_name: null,
-    user_id: null,
-    status: 0,
-    last_login: null,
-    created_at: null,
-    updated_at: null,
-    notify_robot_id: null,
-    notify_robot_name: null,
-  }))
-}
+const { Text } = Typography
 
 // 状态选项
 const STATUS_OPTIONS = [
@@ -156,36 +51,15 @@ export function YunkeCredentialsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
-  const [editDrawerOpen, setEditDrawerOpen] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedCredential, setSelectedCredential] = useState<YunkeCredential | null>(null)
 
-  // 创建表单
-  const createForm = useForm<CreateFormData>({
-    resolver: zodResolver(createFormSchema),
-    defaultValues: {
-      phone: '',
-      password: '',
-      company_code: '',
-      company_name: '',
-      domain: '',
-    },
-  })
-
-  // 更新表单
-  const updateForm = useForm<UpdateFormData>({
-    resolver: zodResolver(updateFormSchema),
-    defaultValues: {
-      phone: '',
-      password: '',
-      company_code: '',
-      company_name: '',
-      domain: '',
-      notify_robot_id: '',
-    },
-  })
+  // Semi Form refs
+  const createFormRef = useRef<FormApi>()
+  const updateFormRef = useRef<FormApi>()
 
   // 查询账号凭证列表
   const { data, isLoading, refetch } = useQuery({
@@ -217,8 +91,8 @@ export function YunkeCredentialsPage() {
     mutationFn: yunkeCredentialsApi.createCredential,
     onSuccess: () => {
       toast.success('账号创建成功')
-      setCreateDrawerOpen(false)
-      createForm.reset()
+      setCreateModalOpen(false)
+      createFormRef.current?.reset()
       queryClient.invalidateQueries({ queryKey: ['yunke-credentials'] })
     },
     onError: (error: Error) => {
@@ -228,7 +102,7 @@ export function YunkeCredentialsPage() {
 
   // 更新账号
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateFormData }) =>
+    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
       yunkeCredentialsApi.updateCredential(id, {
         phone: data.phone,
         password: data.password || undefined,
@@ -239,9 +113,9 @@ export function YunkeCredentialsPage() {
       }),
     onSuccess: () => {
       toast.success('更新成功')
-      setEditDrawerOpen(false)
+      setEditModalOpen(false)
       setSelectedCredential(null)
-      updateForm.reset()
+      updateFormRef.current?.reset()
       queryClient.invalidateQueries({ queryKey: ['yunke-credentials'] })
     },
     onError: (error: Error) => {
@@ -280,39 +154,35 @@ export function YunkeCredentialsPage() {
   })
 
   // 列定义
-  const columns: ColumnDef<YunkeCredential>[] = useMemo(
+  const columns: ColumnProps<YunkeCredential>[] = useMemo(
     () => [
       {
-        accessorKey: 'phone',
-        header: '手机号',
-        size: 150,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
-          }
+        title: '手机号',
+        dataIndex: 'phone',
+        width: 150,
+        render: (_text: string, record: YunkeCredential) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           return (
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono">{row.original.phone}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Phone style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+              <span style={{ fontFamily: 'monospace' }}>{record.phone}</span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'company_name',
-        header: '公司',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-10 w-40" />
-          }
+        title: '公司',
+        dataIndex: 'company_name',
+        width: 200,
+        render: (_text: string, record: YunkeCredential) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 160 }} />
           return (
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
               <div>
-                <div className="font-medium">{row.original.company_name || '-'}</div>
-                <div className="text-xs text-muted-foreground">
-                  {row.original.company_code || '-'}
+                <div style={{ fontWeight: 500 }}>{record.company_name || '-'}</div>
+                <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                  {record.company_code || '-'}
                 </div>
               </div>
             </div>
@@ -320,117 +190,114 @@ export function YunkeCredentialsPage() {
         },
       },
       {
-        accessorKey: 'status',
-        header: '状态',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
-          }
-          const isLoggedIn = row.original.status === 1
+        title: '状态',
+        dataIndex: 'status',
+        width: 100,
+        render: (_text: number, record: YunkeCredential) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+          const isLoggedIn = record.status === 1
           return (
-            <Badge variant={isLoggedIn ? 'default' : 'secondary'} className="gap-1">
+            <Tag
+              color={isLoggedIn ? 'green' : 'grey'}
+              type="light"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            >
               {isLoggedIn ? (
-                <CheckCircle className="h-3 w-3" />
+                <CheckCircle style={{ width: 12, height: 12 }} />
               ) : (
-                <XCircle className="h-3 w-3" />
+                <XCircle style={{ width: 12, height: 12 }} />
               )}
               {isLoggedIn ? '已登录' : '未登录'}
-            </Badge>
+            </Tag>
           )
         },
       },
       {
-        accessorKey: 'last_login',
-        header: '最后登录',
-        size: 180,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
-          }
-          if (!row.original.last_login) {
-            return <span className="text-muted-foreground">从未登录</span>
+        title: '最后登录',
+        dataIndex: 'last_login',
+        width: 180,
+        render: (_text: string, record: YunkeCredential) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
+          if (!record.last_login) {
+            return <Text type="tertiary">从未登录</Text>
           }
           return (
-            <div className="flex items-center gap-1 text-sm">
-              <Clock className="h-3 w-3 text-muted-foreground" />
-              {formatTime(row.original.last_login)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+              <Clock style={{ width: 12, height: 12, color: 'var(--semi-color-text-2)' }} />
+              {formatTime(record.last_login)}
             </div>
           )
         },
       },
       {
-        accessorKey: 'notify_robot_name',
-        header: '失败通知',
-        size: 140,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-20" />
-          }
-          if (!row.original.notify_robot_name) {
-            return <span className="text-muted-foreground text-xs">-</span>
+        title: '失败通知',
+        dataIndex: 'notify_robot_name',
+        width: 140,
+        render: (_text: string, record: YunkeCredential) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+          if (!record.notify_robot_name) {
+            return <Text type="tertiary" size="small">-</Text>
           }
           return (
-            <div className="flex items-center gap-1 text-sm">
-              <Bell className="h-3 w-3 text-orange-500" />
-              <span className="truncate max-w-[100px]" title={row.original.notify_robot_name}>
-                {row.original.notify_robot_name}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+              <Bell style={{ width: 12, height: 12, color: 'orange' }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }} title={record.notify_robot_name}>
+                {record.notify_robot_name}
               </span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
-          }
-          return row.original.created_at ? formatTime(row.original.created_at) : '-'
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 160,
+        render: (_text: string, record: YunkeCredential) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
+          return record.created_at ? formatTime(record.created_at) : '-'
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 120,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-20" />
-          }
-          const credential = row.original
+        title: '操作',
+        dataIndex: 'actions',
+        width: 120,
+        fixed: 'right' as const,
+        render: (_: unknown, record: YunkeCredential) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           return (
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleLogin(credential)}
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<LogIn style={{ width: 16, height: 16 }} />}
+                onClick={() => handleLogin(record)}
                 disabled={loginMutation.isPending}
-                title="登录"
+              />
+              <Dropdown
+                trigger="click"
+                position="bottomRight"
+                clickToHide
+                render={
+                  <Dropdown.Menu>
+                    <Dropdown.Item onClick={() => handleEdit(record)}>
+                      <Pencil style={{ width: 14, height: 14, marginRight: 8 }} />
+                      编辑
+                    </Dropdown.Item>
+                    <Dropdown.Item type="danger" onClick={() => handleDeleteClick(record)}>
+                      <Trash2 style={{ width: 14, height: 14, marginRight: 8 }} />
+                      删除
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                }
               >
-                <LogIn className="h-4 w-4" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleEdit(credential)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    编辑
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => handleDeleteClick(credential)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    删除
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  size="small"
+                  icon={<MoreHorizontal style={{ width: 16, height: 16 }} />}
+                />
+              </Dropdown>
             </div>
           )
         },
@@ -440,7 +307,7 @@ export function YunkeCredentialsPage() {
   )
 
   // 表格数据
-  const tableData = isLoading ? createSkeletonData(5) : credentials
+  const tableData = isLoading ? createSkeletonData<YunkeCredential>(5) : credentials
 
   // 过滤数据（本地搜索）
   const filteredData = useMemo(() => {
@@ -454,14 +321,6 @@ export function YunkeCredentialsPage() {
     )
   }, [tableData, searchValue])
 
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    getRowId: (row) => row.id,
-  })
-
   // 处理函数
   const handleSearch = () => {
     setPage(1)
@@ -473,31 +332,38 @@ export function YunkeCredentialsPage() {
   }
 
   const handleCreateClick = () => {
-    createForm.reset()
-    setCreateDrawerOpen(true)
+    createFormRef.current?.reset()
+    setCreateModalOpen(true)
   }
 
-  const handleCreateSubmit = (data: CreateFormData) => {
-    createMutation.mutate(data)
+  const handleCreateSubmit = () => {
+    createFormRef.current?.validate().then((values: Record<string, any>) => {
+      createMutation.mutate(values as any)
+    })
   }
 
   const handleEdit = (credential: YunkeCredential) => {
     setSelectedCredential(credential)
-    updateForm.reset({
-      phone: credential.phone,
-      password: '',
-      company_code: credential.company_code || '',
-      company_name: credential.company_name || '',
-      domain: '',
-      notify_robot_id: credential.notify_robot_id || '',
-    })
-    setEditDrawerOpen(true)
+    setEditModalOpen(true)
+    // 延迟设置值，等待 modal 渲染
+    setTimeout(() => {
+      updateFormRef.current?.setValues({
+        phone: credential.phone,
+        password: '',
+        company_code: credential.company_code || '',
+        company_name: credential.company_name || '',
+        domain: '',
+        notify_robot_id: credential.notify_robot_id || '',
+      })
+    }, 0)
   }
 
-  const handleUpdateSubmit = (data: UpdateFormData) => {
-    if (selectedCredential) {
-      updateMutation.mutate({ id: selectedCredential.id, data })
-    }
+  const handleUpdateSubmit = () => {
+    updateFormRef.current?.validate().then((values: Record<string, any>) => {
+      if (selectedCredential) {
+        updateMutation.mutate({ id: selectedCredential.id, data: values })
+      }
+    })
   }
 
   const handleDeleteClick = (credential: YunkeCredential) => {
@@ -515,101 +381,75 @@ export function YunkeCredentialsPage() {
     loginMutation.mutate(credential.id)
   }
 
+  // 钉钉机器人选项
+  const robotOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [{ value: '', label: '不通知' }]
+    robots.forEach((robot) => {
+      opts.push({ value: robot.id, label: robot.name })
+    })
+    return opts
+  }, [robots])
+
   return (
     <Main fixed>
-      <div className="flex h-full flex-col gap-4">
+      <div style={{ display: 'flex', height: '100%', flexDirection: 'column', gap: 16 }}>
         {/* 标题栏 */}
-        <div className="flex items-center justify-between">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="text-2xl font-bold">云客账号凭证管理</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>云客账号凭证管理</h1>
+            <Text type="tertiary" size="small">
               管理云客登录凭证，支持创建、编辑密码、手动登录
-            </p>
+            </Text>
           </div>
-          <Button onClick={handleCreateClick}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button icon={<Plus style={{ width: 16, height: 16 }} />} onClick={handleCreateClick}>
             添加账号
           </Button>
         </div>
 
         {/* 搜索栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索手机号或公司名..."
-                className="pl-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="状态筛选" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索手机号或公司名..."
+              style={{ width: 256 }}
+              value={searchValue}
+              onChange={v => setSearchValue(v)}
+              onEnterPress={handleSearch}
+            />
+            <Select
+              value={statusFilter}
+              onChange={v => setStatusFilter(v as string)}
+              optionList={STATUS_OPTIONS}
+              style={{ width: 120 }}
+            />
+            <Button theme="outline" onClick={handleSearch}>搜索</Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleRefresh} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <Button
+            theme="borderless"
+            type="tertiary"
+            icon={<RefreshCw style={{ width: 16, height: 16 }} />}
+            onClick={handleRefresh}
+          />
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <Table
+            columns={columns}
+            dataSource={filteredData}
+            rowKey="id"
+            pagination={false}
+            empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+          />
         </div>
 
         {/* 分页 */}
         {total > 0 && (
-          <SimplePagination
+          <SemiTablePagination
+            total={total}
             page={page}
             pageSize={pageSize}
-            total={total}
             onPageChange={setPage}
             onPageSizeChange={(size) => {
               setPageSize(size)
@@ -620,242 +460,140 @@ export function YunkeCredentialsPage() {
       </div>
 
       {/* 创建账号对话框 */}
-      <Dialog open={createDrawerOpen} onOpenChange={setCreateDrawerOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>添加云客账号</DialogTitle>
-            <DialogDescription>
-              添加新的云客账号凭证，如果手机号已存在则更新密码
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...createForm}>
-            <form
-              onSubmit={createForm.handleSubmit(handleCreateSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={createForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>手机号</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入手机号" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>密码</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="请输入密码" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="company_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>公司代码</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入公司代码" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>公司名称</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入公司名称" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="domain"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>域名（可选）</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入域名" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCreateDrawerOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? '创建中...' : '创建'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title="添加云客账号"
+        visible={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
+        width={425}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button theme="outline" onClick={() => setCreateModalOpen(false)}>取消</Button>
+            <Button onClick={handleCreateSubmit} loading={createMutation.isPending}>
+              {createMutation.isPending ? '创建中...' : '创建'}
+            </Button>
+          </div>
+        }
+      >
+        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 16 }}>
+          添加新的云客账号凭证，如果手机号已存在则更新密码
+        </Text>
+        <Form
+          getFormApi={(api) => { createFormRef.current = api }}
+          labelPosition="top"
+          labelWidth="100%"
+        >
+          <Form.Input
+            field="phone"
+            label="手机号"
+            placeholder="请输入手机号"
+            rules={[
+              { required: true, message: '手机号不能为空' },
+              { pattern: /^1\d{10}$/, message: '请输入正确的手机号' },
+            ]}
+          />
+          <Form.Input
+            field="password"
+            label="密码"
+            mode="password"
+            placeholder="请输入密码"
+            rules={[{ required: true, message: '密码不能为空' }]}
+          />
+          <Form.Input
+            field="company_code"
+            label="公司代码"
+            placeholder="请输入公司代码"
+            rules={[{ required: true, message: '公司代码不能为空' }]}
+          />
+          <Form.Input
+            field="company_name"
+            label="公司名称"
+            placeholder="请输入公司名称"
+            rules={[{ required: true, message: '公司名称不能为空' }]}
+          />
+          <Form.Input
+            field="domain"
+            label="域名（可选）"
+            placeholder="请输入域名"
+          />
+        </Form>
+      </Modal>
 
       {/* 编辑账号对话框 */}
-      <Dialog open={editDrawerOpen} onOpenChange={setEditDrawerOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>编辑账号</DialogTitle>
-            <DialogDescription>
-              修改账号信息，留空密码则不修改密码
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...updateForm}>
-            <form
-              onSubmit={updateForm.handleSubmit(handleUpdateSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={updateForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>手机号</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入手机号" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={updateForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>新密码（可选）</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="留空则不修改密码" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={updateForm.control}
-                name="company_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>公司代码</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入公司代码" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={updateForm.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>公司名称</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入公司名称" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={updateForm.control}
-                name="domain"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>域名（可选）</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入域名" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={updateForm.control}
-                name="notify_robot_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>登录失败通知机器人</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择通知机器人（可选）" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">不通知</SelectItem>
-                        {robots.map((robot) => (
-                          <SelectItem key={robot.id} value={robot.id}>
-                            {robot.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditDrawerOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? '更新中...' : '更新'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title="编辑账号"
+        visible={editModalOpen}
+        onCancel={() => setEditModalOpen(false)}
+        width={425}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button theme="outline" onClick={() => setEditModalOpen(false)}>取消</Button>
+            <Button onClick={handleUpdateSubmit} loading={updateMutation.isPending}>
+              {updateMutation.isPending ? '更新中...' : '更新'}
+            </Button>
+          </div>
+        }
+      >
+        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 16 }}>
+          修改账号信息，留空密码则不修改密码
+        </Text>
+        <Form
+          getFormApi={(api) => { updateFormRef.current = api }}
+          labelPosition="top"
+          labelWidth="100%"
+        >
+          <Form.Input
+            field="phone"
+            label="手机号"
+            placeholder="请输入手机号"
+            rules={[
+              { required: true, message: '手机号不能为空' },
+              { pattern: /^1\d{10}$/, message: '请输入正确的手机号' },
+            ]}
+          />
+          <Form.Input
+            field="password"
+            label="新密码（可选）"
+            mode="password"
+            placeholder="留空则不修改密码"
+          />
+          <Form.Input
+            field="company_code"
+            label="公司代码"
+            placeholder="请输入公司代码"
+            rules={[{ required: true, message: '公司代码不能为空' }]}
+          />
+          <Form.Input
+            field="company_name"
+            label="公司名称"
+            placeholder="请输入公司名称"
+            rules={[{ required: true, message: '公司名称不能为空' }]}
+          />
+          <Form.Input
+            field="domain"
+            label="域名（可选）"
+            placeholder="请输入域名"
+          />
+          <Form.Select
+            field="notify_robot_id"
+            label="登录失败通知机器人"
+            placeholder="选择通知机器人（可选）"
+            optionList={robotOptions}
+          />
+        </Form>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除账号 {selectedCredential?.phone} 吗？此操作无法撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        okText="删除"
+        okType="danger"
+        cancelText="取消"
+        onOk={handleDeleteConfirm}
+      >
+        确定要删除账号 {selectedCredential?.phone} 吗？此操作无法撤销。
+      </Modal>
     </Main>
   )
 }

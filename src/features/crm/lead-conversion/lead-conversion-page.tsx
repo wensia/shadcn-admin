@@ -1,18 +1,21 @@
 /**
- * 转化管理主页面
+ * 转化管理主页面 (Semi Design)
  * 统一管理诺到、到访、缴费记录
  */
 
 import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, RefreshCw, Search, Filter } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import {
+  Button,
+  Input,
+  Tabs,
+  TabPane,
+  Toast,
+  Typography,
+} from '@douyinfe/semi-ui-19'
+import { IconPlus, IconRefresh, IconSearch } from '@douyinfe/semi-icons'
 import { StatsCards } from './components/stats-cards'
 import { ConversionTable, type ConversionRecord } from './components/conversion-table'
 import { PaymentDialog } from './components/payment-dialog'
@@ -28,6 +31,8 @@ import type {
 import { VisitStatus, visitStatusLabels, paymentStatusLabels, paymentMethodLabels, paymentTypeLabels } from './types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
+const { Title, Text } = Typography
+
 // Tab 选项
 type TabValue = 'all' | 'scheduled' | 'visited' | 'payment'
 
@@ -35,7 +40,7 @@ const tabOptions: { value: TabValue; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'scheduled', label: '诺到' },
   { value: 'visited', label: '到访' },
-  { value: 'payment', label: '缴费' }
+  { value: 'payment', label: '缴费' },
 ]
 
 export function LeadConversionPage() {
@@ -53,7 +58,7 @@ export function LeadConversionPage() {
   const paymentParams: PaymentListParams = {
     page: pagination.page,
     size: pagination.size,
-    keyword: searchKeyword || undefined
+    keyword: searchKeyword || undefined,
   }
 
   const visitParams: VisitScheduleListParams = {
@@ -61,7 +66,7 @@ export function LeadConversionPage() {
     size: pagination.size,
     keyword: searchKeyword || undefined,
     status: activeTab === 'scheduled' ? VisitStatus.SCHEDULED :
-            activeTab === 'visited' ? VisitStatus.VISITED : undefined
+            activeTab === 'visited' ? VisitStatus.VISITED : undefined,
   }
 
   // 获取缴费记录
@@ -71,7 +76,7 @@ export function LeadConversionPage() {
       const response = await paymentApi.getPayments(paymentParams)
       return response.data
     },
-    enabled: activeTab === 'all' || activeTab === 'payment'
+    enabled: activeTab === 'all' || activeTab === 'payment',
   })
 
   // 获取到访记录
@@ -81,7 +86,7 @@ export function LeadConversionPage() {
       const response = await visitScheduleApi.getVisitSchedules(visitParams)
       return response.data
     },
-    enabled: activeTab === 'all' || activeTab === 'scheduled' || activeTab === 'visited'
+    enabled: activeTab === 'all' || activeTab === 'scheduled' || activeTab === 'visited',
   })
 
   // 获取缴费统计
@@ -90,7 +95,7 @@ export function LeadConversionPage() {
     queryFn: async () => {
       const response = await paymentApi.getStats()
       return response.data
-    }
+    },
   })
 
   // 获取到访统计
@@ -99,7 +104,7 @@ export function LeadConversionPage() {
     queryFn: async () => {
       const response = await visitScheduleApi.getStats()
       return response.data
-    }
+    },
   })
 
   // 合并统计数据
@@ -107,13 +112,13 @@ export function LeadConversionPage() {
     if (!paymentStats && !visitStats) return undefined
     return {
       scheduled_total: visitStats?.scheduled_count ?? 0,
-      scheduled_month: visitStats?.scheduled_count ?? 0, // TODO: 后端添加月度统计
+      scheduled_month: visitStats?.scheduled_count ?? 0,
       visited_total: visitStats?.visited_count ?? 0,
       visited_month: visitStats?.visited_count ?? 0,
       payment_total: paymentStats?.total_count ?? 0,
       payment_month: paymentStats?.month_count ?? 0,
       payment_amount_total: paymentStats?.total_amount ?? 0,
-      payment_amount_month: paymentStats?.month_amount ?? 0
+      payment_amount_month: paymentStats?.month_amount ?? 0,
     }
   }, [paymentStats, visitStats])
 
@@ -121,7 +126,6 @@ export function LeadConversionPage() {
   const tableData = useMemo<ConversionRecord[]>(() => {
     const records: ConversionRecord[] = []
 
-    // 添加缴费记录
     if (activeTab === 'all' || activeTab === 'payment') {
       paymentsData?.items?.forEach((payment: Payment) => {
         records.push({
@@ -140,18 +144,14 @@ export function LeadConversionPage() {
           remark: payment.remark,
           created_at: payment.created_at,
           created_by_name: payment.created_by_name,
-          original: payment
+          original: payment,
         })
       })
     }
 
-    // 添加到访记录
     if (activeTab === 'all' || activeTab === 'scheduled' || activeTab === 'visited') {
       visitsData?.items?.forEach((visit: VisitSchedule) => {
-        // 根据状态判断类型
         const type: ConversionType = visit.status === VisitStatus.VISITED ? 'visited' : 'scheduled'
-
-        // 如果是特定 tab，只显示对应类型
         if (activeTab === 'scheduled' && type !== 'scheduled') return
         if (activeTab === 'visited' && type !== 'visited') return
 
@@ -168,24 +168,19 @@ export function LeadConversionPage() {
           remark: visit.remark,
           created_at: visit.created_at,
           created_by_name: visit.created_by_name,
-          original: visit
+          original: visit,
         })
       })
     }
 
-    // 按时间倒序排序
     records.sort((a, b) => new Date(b.record_time).getTime() - new Date(a.record_time).getTime())
-
     return records
   }, [activeTab, paymentsData, visitsData])
 
   // 计算总数
   const total = useMemo(() => {
-    if (activeTab === 'payment') {
-      return paymentsData?.total ?? 0
-    } else if (activeTab === 'scheduled' || activeTab === 'visited') {
-      return visitsData?.total ?? 0
-    }
+    if (activeTab === 'payment') return paymentsData?.total ?? 0
+    if (activeTab === 'scheduled' || activeTab === 'visited') return visitsData?.total ?? 0
     return (paymentsData?.total ?? 0) + (visitsData?.total ?? 0)
   }, [activeTab, paymentsData, visitsData])
 
@@ -197,7 +192,7 @@ export function LeadConversionPage() {
     queryClient.invalidateQueries({ queryKey: ['visits'] })
     queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
     queryClient.invalidateQueries({ queryKey: ['visit-stats'] })
-    toast.success('已刷新')
+    Toast.success({ content: '已刷新' })
   }
 
   // 新建缴费
@@ -208,8 +203,7 @@ export function LeadConversionPage() {
 
   // 查看记录
   const handleView = (record: ConversionRecord) => {
-    // TODO: 实现查看详情
-    toast.info(`查看${record.type === 'payment' ? '缴费' : '到访'}记录`)
+    Toast.info({ content: `查看${record.type === 'payment' ? '缴费' : '到访'}记录` })
   }
 
   // 编辑记录
@@ -218,8 +212,7 @@ export function LeadConversionPage() {
       setEditingPayment(record.original as Payment)
       setPaymentDialogOpen(true)
     } else {
-      // TODO: 实现到访记录编辑
-      toast.info('到访记录编辑功能开发中')
+      Toast.info({ content: '到访记录编辑功能开发中' })
     }
   }
 
@@ -231,13 +224,13 @@ export function LeadConversionPage() {
       if (record.type === 'payment') {
         const payment = record.original as Payment
         await paymentApi.deletePayment(payment.id)
-        toast.success('删除成功')
+        Toast.success({ content: '删除成功' })
         queryClient.invalidateQueries({ queryKey: ['payments'] })
         queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
       } else {
         const visit = record.original as VisitSchedule
         await visitScheduleApi.deleteVisitSchedule(visit.id)
-        toast.success('删除成功')
+        Toast.success({ content: '删除成功' })
         queryClient.invalidateQueries({ queryKey: ['visits'] })
         queryClient.invalidateQueries({ queryKey: ['visit-stats'] })
       }
@@ -255,64 +248,58 @@ export function LeadConversionPage() {
   return (
     <>
       <Main fixed className="min-h-0">
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+        <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
           {/* 页面标题 */}
-          <div className="flex flex-shrink-0 flex-wrap items-end justify-between gap-2">
+          <div style={{ display: 'flex', flexShrink: 0, flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">转化管理</h1>
-              <p className="text-xs text-muted-foreground">管理诺到、到访、缴费记录</p>
+              <Title heading={5} style={{ margin: 0 }}>转化管理</Title>
+              <Text type="tertiary" style={{ fontSize: 12 }}>管理诺到、到访、缴费记录</Text>
             </div>
-            <Button onClick={handleCreatePayment} size="sm" className="h-8">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
+            <Button
+              theme="solid"
+              onClick={handleCreatePayment}
+              icon={<IconPlus />}
+            >
               添加缴费
             </Button>
           </div>
 
           {/* 统计卡片 */}
-          <div className="flex-shrink-0">
+          <div style={{ flexShrink: 0 }}>
             <StatsCards stats={stats} isLoading={!stats} />
           </div>
 
           {/* 工具栏 */}
-          <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-4">
+          <div style={{ display: 'flex', flexShrink: 0, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList>
-                {tabOptions.map((tab) => (
-                  <TabsTrigger key={tab.value} value={tab.value}>
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+            <Tabs type="button" activeKey={activeTab} onChange={handleTabChange}>
+              {tabOptions.map((tab) => (
+                <TabPane tab={tab.label} itemKey={tab.value} key={tab.value} />
+              ))}
             </Tabs>
 
             {/* 搜索和操作 */}
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="搜索学生姓名/手机号"
-                  value={searchKeyword}
-                  onChange={(e) => {
-                    setSearchKeyword(e.target.value)
-                    setPagination({ ...pagination, page: 1 })
-                  }}
-                  className="pl-9 w-[200px] h-8"
-                />
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Input
+                prefix={<IconSearch />}
+                placeholder="搜索学生姓名/手机号"
+                value={searchKeyword}
+                onChange={(v) => {
+                  setSearchKeyword(v)
+                  setPagination({ ...pagination, page: 1 })
+                }}
+                style={{ width: 200 }}
+                showClear
+              />
               <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
+                icon={<IconRefresh />}
                 onClick={handleRefresh}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              />
             </div>
           </div>
 
           {/* 数据表格 */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
             <ConversionTable
               data={tableData}
               total={total}

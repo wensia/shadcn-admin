@@ -1,34 +1,34 @@
 /**
  * StatusBadge 组件
- * 带圆点指示器的状态标签，使用 Anthropic 品牌色
+ * 带圆点指示器的状态标签（基于 Semi Design Tag）
  *
- * Anthropic 品牌色:
- * - Orange: #d97757 (主要强调色)
- * - Green: #788c5d (次要强调色)
+ * 状态色:
+ * - Orange: #f97316 (警告/待处理)
+ * - Green: #788c5d (成功/已完成)
  * - Gray: #b0aea5 (次要元素)
  * - Red: 危险/无效状态
  */
 
-import { Badge } from './badge'
+import { Tag } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
 
-// Anthropic 品牌色状态颜色类型
+// 状态颜色类型
 export type StatusColor = 'orange' | 'green' | 'gray' | 'red'
 
-// Anthropic 品牌色 HEX 值
-const anthropicColors: Record<StatusColor, string> = {
-  orange: '#d97757',
+// 状态色 HEX 值
+const statusColors: Record<StatusColor, string> = {
+  orange: '#f97316',
   green: '#788c5d',
   gray: '#b0aea5',
   red: '#dc2626',
 }
 
-// Badge variant 映射
-const variantMap: Record<StatusColor, `status-${StatusColor}`> = {
-  orange: 'status-orange',
-  green: 'status-green',
-  gray: 'status-gray',
-  red: 'status-red',
+// 浅色背景映射
+const statusBgColors: Record<StatusColor, string> = {
+  orange: 'rgba(249, 115, 22, 0.1)',
+  green: 'rgba(120, 140, 93, 0.1)',
+  gray: 'rgba(176, 174, 165, 0.1)',
+  red: 'rgba(220, 38, 38, 0.1)',
 }
 
 interface StatusBadgeProps {
@@ -44,7 +44,7 @@ interface StatusBadgeProps {
 
 /**
  * 状态标签组件
- * 采用 Anthropic 品牌色：浅色背景 + 深色文字 + 圆点指示器
+ * 浅色背景 + 状态色文字 + 圆点指示器
  */
 export function StatusBadge({
   label,
@@ -53,15 +53,22 @@ export function StatusBadge({
   className
 }: StatusBadgeProps) {
   return (
-    <Badge variant={variantMap[color]} className={cn('gap-1.5', className)}>
+    <Tag
+      className={cn('gap-1.5', className)}
+      style={{
+        backgroundColor: statusBgColors[color],
+        color: statusColors[color],
+        borderColor: 'transparent',
+      }}
+    >
       {showDot && (
         <span
-          className="w-1.5 h-1.5 rounded-full shrink-0"
-          style={{ backgroundColor: anthropicColors[color] }}
+          className="w-1.5 h-1.5 rounded-full shrink-0 inline-block"
+          style={{ backgroundColor: statusColors[color] }}
         />
       )}
       {label}
-    </Badge>
+    </Tag>
   )
 }
 

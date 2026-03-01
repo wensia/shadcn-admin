@@ -1,6 +1,6 @@
 /**
- * 日控表主页面
- * 简洁商务风格 - 基于 Anthropic 品牌色彩系统
+ * 日控表主页面 - Semi Design 版
+ * 简洁商务风格 - 基于 Semi Design 官方配色
  */
 
 import { useState, useMemo } from 'react'
@@ -8,32 +8,26 @@ import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
-import { Tabs, TabsContent } from '@/components/ui/tabs'
-import { DateRangePickerSingle } from '@/components/date-picker'
+import { Tabs, TabPane, Select, DatePicker } from '@douyinfe/semi-ui-19'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  UserCheck,
-  CalendarCheck,
-  Wallet,
-  Calendar,
-  TrendingUp,
-  BarChart3,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+  IconUserGroup,
+  IconCalendarClock,
+  IconCreditCard,
+  IconCalendar,
+  IconHistogram,
+  IconTick,
+  IconArrowUp,
+} from '@douyinfe/semi-icons'
 import { PromisedVisitTab } from './components/promised-visit-tab'
 import { ActualVisitTab } from './components/actual-visit-tab'
 import { PaymentTab } from './components/payment-tab'
 import { CalendarTab } from './components/calendar-tab'
 import { ReportTab } from './components/report-tab'
 import { getVisitSchedules, getPayments } from './api'
-import { tabThemes, brandColors, type TabType } from './theme'
+import { brandColors, type TabType } from './theme'
 import { apiClient } from '@/lib/api/client'
+
+const { RangePicker } = DatePicker
 
 // 获取本月第一天
 const getMonthStartStr = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
@@ -117,69 +111,72 @@ export function DailyControlPage() {
     return Math.round((visited / (promised + visited)) * 100)
   }, [promisedStats, visitedStats])
 
-  // Tab 配置
-  const tabs = [
-    { id: 'promised' as const, icon: UserCheck, label: '诺到', count: promisedStats },
-    { id: 'visited' as const, icon: CalendarCheck, label: '到访', count: visitedStats },
-    { id: 'payment' as const, icon: Wallet, label: '缴费', count: paymentStats },
-    { id: 'calendar' as const, icon: Calendar, label: '日历', count: null },
-    { id: 'report' as const, icon: BarChart3, label: '报表', count: null },
-  ]
-
   // 统计卡片配置
   const statCards = [
-    {
-      id: 'promised',
-      icon: UserCheck,
-      label: '诺到预约',
-      value: promisedStats,
-      color: brandColors.orange,
-    },
-    {
-      id: 'visited',
-      icon: CalendarCheck,
-      label: '实际到访',
-      value: visitedStats,
-      color: brandColors.blue,
-    },
-    {
-      id: 'payment',
-      icon: Wallet,
-      label: '成功缴费',
-      value: paymentStats,
-      color: brandColors.green,
-    },
-    {
-      id: 'rate',
-      icon: TrendingUp,
-      label: '到访转化率',
-      value: `${conversionRate}%`,
-      color: brandColors.midGray,
-    },
+    { id: 'promised', icon: IconUserGroup, label: '诺到预约', value: promisedStats, color: brandColors.orange },
+    { id: 'visited', icon: IconCalendarClock, label: '实际到访', value: visitedStats, color: brandColors.blue },
+    { id: 'payment', icon: IconCreditCard, label: '成功缴费', value: paymentStats, color: brandColors.green },
+    { id: 'rate', icon: IconArrowUp, label: '到访转化率', value: `${conversionRate}%`, color: brandColors.midGray },
+  ]
+
+  // Tab 配置
+  const tabConfig: { id: TabType; icon: React.ReactNode; label: string; count: number | null }[] = [
+    { id: 'promised', icon: <IconUserGroup size="small" />, label: '诺到', count: promisedStats ?? null },
+    { id: 'visited', icon: <IconCalendarClock size="small" />, label: '到访', count: visitedStats ?? null },
+    { id: 'payment', icon: <IconCreditCard size="small" />, label: '缴费', count: paymentStats ?? null },
+    { id: 'calendar', icon: <IconCalendar size="small" />, label: '日历', count: null },
+    { id: 'report', icon: <IconHistogram size="small" />, label: '报表', count: null },
+  ]
+
+  // 处理日期范围变化
+  const handleDateRangeChange = (dateStrings: string[]) => {
+    if (dateStrings && dateStrings.length === 2) {
+      setDateRange({ from: dateStrings[0], to: dateStrings[1] })
+    }
+  }
+
+  // 解析日期范围为 Date[]
+  const dateRangeValue = useMemo(() => {
+    if (dateRange.from && dateRange.to) {
+      return [new Date(dateRange.from), new Date(dateRange.to)] as [Date, Date]
+    }
+    return undefined
+  }, [dateRange.from, dateRange.to])
+
+  // 校区选项
+  const campusOptions = [
+    { value: 'all', label: '全部校区' },
+    ...campuses.map((campus: { id: string; name: string }) => ({
+      value: campus.id,
+      label: campus.name,
+    })),
   ]
 
   return (
-    <Main fixed className="min-h-0">
-      {/* 页面容器 */}
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden">
+    <Main fixed style={{ minHeight: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 20, overflow: 'hidden' }}>
 
-        {/* 顶部统计栏 - 紧凑内联样式 */}
-        <div className="flex-shrink-0 flex items-center gap-6">
+        {/* 顶部统计栏 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0 }}>
           {statCards.map((card) => {
             const Icon = card.icon
             return (
-              <div key={card.id} className="flex items-center gap-2">
+              <div key={card.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${card.color}15` }}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: `${card.color}15`,
+                    flexShrink: 0,
+                  }}
                 >
-                  <Icon className="w-4 h-4" style={{ color: card.color }} />
+                  <Icon style={{ color: card.color }} />
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-semibold text-[#141413] dark:text-slate-100">
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 20, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
                     {card.value ?? '-'}
                   </span>
-                  <span className="text-xs text-[#b0aea5] dark:text-slate-400">
+                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
                     {card.label}
                   </span>
                 </div>
@@ -189,49 +186,38 @@ export function DailyControlPage() {
         </div>
 
         {/* Tabs 区域 */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as TabType)}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          {/* Tab 导航栏 - 简洁风格 */}
-          <div className="flex flex-shrink-0 items-center justify-between gap-4 pb-1">
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          {/* Tab 导航栏 + 筛选器 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, paddingBottom: 4, flexShrink: 0 }}>
             {/* Tab 按钮组 */}
-            <div className="flex items-center border-b border-[#e8e6dc] dark:border-slate-800">
-              {tabs.map((tab) => {
-                const theme = tabThemes[tab.id]
+            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #e8e6dc' }}>
+              {tabConfig.map((tab) => {
                 const isActive = activeTab === tab.id
-                const Icon = tab.icon
-
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                      'border-b-2 -mb-[1px]',
-                      isActive ? [
-                        'border-[#141413] dark:border-slate-100',
-                        'text-[#141413] dark:text-slate-100',
-                      ] : [
-                        'border-transparent',
-                        'text-[#b0aea5] dark:text-slate-500',
-                        'hover:text-[#141413] dark:hover:text-slate-300',
-                      ]
-                    )}
+                    style={{
+                      position: 'relative',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 16px', fontSize: 14, fontWeight: 500,
+                      transition: 'color 0.15s',
+                      borderBottom: `2px solid ${isActive ? 'var(--semi-color-text-0)' : 'transparent'}`,
+                      marginBottom: -1,
+                      color: isActive ? 'var(--semi-color-text-0)' : 'var(--semi-color-text-2)',
+                      background: 'none', border: 'none', cursor: 'pointer',
+                    }}
                   >
-                    <Icon className={cn(
-                      'w-4 h-4',
-                      isActive ? 'text-[#141413] dark:text-slate-100' : 'text-[#b0aea5]'
-                    )} />
+                    {tab.icon}
                     <span>{tab.label}</span>
                     {tab.count !== null && tab.count > 0 && (
-                      <span className={cn(
-                        'min-w-[20px] h-5 px-1.5 rounded text-xs font-medium flex items-center justify-center',
-                        isActive
-                          ? 'bg-[#141413] text-white dark:bg-slate-100 dark:text-slate-900'
-                          : 'bg-[#e8e6dc] text-[#b0aea5] dark:bg-slate-800 dark:text-slate-500'
-                      )}>
+                      <span style={{
+                        minWidth: 20, height: 20, padding: '0 6px',
+                        borderRadius: 4, fontSize: 12, fontWeight: 500,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: isActive ? 'var(--semi-color-text-0)' : '#e8e6dc',
+                        color: isActive ? '#fff' : 'var(--semi-color-text-2)',
+                      }}>
                         {tab.count}
                       </span>
                     )}
@@ -240,54 +226,44 @@ export function DailyControlPage() {
               })}
             </div>
 
-            {/* 筛选器：校区 + 日期 */}
+            {/* 筛选器 */}
             {activeTab !== 'calendar' && (
-              <div className="flex items-center gap-3">
-                {/* 校区筛选 */}
-                <Select value={selectedCampusId} onValueChange={setSelectedCampusId}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="选择校区" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">全部校区</SelectItem>
-                    {campuses.map((campus: { id: string; name: string }) => (
-                      <SelectItem key={campus.id} value={campus.id}>
-                        {campus.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {/* 日期选择器 */}
-                <DateRangePickerSingle
-                  value={dateRange}
-                  onChange={setDateRange}
-                  placeholder="选择日期范围"
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Select
+                  value={selectedCampusId}
+                  onChange={(v) => setSelectedCampusId(v as string)}
+                  optionList={campusOptions}
+                  style={{ width: 140 }}
+                />
+                <RangePicker
+                  value={dateRangeValue}
+                  onChange={(_date, dateStrings) => handleDateRangeChange(dateStrings as string[])}
+                  style={{ width: 260 }}
+                  density="compact"
                 />
               </div>
             )}
           </div>
 
           {/* Tab 内容区域 */}
-          <TabsContent value="promised" className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-            <PromisedVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
-          </TabsContent>
-
-          <TabsContent value="visited" className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-            <ActualVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
-          </TabsContent>
-
-          <TabsContent value="payment" className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-            <PaymentTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
-          </TabsContent>
-
-          <TabsContent value="calendar" className="mt-4 flex-1 overflow-hidden">
-            <CalendarTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
-          </TabsContent>
-
-          <TabsContent value="report" className="mt-4 flex-1 overflow-auto">
-            <ReportTab dateFrom={dateRange.from} dateTo={dateRange.to} />
-          </TabsContent>
-        </Tabs>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', paddingTop: 16 }}>
+            {activeTab === 'promised' && (
+              <PromisedVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
+            )}
+            {activeTab === 'visited' && (
+              <ActualVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
+            )}
+            {activeTab === 'payment' && (
+              <PaymentTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
+            )}
+            {activeTab === 'calendar' && (
+              <CalendarTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
+            )}
+            {activeTab === 'report' && (
+              <ReportTab dateFrom={dateRange.from} dateTo={dateRange.to} />
+            )}
+          </div>
+        </div>
       </div>
     </Main>
   )

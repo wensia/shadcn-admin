@@ -1,28 +1,7 @@
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useRef, useEffect } from 'react'
+import { SideSheet, Form, Button, RadioGroup, Radio } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { showSubmittedData } from '@/lib/show-submitted-data'
-import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import { SelectDropdown } from '@/components/select-dropdown'
 import { type Task } from '../data/schema'
 
 type TaskMutateDrawerProps = {
@@ -31,182 +10,112 @@ type TaskMutateDrawerProps = {
   currentRow?: Task
 }
 
-const formSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
-  status: z.string().min(1, 'Please select a status.'),
-  label: z.string().min(1, 'Please select a label.'),
-  priority: z.string().min(1, 'Please choose a priority.'),
-})
-type TaskForm = z.infer<typeof formSchema>
-
 export function TasksMutateDrawer({
   open,
   onOpenChange,
   currentRow,
 }: TaskMutateDrawerProps) {
   const isUpdate = !!currentRow
+  const formRef = useRef<FormApi>()
 
-  const form = useForm<TaskForm>({
-    resolver: zodResolver(formSchema),
-    defaultValues: currentRow ?? {
-      title: '',
-      status: '',
-      label: '',
-      priority: '',
-    },
-  })
+  useEffect(() => {
+    if (open && formRef.current) {
+      if (isUpdate && currentRow) {
+        formRef.current.setValues({
+          title: currentRow.title,
+          status: currentRow.status,
+          label: currentRow.label,
+          priority: currentRow.priority,
+        })
+      } else {
+        formRef.current.setValues({
+          title: '',
+          status: '',
+          label: '',
+          priority: '',
+        })
+      }
+    }
+  }, [open, isUpdate, currentRow])
 
-  const onSubmit = (data: TaskForm) => {
-    // do something with the form data
+  const handleSubmit = (data: Record<string, unknown>) => {
     onOpenChange(false)
-    form.reset()
+    formRef.current?.reset()
     showSubmittedData(data)
   }
 
+  const handleCancel = () => {
+    onOpenChange(false)
+    formRef.current?.reset()
+  }
+
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(v) => {
-        onOpenChange(v)
-        form.reset()
-      }}
-    >
-      <SheetContent className='flex flex-col'>
-        <SheetHeader className='text-start'>
-          <SheetTitle>{isUpdate ? 'Update' : 'Create'} Task</SheetTitle>
-          <SheetDescription>
-            {isUpdate
-              ? 'Update the task by providing necessary info.'
-              : 'Add a new task by providing necessary info.'}
-            Click save when you&apos;re done.
-          </SheetDescription>
-        </SheetHeader>
-        <Form {...form}>
-          <form
-            id='tasks-form'
-            onSubmit={form.handleSubmit(onSubmit)}
-            className='flex-1 space-y-6 overflow-y-auto'
+    <SideSheet
+      title={`${isUpdate ? 'Update' : 'Create'} Task`}
+      visible={open}
+      onCancel={handleCancel}
+      width={400}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={handleCancel}>Close</Button>
+          <Button
+            theme='solid'
+            type='primary'
+            onClick={() => formRef.current?.submitForm()}
           >
-            <FormField
-              control={form.control}
-              name='title'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder='Enter a title' />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='status'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <SelectDropdown
-                    defaultValue={field.value}
-                    onValueChange={field.onChange}
-                    placeholder='Select dropdown'
-                    items={[
-                      { label: 'In Progress', value: 'in progress' },
-                      { label: 'Backlog', value: 'backlog' },
-                      { label: 'Todo', value: 'todo' },
-                      { label: 'Canceled', value: 'canceled' },
-                      { label: 'Done', value: 'done' },
-                    ]}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='label'
-              render={({ field }) => (
-                <FormItem className='relative'>
-                  <FormLabel>Label</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className='flex flex-col space-y-1'
-                    >
-                      <FormItem className='flex items-center'>
-                        <FormControl>
-                          <RadioGroupItem value='documentation' />
-                        </FormControl>
-                        <FormLabel className='font-normal'>
-                          Documentation
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className='flex items-center'>
-                        <FormControl>
-                          <RadioGroupItem value='feature' />
-                        </FormControl>
-                        <FormLabel className='font-normal'>Feature</FormLabel>
-                      </FormItem>
-                      <FormItem className='flex items-center'>
-                        <FormControl>
-                          <RadioGroupItem value='bug' />
-                        </FormControl>
-                        <FormLabel className='font-normal'>Bug</FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='priority'
-              render={({ field }) => (
-                <FormItem className='relative'>
-                  <FormLabel>Priority</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className='flex flex-col space-y-1'
-                    >
-                      <FormItem className='flex items-center'>
-                        <FormControl>
-                          <RadioGroupItem value='high' />
-                        </FormControl>
-                        <FormLabel className='font-normal'>High</FormLabel>
-                      </FormItem>
-                      <FormItem className='flex items-center'>
-                        <FormControl>
-                          <RadioGroupItem value='medium' />
-                        </FormControl>
-                        <FormLabel className='font-normal'>Medium</FormLabel>
-                      </FormItem>
-                      <FormItem className='flex items-center'>
-                        <FormControl>
-                          <RadioGroupItem value='low' />
-                        </FormControl>
-                        <FormLabel className='font-normal'>Low</FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
-        <SheetFooter className='gap-2'>
-          <SheetClose asChild>
-            <Button variant='outline'>Close</Button>
-          </SheetClose>
-          <Button form='tasks-form' type='submit'>
             Save changes
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </div>
+      }
+    >
+      <p className='text-sm text-muted-foreground mb-4'>
+        {isUpdate
+          ? 'Update the task by providing necessary info.'
+          : 'Add a new task by providing necessary info.'}
+        {' '}Click save when you&apos;re done.
+      </p>
+      <Form
+        getFormApi={(api) => (formRef.current = api)}
+        onSubmit={handleSubmit}
+      >
+        <Form.Input
+          field='title'
+          label='Title'
+          placeholder='Enter a title'
+          rules={[{ required: true, message: 'Title is required.' }]}
+        />
+        <Form.Select
+          field='status'
+          label='Status'
+          placeholder='Select status'
+          optionList={[
+            { label: 'In Progress', value: 'in progress' },
+            { label: 'Backlog', value: 'backlog' },
+            { label: 'Todo', value: 'todo' },
+            { label: 'Canceled', value: 'canceled' },
+            { label: 'Done', value: 'done' },
+          ]}
+          rules={[{ required: true, message: 'Please select a status.' }]}
+        />
+        <Form.RadioGroup
+          field='label'
+          label='Label'
+          rules={[{ required: true, message: 'Please select a label.' }]}
+        >
+          <Radio value='documentation'>Documentation</Radio>
+          <Radio value='feature'>Feature</Radio>
+          <Radio value='bug'>Bug</Radio>
+        </Form.RadioGroup>
+        <Form.RadioGroup
+          field='priority'
+          label='Priority'
+          rules={[{ required: true, message: 'Please choose a priority.' }]}
+        >
+          <Radio value='high'>High</Radio>
+          <Radio value='medium'>Medium</Radio>
+          <Radio value='low'>Low</Radio>
+        </Form.RadioGroup>
+      </Form>
+    </SideSheet>
   )
 }

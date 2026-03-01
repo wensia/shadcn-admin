@@ -15,10 +15,7 @@ import {
   MessagesSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
+import { Avatar, Button, Divider } from '@douyinfe/semi-ui-19'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -81,20 +78,20 @@ export function Chats() {
                 </div>
 
                 <Button
-                  size='icon'
-                  variant='ghost'
+                  theme='borderless'
+                  type='tertiary'
+                  icon={<Edit size={24} />}
                   onClick={() => setCreateConversationDialog(true)}
                   className='rounded-lg'
-                >
-                  <Edit size={24} className='stroke-muted-foreground' />
-                </Button>
+                />
               </div>
 
               <label
                 className={cn(
                   'focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden',
-                  'flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-2'
+                  'flex h-10 w-full items-center space-x-0 rounded-md border ps-2'
                 )}
+                style={{ borderColor: 'var(--semi-color-border)' }}
               >
                 <SearchIcon size={15} className='me-2 stroke-slate-500' />
                 <span className='sr-only'>Search</span>
@@ -108,7 +105,7 @@ export function Chats() {
               </label>
             </div>
 
-            <ScrollArea className='-mx-3 h-full overflow-scroll p-3'>
+            <div className='-mx-3 h-full overflow-auto p-3'>
               {filteredChatList.map((chatUsr) => {
                 const { id, profile, username, messages, fullName } = chatUsr
                 const lastConvo = messages[0]
@@ -131,60 +128,55 @@ export function Chats() {
                       }}
                     >
                       <div className='flex gap-2'>
-                        <Avatar>
-                          <AvatarImage src={profile} alt={username} />
-                          <AvatarFallback>{username}</AvatarFallback>
-                        </Avatar>
+                        <Avatar size='default' src={profile} alt={username}>{username}</Avatar>
                         <div>
                           <span className='col-start-2 row-span-2 font-medium'>
                             {fullName}
                           </span>
-                          <span className='col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90'>
+                          <span className='col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis' style={{ color: 'var(--semi-color-text-2)' }}>
                             {lastMsg}
                           </span>
                         </div>
                       </div>
                     </button>
-                    <Separator className='my-1' />
+                    <Divider style={{ margin: '4px 0' }} />
                   </Fragment>
                 )
               })}
-            </ScrollArea>
+            </div>
           </div>
 
           {/* Right Side */}
           {selectedUser ? (
             <div
               className={cn(
-                'absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md',
+                'absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md',
                 mobileSelectedUser && 'start-0 flex'
               )}
+              style={{ background: 'var(--semi-color-bg-0)', borderColor: 'var(--semi-color-border)' }}
             >
               {/* Top Part */}
-              <div className='mb-1 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md'>
+              <div className='mb-1 flex flex-none justify-between p-4 shadow-lg sm:rounded-t-md' style={{ background: 'var(--semi-color-bg-1)' }}>
                 {/* Left */}
                 <div className='flex gap-3'>
                   <Button
-                    size='icon'
-                    variant='ghost'
+                    theme='borderless'
+                    type='tertiary'
+                    icon={<ArrowLeft className='rtl:rotate-180' />}
                     className='-ms-2 h-full sm:hidden'
                     onClick={() => setMobileSelectedUser(null)}
-                  >
-                    <ArrowLeft className='rtl:rotate-180' />
-                  </Button>
+                  />
                   <div className='flex items-center gap-2 lg:gap-4'>
-                    <Avatar className='size-9 lg:size-11'>
-                      <AvatarImage
-                        src={selectedUser.profile}
-                        alt={selectedUser.username}
-                      />
-                      <AvatarFallback>{selectedUser.username}</AvatarFallback>
-                    </Avatar>
+                    <Avatar
+                      size='small'
+                      src={selectedUser.profile}
+                      alt={selectedUser.username}
+                    >{selectedUser.username}</Avatar>
                     <div>
                       <span className='col-start-2 row-span-2 text-sm font-medium lg:text-base'>
                         {selectedUser.fullName}
                       </span>
-                      <span className='col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm'>
+                      <span className='col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis lg:max-w-none lg:text-sm' style={{ color: 'var(--semi-color-text-2)' }}>
                         {selectedUser.title}
                       </span>
                     </div>
@@ -194,26 +186,23 @@ export function Chats() {
                 {/* Right */}
                 <div className='-me-1 flex items-center gap-1 lg:gap-2'>
                   <Button
-                    size='icon'
-                    variant='ghost'
+                    theme='borderless'
+                    type='tertiary'
+                    icon={<Video size={22} />}
                     className='hidden size-8 rounded-full sm:inline-flex lg:size-10'
-                  >
-                    <Video size={22} className='stroke-muted-foreground' />
-                  </Button>
+                  />
                   <Button
-                    size='icon'
-                    variant='ghost'
+                    theme='borderless'
+                    type='tertiary'
+                    icon={<Phone size={22} />}
                     className='hidden size-8 rounded-full sm:inline-flex lg:size-10'
-                  >
-                    <Phone size={22} className='stroke-muted-foreground' />
-                  </Button>
+                  />
                   <Button
-                    size='icon'
-                    variant='ghost'
+                    theme='borderless'
+                    type='tertiary'
+                    icon={<MoreVertical className='sm:size-5' />}
                     className='h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6'
-                  >
-                    <MoreVertical className='stroke-muted-foreground sm:size-5' />
-                  </Button>
+                  />
                 </div>
               </div>
 
@@ -254,38 +243,26 @@ export function Chats() {
                   </div>
                 </div>
                 <form className='flex w-full flex-none gap-2'>
-                  <div className='flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4'>
+                  <div className='flex flex-1 items-center gap-2 rounded-md border px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4' style={{ borderColor: 'var(--semi-color-border)', background: 'var(--semi-color-bg-1)' }}>
                     <div className='space-x-1'>
                       <Button
-                        size='icon'
-                        type='button'
-                        variant='ghost'
+                        theme='borderless'
+                        type='tertiary'
+                        icon={<Plus size={20} />}
                         className='h-8 rounded-md'
-                      >
-                        <Plus size={20} className='stroke-muted-foreground' />
-                      </Button>
+                      />
                       <Button
-                        size='icon'
-                        type='button'
-                        variant='ghost'
+                        theme='borderless'
+                        type='tertiary'
+                        icon={<ImagePlus size={20} />}
                         className='hidden h-8 rounded-md lg:inline-flex'
-                      >
-                        <ImagePlus
-                          size={20}
-                          className='stroke-muted-foreground'
-                        />
-                      </Button>
+                      />
                       <Button
-                        size='icon'
-                        type='button'
-                        variant='ghost'
+                        theme='borderless'
+                        type='tertiary'
+                        icon={<Paperclip size={20} />}
                         className='hidden h-8 rounded-md lg:inline-flex'
-                      >
-                        <Paperclip
-                          size={20}
-                          className='stroke-muted-foreground'
-                        />
-                      </Button>
+                      />
                     </div>
                     <label className='flex-1'>
                       <span className='sr-only'>Chat Text Box</span>
@@ -296,14 +273,13 @@ export function Chats() {
                       />
                     </label>
                     <Button
-                      variant='ghost'
-                      size='icon'
+                      theme='borderless'
+                      type='tertiary'
+                      icon={<Send size={20} />}
                       className='hidden sm:inline-flex'
-                    >
-                      <Send size={20} />
-                    </Button>
+                    />
                   </div>
-                  <Button className='h-full sm:hidden'>
+                  <Button theme='solid' className='h-full sm:hidden'>
                     <Send size={18} /> Send
                   </Button>
                 </form>
@@ -312,20 +288,21 @@ export function Chats() {
           ) : (
             <div
               className={cn(
-                'absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col justify-center rounded-md border bg-card shadow-xs sm:static sm:z-auto sm:flex'
+                'absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col justify-center rounded-md border shadow-xs sm:static sm:z-auto sm:flex'
               )}
+              style={{ background: 'var(--semi-color-bg-1)', borderColor: 'var(--semi-color-border)' }}
             >
               <div className='flex flex-col items-center space-y-6'>
-                <div className='flex size-16 items-center justify-center rounded-full border-2 border-border'>
+                <div className='flex size-16 items-center justify-center rounded-full border-2' style={{ borderColor: 'var(--semi-color-border)' }}>
                   <MessagesSquare className='size-8' />
                 </div>
                 <div className='space-y-2 text-center'>
                   <h1 className='text-xl font-semibold'>Your messages</h1>
-                  <p className='text-sm text-muted-foreground'>
+                  <p className='text-sm' style={{ color: 'var(--semi-color-text-2)' }}>
                     Send a message to start a chat.
                   </p>
                 </div>
-                <Button onClick={() => setCreateConversationDialog(true)}>
+                <Button theme='solid' onClick={() => setCreateConversationDialog(true)}>
                   Send message
                 </Button>
               </div>

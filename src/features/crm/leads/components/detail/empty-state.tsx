@@ -1,12 +1,9 @@
 /**
- * EmptyState 空状态组件
- * 用于展示无数据状态
+ * EmptyState 空状态组件 - Semi Design 版本
  */
 
 import * as React from 'react'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@douyinfe/semi-ui-19'
 
 interface EmptyStateProps {
   icon?: React.ReactNode
@@ -26,36 +23,38 @@ export function EmptyState({
   action,
   className,
 }: EmptyStateProps) {
-  const s = useStyleClasses()
-
   return (
     <div
-      className={cn(
-        'flex flex-col items-center justify-center py-12 px-4 text-center',
-        className
-      )}
+      className={className}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '48px 16px',
+        textAlign: 'center',
+      }}
     >
       {icon && (
-        <div className="mb-4 text-muted-foreground">
+        <div style={{ marginBottom: 16, color: 'var(--semi-color-text-2)' }}>
           {React.cloneElement(icon as React.ReactElement, {
-            className: 'h-12 w-12',
+            style: { width: 48, height: 48 },
           })}
         </div>
       )}
-      <h3 className={cn(s.text.sm, 'font-medium text-foreground mb-1')}>
+      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-0)', marginBottom: 4 }}>
         {title}
-      </h3>
+      </div>
       {description && (
-        <p className={cn(s.text.xs, 'text-muted-foreground max-w-sm')}>
+        <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)', maxWidth: 360 }}>
           {description}
-        </p>
+        </div>
       )}
       {action && (
         <Button
-          variant="outline"
-          size="sm"
+          theme="light"
           onClick={action.onClick}
-          className={cn('mt-4', s.height.controlSm, s.text.xs)}
+          style={{ marginTop: 16 }}
         >
           {action.label}
         </Button>

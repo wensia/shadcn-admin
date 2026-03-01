@@ -1,65 +1,49 @@
 /**
- * Leads表格工具栏
- * 使用 shadcn-admin tasks 页面相同的筛选组件样式
- * 包含搜索、FacetedFilter筛选、批量操作等功能
+ * 线索工具栏 - Semi Design 版本
+ * 搜索、状态/意向筛选、批量操作
  */
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+  Input,
+  Select,
+  Button,
+  Dropdown,
+  Modal,
+  Typography,
+  Toast,
+  Space,
+} from '@douyinfe/semi-ui-19'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { StandaloneFacetedFilter } from '@/components/data-table/standalone-faceted-filter'
-import { DataTableViewOptions } from '@/components/data-table/view-options'
-import { Plus, RefreshCw, Filter, MoreHorizontal, X, Eye, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
-import { toast } from 'sonner'
+  IconSearch,
+  IconFilter,
+  IconMore,
+  IconEyeOpened,
+} from '@douyinfe/semi-icons'
 import {
   leadStatusLabels,
   intentionLevelLabels,
   LeadStatus,
-  IntentionLevel
+  IntentionLevel,
 } from '../types'
-import type { Table } from '@tanstack/react-table'
-import type { LeadListItem, Lead } from '../types'
+import type { Lead } from '../types'
 import { leadsApi } from '../api'
 import { LeadInfoDisplay } from './detail/lead-info-display'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-// 状态筛选选项
-const statusOptions = Object.entries(leadStatusLabels).map(([value, label]) => ({
-  label,
-  value
-}))
+const { Text } = Typography
 
-// 意向等级筛选选项
-const intentionOptions = Object.entries(intentionLevelLabels).map(([value, label]) => ({
-  label,
-  value
-}))
+const isValidPhone = (value: string) => /^1[3-9]\d{9}$/.test(value)
 
 interface LeadsToolbarProps {
-  table?: Table<LeadListItem>
+  table?: unknown
   selectedCount: number
   searchValue?: string
   statusFilter?: LeadStatus[]
   intentionFilter?: IntentionLevel[]
-  showCreateButton?: boolean
-  onCreateClick?: () => void
-  onRefreshClick: () => void
   onFilterClick: () => void
   onSearchChange?: (value: string) => void
+  onSearch?: () => void
   onStatusFilterChange?: (values: LeadStatus[]) => void
   onIntentionFilterChange?: (values: IntentionLevel[]) => void
   onBatchAssign?: () => void
@@ -68,57 +52,42 @@ interface LeadsToolbarProps {
   onBatchDelete?: () => void
 }
 
-// 验证是否为有效的11位手机号
-const isValidPhone = (value: string) => /^1[3-9]\d{9}$/.test(value)
-
 export function LeadsToolbar({
-  table,
   selectedCount,
   searchValue = '',
   statusFilter = [],
   intentionFilter = [],
-  showCreateButton = true,
-  onCreateClick,
-  onRefreshClick,
   onFilterClick,
   onSearchChange,
+  onSearch,
   onStatusFilterChange,
   onIntentionFilterChange,
   onBatchAssign,
   onBatchRelease,
   onBatchUpdateStatus,
-  onBatchDelete
+  onBatchDelete,
 }: LeadsToolbarProps) {
-  const s = useStyleClasses()
-
-  // 手机号查询详情相关状态
-  const [showLeadDialog, setShowLeadDialog] = useState(false)
   const [isLookingUp, setIsLookingUp] = useState(false)
   const [lookupLead, setLookupLead] = useState<Lead | null>(null)
+  const [showLeadModal, setShowLeadModal] = useState(false)
 
-  // 查看手机号对应的线索详情
   const handlePhoneLookup = async () => {
     if (!isValidPhone(searchValue)) return
-
     setIsLookingUp(true)
     try {
-      // 使用 checkPhoneDuplicate 查找所有匹配的线索（包含公海线索）
       const checkResult = await leadsApi.checkPhoneDuplicate(searchValue)
       const duplicateLeads = checkResult?.data?.duplicate_leads
       if (duplicateLeads && duplicateLeads.length > 0) {
-        // 找第一个有权限的线索
-        const accessibleLead = duplicateLeads.find(l => !l.no_permission)
+        const accessibleLead = duplicateLeads.find((l) => !l.no_permission)
         if (accessibleLead) {
-          // 获取完整的线索详情
           const leadDetail = await leadsApi.getLead(accessibleLead.id)
           setLookupLead(leadDetail.data)
-          setShowLeadDialog(true)
+          setShowLeadModal(true)
         } else {
-          // 所有线索都没有权限
-          toast.warning('找到线索但您没有查看权限')
+          Toast.warning({ content: '找到线索但您没有查看权限' })
         }
       } else {
-        toast.info('未找到该手机号对应的线索')
+        Toast.info({ content: '未找到该手机号对应的线索' })
       }
     } catch (error: any) {
       showApiErrorToast(error, '查询失败')
@@ -127,144 +96,154 @@ export function LeadsToolbar({
     }
   }
 
+  const batchMenuItems = [
+    onBatchAssign && {
+      node: 'item' as const,
+      name: '批量分配',
+      onClick: onBatchAssign,
+    },
+    onBatchRelease && {
+      node: 'item' as const,
+      name: '释放到公海',
+      onClick: onBatchRelease,
+    },
+    onBatchUpdateStatus && {
+      node: 'item' as const,
+      name: '修改状态',
+      onClick: onBatchUpdateStatus,
+    },
+    onBatchDelete && {
+      node: 'item' as const,
+      name: '批量删除',
+      type: 'danger' as const,
+      onClick: onBatchDelete,
+    },
+  ].filter(Boolean) as Array<{
+    node: 'item'
+    name: string
+    type?: 'danger'
+    onClick: () => void
+  }>
+
   return (
-    <div className="flex items-center justify-between pb-4">
-      <div className="flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2">
-        {/* 搜索框和快捷查看按钮 */}
-        <div className="flex items-center gap-1">
-          <div className="relative">
+    <>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 8,
+        }}
+      >
+        {/* 左侧：搜索 + 筛选 */}
+        <Space spacing={8} wrap>
+          {/* 搜索框 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Input
+              prefix={<IconSearch />}
               placeholder="搜索姓名/手机号..."
               value={searchValue}
-              onChange={(e) => onSearchChange?.(e.target.value)}
-              className={cn("h-8 w-[150px] lg:w-[250px]", searchValue && "pr-8")}
+              onChange={(v) => onSearchChange?.(v)}
+              onEnterPress={() => onSearch?.()}
+              showClear
+              style={{ width: 220 }}
             />
-            {searchValue && (
-              <button
-                type="button"
-                onClick={() => onSearchChange?.('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                title="清空搜索"
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <Button
+              onClick={() => onSearch?.()}
+            >
+              搜索
+            </Button>
+            {isValidPhone(searchValue) && (
+              <Button
+                icon={<IconEyeOpened />}
+                theme="borderless"
+                onClick={handlePhoneLookup}
+                loading={isLookingUp}
+                title="查看该手机号的线索详情"
+              />
             )}
           </div>
-          {/* 手机号快捷查看按钮 */}
-          {isValidPhone(searchValue) && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2"
-              onClick={handlePhoneLookup}
-              disabled={isLookingUp}
-              title="查看该手机号的线索详情"
-            >
-              {isLookingUp ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-        </div>
 
-        {/* FacetedFilter 筛选按钮组 */}
-        <div className="flex gap-x-2">
-          <StandaloneFacetedFilter
-            title="状态"
-            options={statusOptions}
-            selectedValues={new Set(statusFilter)}
-            onSelectedChange={(values) => onStatusFilterChange?.(Array.from(values) as LeadStatus[])}
-          />
-          <StandaloneFacetedFilter
-            title="意向等级"
-            options={intentionOptions}
-            selectedValues={new Set(intentionFilter)}
-            onSelectedChange={(values) => onIntentionFilterChange?.(Array.from(values) as IntentionLevel[])}
-          />
-        </div>
+          {/* 状态筛选 */}
+          <Select
+            placeholder="状态"
+            multiple
+            maxTagCount={2}
+            value={statusFilter}
+            onChange={(v) => onStatusFilterChange?.((v || []) as LeadStatus[])}
+            style={{ width: 200 }}
+            showClear
+          >
+            {Object.entries(leadStatusLabels).map(([value, label]) => (
+              <Select.Option key={value} value={value}>
+                {label}
+              </Select.Option>
+            ))}
+          </Select>
 
-        {/* 高级筛选按钮 */}
-        <Button variant="outline" size="sm" onClick={onFilterClick} className="h-8">
-          <Filter className="mr-1.5 h-3.5 w-3.5" />
-          高级筛选
-        </Button>
-      </div>
+          {/* 意向等级筛选 */}
+          <Select
+            placeholder="意向等级"
+            multiple
+            value={intentionFilter}
+            onChange={(v) =>
+              onIntentionFilterChange?.((v || []) as IntentionLevel[])
+            }
+            style={{ width: 160 }}
+            showClear
+          >
+            {Object.entries(intentionLevelLabels).map(([value, label]) => (
+              <Select.Option key={value} value={value}>
+                {label}
+              </Select.Option>
+            ))}
+          </Select>
 
-      {/* 右侧按钮组 */}
-      <div className="flex items-center space-x-2">
-        {/* 新建按钮 */}
-        {showCreateButton && (
-          <Button onClick={onCreateClick} size="sm" className="h-8">
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            新建线索
+          {/* 高级筛选 */}
+          <Button
+            icon={<IconFilter />}
+            theme="light"
+            onClick={onFilterClick}
+          >
+            高级筛选
           </Button>
-        )}
+        </Space>
 
-        {/* 批量操作按钮 - 只在有选中时显示 */}
+        {/* 右侧：批量操作 */}
         {selectedCount > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8">
-                <MoreHorizontal className="mr-1.5 h-3.5 w-3.5" />
+          <Dropdown
+            trigger="click"
+            clickToHide
+            position="bottomRight"
+            menu={batchMenuItems}
+          >
+            <span style={{ display: 'inline-flex' }}>
+              <Button icon={<IconMore />} theme="light">
                 批量操作 ({selectedCount})
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {onBatchAssign && (
-                <DropdownMenuItem onClick={onBatchAssign}>
-                  批量分配
-                </DropdownMenuItem>
-              )}
-              {onBatchRelease && (
-                <DropdownMenuItem onClick={onBatchRelease}>
-                  释放到公海
-                </DropdownMenuItem>
-              )}
-              {onBatchUpdateStatus && (
-                <DropdownMenuItem onClick={onBatchUpdateStatus}>
-                  修改状态
-                </DropdownMenuItem>
-              )}
-              {onBatchDelete && (
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={onBatchDelete}
-                >
-                  批量删除
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </span>
+          </Dropdown>
         )}
-
-        {/* 刷新 */}
-        <Button variant="outline" size="icon" onClick={onRefreshClick} title="刷新">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-
-        {/* 列显示控制 */}
-        {table && <DataTableViewOptions table={table} />}
       </div>
 
-      {/* 手机号查看线索详情弹窗 */}
-      <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
-        <DialogContent className="!w-[90vw] !max-w-5xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className={cn(s.text.base, 'font-semibold')}>
-              线索详情 - {lookupLead?.child_name || lookupLead?.parent_phone || ''}
-            </DialogTitle>
-          </DialogHeader>
-          {lookupLead && (
-            <LeadInfoDisplay
-              lead={lookupLead}
-              compact={false}
-              showBackupContact={true}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+      {/* 手机号查看详情弹窗 */}
+      <Modal
+        title={`线索详情 - ${lookupLead?.child_name || lookupLead?.parent_phone || ''}`}
+        visible={showLeadModal}
+        onCancel={() => setShowLeadModal(false)}
+        footer={null}
+        width={800}
+        bodyStyle={{ maxHeight: '70vh', overflow: 'auto' }}
+      >
+        {lookupLead && (
+          <LeadInfoDisplay
+            lead={lookupLead}
+            compact={false}
+            showBackupContact={true}
+          />
+        )}
+      </Modal>
+    </>
   )
 }

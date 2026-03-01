@@ -1,16 +1,14 @@
-import { useLocation } from '@tanstack/react-router'
+/**
+ * AppSidebar - Semi Design Nav 侧边栏
+ * 替代 shadcn Sidebar，使用 Semi Nav 实现导航
+ */
+
+import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useLocation, Link } from '@tanstack/react-router'
+import { Nav, SideSheet } from '@douyinfe/semi-ui-19'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { useLayout } from '@/context/layout-provider'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-  useSidebar,
-} from '@/components/ui/sidebar'
-import { Button } from '@/components/ui/button'
-// import { AppTitle } from './app-title'
+import { useSidebar } from '@/context/sidebar-context'
+import { AnthropicLogo } from '@/assets/anthropic-logo'
 import {
   crmNavGroups,
   adminNavGroups,
@@ -21,83 +19,233 @@ import {
   yunkeTeams,
   hrTeams,
 } from './data/sidebar-data'
-import { NavGroup } from './nav-group'
+import type { NavGroup } from './types'
 import { NavUser } from './nav-user'
-import { TeamSwitcher } from './team-switcher'
 
-// 折叠按钮组件
-function CollapseButton() {
-  const { state, toggleSidebar, isMobile } = useSidebar()
+// ─── Group collapse persistence ────────────────────────────────
+const COLLAPSED_GROUPS_KEY = 'sidebar_collapsed_groups'
+const DEFAULT_COLLAPSED_GROUPS = ['教管部', '行政部']
 
-  // 移动端不显示折叠按钮
-  if (isMobile) return null
-
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
-      onClick={toggleSidebar}
-    >
-      {state === 'expanded' ? (
-        <>
-          <ChevronsLeft className="h-4 w-4" />
-          <span className="group-data-[collapsible=icon]:hidden">收起侧边栏</span>
-        </>
-      ) : (
-        <>
-          <ChevronsRight className="h-4 w-4" />
-          <span className="group-data-[collapsible=icon]:hidden">展开侧边栏</span>
-        </>
-      )}
-    </Button>
-  )
+function getCollapsedGroups(): string[] {
+  try {
+    const stored = localStorage.getItem(COLLAPSED_GROUPS_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
 }
 
-export function AppSidebar() {
-  const { collapsible, variant } = useLayout()
-  const location = useLocation()
+function isFirstVisit(): boolean {
+  return localStorage.getItem(COLLAPSED_GROUPS_KEY) === null
+}
 
-  // 根据当前路径判断使用哪个导航组
-  const isAdminRoute = location.pathname.startsWith('/admin')
-  const isYunkeRoute = location.pathname.startsWith('/yunke')
-  const isHrRoute = location.pathname.startsWith('/hr')
+function saveCollapsedGroups(groups: string[]) {
+  try {
+    localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify(groups))
+  } catch {
+    /* ignore */
+  }
+}
 
-  // 选择对应的导航组和团队配置
-  const getNavConfig = () => {
-    if (isYunkeRoute) {
-      return { navGroups: yunkeNavGroups, teams: yunkeTeams }
-    }
-    if (isHrRoute) {
-      return { navGroups: hrNavGroups, teams: hrTeams }
-    }
-    if (isAdminRoute) {
-      return { navGroups: adminNavGroups, teams: adminTeams }
-    }
-    return { navGroups: crmNavGroups, teams: crmTeams }
+function getInitialOpenKeys(
+  groups: NavGroup[],
+  currentPath: string
+): string[] {
+  const allKeys = groups.map((g) => `group-${g.title}`)
+
+  if (isFirstVisit()) {
+    return allKeys.filter(
+      (key) => !DEFAULT_COLLAPSED_GROUPS.includes(key.replace('group-', ''))
+    )
   }
 
-  const { navGroups, teams } = getNavConfig()
-
-  return (
-    <Sidebar collapsible={collapsible} variant={variant}>
-      <SidebarHeader>
-        <TeamSwitcher teams={teams} />
-
-        {/* Replace <TeamSwitch /> with the following <AppTitle />
-         /* if you want to use the normal app title instead of TeamSwitch dropdown */}
-        {/* <AppTitle /> */}
-      </SidebarHeader>
-      <SidebarContent>
-        {navGroups.map((props) => (
-          <NavGroup key={props.title} {...props} />
-        ))}
-      </SidebarContent>
-      <SidebarFooter>
-        <CollapseButton />
-        <NavUser />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+  const collapsed = getCollapsedGroups()
+  const openKeys = allKeys.filter(
+    (key) => !collapsed.includes(key.replace('group-', ''))
   )
+
+  // 确保包含当前路由所在分组
+  for (const group of groups) {
+    const hasActive = group.items.some((item) => item.url === currentPath)
+    if (hasActive) {
+      const gk = `group-${group.title}`
+      if (!openKeys.includes(gk)) openKeys.push(gk)
+    }
+  }
+
+  return openKeys
+}
+
+// ─── Main Component ────────────────────────────────────────────
+export function AppSidebar() {
+  const { open, setOpen, isMobile, openMobile, setOpenMobile } = useSidebar()
+  const location = useLocation()
+
+  // 根据当前路径选择导航配置
+  const { navGroups, teams } = useMemo(() => {
+    const p = location.pathname
+    if (p.startsWith('/yunke')) return { navGroups: yunkeNavGroups, teams: yunkeTeams }
+    if (p.startsWith('/hr')) return { navGroups: hrNavGroups, teams: hrTeams }
+    if (p.startsWith('/admin')) return { navGroups: adminNavGroups, teams: adminTeams }
+    return { navGroups: crmNavGroups, teams: crmTeams }
+  }, [location.pathname])
+
+  const isCollapsed = !open && !isMobile
+
+  // ─── Open keys (分组展开状态) ──────────────────────────────
+  const [openKeys, setOpenKeys] = useState<string[]>(() =>
+    getInitialOpenKeys(navGroups, location.pathname)
+  )
+
+  // 路由切换时自动展开对应分组
+  useEffect(() => {
+    for (const group of navGroups) {
+      if (group.items.some((item) => item.url === location.pathname)) {
+        const gk = `group-${group.title}`
+        setOpenKeys((prev) => (prev.includes(gk) ? prev : [...prev, gk]))
+      }
+    }
+  }, [location.pathname, navGroups])
+
+  const handleOpenChange = useCallback(
+    ({ openKeys: newKeys }: { openKeys: string[] }) => {
+      setOpenKeys(newKeys)
+      const allKeys = navGroups.map((g) => `group-${g.title}`)
+      const collapsed = allKeys
+        .filter((key) => !newKeys.includes(key))
+        .map((key) => key.replace('group-', ''))
+      saveCollapsedGroups(collapsed)
+    },
+    [navGroups]
+  )
+
+  // ─── Selected keys ────────────────────────────────────────
+  const selectedKeys = useMemo(() => [location.pathname], [location.pathname])
+
+  // ─── Render wrapper: TanStack Router Link ─────────────────
+  const renderWrapper = useCallback(
+    ({
+      itemElement,
+      isSubNav,
+      props,
+    }: {
+      itemElement: React.ReactElement
+      isSubNav: boolean
+      isInSubNav: boolean
+      props: { itemKey?: string }
+    }) => {
+      if (isSubNav || !props.itemKey || String(props.itemKey).startsWith('group-')) {
+        return itemElement
+      }
+      return (
+        <Link
+          to={props.itemKey as string}
+          style={{ textDecoration: 'none' }}
+          onClick={() => isMobile && setOpenMobile(false)}
+        >
+          {itemElement}
+        </Link>
+      )
+    },
+    [isMobile, setOpenMobile]
+  )
+
+  // ─── Sidebar content ─────────────────────────────────────
+  const sidebarContent = (
+    <Nav
+      isCollapsed={isCollapsed}
+      selectedKeys={selectedKeys}
+      openKeys={isCollapsed ? [] : openKeys}
+      onOpenChange={handleOpenChange}
+      onCollapseChange={(collapsed: boolean) => setOpen(!collapsed)}
+      renderWrapper={renderWrapper}
+      style={{ height: '100%', userSelect: 'none' }}
+    >
+      <Nav.Header
+        logo={<AnthropicLogo className='size-7' />}
+        text={teams[0]?.name || 'RMF CRM'}
+      >
+        {!isMobile && (
+          <div
+            onClick={() => setOpen((prev) => !prev)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              cursor: 'pointer',
+              color: 'var(--semi-color-text-2)',
+              borderRadius: 6,
+              transition: 'background-color 0.2s',
+              marginLeft: 'auto',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--semi-color-fill-0)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            {isCollapsed ? (
+              <ChevronsRight style={{ width: 16, height: 16 }} />
+            ) : (
+              <ChevronsLeft style={{ width: 16, height: 16 }} />
+            )}
+          </div>
+        )}
+      </Nav.Header>
+
+      {navGroups.map((group) => (
+        <Nav.Sub
+          key={group.title}
+          itemKey={`group-${group.title}`}
+          text={group.title}
+          icon={
+            isCollapsed && group.icon ? (
+              <span className="inline-flex"><group.icon size={16} /></span>
+            ) : undefined
+          }
+        >
+          {group.items.map((item) => (
+            <Nav.Item
+              key={item.url || item.title}
+              itemKey={item.url || `item-${item.title}`}
+              text={item.title}
+              icon={
+                item.icon ? (
+                  <span className="inline-flex"><item.icon size={16} /></span>
+                ) : undefined
+              }
+            />
+          ))}
+        </Nav.Sub>
+      ))}
+
+      <Nav.Footer>
+        <NavUser collapsed={isCollapsed} />
+      </Nav.Footer>
+    </Nav>
+  )
+
+  // 移动端: SideSheet 抽屉
+  if (isMobile) {
+    return (
+      <SideSheet
+        visible={openMobile}
+        onCancel={() => setOpenMobile(false)}
+        placement='left'
+        width={280}
+        closable={false}
+        bodyStyle={{ padding: 0, height: '100%' }}
+        style={{ padding: 0 }}
+      >
+        {sidebarContent}
+      </SideSheet>
+    )
+  }
+
+  // 桌面: 直接渲染
+  return sidebarContent
 }

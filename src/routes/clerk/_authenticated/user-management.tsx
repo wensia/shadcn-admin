@@ -8,8 +8,8 @@ import {
 } from '@tanstack/react-router'
 import { SignedIn, useAuth, UserButton } from '@clerk/clerk-react'
 import { ExternalLink, Loader2 } from 'lucide-react'
+import { Button } from '@douyinfe/semi-ui-19'
 import { ClerkLogo } from '@/assets/clerk-logo'
-import { Button } from '@/components/ui/button'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { LearnMore } from '@/components/learn-more'
@@ -157,7 +157,7 @@ function Unauthorized() {
           to access this resource.
         </p>
         <div className='mt-6 flex gap-4'>
-          <Button variant='outline' onClick={() => history.go(-1)}>
+          <Button theme='outline' onClick={() => history.go(-1)}>
             Go Back
           </Button>
           <Button onClick={() => navigate({ to: '/clerk/sign-in' })}>
@@ -172,7 +172,11 @@ function Unauthorized() {
                   ? `Redirecting to Sign In page in ${countdown}s`
                   : `Redirecting...`}
               </p>
-              <Button variant='link' onClick={() => setCancelled(true)}>
+              <Button
+                theme='borderless'
+                type='tertiary'
+                onClick={() => setCancelled(true)}
+              >
                 Cancel Redirect
               </Button>
             </>

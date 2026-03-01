@@ -1,5 +1,5 @@
 /**
- * 今日待办视图
+ * 今日待办视图 - Semi Design 版
  * 展示今日需要跟进的线索列表
  */
 
@@ -7,11 +7,8 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format, startOfDay, endOfDay, parseISO, isBefore, isWithinInterval } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Clock, User, AlertCircle, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Card, Button, Skeleton, Tag } from '@douyinfe/semi-ui-19'
+import { IconClock, IconUser, IconAlertCircle, IconChevronRight } from '@douyinfe/semi-icons'
 import { leadsApi } from '@/features/crm/leads/api'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
 import { LeadStatusBadge, IntentionLevelBadge } from '@/features/crm/leads/components/status-badges'
@@ -63,72 +60,78 @@ export function TodayLeadsView() {
   }
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* 逾期线索 */}
       {overdueLeads.length > 0 && (
-        <Card className="border-destructive/50">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              <CardTitle className="text-base text-destructive">逾期待跟进</CardTitle>
-            </div>
-            <CardDescription>
-              共 {overdueLeads.length} 条线索已逾期
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {overdueLeads.slice(0, 5).map((lead) => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  isOverdue
-                  onClick={() => handleLeadClick(lead.id)}
-                />
-              ))}
-              {overdueLeads.length > 5 && (
-                <Button variant="ghost" className="w-full text-muted-foreground">
-                  查看全部 {overdueLeads.length} 条逾期线索
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </CardContent>
+        <Card
+          style={{ border: '1px solid var(--semi-color-danger)' }}
+          header={
+            <Card.Meta
+              title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IconAlertCircle style={{ color: 'var(--semi-color-danger)' }} />
+                  <span style={{ fontSize: 16, color: 'var(--semi-color-danger)' }}>逾期待跟进</span>
+                </div>
+              }
+              description={`共 ${overdueLeads.length} 条线索已逾期`}
+            />
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {overdueLeads.slice(0, 5).map((lead) => (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                isOverdue
+                onClick={() => handleLeadClick(lead.id)}
+              />
+            ))}
+            {overdueLeads.length > 5 && (
+              <Button
+                theme="borderless"
+                block
+                style={{ color: 'var(--semi-color-text-2)' }}
+                icon={<IconChevronRight />}
+                iconPosition="right"
+              >
+                查看全部 {overdueLeads.length} 条逾期线索
+              </Button>
+            )}
+          </div>
         </Card>
       )}
 
       {/* 今日待跟进 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">今日待跟进</CardTitle>
-          <CardDescription>
-            共 {todayLeads.length} 条待处理线索
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
-            </div>
-          ) : todayLeads.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Clock className="mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">今日暂无待跟进线索</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {todayLeads.map((lead) => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onClick={() => handleLeadClick(lead.id)}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
+      <Card
+        header={
+          <Card.Meta
+            title={<span style={{ fontSize: 16 }}>今日待跟进</span>}
+            description={`共 ${todayLeads.length} 条待处理线索`}
+          />
+        }
+      >
+        {isLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[1, 2, 3].map((i) => (
+              <Skeleton.Paragraph key={i} rows={2} style={{ width: '100%' }} />
+            ))}
+          </div>
+        ) : todayLeads.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+            <IconClock size="extra-large" style={{ color: 'var(--semi-color-text-2)', marginBottom: 8 }} />
+            <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>今日暂无待跟进线索</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {todayLeads.map((lead) => (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                onClick={() => handleLeadClick(lead.id)}
+              />
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* 线索详情抽屉 */}
@@ -156,26 +159,31 @@ function LeadCard({ lead, isOverdue, onClick }: LeadCardProps) {
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        'w-full rounded-lg border p-3 text-left transition-colors',
-        'hover:bg-muted/50',
-        isOverdue && 'border-destructive/30 bg-destructive/5'
-      )}
+      style={{
+        width: '100%', borderRadius: 8,
+        border: `1px solid ${isOverdue ? 'var(--semi-color-danger-light-default)' : 'var(--semi-color-border)'}`,
+        padding: 12, textAlign: 'left',
+        transition: 'background 0.15s',
+        background: isOverdue ? 'var(--semi-color-danger-light-default)' : 'transparent',
+        cursor: 'pointer',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = isOverdue ? 'var(--semi-color-danger-light-hover)' : 'var(--semi-color-fill-0)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = isOverdue ? 'var(--semi-color-danger-light-default)' : 'transparent' }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium truncate">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {lead.child_name || lead.parent_name || '未知'}
             </span>
             {lead.intention_level && (
               <IntentionLevelBadge level={lead.intention_level} />
             )}
           </div>
-          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+          <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
             {lead.advisor_name && (
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <IconUser size="extra-small" />
                 {lead.advisor_name}
               </span>
             )}
@@ -184,18 +192,18 @@ function LeadCard({ lead, isOverdue, onClick }: LeadCardProps) {
             )}
           </div>
           {lead.source_channel_name && (
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
               来源：{lead.source_channel_name}
             </div>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <LeadStatusBadge status={lead.status} />
           {followupTime && (
-            <span className={cn(
-              'text-xs',
-              isOverdue ? 'text-destructive' : 'text-muted-foreground'
-            )}>
+            <span style={{
+              fontSize: 12,
+              color: isOverdue ? 'var(--semi-color-danger)' : 'var(--semi-color-text-2)',
+            }}>
               {isOverdue ? '逾期' : followupTime}
             </span>
           )}

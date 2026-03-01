@@ -1,64 +1,34 @@
 /**
- * 用户登录表单
- * 连接到 RMF CRM 后端 API
+ * 用户登录表单 - Semi Design 版本
+ * 使用 Semi Form + Input + Button 组件
  */
 
-import { useState } from 'react'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useState, useRef } from 'react'
+import { Form, Button } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconUser, IconLock } from '@douyinfe/semi-icons'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { authApi } from '@/features/auth/api'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { PasswordInput } from '@/components/password-input'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-const formSchema = z.object({
-  username: z.string().min(1, '请输入用户名'),
-  password: z.string().min(1, '请输入密码'),
-})
-
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
+interface UserAuthFormProps {
   redirectTo?: string
 }
 
-export function UserAuthForm({
-  className,
-  redirectTo,
-  ...props
-}: UserAuthFormProps) {
+export function UserAuthForm({ redirectTo }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { setAuthState } = useAuthStore()
+  const formApiRef = useRef<FormApi>()
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: '',
-      password: '',
-    },
-  })
-
-  async function onSubmit(data: z.infer<typeof formSchema>) {
+  async function handleSubmit(values: Record<string, any>) {
     setIsLoading(true)
-
     try {
       const response = await authApi.login({
-        username: data.username,
-        password: data.password,
+        username: values.username,
+        password: values.password,
       })
 
       if (response.success && response.data) {
@@ -67,9 +37,10 @@ export function UserAuthForm({
           response.data.refresh_token,
           response.data.user
         )
-        toast.success(`欢迎回来, ${response.data.user.name || data.username}!`)
-        const targetPath = redirectTo || '/'
-        navigate({ to: targetPath, replace: true })
+        toast.success(
+          `欢迎回来, ${response.data.user.name || values.username}!`
+        )
+        navigate({ to: redirectTo || '/', replace: true })
       } else {
         toast.error(response.message || '登录失败')
       }
@@ -84,73 +55,52 @@ export function UserAuthForm({
   }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-5', className)}
-        {...props}
+    <Form
+      getFormApi={(api) => {
+        formApiRef.current = api
+      }}
+      onSubmit={handleSubmit}
+      className='login-semi-form'
+    >
+      <Form.Input
+        field='username'
+        label='用户名'
+        placeholder='请输入用户名'
+        prefix={<IconUser />}
+        size='large'
+        showClear
+        rules={[{ required: true, message: '请输入用户名' }]}
+        autoComplete='username'
+      />
+
+      {/* Password field with custom label row */}
+      <div className='login-password-label'>
+        <span>密码</span>
+        <Link to='/forgot-password' className='login-forgot-link'>
+          忘记密码?
+        </Link>
+      </div>
+      <Form.Input
+        field='password'
+        noLabel
+        mode='password'
+        placeholder='请输入密码'
+        prefix={<IconLock />}
+        size='large'
+        rules={[{ required: true, message: '请输入密码' }]}
+        autoComplete='current-password'
+      />
+
+      <Button
+        htmlType='submit'
+        theme='solid'
+        loading={isLoading}
+        block
+        size='large'
+        style={{ marginTop: 24 }}
       >
-        <FormField
-          control={form.control}
-          name='username'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className='font-poppins text-sm font-medium text-foreground'>
-                用户名
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder='请输入用户名'
-                  autoComplete='username'
-                  {...field}
-                  className='h-11 rounded-lg border-input bg-background'
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='password'
-          render={({ field }) => (
-            <FormItem>
-              <div className='flex items-center justify-between'>
-                <FormLabel className='font-poppins text-sm font-medium text-foreground'>
-                  密码
-                </FormLabel>
-                <Link
-                  to='/forgot-password'
-                  className='text-xs font-medium text-primary transition-colors hover:text-foreground'
-                >
-                  忘记密码?
-                </Link>
-              </div>
-              <FormControl>
-                <PasswordInput
-                  placeholder='请输入密码'
-                  autoComplete='current-password'
-                  {...field}
-                  inputClassName='h-11 rounded-lg border-input bg-background'
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button
-          type='submit'
-          disabled={isLoading}
-          className='mt-2 h-11 w-full rounded-lg font-poppins text-sm font-medium'
-        >
-          {isLoading ? (
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-          ) : (
-            <LogIn className='mr-2 h-4 w-4' />
-          )}
-          登录
-        </Button>
-      </form>
+        登录
+      </Button>
     </Form>
   )
 }

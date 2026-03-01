@@ -1,34 +1,23 @@
 /**
  * 订单管理页面
- * 使用与线索页面一致的布局结构
+ * Semi Design 重构版
  */
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import {
+  Button,
+  Input,
+  Select,
+  Card,
+  Modal,
+  Toast,
+  Typography,
+} from '@douyinfe/semi-ui-19'
+import { IconPlus, IconRefresh, IconSearch } from '@douyinfe/semi-icons'
+import { ShoppingCart, CheckCircle, CalendarDays, TrendingUp } from 'lucide-react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from '@/components/ui/alert-dialog'
-import { Plus, RefreshCw, Search, ShoppingCart, CheckCircle, CalendarDays, TrendingUp } from 'lucide-react'
 import { orderApi } from './api'
 import { OrderDialog } from './components/order-dialog'
 import { OrdersTable } from './components/orders-table'
@@ -39,6 +28,8 @@ import {
   orderApprovalStatusOptions
 } from './types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+
+const { Title: SemiTitle, Text } = Typography
 
 export function OrdersPage() {
   useDocumentTitle('订单管理')
@@ -84,7 +75,7 @@ export function OrdersPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => orderApi.deleteOrder(id),
     onSuccess: () => {
-      toast.success('订单删除成功')
+      Toast.success('订单删除成功')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['order-stats'] })
       setDeleteDialogOpen(false)
@@ -103,8 +94,8 @@ export function OrdersPage() {
         setEditingOrder(response.data)
         setDialogOpen(true)
       }
-    } catch (error) {
-      toast.error('获取订单详情失败')
+    } catch {
+      Toast.error('获取订单详情失败')
     }
   }
 
@@ -150,76 +141,109 @@ export function OrdersPage() {
   const orders = ordersData?.items || []
   const total = ordersData?.total || 0
 
+  // 筛选选项：加上"全部"
+  const paymentStatusOpts = [
+    { value: 'all', label: '全部状态' },
+    ...orderPaymentStatusOptions
+  ]
+  const paymentMethodOpts = [
+    { value: 'all', label: '全部方式' },
+    ...orderPaymentMethodOptions
+  ]
+  const approvalStatusOpts = [
+    { value: 'all', label: '全部审批' },
+    ...orderApprovalStatusOptions
+  ]
+
   return (
-    <Main fixed className="min-h-0">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-        {/* 页面标题 - 固定高度 */}
-        <div className="flex flex-shrink-0 items-center justify-between">
+    <Main fixed style={{ minHeight: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 16, overflow: 'hidden' }}>
+        {/* 页面标题 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <h1 className="text-2xl font-bold">订单管理</h1>
-            <p className="text-muted-foreground">管理学员缴费订单</p>
+            <SemiTitle heading={4} style={{ margin: 0 }}>订单管理</SemiTitle>
+            <Text type="tertiary">管理学员缴费订单</Text>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>
             新建订单
           </Button>
         </div>
 
-        {/* 统计卡片 - 紧凑布局 */}
+        {/* 统计卡片 */}
         {statsData && (
-          <div className="grid flex-shrink-0 grid-cols-4 gap-3">
-            <Card className="py-3 px-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <ShoppingCart className="h-4 w-4" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, flexShrink: 0 }}>
+            <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'var(--semi-color-primary-light-default)',
+                  color: 'var(--semi-color-primary)',
+                }}>
+                  <ShoppingCart size={16} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground">总订单</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-semibold">{statsData.total_count}</span>
-                    <span className="text-xs text-muted-foreground">¥{statsData.total_amount?.toLocaleString()}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text type="tertiary" style={{ fontSize: 12 }}>总订单</Text>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <Text strong style={{ fontSize: 18 }}>{statsData.total_count}</Text>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.total_amount?.toLocaleString()}</Text>
                   </div>
                 </div>
               </div>
             </Card>
-            <Card className="py-3 px-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-600">
-                  <CheckCircle className="h-4 w-4" />
+            <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'var(--semi-color-success-light-default)',
+                  color: 'var(--semi-color-success)',
+                }}>
+                  <CheckCircle size={16} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground">已支付</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-semibold text-green-600">{statsData.paid_count}</span>
-                    <span className="text-xs text-muted-foreground">¥{statsData.paid_amount?.toLocaleString()}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text type="tertiary" style={{ fontSize: 12 }}>已支付</Text>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <Text strong style={{ fontSize: 18, color: 'var(--semi-color-success)' }}>{statsData.paid_count}</Text>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.paid_amount?.toLocaleString()}</Text>
                   </div>
                 </div>
               </div>
             </Card>
-            <Card className="py-3 px-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                  <CalendarDays className="h-4 w-4" />
+            <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'var(--semi-color-warning-light-default)',
+                  color: 'var(--semi-color-warning)',
+                }}>
+                  <CalendarDays size={16} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground">今日</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-semibold">{statsData.today_count}</span>
-                    <span className="text-xs text-muted-foreground">¥{statsData.today_amount?.toLocaleString()}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text type="tertiary" style={{ fontSize: 12 }}>今日</Text>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <Text strong style={{ fontSize: 18 }}>{statsData.today_count}</Text>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.today_amount?.toLocaleString()}</Text>
                   </div>
                 </div>
               </div>
             </Card>
-            <Card className="py-3 px-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-                  <TrendingUp className="h-4 w-4" />
+            <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: '#f3e8ff',
+                  color: '#7c3aed',
+                }}>
+                  <TrendingUp size={16} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground">本月</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-semibold">{statsData.month_count}</span>
-                    <span className="text-xs text-muted-foreground">¥{statsData.month_amount?.toLocaleString()}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text type="tertiary" style={{ fontSize: 12 }}>本月</Text>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <Text strong style={{ fontSize: 18 }}>{statsData.month_count}</Text>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.month_amount?.toLocaleString()}</Text>
                   </div>
                 </div>
               </div>
@@ -227,82 +251,48 @@ export function OrdersPage() {
           </div>
         )}
 
-        {/* 筛选栏 - 固定高度 */}
-        <div className="flex flex-shrink-0 gap-4 items-center">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索学员姓名、电话、订单号..."
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-9"
-            />
-          </div>
+        {/* 筛选栏 */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
+          <Input
+            prefix={<IconSearch />}
+            placeholder="搜索学员姓名、电话、订单号..."
+            value={searchKeyword}
+            onChange={(val) => setSearchKeyword(val)}
+            onEnterPress={handleSearch}
+            style={{ flex: 1 }}
+          />
           <Select
             value={filters.payment_status || 'all'}
-            onValueChange={(value) => {
-              setFilters({ ...filters, payment_status: value === 'all' ? undefined : value })
+            onChange={(value) => {
+              setFilters({ ...filters, payment_status: value === 'all' ? undefined : value as string })
               setPagination({ ...pagination, page: 1 })
             }}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="支付状态" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              {orderPaymentStatusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            optionList={paymentStatusOpts}
+            style={{ width: 130 }}
+          />
           <Select
             value={filters.payment_method || 'all'}
-            onValueChange={(value) => {
-              setFilters({ ...filters, payment_method: value === 'all' ? undefined : value })
+            onChange={(value) => {
+              setFilters({ ...filters, payment_method: value === 'all' ? undefined : value as string })
               setPagination({ ...pagination, page: 1 })
             }}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="支付方式" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部方式</SelectItem>
-              {orderPaymentMethodOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            optionList={paymentMethodOpts}
+            style={{ width: 130 }}
+          />
           <Select
             value={filters.approval_status || 'all'}
-            onValueChange={(value) => {
-              setFilters({ ...filters, approval_status: value === 'all' ? undefined : value })
+            onChange={(value) => {
+              setFilters({ ...filters, approval_status: value === 'all' ? undefined : value as string })
               setPagination({ ...pagination, page: 1 })
             }}
-          >
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="审批状态" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部审批</SelectItem>
-              {orderApprovalStatusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+            optionList={approvalStatusOpts}
+            style={{ width: 140 }}
+          />
+          <Button icon={<IconRefresh />} onClick={() => refetch()} />
         </div>
 
-        {/* 数据表格 - 填满剩余空间 */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {/* 数据表格 */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <OrdersTable
             data={orders}
             total={total}
@@ -330,25 +320,18 @@ export function OrdersPage() {
       />
 
       {/* 删除确认弹窗 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除这个订单吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onOk={handleConfirmDelete}
+        okType="danger"
+        okText="删除"
+        cancelText="取消"
+        confirmLoading={deleteMutation.isPending}
+      >
+        确定要删除这个订单吗？此操作不可撤销。
+      </Modal>
     </Main>
   )
 }

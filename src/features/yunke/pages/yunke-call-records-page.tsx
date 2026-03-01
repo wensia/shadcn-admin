@@ -40,14 +40,14 @@ function CallRecordsContent() {
   }, [])
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-      {/* 统计卡片 - flex-shrink-0 防止收缩 */}
-      <div className="flex-shrink-0">
+    <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
+      {/* 统计卡片 */}
+      <div style={{ flexShrink: 0 }}>
         <StatsCards stats={stats} isLoading={isStatsLoading} />
       </div>
 
-      {/* 筛选工具栏 - flex-shrink-0 */}
-      <div className="flex-shrink-0">
+      {/* 筛选工具栏 */}
+      <div style={{ flexShrink: 0 }}>
         <CallRecordsToolbar
           filters={filters}
           onFilterChange={updateFilter}
@@ -57,8 +57,8 @@ function CallRecordsContent() {
         />
       </div>
 
-      {/* 数据表格容器 - flex-1 min-h-0 允许收缩和滚动 */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/* 数据表格容器 */}
+      <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
         <CallRecordsTable
           records={records}
           total={total}
@@ -83,7 +83,7 @@ function CallRecordsContent() {
 
 export function YunkeCallRecordsPage() {
   return (
-    <Main fixed className="min-h-0">
+    <Main fixed style={{ minHeight: 0 }}>
       <CallRecordsProvider>
         <CallRecordsContent />
       </CallRecordsProvider>

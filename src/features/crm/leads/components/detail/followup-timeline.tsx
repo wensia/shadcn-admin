@@ -1,25 +1,12 @@
 /**
- * FollowupTimeline 跟进记录时间轴组件
- * 使用时间轴样式展示跟进历史
+ * FollowupTimeline 跟进记录时间轴组件 - Semi Design 版本
  */
 
 import * as React from 'react'
-import { Phone, MessageSquare, Users, Mail, MessageCircle, Sparkles } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
-import {
-  Timeline,
-  TimelineItem,
-  TimelineNode,
-  TimelineContent,
-  TimelineHeader,
-  TimelineBody,
-  TimelineDescription,
-} from '@/components/ui/timeline'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Timeline, Tag, Avatar } from '@douyinfe/semi-ui-19'
+import { IconPhone, IconMail } from '@douyinfe/semi-icons'
+import { Phone, MessageSquare, Users, MessageCircle, Sparkles } from 'lucide-react'
 import { formatTime, formatRelativeTime } from '@/lib/utils/time'
-import { getFollowupResultStyle } from '@/lib/status-styles'
 import { EmptyState } from './empty-state'
 import { FollowupResultBadge } from '../status-badges'
 import type { LeadFollowup, FollowupMethod, FollowupResult } from '../../types'
@@ -33,32 +20,27 @@ interface FollowupTimelineProps {
 
 // 跟进方式对应的图标
 const methodIcons: Record<FollowupMethod, React.ReactNode> = {
-  phone: <Phone className="h-4 w-4" />,
-  wechat: <MessageCircle className="h-4 w-4" />,
-  face_to_face: <Users className="h-4 w-4" />,
-  sms: <MessageSquare className="h-4 w-4" />,
-  email: <Mail className="h-4 w-4" />,
+  phone: <Phone style={{ width: 14, height: 14 }} />,
+  wechat: <MessageCircle style={{ width: 14, height: 14 }} />,
+  face_to_face: <Users style={{ width: 14, height: 14 }} />,
+  sms: <MessageSquare style={{ width: 14, height: 14 }} />,
+  email: <IconMail style={{ fontSize: 14 }} />,
 }
 
-// 跟进结果对应的节点颜色（基于新的颜色系统）
-function getNodeVariant(result?: FollowupResult): 'default' | 'success' | 'warning' | 'destructive' | 'info' | 'muted' {
-  if (!result) return 'muted'
-
-  const style = getFollowupResultStyle(result)
-  switch (style.color) {
-    case 'green':
-    case 'emerald':
-      return 'success'
-    case 'amber':
-      return 'warning'
-    case 'red':
-      return 'destructive'
-    case 'blue':
-    case 'cyan':
-      return 'info'
-    default:
-      return 'default'
+// 跟进结果 → Timeline dot color
+function getDotColor(result?: FollowupResult): string {
+  if (!result) return 'var(--semi-color-text-2)'
+  const colorMap: Record<string, string> = {
+    interested: '#00b42a',
+    callback: '#00b42a',
+    visited: '#00b42a',
+    need_followup: '#ff7d00',
+    not_interested: '#f53f3f',
+    no_answer: '#86909c',
+    wrong_number: '#86909c',
+    will_consider: '#0077fa',
   }
+  return colorMap[result] || 'var(--semi-color-text-2)'
 }
 
 export function FollowupTimeline({
@@ -66,11 +48,9 @@ export function FollowupTimeline({
   isLoading,
   className,
 }: FollowupTimelineProps) {
-  const s = useStyleClasses()
-
   if (isLoading) {
     return (
-      <div className={cn('flex items-center justify-center py-12', s.text.xs, 'text-muted-foreground')}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0', fontSize: 13, color: 'var(--semi-color-text-2)' }}>
         加载中...
       </div>
     )
@@ -88,82 +68,90 @@ export function FollowupTimeline({
 
   return (
     <Timeline className={className}>
-      {followups.map((followup, index) => {
-        const isLast = index === followups.length - 1
+      {followups.map((followup) => (
+        <Timeline.Item
+          key={followup.id}
+          dot={
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: getDotColor(followup.result) + '20',
+                color: getDotColor(followup.result),
+              }}
+            >
+              {methodIcons[followup.method]}
+            </div>
+          }
+        >
+          {/* 头部: AI标签 + 方式徽章 + 结果徽章 + 相对时间 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            {followup.source === 'ai_auto' && (
+              <Tag size="small" style={{ borderColor: '#c084fc', color: '#9333ea', background: '#faf5ff', gap: 2 }}>
+                <Sparkles style={{ width: 10, height: 10 }} />
+                AI
+              </Tag>
+            )}
+            <Tag size="small">{followupMethodLabels[followup.method]}</Tag>
+            {followup.result && (
+              <FollowupResultBadge result={followup.result} />
+            )}
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', marginLeft: 'auto' }}>
+              {formatRelativeTime(followup.followup_at)}
+            </span>
+          </div>
 
-        return (
-          <TimelineItem key={followup.id}>
-            <TimelineNode
-              variant={getNodeVariant(followup.result)}
-              icon={methodIcons[followup.method]}
-              showConnector={!isLast}
-            />
-            <TimelineContent>
-              {/* 头部: AI标签 + 方式徽章 + 结果徽章 + 相对时间 */}
-              <TimelineHeader>
-                {followup.source === 'ai_auto' && (
-                  <Badge variant="outline" className={cn(s.text.xs, s.height.badge, 'border-purple-300 text-purple-600 bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:bg-purple-950/30 gap-0.5')}>
-                    <Sparkles className="h-2.5 w-2.5" />
-                    AI
-                  </Badge>
-                )}
-                <Badge variant="outline" className={cn(s.text.xs, s.height.badge)}>
-                  {followupMethodLabels[followup.method]}
-                </Badge>
-                {followup.result && (
-                  <FollowupResultBadge
-                    result={followup.result}
-                    className={cn(s.text.xs, s.height.badge)}
-                  />
-                )}
-                <span className={cn(s.text.xs, 'text-muted-foreground ml-auto')}>
-                  {formatRelativeTime(followup.followup_at)}
-                </span>
-              </TimelineHeader>
+          {/* 跟进人信息 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+            <Avatar size="extra-extra-small" style={{ fontSize: 10 }}>
+              {followup.followup_by_name?.[0] || '?'}
+            </Avatar>
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+              {followup.followup_by_name} · {formatTime(followup.followup_at)}
+            </span>
+          </div>
 
-              {/* 跟进人信息 */}
-              <div className="flex items-center gap-2 mt-1.5">
-                <Avatar className="h-5 w-5">
-                  <AvatarFallback className={cn(s.text.xs)}>
-                    {followup.followup_by_name?.[0] || '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <TimelineDescription>
-                  {followup.followup_by_name} · {formatTime(followup.followup_at)}
-                </TimelineDescription>
-              </div>
+          {/* 跟进内容 */}
+          {followup.content && (
+            <div style={{
+              marginTop: 8,
+              padding: '8px 12px',
+              background: 'var(--semi-color-fill-0)',
+              borderRadius: 6,
+              fontSize: 13,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {followup.content}
+            </div>
+          )}
 
-              {/* 跟进内容 */}
-              {followup.content && (
-                <TimelineBody>
-                  {followup.content}
-                </TimelineBody>
+          {/* 附加信息 */}
+          {(followup.result_remark || followup.next_action || followup.next_followup_at) && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--semi-color-text-2)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {followup.result_remark && (
+                <p style={{ margin: 0 }}>
+                  <strong>结果备注:</strong> {followup.result_remark}
+                </p>
               )}
-
-              {/* 附加信息 */}
-              {(followup.result_remark || followup.next_action || followup.next_followup_at) && (
-                <div className={cn('mt-2 space-y-1', s.text.xs, 'text-muted-foreground')}>
-                  {followup.result_remark && (
-                    <p>
-                      <strong>结果备注:</strong> {followup.result_remark}
-                    </p>
-                  )}
-                  {followup.next_action && (
-                    <p>
-                      <strong>下一步行动:</strong> {followup.next_action}
-                    </p>
-                  )}
-                  {followup.next_followup_at && (
-                    <p>
-                      <strong>计划下次跟进:</strong> {formatTime(followup.next_followup_at)}
-                    </p>
-                  )}
-                </div>
+              {followup.next_action && (
+                <p style={{ margin: 0 }}>
+                  <strong>下一步行动:</strong> {followup.next_action}
+                </p>
               )}
-            </TimelineContent>
-          </TimelineItem>
-        )
-      })}
+              {followup.next_followup_at && (
+                <p style={{ margin: 0 }}>
+                  <strong>计划下次跟进:</strong> {formatTime(followup.next_followup_at)}
+                </p>
+              )}
+            </div>
+          )}
+        </Timeline.Item>
+      ))}
     </Timeline>
   )
 }

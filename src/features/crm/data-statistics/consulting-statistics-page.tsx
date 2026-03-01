@@ -1,43 +1,34 @@
 /**
  * 咨询数据统计页面
  * 展示通话统计数据，包括统计卡片和员工通话明细表格
+ * Semi Design 重构
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
+  Table,
+  Button,
+  Select,
+  Skeleton,
+  Progress,
+  Toast,
+  Card,
+} from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import {
+  IconRefresh,
+} from '@douyinfe/semi-icons'
+import {
   Phone,
   Clock,
-  Loader2,
-  RefreshCw,
   Users,
+  Building2,
 } from 'lucide-react'
 import { Main } from '@/components/layout/main'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { brandColors } from '@/features/crm/daily-control/theme'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
-import { cn } from '@/lib/utils'
 import { callRecordsApi, yunkeCredentialsApi, type EmployeeCampusMapping } from '@/features/yunke/api'
-import { toast } from 'sonner'
-import { Building2 } from 'lucide-react'
 
 // 时间周期选项
 const periodOptions = [
@@ -89,6 +80,13 @@ interface YunkeCallStatisticsData {
   chart2Counts3?: ChartCountItem[]
 }
 
+// 合并用户数据类型
+interface MergedUser {
+  name: string
+  callCount: number
+  duration: number
+}
+
 export function ConsultingStatisticsPage() {
   useDocumentTitle('咨询数据统计')
 
@@ -97,6 +95,23 @@ export function ConsultingStatisticsPage() {
   const [statType, setStatType] = useState('0')
   const [selectedAccountId, setSelectedAccountId] = useState<string>('')
   const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
+
+  // 表格全高
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(400)
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const measure = () => {
+      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+      const available = el.clientHeight - headerH
+      if (available > 100) setScrollY(available)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // 获取云客账号列表
   const { data: accountsData } = useQuery({
@@ -131,7 +146,7 @@ export function ConsultingStatisticsPage() {
     }))
   }, [employeeCampusMapping])
 
-  // 默认部门ID（当账号没有 root_dept_id 时使用）
+  // 默认部门ID
   const DEFAULT_DEPT_ID = '50EDD867A7C04917B53FA277EE706D08'
 
   // 账号选项列表
@@ -140,7 +155,7 @@ export function ConsultingStatisticsPage() {
     return accounts.map(acc => ({
       value: acc.id,
       label: acc.company_name || acc.phone,
-      deptId: acc.root_dept_id || DEFAULT_DEPT_ID, // 使用默认值
+      deptId: acc.root_dept_id || DEFAULT_DEPT_ID,
     }))
   }, [accountsData])
 
@@ -150,7 +165,6 @@ export function ConsultingStatisticsPage() {
       const selected = accountOptions.find(opt => opt.value === selectedAccountId)
       return selected?.deptId || DEFAULT_DEPT_ID
     }
-    // 默认使用第一个账号的部门ID，或默认值
     return accountOptions[0]?.deptId || DEFAULT_DEPT_ID
   }, [selectedAccountId, accountOptions])
 
@@ -170,48 +184,41 @@ export function ConsultingStatisticsPage() {
         flag: 'department',
         period: parseInt(period),
         stat_type: parseInt(statType),
-        account_id: selectedAccountId || undefined, // 传递选中的账号ID
+        account_id: selectedAccountId || undefined,
       }) as Promise<YunkeCallStatisticsData>
     },
     staleTime: 60 * 1000,
-    enabled: !!departmentId && !!selectedAccountId, // 只有选择了部门和账号才查询
+    enabled: !!departmentId && !!selectedAccountId,
   })
 
   // 刷新数据
   const handleRefresh = () => {
     refetch()
-    toast.success('已刷新')
+    Toast.success('已刷新')
   }
 
-  // 处理通话次数数据（chart2Counts1）
-  const callCountList = useMemo(() => {
-    return data?.chart2Counts1 || []
-  }, [data])
+  // 处理通话次数数据
+  const callCountList = useMemo(() => data?.chart2Counts1 || [], [data])
 
-  // 处理通话时长数据（chart2Counts3）
-  const callDurationList = useMemo(() => {
-    return data?.chart2Counts3 || []
-  }, [data])
+  // 处理通话时长数据
+  const callDurationList = useMemo(() => data?.chart2Counts3 || [], [data])
 
   // 合并数据用于表格显示
   const mergedUserList = useMemo(() => {
     const countMap = new Map(callCountList.map(item => [item.name, item.value]))
     const durationMap = new Map(callDurationList.map(item => [item.name, item.value]))
 
-    // 获取所有员工名称
     const allNames = new Set([
       ...callCountList.map(item => item.name),
       ...callDurationList.map(item => item.name),
     ])
 
-    // 合并数据
     let result = Array.from(allNames).map(name => ({
       name,
       callCount: countMap.get(name) || 0,
       duration: durationMap.get(name) || 0,
     }))
 
-    // 根据校区过滤
     if (selectedCampusId !== 'all' && employeeCampusMapping) {
       result = result.filter(user => {
         const campusList = employeeCampusMapping[user.name] || []
@@ -219,91 +226,146 @@ export function ConsultingStatisticsPage() {
       })
     }
 
-    // 按通话次数排序
     return result.sort((a, b) => b.callCount - a.callCount)
   }, [callCountList, callDurationList, selectedCampusId, employeeCampusMapping])
 
-  // 计算总计（基于过滤后的数据）
+  // 计算总计
   const totals = useMemo(() => {
     const totalCount = mergedUserList.reduce((sum, user) => sum + user.callCount, 0)
     const totalDuration = mergedUserList.reduce((sum, user) => sum + user.duration, 0)
     return { totalCount, totalDuration, userCount: mergedUserList.length }
   }, [mergedUserList])
 
-  // 最大值用于进度条（基于过滤后的数据）
-  const maxCallCount = useMemo(() => {
-    return Math.max(...mergedUserList.map(user => user.callCount), 1)
-  }, [mergedUserList])
+  // 最大值用于进度条
+  const maxCallCount = useMemo(() => Math.max(...mergedUserList.map(user => user.callCount), 1), [mergedUserList])
+  const maxDuration = useMemo(() => Math.max(...mergedUserList.map(user => user.duration), 1), [mergedUserList])
 
-  const maxDuration = useMemo(() => {
-    return Math.max(...mergedUserList.map(user => user.duration), 1)
-  }, [mergedUserList])
+  // 表格列
+  const columns = useMemo<ColumnProps<MergedUser>[]>(() => [
+    {
+      title: '排名',
+      dataIndex: 'rank',
+      width: 64,
+      align: 'center' as const,
+      render: (_: unknown, __: MergedUser, index: number) => {
+        const rankStyle: React.CSSProperties = {
+          display: 'inline-flex',
+          width: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '50%',
+          fontSize: 12,
+          fontWeight: 500,
+        }
+        if (index === 0) Object.assign(rankStyle, { background: '#FEF3C7', color: '#A16207' })
+        else if (index === 1) Object.assign(rankStyle, { background: '#F3F4F6', color: '#374151' })
+        else if (index === 2) Object.assign(rankStyle, { background: '#FFEDD5', color: '#C2410C' })
+        else Object.assign(rankStyle, { color: 'var(--semi-color-text-2)' })
+        return <span style={rankStyle}>{index + 1}</span>
+      },
+    },
+    {
+      title: '员工姓名',
+      dataIndex: 'name',
+      width: 128,
+      render: (t: string) => <span style={{ fontWeight: 500 }}>{t}</span>,
+    },
+    {
+      title: '通话次数',
+      dataIndex: 'callCount',
+      width: 128,
+      align: 'right' as const,
+      render: (val: number) => <span style={{ fontFamily: 'monospace' }}>{val.toLocaleString()}</span>,
+    },
+    {
+      title: '次数分布',
+      dataIndex: 'countDist',
+      render: (_: unknown, record: MergedUser) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Progress percent={(record.callCount / maxCallCount) * 100} size="small" showInfo={false} style={{ flex: 1 }} />
+          <span style={{ width: 48, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            {((record.callCount / totals.totalCount) * 100).toFixed(1)}%
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: '通话时长',
+      dataIndex: 'duration',
+      width: 128,
+      align: 'right' as const,
+      render: (val: number) => <span style={{ fontFamily: 'monospace' }}>{formatDurationShort(val)}</span>,
+    },
+    {
+      title: '时长分布',
+      dataIndex: 'durationDist',
+      render: (_: unknown, record: MergedUser) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Progress percent={(record.duration / maxDuration) * 100} size="small" showInfo={false} style={{ flex: 1 }} />
+          <span style={{ width: 48, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+            {((record.duration / totals.totalDuration) * 100).toFixed(1)}%
+          </span>
+        </div>
+      ),
+    },
+  ], [maxCallCount, maxDuration, totals])
 
   return (
-    <Main fixed className="min-h-0">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-        {/* 顶部统计栏 - 紧凑内联样式 */}
-        <div className="flex-shrink-0 flex items-center gap-6">
+    <Main fixed style={{ minHeight: 0 }}>
+      <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
+        {/* 顶部统计栏 */}
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 24 }}>
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Skeleton className="w-8 h-8 rounded-lg" />
-                <div className="flex items-baseline gap-1.5">
-                  <Skeleton className="h-6 w-12" />
-                  <Skeleton className="h-3 w-16" />
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Skeleton.Avatar size="small" style={{ width: 32, height: 32 }} />
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
                 </div>
               </div>
             ))
           ) : (
             <>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${brandColors.blue}15` }}
-                >
-                  <Phone className="w-4 h-4" style={{ color: brandColors.blue }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: `${brandColors.blue}15`,
+                }}>
+                  <Phone style={{ width: 16, height: 16, color: brandColors.blue }} />
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-semibold text-[#141413] dark:text-slate-100">
-                    {totals.totalCount.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-[#b0aea5] dark:text-slate-400">
-                    总通话次数
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 20, fontWeight: 600 }}>{totals.totalCount.toLocaleString()}</span>
+                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总通话次数</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${brandColors.green}15` }}
-                >
-                  <Clock className="w-4 h-4" style={{ color: brandColors.green }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: `${brandColors.green}15`,
+                }}>
+                  <Clock style={{ width: 16, height: 16, color: brandColors.green }} />
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-semibold text-[#141413] dark:text-slate-100">
-                    {formatDuration(totals.totalDuration)}
-                  </span>
-                  <span className="text-xs text-[#b0aea5] dark:text-slate-400">
-                    总通话时长
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 20, fontWeight: 600 }}>{formatDuration(totals.totalDuration)}</span>
+                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总通话时长</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${brandColors.orange}15` }}
-                >
-                  <Users className="w-4 h-4" style={{ color: brandColors.orange }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: `${brandColors.orange}15`,
+                }}>
+                  <Users style={{ width: 16, height: 16, color: brandColors.orange }} />
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-semibold text-[#141413] dark:text-slate-100">
-                    {totals.userCount}
-                  </span>
-                  <span className="text-xs text-[#b0aea5] dark:text-slate-400">
-                    参与员工数
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 20, fontWeight: 600 }}>{totals.userCount}</span>
+                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>参与员工数</span>
                 </div>
               </div>
             </>
@@ -311,165 +373,61 @@ export function ConsultingStatisticsPage() {
         </div>
 
         {/* 工具栏 */}
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-3">
-          {/* 云客账号筛选 */}
-          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="选择云客账号" />
-            </SelectTrigger>
-            <SelectContent>
-              {accountOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div style={{ flexShrink: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+          <Select
+            value={selectedAccountId}
+            onChange={(val) => setSelectedAccountId(val as string)}
+            optionList={accountOptions}
+            placeholder="选择云客账号"
+            style={{ width: 160 }}
+          />
 
-          {/* 校区筛选 */}
-          <Select value={selectedCampusId} onValueChange={setSelectedCampusId}>
-            <SelectTrigger className="w-32">
-              <Building2 className="mr-1.5 h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="选择校区" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部校区</SelectItem>
-              {campusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            value={selectedCampusId}
+            onChange={(val) => setSelectedCampusId(val as string)}
+            optionList={[{ value: 'all', label: '全部校区' }, ...campusOptions]}
+            prefix={<Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />}
+            style={{ width: 128 }}
+          />
 
-          {/* 时间周期筛选 */}
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-28">
-              <SelectValue placeholder="时间周期" />
-            </SelectTrigger>
-            <SelectContent>
-              {periodOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            value={period}
+            onChange={(val) => setPeriod(val as string)}
+            optionList={periodOptions}
+            style={{ width: 112 }}
+          />
 
-          {/* 统计类型筛选 */}
-          <Select value={statType} onValueChange={setStatType}>
-            <SelectTrigger className="w-28">
-              <SelectValue placeholder="统计类型" />
-            </SelectTrigger>
-            <SelectContent>
-              {statTypeOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            value={statType}
+            onChange={(val) => setStatType(val as string)}
+            optionList={statTypeOptions}
+            style={{ width: 112 }}
+          />
 
-          <div className="flex-1" />
+          <div style={{ flex: 1 }} />
 
-          {/* 刷新按钮 */}
           <Button
-            variant="outline"
-            size="sm"
+            icon={<IconRefresh spin={isRefetching} />}
             onClick={handleRefresh}
             disabled={isRefetching}
           >
-            {isRefetching ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-            )}
             刷新
           </Button>
         </div>
 
         {/* 员工通话统计表格 */}
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-            <div className="flex-1 overflow-auto">
-              <Table>
-                <TableHeader className="sticky top-0 z-10 bg-muted/50">
-                  <TableRow>
-                    <TableHead className="w-16 text-center">排名</TableHead>
-                    <TableHead className="w-32">员工姓名</TableHead>
-                    <TableHead className="w-32 text-right">通话次数</TableHead>
-                    <TableHead className="min-w-[200px]">次数分布</TableHead>
-                    <TableHead className="w-32 text-right">通话时长</TableHead>
-                    <TableHead className="min-w-[200px]">时长分布</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    Array.from({ length: 10 }).map((_, i) => (
-                      <TableRow key={i}>
-                        {Array.from({ length: 6 }).map((_, j) => (
-                          <TableCell key={j}>
-                            <Skeleton className="h-4 w-full" />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : mergedUserList.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                        暂无数据
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    mergedUserList.map((user, index) => (
-                      <TableRow key={user.name}>
-                        <TableCell className="text-center">
-                          <span className={cn(
-                            'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium',
-                            index === 0 && 'bg-yellow-100 text-yellow-700',
-                            index === 1 && 'bg-gray-100 text-gray-700',
-                            index === 2 && 'bg-orange-100 text-orange-700',
-                            index > 2 && 'text-muted-foreground'
-                          )}>
-                            {index + 1}
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell className="text-right font-mono">
-                          {user.callCount.toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress
-                              value={(user.callCount / maxCallCount) * 100}
-                              className="h-2"
-                            />
-                            <span className="w-12 text-xs text-muted-foreground">
-                              {((user.callCount / totals.totalCount) * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatDurationShort(user.duration)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress
-                              value={(user.duration / maxDuration) * 100}
-                              className="h-2"
-                            />
-                            <span className="w-12 text-xs text-muted-foreground">
-                              {((user.duration / totals.totalDuration) * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+        <Card bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1, overflow: 'hidden' }} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
+            <Table
+              columns={columns}
+              dataSource={mergedUserList}
+              rowKey="name"
+              pagination={false}
+              scroll={{ y: scrollY }}
+              loading={isLoading}
+              empty={<div style={{ padding: 64, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+            />
+          </div>
         </Card>
       </div>
     </Main>

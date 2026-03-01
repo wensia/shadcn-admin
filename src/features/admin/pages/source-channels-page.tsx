@@ -2,78 +2,26 @@
  * 来源渠道管理页面
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, Share2, Filter, X, Settings2, RefreshCw, Copy, Link, Bot, Bell } from 'lucide-react'
+import { Plus, Pencil, Trash2, Share2, Filter, X, Settings2, Copy, Link, Bot, Bell } from 'lucide-react'
+import { Table, Button, Input, Select, Modal, Form, Skeleton, Typography, Switch, Tag, Checkbox as SemiCheckbox } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
+
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Label } from '@/components/ui/label'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
 import adminApi, { sourceChannelApi, dingtalkRobotsApi } from '../api'
 import type { SourceChannel, DingtalkRobot } from '../types'
 import { StatusBadge, SourceChannelCategoryBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
 import { UserPlus } from 'lucide-react'
+
+const { Text } = Typography
 
 // 渠道分类选项
 const CHANNEL_CATEGORIES = [
@@ -94,56 +42,48 @@ const FIELD_TYPE_OPTIONS = [
   { value: 'textarea', label: '文本域' },
 ] as const
 
-// 额外字段选项的 schema
-const fieldOptionSchema = z.object({
-  label: z.string().min(1, '请输入选项标签'),
-  value: z.string().min(1, '请输入选项值'),
-})
+// 分类筛选选项
+const categoryFilterOptions = [
+  { value: 'all', label: '全部分类' },
+  ...CHANNEL_CATEGORIES.map(c => ({ value: c.value, label: c.label })),
+]
 
-// 额外字段的 schema
-const extraFieldSchema = z.object({
-  field_name: z.string().min(1, '请输入字段名称'),
-  field_label: z.string().min(1, '请输入字段标签'),
-  field_type: z.enum(['text', 'number', 'date', 'datetime', 'select', 'textarea']),
-  required: z.boolean().default(false),
-  placeholder: z.string().optional(),
-  options: z.array(fieldOptionSchema).optional(),
-})
+// 状态筛选选项
+const statusFilterOptions = [
+  { value: 'all', label: '全部状态' },
+  { value: 'active', label: '已启用' },
+  { value: 'inactive', label: '已停用' },
+]
 
-// 表单验证 schema
-const formSchema = z.object({
-  name: z.string().min(1, '请输入渠道名称').max(50, '渠道名称不能超过50个字符'),
-  category: z.enum(['ONLINE', 'OFFLINE', 'REFERRAL', 'EVENT', 'OTHER']),
-  description: z.string().max(200, '描述不能超过200个字符').optional(),
-  sort_order: z.number().min(0, '排序值不能小于0').default(0),
-  is_active: z.boolean().default(true),
-  extra_fields: z.array(extraFieldSchema).default([]),
-  // 快速录入 & 钉钉通知配置
-  channel_config: z.object({
-    submit_campus_id: z.string().optional(),
-    dingtalk_notify: z.object({
-      enabled: z.boolean().default(false),
-      robot_id: z.string().nullable().optional(),
-      notify_on_submit: z.boolean().default(true),
-      notify_on_collision: z.boolean().default(false),
-      notify_on_followup: z.boolean().default(false),
-    }).default({
-      enabled: false,
-      robot_id: null,
-      notify_on_submit: true,
-      notify_on_collision: false,
-      notify_on_followup: false,
-    }),
-  }).default({}),
-})
+// 骨架屏数据
+const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+function createSkeletonData(count: number): SourceChannel[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${SKELETON_PREFIX}${i}`,
+    name: '',
+    category: 'online' as const,
+    is_active: true,
+    sort_order: 0,
+  }))
+}
 
-type FormData = z.infer<typeof formSchema>
+// 额外字段类型
+interface ExtraFieldItem {
+  field_name: string
+  field_label: string
+  field_type: string
+  required: boolean
+  placeholder?: string
+  options?: Array<{ label: string; value: string }>
+}
 
-const pageSize = 20
+const PAGE_SIZE = 20
 
 export function SourceChannelsPage() {
   useDocumentTitle('来源渠道管理')
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -155,53 +95,21 @@ export function SourceChannelsPage() {
   const [editingItem, setEditingItem] = useState<SourceChannel | null>(null)
   const [deletingItem, setDeletingItem] = useState<SourceChannel | null>(null)
 
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      category: 'ONLINE',
-      description: '',
-      sort_order: 0,
-      is_active: true,
-      extra_fields: [],
-      channel_config: {
-        submit_campus_id: '',
-        dingtalk_notify: {
-          enabled: false,
-          robot_id: null,
-          notify_on_submit: true,
-          notify_on_collision: false,
-        },
-      },
-    },
-  })
-
-  // 额外字段数组管理
-  const { fields: extraFields, append: appendExtraField, remove: removeExtraField } = useFieldArray({
-    control: form.control,
-    name: 'extra_fields',
-  })
+  // 额外字段状态（Semi Form 不支持 fieldArray，手动管理）
+  const [extraFields, setExtraFields] = useState<ExtraFieldItem[]>([])
 
   // 获取来源渠道列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-source-channels', page, pageSize, searchValue, statusFilter, categoryFilter],
+    queryKey: ['admin-source-channels', page, PAGE_SIZE, searchValue, statusFilter, categoryFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = {
         page,
-        size: pageSize,
+        size: PAGE_SIZE,
       }
-      if (searchValue) {
-        params.search = searchValue
-      }
-      if (statusFilter !== 'all') {
-        params.is_active = statusFilter === 'active'
-      }
-      if (categoryFilter !== 'all') {
-        params.category = categoryFilter
-      }
-      const response = await sourceChannelApi.getChannelsPaginated(params)
-      return response
+      if (searchValue) params.search = searchValue
+      if (statusFilter !== 'all') params.is_active = statusFilter === 'active'
+      if (categoryFilter !== 'all') params.category = categoryFilter
+      return sourceChannelApi.getChannelsPaginated(params)
     },
   })
 
@@ -232,7 +140,6 @@ export function SourceChannelsPage() {
     onSuccess: () => {
       toast.success('令牌已添加')
       queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
-      // 刷新编辑项数据
       if (editingItem) {
         sourceChannelApi.getChannelById(editingItem.id).then(ch => {
           if (ch) setEditingItem(ch)
@@ -264,11 +171,10 @@ export function SourceChannelsPage() {
 
   // 创建来源渠道
   const createMutation = useMutation({
-    mutationFn: (data: FormData) => sourceChannelApi.createChannel(data),
+    mutationFn: (data: Record<string, any>) => sourceChannelApi.createChannel(data),
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
     },
     onError: (error: Error) => {
@@ -278,13 +184,12 @@ export function SourceChannelsPage() {
 
   // 更新来源渠道
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+    mutationFn: ({ id, data }: { id: string; data: Record<string, any> }) =>
       sourceChannelApi.updateChannel(id, data),
     onSuccess: () => {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-source-channels'] })
     },
     onError: (error: Error) => {
@@ -306,161 +211,129 @@ export function SourceChannelsPage() {
     },
   })
 
-  // 判断是否为骨架屏数据
-  const isSkeleton = (id?: string) => id?.startsWith('__skeleton__') ?? false
-
-  // 表格列定义
-  const columns: ColumnDef<SourceChannel>[] = [
+  // 列定义
+  const columns: ColumnProps[] = useMemo(() => [
     {
-      accessorKey: 'name',
-      header: '渠道名称',
-      cell: ({ row }) => {
-        if (isSkeleton(row.original.id)) {
-          return <Skeleton className="h-4 w-24" />
-        }
+      title: '渠道名称',
+      dataIndex: 'name',
+      width: 200,
+      render: (text: string, record: any) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
         return (
           <div className="flex items-center gap-2">
             <Share2 className="h-4 w-4 text-indigo-500" />
-            <span className="font-medium">{row.original.name}</span>
+            <Text strong>{text}</Text>
           </div>
         )
       },
     },
     {
-      accessorKey: 'category',
-      header: '分类',
-      cell: ({ row }) => {
-        if (isSkeleton(row.original.id)) {
-          return <Skeleton className="h-5 w-16" />
-        }
-        return <SourceChannelCategoryBadge category={row.original.category?.toUpperCase() || 'OTHER'} />
+      title: '分类',
+      dataIndex: 'category',
+      width: 120,
+      render: (_: string, record: any) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
+        return <SourceChannelCategoryBadge category={record.category?.toUpperCase() || 'OTHER'} />
       },
     },
     {
-      accessorKey: 'description',
-      header: '描述',
-      cell: ({ row }) => {
-        if (isSkeleton(row.original.id)) {
-          return <Skeleton className="h-4 w-32" />
-        }
-        return row.original.description || '-'
+      title: '描述',
+      dataIndex: 'description',
+      width: 250,
+      render: (text: string, record: any) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 16 }} loading />
+        return (
+          <Text type="tertiary" ellipsis={{ showTooltip: true }} style={{ maxWidth: 250 }}>
+            {text || '-'}
+          </Text>
+        )
       },
     },
     {
-      accessorKey: 'extra_fields',
-      header: '额外字段',
-      cell: ({ row }) => {
-        if (isSkeleton(row.original.id)) {
-          return <Skeleton className="h-4 w-8" />
-        }
-        const fields = row.original.extra_fields || row.original.channel_config?.fields || []
+      title: '额外字段',
+      dataIndex: 'extra_fields',
+      width: 100,
+      render: (_: any, record: any) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
+        const fields = record.extra_fields || record.channel_config?.fields || []
         return fields.length > 0 ? `${fields.length} 个` : '-'
       },
     },
     {
-      accessorKey: 'sort_order',
-      header: '排序',
-      cell: ({ row }) => {
-        if (isSkeleton(row.original.id)) {
-          return <Skeleton className="h-4 w-8" />
-        }
-        return row.original.sort_order ?? 0
+      title: '排序',
+      dataIndex: 'sort_order',
+      width: 80,
+      render: (text: number, record: any) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
+        return text ?? 0
       },
     },
     {
-      accessorKey: 'is_active',
-      header: '状态',
-      cell: ({ row }) => {
-        if (isSkeleton(row.original.id)) {
-          return <Skeleton className="h-5 w-14" />
-        }
-        return <StatusBadge isActive={row.original.is_active ?? true} />
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 100,
+      render: (_: boolean, record: any) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
+        return <StatusBadge isActive={record.is_active ?? true} />
       },
     },
     {
-      id: 'actions',
-      header: '操作',
-      cell: ({ row }) => {
-        if (isSkeleton(row.original.id)) {
-          return (
-            <div className="flex gap-2">
-              <Skeleton className="h-8 w-8" />
-              <Skeleton className="h-8 w-8" />
-            </div>
-          )
-        }
+      title: '操作',
+      dataIndex: 'id',
+      width: 120,
+      render: (_: string, record: any) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 28 }} loading />
         return (
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleEdit(row.original)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDeleteClick(row.original)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
           </div>
         )
       },
     },
-  ]
+  ], [])
 
-  // 生成骨架屏数据
-  const skeletonData: SourceChannel[] = useMemo(
-    () =>
-      Array.from({ length: 5 }).map((_, i) => ({
-        id: `__skeleton__${i}`,
-        name: '',
-        category: 'online' as const,
-        is_active: true,
-        sort_order: 0,
-      })),
-    []
-  )
+  // 显示数据
+  const displayData = isLoading ? createSkeletonData(5) : (data?.items || [])
 
-  const tableData = isLoading ? skeletonData : (data?.items || [])
-
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+  // 分页配置
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize: PAGE_SIZE,
+    total: data?.total || 0,
+    onPageChange: (p: number) => setPage(p),
+    showSizeChanger: false,
+    showTotal: true,
+    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, data?.total])
 
   // 处理创建
   const handleCreate = () => {
     setEditingItem(null)
-    form.reset({
-      name: '',
-      category: 'ONLINE',
-      description: '',
-      sort_order: 0,
-      is_active: true,
-      extra_fields: [],
-      channel_config: {
-        submit_campus_id: '',
-        dingtalk_notify: {
-          enabled: false,
-          robot_id: null,
-          notify_on_submit: true,
-          notify_on_collision: false,
-          notify_on_followup: false,
-        },
-      },
-    })
+    setExtraFields([])
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.reset()
+      formRef.current?.setValues({
+        category: 'ONLINE',
+        sort_order: 0,
+        is_active: true,
+        'channel_config.submit_campus_id': '',
+        'channel_config.dingtalk_notify.enabled': false,
+        'channel_config.dingtalk_notify.robot_id': '',
+        'channel_config.dingtalk_notify.notify_on_submit': true,
+        'channel_config.dingtalk_notify.notify_on_collision': false,
+        'channel_config.dingtalk_notify.notify_on_followup': false,
+      })
+    }, 0)
   }
 
   // 处理编辑
   const handleEdit = (item: SourceChannel) => {
     setEditingItem(item)
-    // 获取额外字段数据，兼容多种格式
-    let extraFieldsData: FormData['extra_fields'] = []
+
+    // 获取额外字段数据
+    let extraFieldsData: ExtraFieldItem[] = []
     if (item.extra_fields && Array.isArray(item.extra_fields)) {
       extraFieldsData = item.extra_fields.map(field => ({
         field_name: field.field_name || '',
@@ -480,27 +353,25 @@ export function SourceChannelsPage() {
         options: field.options || [],
       }))
     }
+    setExtraFields(extraFieldsData)
 
     const config = item.channel_config || {}
-    form.reset({
-      name: item.name,
-      category: (item.category?.toUpperCase() || 'ONLINE') as FormData['category'],
-      description: item.description || '',
-      sort_order: item.sort_order,
-      is_active: item.is_active,
-      extra_fields: extraFieldsData,
-      channel_config: {
-        submit_campus_id: config.submit_campus_id || '',
-        dingtalk_notify: {
-          enabled: config.dingtalk_notify?.enabled || false,
-          robot_id: config.dingtalk_notify?.robot_id || null,
-          notify_on_submit: config.dingtalk_notify?.notify_on_submit ?? true,
-          notify_on_collision: config.dingtalk_notify?.notify_on_collision ?? false,
-          notify_on_followup: config.dingtalk_notify?.notify_on_followup ?? false,
-        },
-      },
-    })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        name: item.name,
+        category: (item.category?.toUpperCase() || 'ONLINE'),
+        description: item.description || '',
+        sort_order: item.sort_order,
+        is_active: item.is_active,
+        'channel_config.submit_campus_id': config.submit_campus_id || '',
+        'channel_config.dingtalk_notify.enabled': config.dingtalk_notify?.enabled || false,
+        'channel_config.dingtalk_notify.robot_id': config.dingtalk_notify?.robot_id || '',
+        'channel_config.dingtalk_notify.notify_on_submit': config.dingtalk_notify?.notify_on_submit ?? true,
+        'channel_config.dingtalk_notify.notify_on_collision': config.dingtalk_notify?.notify_on_collision ?? false,
+        'channel_config.dingtalk_notify.notify_on_followup': config.dingtalk_notify?.notify_on_followup ?? false,
+      })
+    }, 0)
   }
 
   // 处理删除点击
@@ -517,27 +388,36 @@ export function SourceChannelsPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (data: FormData) => {
-    // 过滤掉无效的额外字段（必须有 field_name 和 field_label）
-    const submitData = {
-      ...data,
-      extra_fields: data.extra_fields.filter(
-        field => field.field_name.trim() && field.field_label.trim()
-      ).map(field => ({
+  const handleSubmit = (values: Record<string, any>) => {
+    // 过滤掉无效的额外字段
+    const validExtraFields = extraFields
+      .filter(field => field.field_name.trim() && field.field_label.trim())
+      .map(field => ({
         ...field,
         options: field.field_type === 'select' ? field.options : undefined,
-      })),
+      }))
+
+    const submitData = {
+      name: values.name,
+      category: values.category,
+      description: values.description,
+      sort_order: values.sort_order,
+      is_active: values.is_active,
+      extra_fields: validExtraFields,
       channel_config: {
-        ...(data.channel_config || {}),
-        submit_campus_id: data.channel_config?.submit_campus_id || undefined,
+        submit_campus_id: values['channel_config.submit_campus_id'] || undefined,
+        dingtalk_notify: {
+          enabled: values['channel_config.dingtalk_notify.enabled'] || false,
+          robot_id: values['channel_config.dingtalk_notify.robot_id'] || null,
+          notify_on_submit: values['channel_config.dingtalk_notify.notify_on_submit'] ?? true,
+          notify_on_collision: values['channel_config.dingtalk_notify.notify_on_collision'] ?? false,
+          notify_on_followup: values['channel_config.dingtalk_notify.notify_on_followup'] ?? false,
+        },
       },
     }
 
     if (editingItem) {
-      updateMutation.mutate({
-        id: editingItem.id,
-        data: submitData,
-      })
+      updateMutation.mutate({ id: editingItem.id, data: submitData })
     } else {
       createMutation.mutate(submitData)
     }
@@ -554,40 +434,64 @@ export function SourceChannelsPage() {
   }
 
   // 复制员工录入链接
-  const handleCopyTokenLink = (token: string) => {
+  const handleCopyTokenLink = async (token: string) => {
     const link = `${window.location.origin}/lead-submit?token=${token}`
-    navigator.clipboard.writeText(link)
-    toast.success('链接已复制到剪贴板')
+    const { copyToClipboard } = await import('@/lib/utils')
+    const success = await copyToClipboard(link)
+    if (success) {
+      toast.success('链接已复制到剪贴板')
+    } else {
+      toast.error('复制失败')
+    }
   }
 
   // 添加新的额外字段
   const handleAddExtraField = () => {
-    appendExtraField({
+    setExtraFields(prev => [...prev, {
       field_name: '',
       field_label: '',
       field_type: 'text',
       required: false,
       placeholder: '',
       options: [],
-    })
+    }])
+  }
+
+  // 移除额外字段
+  const handleRemoveExtraField = (index: number) => {
+    setExtraFields(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // 更新额外字段
+  const updateExtraField = (index: number, key: keyof ExtraFieldItem, value: any) => {
+    setExtraFields(prev => prev.map((f, i) => i === index ? { ...f, [key]: value } : f))
   }
 
   // 为选择框添加选项
   const handleAddOption = (fieldIndex: number) => {
-    const currentOptions = form.getValues(`extra_fields.${fieldIndex}.options`) || []
-    form.setValue(`extra_fields.${fieldIndex}.options`, [
-      ...currentOptions,
-      { label: '', value: '' },
-    ])
+    setExtraFields(prev => prev.map((f, i) => {
+      if (i !== fieldIndex) return f
+      return { ...f, options: [...(f.options || []), { label: '', value: '' }] }
+    }))
   }
 
   // 移除选择框选项
   const handleRemoveOption = (fieldIndex: number, optionIndex: number) => {
-    const currentOptions = form.getValues(`extra_fields.${fieldIndex}.options`) || []
-    form.setValue(
-      `extra_fields.${fieldIndex}.options`,
-      currentOptions.filter((_, i) => i !== optionIndex)
-    )
+    setExtraFields(prev => prev.map((f, i) => {
+      if (i !== fieldIndex) return f
+      return { ...f, options: (f.options || []).filter((_, oi) => oi !== optionIndex) }
+    }))
+  }
+
+  // 更新选择框选项
+  const updateOption = (fieldIndex: number, optionIndex: number, key: 'label' | 'value', value: string) => {
+    setExtraFields(prev => prev.map((f, i) => {
+      if (i !== fieldIndex) return f
+      return {
+        ...f,
+        options: (f.options || []).map((opt, oi) => oi === optionIndex ? { ...opt, [key]: value } : opt),
+      }
+    }))
   }
 
   // 处理搜索
@@ -596,699 +500,327 @@ export function SourceChannelsPage() {
     refetch()
   }
 
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0
+  const isPending = createMutation.isPending || updateMutation.isPending
+
+  // 钉钉通知启用状态（需要在表单外追踪以条件渲染）
+  const [dingtalkEnabled, setDingtalkEnabled] = useState(false)
 
   return (
     <Main fixed>
-      <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-col gap-4 h-full">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-shrink-0">
           <div>
-            <h1 className="text-2xl font-bold">来源渠道管理</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl font-semibold">来源渠道管理</h1>
+            <p style={{ color: 'var(--semi-color-text-2)', fontSize: 14 }}>
               管理线索来源渠道配置，支持线上、线下、推荐等多种渠道类型
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新建渠道
           </Button>
         </div>
 
         {/* 工具栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative min-w-[200px] max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索渠道名称..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-8"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={(value) => { setCategoryFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[140px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="筛选分类" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部分类</SelectItem>
-                {CHANNEL_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="筛选状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="active">已启用</SelectItem>
-                <SelectItem value="inactive">已停用</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Input
+            prefix={<IconSearch />}
+            placeholder="搜索渠道名称..."
+            value={searchValue}
+            onChange={(v) => setSearchValue(v)}
+            onEnterPress={handleSearch}
+            showClear
+            style={{ width: 220 }}
+          />
+          <Select
+            value={categoryFilter}
+            onChange={(v) => { setCategoryFilter(v as string); setPage(1) }}
+            optionList={categoryFilterOptions}
+            style={{ width: 140 }}
+            prefix={<Filter className="h-3.5 w-3.5" />}
+          />
+          <Select
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
+            optionList={statusFilterOptions}
+            style={{ width: 130 }}
+          />
+          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {totalPages > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
+        <div className="flex-1 min-h-0">
+          <Table
+            columns={columns}
+            dataSource={displayData}
+            rowKey="id"
+            pagination={pagination}
+            loading={false}
+            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+            empty={<div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
           />
-        )}
+        </div>
       </div>
 
-      {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>
-              {editingItem ? '编辑来源渠道' : '新建来源渠道'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingItem
-                ? '修改来源渠道信息'
-                : '创建一个新的来源渠道'}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
-                <TabsList className="mx-6 mt-2 grid w-auto grid-cols-4">
-                  <TabsTrigger value="basic">基本信息</TabsTrigger>
-                  <TabsTrigger value="submit-config">
-                    <Link className="mr-1 h-3 w-3" />
-                    快速录入
-                  </TabsTrigger>
-                  <TabsTrigger value="dingtalk-notify">
-                    <Bell className="mr-1 h-3 w-3" />
-                    钉钉通知
-                  </TabsTrigger>
-                  <TabsTrigger value="extra-fields">
-                    额外字段
-                    {extraFields.length > 0 && (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        ({extraFields.length})
-                      </span>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
+      {/* 创建/编辑弹窗 */}
+      <Modal
+        title={editingItem ? '编辑来源渠道' : '新建来源渠道'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        width={720}
+        style={{ maxHeight: '90vh' }}
+        bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => formRef.current?.submitForm()} loading={isPending}>保存</Button>
+          </div>
+        }
+      >
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleSubmit}
+          labelPosition="top"
+          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+        >
+          <Tabs defaultActiveKey="basic" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 24px' }}>
+            <TabPane tab="基本信息" itemKey="basic">
+              <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16, paddingBottom: 24 }}>
+                <Form.Input field="name" label="渠道名称" placeholder="请输入渠道名称" rules={[{ required: true, message: '请输入渠道名称' }, { max: 50, message: '名称最多50个字符' }]} />
+                <Form.Select field="category" label="渠道分类" placeholder="请选择渠道分类" optionList={CHANNEL_CATEGORIES.map(c => ({ value: c.value, label: c.label }))} rules={[{ required: true, message: '请选择渠道分类' }]} />
+                <Form.TextArea field="description" label="描述" placeholder="请输入描述（可选）" rows={3} rules={[{ max: 200, message: '描述最多200个字符' }]} />
+                <Form.InputNumber field="sort_order" label="排序值" min={0} style={{ width: '100%' }} />
+                <Form.Switch field="is_active" label="启用状态" />
+              </div>
+            </TabPane>
 
-                {/* 基本信息 Tab */}
-                <TabsContent value="basic" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>渠道名称</FormLabel>
-                        <FormControl>
-                          <Input placeholder="请输入渠道名称" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>渠道分类</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="请选择渠道分类" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {CHANNEL_CATEGORIES.map((cat) => (
-                              <SelectItem key={cat.value} value={cat.value}>
-                                {cat.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>描述</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="请输入描述（可选）"
-                            className="resize-none"
-                            rows={3}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="sort_order"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>排序值</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="请输入排序值"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>启用状态</FormLabel>
-                          <div className="text-sm text-muted-foreground">
-                            设置该渠道是否启用
-                          </div>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </TabsContent>
+            {/* 快速录入配置 Tab */}
+            <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Link size={12} />快速录入</span>} itemKey="submit-config">
+              <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16, paddingBottom: 24 }}>
+                {/* 归属校区 */}
+                <Form.Select
+                  field="channel_config.submit_campus_id"
+                  label="归属校区"
+                  placeholder="选择线索归属校区"
+                  optionList={campuses.map((campus: { id: string; name: string }) => ({ value: campus.id, label: campus.name }))}
+                  showClear
+                />
 
-                {/* 快速录入配置 Tab */}
-                <TabsContent value="submit-config" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
-                  {/* 归属校区 */}
-                  <FormField
-                    control={form.control}
-                    name="channel_config.submit_campus_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>归属校区</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ''}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="选择线索归属校区" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {campuses.map((campus: { id: string; name: string }) => (
-                              <SelectItem key={campus.id} value={campus.id}>
-                                {campus.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {/* 员工提交令牌管理 */}
+                <div style={{ marginTop: 16 }}>
+                  <Text strong style={{ display: 'block', marginBottom: 8 }}>员工专属链接</Text>
 
-                  {/* 员工提交令牌管理 */}
-                  <div className="space-y-3">
-                    <Label>员工专属链接</Label>
+                  {!editingItem ? (
+                    <Text type="tertiary" size="small">请先保存渠道后再管理员工令牌</Text>
+                  ) : (
+                    <>
+                      <Button
+                        theme="outline"
+                        icon={<UserPlus className="h-4 w-4" />}
+                        onClick={() => setEmployeeSelectorOpen(true)}
+                        disabled={addTokenMutation.isPending}
+                        block
+                      >
+                        选择员工并生成链接
+                      </Button>
 
-                    {!editingItem ? (
-                      <p className="text-xs text-muted-foreground">请先保存渠道后再管理员工令牌</p>
-                    ) : (
-                      <>
-                        {/* 添加员工 */}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setEmployeeSelectorOpen(true)}
-                          disabled={addTokenMutation.isPending}
-                          className="w-full"
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          选择员工并生成链接
-                        </Button>
-
-                        {/* 已有令牌列表 */}
-                        {(() => {
-                          const submitTokens = editingItem?.channel_config?.submit_tokens || {}
-                          const tokenEntries = Object.entries(submitTokens)
-                          if (tokenEntries.length === 0) {
-                            return (
-                              <div className="flex flex-col items-center justify-center py-6 text-center border rounded-lg border-dashed">
-                                <Link className="h-6 w-6 text-muted-foreground mb-2" />
-                                <p className="text-sm text-muted-foreground">暂无员工链接</p>
-                                <p className="text-xs text-muted-foreground mt-1">选择员工并点击生成链接</p>
-                              </div>
-                            )
-                          }
+                      {(() => {
+                        const submitTokens = editingItem?.channel_config?.submit_tokens || {}
+                        const tokenEntries = Object.entries(submitTokens)
+                        if (tokenEntries.length === 0) {
                           return (
-                            <div className="space-y-2">
-                              {tokenEntries.map(([tok, info]) => (
-                                <Card key={tok} className="p-3">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0 flex-1">
-                                      <div className="font-medium text-sm">{(info as { employee_name: string }).employee_name}</div>
-                                      <div className="text-xs text-muted-foreground font-mono truncate">
-                                        {`${window.location.origin}/lead-submit?token=${tok}`}
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-1 shrink-0">
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() => handleCopyTokenLink(tok)}
-                                        title="复制链接"
-                                      >
-                                        <Copy className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 text-destructive"
-                                        onClick={() => removeTokenMutation.mutate({ channelId: editingItem.id, token: tok })}
-                                        title="移除"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </Card>
-                              ))}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 0', textAlign: 'center', border: '1px dashed var(--semi-color-border)', borderRadius: 6, marginTop: 12 }}>
+                              <Link className="h-6 w-6" style={{ color: 'var(--semi-color-text-2)', marginBottom: 8 }} />
+                              <Text type="tertiary" size="small">暂无员工链接</Text>
+                              <Text type="tertiary" size="small" style={{ marginTop: 4 }}>选择员工并点击生成链接</Text>
                             </div>
                           )
-                        })()}
-                      </>
-                    )}
-                  </div>
-                </TabsContent>
-
-                {/* 钉钉通知配置 Tab */}
-                <TabsContent value="dingtalk-notify" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
-                  {/* 启用开关 */}
-                  <FormField
-                    control={form.control}
-                    name="channel_config.dingtalk_notify.enabled"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>启用钉钉通知</FormLabel>
-                          <div className="text-sm text-muted-foreground">
-                            新线索提交时自动发送通知到钉钉群
+                        }
+                        return (
+                          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {tokenEntries.map(([tok, info]) => (
+                              <div key={tok} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 12, border: '1px solid var(--semi-color-border)', borderRadius: 6 }}>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <Text strong size="small">{(info as { employee_name: string }).employee_name}</Text>
+                                  <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--semi-color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {`${window.location.origin}/lead-submit?token=${tok}`}
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                  <Button theme="borderless" type="tertiary" icon={<Copy className="h-3.5 w-3.5" />} size="small" onClick={() => handleCopyTokenLink(tok)} />
+                                  <Button theme="borderless" type="danger" icon={<Trash2 className="h-3.5 w-3.5" />} size="small" onClick={() => removeTokenMutation.mutate({ channelId: editingItem.id, token: tok })} />
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* 选择机器人（启用后显示） */}
-                  {form.watch('channel_config.dingtalk_notify.enabled') && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="channel_config.dingtalk_notify.robot_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>通知机器人</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || ''}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <Bot className="mr-2 h-4 w-4" />
-                                  <SelectValue placeholder="选择钉钉机器人" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {robots.map((robot: DingtalkRobot) => (
-                                  <SelectItem key={robot.id} value={robot.id}>
-                                    {robot.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {robots.length === 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                暂无可用机器人，请先在钉钉机器人管理中创建
-                              </p>
-                            )}
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* 通知场景 */}
-                      <FormField
-                        control={form.control}
-                        name="channel_config.dingtalk_notify.notify_on_submit"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                            <div>
-                              <FormLabel>新线索录入通知</FormLabel>
-                              <div className="text-sm text-muted-foreground">
-                                有新线索成功录入时发送通知
-                              </div>
-                            </div>
-                            <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="channel_config.dingtalk_notify.notify_on_collision"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                            <div>
-                              <FormLabel>撞量通知</FormLabel>
-                              <div className="text-sm text-muted-foreground">
-                                线索撞量时发送通知（包括成功接管和正在跟进中）
-                              </div>
-                            </div>
-                            <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="channel_config.dingtalk_notify.notify_on_followup"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                            <div>
-                              <FormLabel>跟进结果回传</FormLabel>
-                              <div className="text-sm text-muted-foreground">
-                                课程顾问添加跟进记录后，自动将结果回传到渠道方钉钉群（脱敏信息）
-                              </div>
-                            </div>
-                            <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        )
+                      })()}
                     </>
                   )}
-                </TabsContent>
+                </div>
+              </div>
+            </TabPane>
 
-                {/* 额外字段配置 Tab */}
-                <TabsContent value="extra-fields" className="flex-1 overflow-y-auto px-6 mt-4 pb-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Settings2 className="h-4 w-4" />
-                      <span>配置该来源渠道特有的额外字段</span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddExtraField}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      添加字段
-                    </Button>
+            {/* 钉钉通知配置 Tab */}
+            <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Bell size={12} />钉钉通知</span>} itemKey="dingtalk-notify">
+              <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16, paddingBottom: 24 }}>
+                <Form.Switch
+                  field="channel_config.dingtalk_notify.enabled"
+                  label="启用钉钉通知"
+                  extraText="新线索提交时自动发送通知到钉钉群"
+                  onChange={(v) => setDingtalkEnabled(v as boolean)}
+                />
+
+                {dingtalkEnabled && (
+                  <>
+                    <Form.Select
+                      field="channel_config.dingtalk_notify.robot_id"
+                      label="通知机器人"
+                      placeholder="选择钉钉机器人"
+                      optionList={robots.map((robot: DingtalkRobot) => ({ value: robot.id, label: robot.name }))}
+                      prefix={<Bot className="h-4 w-4" />}
+                      showClear
+                    />
+                    {robots.length === 0 && (
+                      <Text type="tertiary" size="small" style={{ display: 'block', marginTop: -8, marginBottom: 12 }}>
+                        暂无可用机器人，请先在钉钉机器人管理中创建
+                      </Text>
+                    )}
+
+                    <Form.Switch
+                      field="channel_config.dingtalk_notify.notify_on_submit"
+                      label="新线索录入通知"
+                      extraText="有新线索成功录入时发送通知"
+                    />
+                    <Form.Switch
+                      field="channel_config.dingtalk_notify.notify_on_collision"
+                      label="撞量通知"
+                      extraText="线索撞量时发送通知（包括成功接管和正在跟进中）"
+                    />
+                    <Form.Switch
+                      field="channel_config.dingtalk_notify.notify_on_followup"
+                      label="跟进结果回传"
+                      extraText="课程顾问添加跟进记录后，自动将结果回传到渠道方钉钉群（脱敏信息）"
+                    />
+                  </>
+                )}
+              </div>
+            </TabPane>
+
+            {/* 额外字段配置 Tab */}
+            <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>额外字段{extraFields.length > 0 && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>({extraFields.length})</span>}</span>} itemKey="extra-fields">
+              <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16, paddingBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--semi-color-text-2)', fontSize: 14 }}>
+                    <Settings2 className="h-4 w-4" />
+                    <span>配置该来源渠道特有的额外字段</span>
                   </div>
+                  <Button theme="outline" size="small" icon={<Plus className="h-4 w-4" />} onClick={handleAddExtraField}>
+                    添加字段
+                  </Button>
+                </div>
 
-                  {extraFields.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center border rounded-lg border-dashed">
-                      <Settings2 className="h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">暂无额外字段</p>
-                      <p className="text-xs text-muted-foreground mt-1">点击上方按钮添加字段</p>
+                {extraFields.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', textAlign: 'center', border: '1px dashed var(--semi-color-border)', borderRadius: 6 }}>
+                    <Settings2 className="h-8 w-8" style={{ color: 'var(--semi-color-text-2)', marginBottom: 8 }} />
+                    <Text type="tertiary" size="small">暂无额外字段</Text>
+                    <Text type="tertiary" size="small" style={{ marginTop: 4 }}>点击上方按钮添加字段</Text>
+                  </div>
+                ) : (
+                  extraFields.map((field, index) => (
+                    <div key={index} style={{ border: '1px solid var(--semi-color-border)', borderRadius: 6, marginBottom: 12, padding: 16, position: 'relative' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <Text strong size="small">字段 {index + 1}</Text>
+                        <Button theme="borderless" type="tertiary" icon={<X className="h-4 w-4" />} size="small" onClick={() => handleRemoveExtraField(index)} />
+                      </div>
+
+                      {/* 第一行：字段名和标签 */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                        <div>
+                          <Text size="small" type="tertiary" style={{ display: 'block', marginBottom: 4 }}>字段名称（英文）</Text>
+                          <Input placeholder="如: phone, wechat" value={field.field_name} onChange={(v) => updateExtraField(index, 'field_name', v)} />
+                        </div>
+                        <div>
+                          <Text size="small" type="tertiary" style={{ display: 'block', marginBottom: 4 }}>字段标签（中文）</Text>
+                          <Input placeholder="如: 手机号, 微信号" value={field.field_label} onChange={(v) => updateExtraField(index, 'field_label', v)} />
+                        </div>
+                      </div>
+
+                      {/* 第二行：类型、占位符、必填 */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+                        <div>
+                          <Text size="small" type="tertiary" style={{ display: 'block', marginBottom: 4 }}>字段类型</Text>
+                          <Select
+                            value={field.field_type}
+                            onChange={(v) => updateExtraField(index, 'field_type', v)}
+                            optionList={FIELD_TYPE_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div>
+                          <Text size="small" type="tertiary" style={{ display: 'block', marginBottom: 4 }}>占位符</Text>
+                          <Input placeholder="请输入..." value={field.placeholder || ''} onChange={(v) => updateExtraField(index, 'placeholder', v)} />
+                        </div>
+                        <div style={{ paddingBottom: 4 }}>
+                          <SemiCheckbox
+                            checked={field.required}
+                            onChange={(e) => updateExtraField(index, 'required', (e.target as HTMLInputElement).checked)}
+                          >
+                            必填
+                          </SemiCheckbox>
+                        </div>
+                      </div>
+
+                      {/* 选择框选项配置 */}
+                      {field.field_type === 'select' && (
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--semi-color-border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <Text size="small" type="tertiary">选项配置</Text>
+                            <Button theme="borderless" type="tertiary" size="small" icon={<Plus className="h-3 w-3" />} onClick={() => handleAddOption(index)}>
+                              添加选项
+                            </Button>
+                          </div>
+                          {(!field.options || field.options.length === 0) ? (
+                            <Text type="tertiary" size="small" style={{ display: 'block', textAlign: 'center', padding: '8px 0' }}>
+                              暂无选项，请添加
+                            </Text>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {field.options.map((opt, optIndex) => (
+                                <div key={optIndex} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <Input placeholder="选项标签" value={opt.label} onChange={(v) => updateOption(index, optIndex, 'label', v)} style={{ flex: 1 }} />
+                                  <Input placeholder="选项值" value={opt.value} onChange={(v) => updateOption(index, optIndex, 'value', v)} style={{ flex: 1 }} />
+                                  <Button theme="borderless" type="tertiary" icon={<X className="h-3 w-3" />} size="small" onClick={() => handleRemoveOption(index, optIndex)} />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    extraFields.map((field, index) => {
-                      const fieldType = form.watch(`extra_fields.${index}.field_type`)
-                      const options = form.watch(`extra_fields.${index}.options`) || []
+                  ))
+                )}
+              </div>
+            </TabPane>
+          </Tabs>
+        </Form>
+      </Modal>
 
-                      return (
-                        <Card key={field.id} className="relative">
-                          <CardHeader className="pb-3 pt-4 px-4">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-sm font-medium">
-                                字段 {index + 1}
-                              </CardTitle>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => removeExtraField(index)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="px-4 pb-4 space-y-3">
-                            {/* 第一行：字段名和标签 */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">字段名称（英文）</Label>
-                                <Input
-                                  placeholder="如: phone, wechat"
-                                  {...form.register(`extra_fields.${index}.field_name`)}
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">字段标签（中文）</Label>
-                                <Input
-                                  placeholder="如: 手机号, 微信号"
-                                  {...form.register(`extra_fields.${index}.field_label`)}
-                                />
-                              </div>
-                            </div>
-
-                            {/* 第二行：类型、必填、占位符 */}
-                            <div className="grid grid-cols-3 gap-3">
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">字段类型</Label>
-                                <Select
-                                  value={fieldType}
-                                  onValueChange={(value) => form.setValue(`extra_fields.${index}.field_type`, value as FormData['extra_fields'][0]['field_type'])}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {FIELD_TYPE_OPTIONS.map((opt) => (
-                                      <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">占位符</Label>
-                                <Input
-                                  placeholder="请输入..."
-                                  {...form.register(`extra_fields.${index}.placeholder`)}
-                                />
-                              </div>
-                              <div className="flex items-end pb-2">
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={`required-${index}`}
-                                    checked={form.watch(`extra_fields.${index}.required`)}
-                                    onCheckedChange={(checked) => form.setValue(`extra_fields.${index}.required`, !!checked)}
-                                  />
-                                  <Label htmlFor={`required-${index}`} className="text-xs cursor-pointer">
-                                    必填
-                                  </Label>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 选择框选项配置 */}
-                            {fieldType === 'select' && (
-                              <div className="space-y-2 pt-2 border-t">
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-xs">选项配置</Label>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 text-xs"
-                                    onClick={() => handleAddOption(index)}
-                                  >
-                                    <Plus className="mr-1 h-3 w-3" />
-                                    添加选项
-                                  </Button>
-                                </div>
-                                {options.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground text-center py-2">
-                                    暂无选项，请添加
-                                  </p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {options.map((_, optIndex) => (
-                                      <div key={optIndex} className="flex items-center gap-2">
-                                        <Input
-                                          placeholder="选项标签"
-                                          className="h-8 text-xs"
-                                          {...form.register(`extra_fields.${index}.options.${optIndex}.label`)}
-                                        />
-                                        <Input
-                                          placeholder="选项值"
-                                          className="h-8 text-xs"
-                                          {...form.register(`extra_fields.${index}.options.${optIndex}.value`)}
-                                        />
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 shrink-0"
-                                          onClick={() => handleRemoveOption(index, optIndex)}
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      )
-                    })
-                  )}
-                </TabsContent>
-              </Tabs>
-
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? '保存中...'
-                    : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除渠道「{deletingItem?.name}」吗？此操作不可撤销。
-              如果该渠道下存在线索，则无法删除。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* 删除确认弹窗 */}
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>删除</Button>
+          </div>
+        }
+      >
+        确定要删除渠道「{deletingItem?.name}」吗？此操作不可撤销。
+        如果该渠道下存在线索，则无法删除。
+      </Modal>
 
       {/* 员工选择弹窗 */}
       <EmployeeSelectorDialog

@@ -10,14 +10,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { createUniver, LocaleType, mergeLocales } from '@univerjs/presets'
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import UniverPresetSheetsCoreZhCN from '@univerjs/preset-sheets-core/locales/zh-CN'
-import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { Separator } from '@/components/ui/separator'
+import { Button, Divider, Tooltip } from '@douyinfe/semi-ui-19'
 import { toast } from 'sonner'
 import {
   FileUp,
@@ -283,26 +276,20 @@ export function ExcelDemoPage() {
   return (
     <div className="flex h-full flex-col">
       {/* 顶部工具栏 */}
-      <header className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-border/60 bg-card px-3">
+      <header className="flex h-12 flex-shrink-0 items-center gap-2 border-b px-3" style={{ borderColor: 'var(--semi-color-border)', background: 'var(--semi-color-bg-1)' }}>
         {/* 左侧：返回 + 文档标题 */}
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => navigate({ to: '/' })}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">返回首页</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip content="返回首页" position="bottom">
+          <Button
+            theme="borderless"
+            type="tertiary"
+            icon={<ArrowLeft className="h-4 w-4" />}
+            style={{ width: 32, height: 32 }}
+            onClick={() => navigate({ to: '/' })}
+          />
+        </Tooltip>
 
         <div className="flex items-center gap-2">
-          <FileSpreadsheet className="h-5 w-5 text-primary" />
+          <FileSpreadsheet className="h-5 w-5" style={{ color: 'var(--semi-color-primary)' }} />
           <input
             data-doc-name
             value={docName}
@@ -310,97 +297,83 @@ export function ExcelDemoPage() {
               setDocName(e.target.value)
               scheduleSave()
             }}
-            className="h-7 w-[200px] rounded border-transparent bg-transparent px-1.5 text-sm font-medium text-foreground outline-none transition-colors hover:border-border focus:border-primary focus:bg-background"
-            style={{ border: '1px solid transparent' }}
+            className="h-7 w-[200px] rounded bg-transparent px-1.5 text-sm font-medium outline-none transition-colors"
+            style={{ border: '1px solid transparent', color: 'var(--semi-color-text-0)' }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--semi-color-primary)'; e.currentTarget.style.background = 'var(--semi-color-bg-0)' }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
           />
           {/* 保存状态指示 */}
           {saveStatus === 'saving' && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--semi-color-text-2)' }}>
               <Loader2 className="h-3 w-3 animate-spin" />
               保存中
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--semi-color-text-2)' }}>
               <Check className="h-3 w-3" />
               已保存
             </span>
           )}
         </div>
 
-        <Separator orientation="vertical" className="mx-1 h-5" />
+        <Divider layout="vertical" style={{ height: 20, margin: '0 4px' }} />
 
         {/* 操作按钮组 */}
-        <TooltipProvider delayDuration={300}>
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 px-2.5 text-xs"
-                  onClick={handleImportJSON}
-                >
-                  <FileUp className="h-3.5 w-3.5" />
-                  导入
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">导入 JSON 快照</TooltipContent>
-            </Tooltip>
+        <div className="flex items-center gap-1">
+          <Tooltip content="导入 JSON 快照" position="bottom">
+            <Button
+              theme="borderless"
+              type="tertiary"
+              size="small"
+              icon={<FileUp className="h-3.5 w-3.5" />}
+              onClick={handleImportJSON}
+            >
+              导入
+            </Button>
+          </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 px-2.5 text-xs"
-                  onClick={handleExportJSON}
-                  disabled={!isReady}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  导出
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">导出 JSON 快照</TooltipContent>
-            </Tooltip>
+          <Tooltip content="导出 JSON 快照" position="bottom">
+            <Button
+              theme="borderless"
+              type="tertiary"
+              size="small"
+              icon={<Download className="h-3.5 w-3.5" />}
+              onClick={handleExportJSON}
+              disabled={!isReady}
+            >
+              导出
+            </Button>
+          </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 px-2.5 text-xs"
-                  onClick={handlePrintData}
-                  disabled={!isReady}
-                >
-                  <Terminal className="h-3.5 w-3.5" />
-                  控制台
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                将工作簿数据打印到浏览器控制台 (F12)
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <Tooltip content="将工作簿数据打印到浏览器控制台 (F12)" position="bottom">
+            <Button
+              theme="borderless"
+              type="tertiary"
+              size="small"
+              icon={<Terminal className="h-3.5 w-3.5" />}
+              onClick={handlePrintData}
+              disabled={!isReady}
+            >
+              控制台
+            </Button>
+          </Tooltip>
+        </div>
 
-          <div className="ml-auto flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 px-2.5 text-xs"
-                  onClick={handleClear}
-                  disabled={!isReady}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  新建
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">新建空白表格</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
+        <div className="ml-auto flex items-center gap-1">
+          <Tooltip content="新建空白表格" position="bottom">
+            <Button
+              theme="borderless"
+              type="tertiary"
+              size="small"
+              icon={<Plus className="h-3.5 w-3.5" />}
+              onClick={handleClear}
+              disabled={!isReady}
+            >
+              新建
+            </Button>
+          </Tooltip>
+        </div>
       </header>
 
       {/* Univer 表格容器 - 占满剩余空间 */}

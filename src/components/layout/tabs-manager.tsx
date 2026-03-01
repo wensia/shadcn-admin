@@ -8,14 +8,7 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Outlet } from '@tanstack/react-router'
 import { X, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu'
+import { Dropdown } from '@douyinfe/semi-ui-19'
 import { useTabsStore, type TabInfo } from '@/stores/tabs-store'
 import { getRouteConfig } from '@/lib/route-components'
 
@@ -39,52 +32,56 @@ function TabItem({
   onCloseAll: () => void
 }) {
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={cn(
-            'group flex h-9 shrink-0 cursor-pointer items-center gap-2 border-b-2 px-4 text-sm transition-colors',
-            isActive
-              ? 'border-primary bg-background text-foreground'
-              : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-          )}
-          onClick={onActivate}
-        >
-          <LayoutDashboard className='h-4 w-4 shrink-0' />
-          <span className='max-w-[120px] truncate'>{tab.title}</span>
+    <Dropdown
+      trigger='contextMenu'
+      position='bottomLeft'
+      clickToHide
+      render={
+        <Dropdown.Menu>
           {tab.closable && (
-            <button
-              className={cn(
-                'ml-1 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100',
-                isActive && 'opacity-100'
-              )}
-              onClick={(e) => {
-                e.stopPropagation()
-                onClose()
-              }}
-            >
-              <X className='h-3.5 w-3.5' />
-            </button>
+            <>
+              <Dropdown.Item onClick={onClose}>
+                关闭当前
+              </Dropdown.Item>
+              <Dropdown.Divider />
+            </>
           )}
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        {tab.closable && (
-          <>
-            <ContextMenuItem onClick={onClose}>
-              关闭当前
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-          </>
+          <Dropdown.Item onClick={onCloseOthers}>
+            关闭其他
+          </Dropdown.Item>
+          <Dropdown.Item onClick={onCloseAll}>
+            关闭全部
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      }
+    >
+      <div
+        className={cn(
+          'group flex h-9 shrink-0 cursor-pointer items-center gap-2 border-b-2 px-4 text-sm transition-colors',
+          isActive
+            ? 'border-primary bg-background text-foreground'
+            : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
         )}
-        <ContextMenuItem onClick={onCloseOthers}>
-          关闭其他
-        </ContextMenuItem>
-        <ContextMenuItem onClick={onCloseAll}>
-          关闭全部
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+        onClick={onActivate}
+      >
+        <LayoutDashboard className='h-4 w-4 shrink-0' />
+        <span className='max-w-[120px] truncate'>{tab.title}</span>
+        {tab.closable && (
+          <button
+            className={cn(
+              'ml-1 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100',
+              isActive && 'opacity-100'
+            )}
+            onClick={(e) => {
+              e.stopPropagation()
+              onClose()
+            }}
+          >
+            <X className='h-3.5 w-3.5' />
+          </button>
+        )}
+      </div>
+    </Dropdown>
   )
 }
 
@@ -210,7 +207,7 @@ export function TabsManager() {
     <div className='flex h-full flex-col'>
       {/* Tab栏 */}
       <div className='shrink-0 border-b bg-muted/30'>
-        <ScrollArea orientation='horizontal' className='w-full'>
+        <div className='w-full overflow-x-auto'>
           <div
             ref={tabsContainerRef}
             className='flex h-10 items-end'
@@ -228,8 +225,7 @@ export function TabsManager() {
               </div>
             ))}
           </div>
-          <ScrollBar orientation='horizontal' />
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Tab内容区域 - 使用Outlet渲染当前路由组件 */}

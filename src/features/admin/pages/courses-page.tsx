@@ -2,79 +2,28 @@
  * 课程管理页面
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-  type RowSelectionState,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { BookOpen, Plus, Pencil, Trash2, Copy, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button, Form, Modal, Switch, Table, Skeleton, Typography, Checkbox } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { coursesApi } from '../api'
 import type { Course, CourseFormData } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
-// 表单验证模式
-const formSchema = z.object({
-  name: z.string().min(1, '请输入课程名称').max(50, '名称最多50个字符'),
-  sort_order: z.coerce.number().int().min(0, '排序值不能为负数').default(0),
-  is_active: z.boolean().default(true),
-})
-
-type FormData = z.infer<typeof formSchema>
+const { Text } = Typography
 
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+
 function createSkeletonData(count: number): Course[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_PREFIX}${i}`,
@@ -89,6 +38,7 @@ function createSkeletonData(count: number): Course[] {
 export function CoursesPage() {
   useDocumentTitle('课程配置')
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   // 状态管理
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -97,17 +47,7 @@ export function CoursesPage() {
   const [initDialogOpen, setInitDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Course | null>(null)
   const [deletingItem, setDeletingItem] = useState<Course | null>(null)
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      sort_order: 0,
-      is_active: true,
-    },
-  })
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
   // 查询数据
   const { data: courses = [], isLoading } = useQuery({
@@ -124,7 +64,6 @@ export function CoursesPage() {
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
@@ -140,7 +79,6 @@ export function CoursesPage() {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
@@ -179,7 +117,7 @@ export function CoursesPage() {
     mutationFn: (ids: string[]) => coursesApi.batchActivateCourses(ids),
     onSuccess: () => {
       toast.success('批量启用成功')
-      setRowSelection({})
+      setSelectedRowKeys([])
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
@@ -192,7 +130,7 @@ export function CoursesPage() {
     mutationFn: (ids: string[]) => coursesApi.batchDeactivateCourses(ids),
     onSuccess: () => {
       toast.success('批量停用成功')
-      setRowSelection({})
+      setSelectedRowKeys([])
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
@@ -206,7 +144,7 @@ export function CoursesPage() {
     onSuccess: () => {
       toast.success('批量删除成功')
       setBatchDeleteDialogOpen(false)
-      setRowSelection({})
+      setSelectedRowKeys([])
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] })
     },
     onError: (error: Error) => {
@@ -227,131 +165,101 @@ export function CoursesPage() {
     },
   })
 
-  // 获取选中的 ID 列表
-  const selectedIds = useMemo(() => {
-    return Object.keys(rowSelection).filter(key => rowSelection[key])
-  }, [rowSelection])
-
   // 列定义
-  const columns: ColumnDef<Course>[] = useMemo(
+  const columns: ColumnProps<Course>[] = useMemo(
     () => [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="全选"
-          />
-        ),
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-4" />
+        title: '课程名称',
+        dataIndex: 'name',
+        width: 200,
+        render: (_: unknown, record: Course) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 20 }} loading />
           }
           return (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="选择行"
-            />
-          )
-        },
-        enableSorting: false,
-        enableHiding: false,
-        size: 40,
-      },
-      {
-        accessorKey: 'name',
-        header: '课程名称',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-24" />
-          }
-          return (
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <BookOpen className="h-4 w-4 text-blue-500" />
-              <span className="font-medium">{row.original.name}</span>
+              <Text strong>{record.name}</Text>
             </div>
           )
         },
       },
       {
-        accessorKey: 'is_active',
-        header: '状态',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 100,
+        render: (_: unknown, record: Course) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
           }
-          return <StatusBadge isActive={row.original.is_active} />
+          return <StatusBadge isActive={record.is_active} />
         },
       },
       {
-        accessorKey: 'sort_order',
-        header: '排序值',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-12" />
+        title: '排序值',
+        dataIndex: 'sort_order',
+        width: 100,
+        render: (_: unknown, record: Course) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 48, height: 20 }} loading />
           }
-          return row.original.sort_order
+          return record.sort_order
         },
       },
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        size: 180,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 180,
+        render: (_: unknown, record: Course) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
           }
-          return formatTime(row.original.created_at)
+          return formatTime(record.created_at)
         },
       },
       {
-        accessorKey: 'updated_at',
-        header: '更新时间',
-        size: 180,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '更新时间',
+        dataIndex: 'updated_at',
+        width: 180,
+        render: (_: unknown, record: Course) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128, height: 20 }} loading />
           }
-          return formatTime(row.original.updated_at)
+          return formatTime(record.updated_at)
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 180,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-28" />
+        title: '操作',
+        dataIndex: 'id',
+        width: 180,
+        render: (_: unknown, record: Course) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 20 }} loading />
           }
           return (
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', gap: 4 }}>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Pencil className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleEdit(record)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleCopy(row.original)}
+                theme="borderless"
+                type="tertiary"
+                icon={<Copy className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleCopy(record)}
                 disabled={copyMutation.isPending}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+                theme="borderless"
+                type="danger"
+                icon={<Trash2 className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleDeleteClick(record)}
+              />
             </div>
           )
         },
@@ -361,39 +269,29 @@ export function CoursesPage() {
   )
 
   // 表格数据
-  const tableData = isLoading ? createSkeletonData(5) : courses
-
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: setRowSelection,
-    state: {
-      rowSelection,
-    },
-    getRowId: (row) => row.id,
-  })
+  const displayData = isLoading ? createSkeletonData(5) : courses
 
   // 打开新增对话框
   const handleCreate = () => {
     setEditingItem(null)
-    form.reset({
-      name: '',
-      sort_order: 0,
-      is_active: true,
-    })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.reset()
+      formRef.current?.setValues({ sort_order: 0, is_active: true })
+    }, 0)
   }
 
   // 打开编辑对话框
   const handleEdit = (item: Course) => {
     setEditingItem(item)
-    form.reset({
-      name: item.name,
-      sort_order: item.sort_order,
-      is_active: item.is_active,
-    })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        name: item.name,
+        sort_order: item.sort_order,
+        is_active: item.is_active,
+      })
+    }, 0)
   }
 
   // 复制课程
@@ -415,11 +313,11 @@ export function CoursesPage() {
   }
 
   // 提交表单
-  const handleSubmit = (data: FormData) => {
+  const handleSubmit = (values: Record<string, unknown>) => {
     const formData: CourseFormData = {
-      name: data.name,
-      is_active: data.is_active,
-      sort_order: data.sort_order,
+      name: values.name as string,
+      is_active: values.is_active as boolean,
+      sort_order: values.sort_order as number,
     }
 
     if (editingItem) {
@@ -431,24 +329,37 @@ export function CoursesPage() {
 
   // 批量启用
   const handleBatchActivate = () => {
-    if (selectedIds.length > 0) {
-      batchActivateMutation.mutate(selectedIds)
+    if (selectedRowKeys.length > 0) {
+      batchActivateMutation.mutate(selectedRowKeys)
     }
   }
 
   // 批量停用
   const handleBatchDeactivate = () => {
-    if (selectedIds.length > 0) {
-      batchDeactivateMutation.mutate(selectedIds)
+    if (selectedRowKeys.length > 0) {
+      batchDeactivateMutation.mutate(selectedRowKeys)
     }
   }
 
   // 批量删除
   const handleBatchDeleteConfirm = () => {
-    if (selectedIds.length > 0) {
-      batchDeleteMutation.mutate(selectedIds)
+    if (selectedRowKeys.length > 0) {
+      batchDeleteMutation.mutate(selectedRowKeys)
     }
   }
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+
+  // 行选择配置
+  const rowSelection = useMemo(() => ({
+    selectedRowKeys,
+    onChange: (_selectedRowKeys: (string | number)[] | undefined) => {
+      setSelectedRowKeys((_selectedRowKeys || []) as string[])
+    },
+    getCheckboxProps: (record: Course) => ({
+      disabled: isSkeletonRow(record.id),
+    }),
+  }), [selectedRowKeys])
 
   return (
     <Main fixed>
@@ -457,256 +368,151 @@ export function CoursesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">课程管理</h1>
-            <p className="text-sm text-muted-foreground">
+            <Text type="tertiary" size="small">
               管理系统中的课程信息
-            </p>
+            </Text>
           </div>
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', gap: 8 }}>
             <Button
-              variant="outline"
+              theme="outline"
               onClick={() => setInitDialogOpen(true)}
               disabled={initPresetMutation.isPending}
+              icon={<RefreshCw className="h-4 w-4" />}
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
               初始化预设
             </Button>
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button theme="solid" type="primary" onClick={handleCreate} icon={<Plus className="h-4 w-4" />}>
               新增课程
             </Button>
           </div>
         </div>
 
         {/* 批量操作栏 */}
-        {selectedIds.length > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-            <span className="text-sm text-muted-foreground">
-              已选择 {selectedIds.length} 项
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleBatchActivate}
-              disabled={batchActivateMutation.isPending}
-            >
+        {selectedRowKeys.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8, border: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)' }}>
+            <Text type="tertiary" size="small">
+              已选择 {selectedRowKeys.length} 项
+            </Text>
+            <Button size="small" theme="outline" onClick={handleBatchActivate} disabled={batchActivateMutation.isPending}>
               批量启用
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleBatchDeactivate}
-              disabled={batchDeactivateMutation.isPending}
-            >
+            <Button size="small" theme="outline" onClick={handleBatchDeactivate} disabled={batchDeactivateMutation.isPending}>
               批量停用
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => setBatchDeleteDialogOpen(true)}
-            >
+            <Button size="small" theme="solid" type="danger" onClick={() => setBatchDeleteDialogOpen(true)}>
               批量删除
             </Button>
           </div>
         )}
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={displayData}
+            rowKey="id"
+            pagination={false}
+            loading={false}
+            rowSelection={rowSelection as any}
+            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+          />
         </div>
       </div>
 
       {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>{editingItem ? '编辑课程' : '新建课程'}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? '修改课程信息' : '创建一个新的课程'}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>课程名称</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入课程名称" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sort_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>排序值</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="请输入排序值"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>启用状态</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        设置该课程是否启用
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? '保存中...'
-                    : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title={editingItem ? '编辑课程' : '新建课程'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => formRef.current?.submitForm()} loading={isPending}>
+              保存
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleSubmit}
+          labelPosition="top"
+        >
+          <Form.Input
+            field="name"
+            label="课程名称"
+            placeholder="请输入课程名称"
+            rules={[
+              { required: true, message: '请输入课程名称' },
+              { max: 50, message: '名称最多50个字符' },
+            ]}
+          />
+          <Form.InputNumber
+            field="sort_order"
+            label="排序值"
+            placeholder="请输入排序值"
+            min={0}
+            rules={[{ required: true, message: '请输入排序值' }]}
+          />
+          <Form.Switch
+            field="is_active"
+            label="启用状态"
+            checkedText="启用"
+            uncheckedText="停用"
+          />
+        </Form>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除课程「{deletingItem?.name}」吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除课程"{deletingItem?.name}"吗？此操作不可撤销。
+      </Modal>
 
       {/* 批量删除确认对话框 */}
-      <AlertDialog open={batchDeleteDialogOpen} onOpenChange={setBatchDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认批量删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除选中的 {selectedIds.length} 个课程吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleBatchDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {batchDeleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认批量删除"
+        visible={batchDeleteDialogOpen}
+        onCancel={() => setBatchDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setBatchDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleBatchDeleteConfirm} loading={batchDeleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除选中的 {selectedRowKeys.length} 个课程吗？此操作不可撤销。
+      </Modal>
 
       {/* 初始化预设确认对话框 */}
-      <AlertDialog open={initDialogOpen} onOpenChange={setInitDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认初始化</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要初始化预设课程吗？这将添加系统预设的课程列表。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => initPresetMutation.mutate()}
-            >
-              {initPresetMutation.isPending ? '初始化中...' : '确定'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认初始化"
+        visible={initDialogOpen}
+        onCancel={() => setInitDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setInitDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => initPresetMutation.mutate()} loading={initPresetMutation.isPending}>
+              确定
+            </Button>
+          </div>
+        }
+      >
+        确定要初始化预设课程吗？这将添加系统预设的课程列表。
+      </Modal>
     </Main>
   )
 }

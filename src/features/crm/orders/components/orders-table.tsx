@@ -1,50 +1,37 @@
 /**
  * 订单数据表格组件
- * 使用TanStack Table + TanStack Virtual实现高性能虚拟滚动
- * 复用 leads-table 的布局结构
+ * Semi Design 重构版 - 使用 Semi Table + ResizeObserver 全高模式
  */
 
-import { useRef, useMemo, useEffect, useState } from 'react'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-  type RowSelectionState
-} from '@tanstack/react-table'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useRef, useMemo, useEffect, useState, useCallback } from 'react'
+import { Table, Tag, Typography, Skeleton } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { formatTime } from '@/lib/utils/time'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { cn } from '@/lib/utils'
-import { useStyle } from '@/context/style-provider'
-import { useStyleClasses } from '@/lib/style-utils'
 import type { OrderListItem } from '../types'
+
+const { Text } = Typography
 
 // 骨架屏占位数据标识
 const SKELETON_ID_PREFIX = '__skeleton__'
 
 // 支付状态颜色映射
 const paymentStatusColorMap: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  paid: 'bg-green-100 text-green-800',
-  partial: 'bg-blue-100 text-blue-800',
-  refunded: 'bg-gray-100 text-gray-800',
-  cancelled: 'bg-red-100 text-red-800'
+  pending: 'orange',
+  paid: 'green',
+  partial: 'blue',
+  refunded: 'grey',
+  cancelled: 'red'
 }
 
 // 审批状态颜色映射
 const approvalStatusColorMap: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-800',
-  leader_pending: 'bg-blue-100 text-blue-800',
-  leader_rejected: 'bg-red-100 text-red-800',
-  finance_pending: 'bg-purple-100 text-purple-800',
-  finance_rejected: 'bg-red-100 text-red-800',
-  approved: 'bg-green-100 text-green-800',
-  cancelled: 'bg-gray-100 text-gray-600'
+  pending: 'grey',
+  leader_pending: 'blue',
+  leader_rejected: 'red',
+  finance_pending: 'violet',
+  finance_rejected: 'red',
+  approved: 'green',
+  cancelled: 'grey'
 }
 
 // 生成骨架屏占位数据
@@ -78,6 +65,17 @@ function isSkeletonRow(id: string): boolean {
   return id.startsWith(SKELETON_ID_PREFIX)
 }
 
+// 骨架屏单元格
+function SkeletonCell({ width = '70%' }: { width?: string | number }) {
+  return (
+    <Skeleton.Paragraph
+      rows={1}
+      style={{ width, height: 16 }}
+      loading
+    />
+  )
+}
+
 interface OrdersTableProps {
   data: OrderListItem[]
   total: number
@@ -101,357 +99,240 @@ export function OrdersTable({
   onRowClick,
   onSelectionChange
 }: OrdersTableProps) {
-  const tableContainerRef = useRef<HTMLDivElement>(null)
-  const { style } = useStyle()
-  const s = useStyleClasses()
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(400)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([])
 
-  // Lyra 风格需要更宽的列(等宽字体)
-  const getColumnSize = (baseSize: number) => {
-    return style === 'lyra' ? Math.ceil(baseSize * 1.1) : baseSize
-  }
+  // 动态计算 scroll.y
+  const measure = useCallback(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+    const available = el.clientHeight - headerH
+    if (available > 100) setScrollY(available)
+  }, [])
 
-  // 决定显示的数据：加载时使用骨架屏数据
+  useEffect(() => {
+    measure()
+    const el = wrapperRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => measure())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [measure])
+
+  // 决定显示的数据
   const displayData = useMemo(() => {
     return isLoading ? createSkeletonData(pageSize) : data
   }, [isLoading, data, pageSize])
 
+  // 数据变化时清空选中
+  useEffect(() => {
+    setSelectedRowKeys([])
+  }, [data, page, pageSize])
+
+  // 选中变化回调
+  const handleSelectionChange = useCallback((keys?: (string | number)[], rows?: OrderListItem[]) => {
+    const safeKeys = keys ?? []
+    setSelectedRowKeys(safeKeys)
+    if (!isLoading && rows) {
+      onSelectionChange?.(rows)
+    }
+  }, [isLoading, onSelectionChange])
+
   // 定义表格列
-  const columns = useMemo<ColumnDef<OrderListItem>[]>(
+  const columns: ColumnProps<OrderListItem>[] = useMemo(
     () => [
-      // 选择列
       {
-        id: 'select',
-        header: ({ table }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={table.getIsAllPageRowsSelected()}
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="全选"
-              disabled={isLoading}
-            />
-          </div>
-        ),
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <div className="flex items-center justify-center" />
-          }
+        title: '订单编号',
+        dataIndex: 'order_no',
+        width: 140,
+        render: (_text: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={96} />
           return (
-            <div className="flex items-center justify-center">
-              <Checkbox
-                checked={row.getIsSelected()}
-                onCheckedChange={(value) => row.toggleSelected(!!value)}
-                aria-label="选择行"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
+            <Text style={{ fontFamily: 'monospace', fontSize: 13 }}>
+              {record.order_no}
+            </Text>
           )
-        },
-        size: 50,
-        enableSorting: false,
-        enableHiding: false
+        }
       },
-      // 订单编号
       {
-        accessorKey: 'order_no',
-        header: '订单编号',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
-          }
-          return (
-            <div className={cn('font-mono', s.text.xs)}>{row.original.order_no}</div>
-          )
-        },
-        size: getColumnSize(140)
+        title: '学员姓名',
+        dataIndex: 'child_name',
+        width: 100,
+        render: (_text: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
+          return <Text strong style={{ fontSize: 13 }}>{record.child_name || '-'}</Text>
+        }
       },
-      // 学员姓名
       {
-        accessorKey: 'child_name',
-        header: '学员姓名',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          return (
-            <div className={cn('font-medium', s.text.xs)}>{row.original.child_name || '-'}</div>
-          )
-        },
-        size: getColumnSize(100)
+        title: '家长电话',
+        dataIndex: 'parent_phone',
+        width: 120,
+        render: (_text: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={96} />
+          return <Text style={{ fontSize: 13 }}>{record.parent_phone || '-'}</Text>
+        }
       },
-      // 家长电话
       {
-        accessorKey: 'parent_phone',
-        header: '家长电话',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
-          }
+        title: '订单金额',
+        dataIndex: 'total_amount',
+        width: 100,
+        align: 'right' as const,
+        render: (_text: number, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
           return (
-            <div className={s.text.xs}>{row.original.parent_phone || '-'}</div>
-          )
-        },
-        size: getColumnSize(120)
-      },
-      // 订单金额
-      {
-        accessorKey: 'total_amount',
-        header: () => <div className="text-right">订单金额</div>,
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16 ml-auto" />
-          }
-          return (
-            <div className={cn('text-right', s.text.xs)}>
-              <span className="font-medium">¥{row.original.total_amount.toLocaleString()}</span>
-              {row.original.discount_amount > 0 && (
-                <div className="text-xs text-orange-500">-¥{row.original.discount_amount}</div>
+            <div>
+              <Text strong style={{ fontSize: 13 }}>
+                ¥{record.total_amount.toLocaleString()}
+              </Text>
+              {record.discount_amount > 0 && (
+                <div style={{ fontSize: 12, color: 'var(--semi-color-warning)' }}>
+                  -¥{record.discount_amount}
+                </div>
               )}
             </div>
           )
-        },
-        size: getColumnSize(100)
+        }
       },
-      // 实付金额
       {
-        accessorKey: 'actual_amount',
-        header: () => <div className="text-right">实付金额</div>,
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16 ml-auto" />
-          }
+        title: '实付金额',
+        dataIndex: 'actual_amount',
+        width: 100,
+        align: 'right' as const,
+        render: (_text: number, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
           return (
-            <div className={cn('text-right font-bold text-green-600', s.text.xs)}>
-              ¥{row.original.actual_amount.toLocaleString()}
-            </div>
+            <Text strong style={{ fontSize: 13, color: 'var(--semi-color-success)' }}>
+              ¥{record.actual_amount.toLocaleString()}
+            </Text>
           )
-        },
-        size: getColumnSize(100)
+        }
       },
-      // 支付方式
       {
-        accessorKey: 'payment_method_display',
-        header: '支付方式',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-12" />
-          }
-          return (
-            <div className={s.text.xs}>{row.original.payment_method_display || '-'}</div>
-          )
-        },
-        size: getColumnSize(80)
+        title: '支付方式',
+        dataIndex: 'payment_method_display',
+        width: 80,
+        render: (_text: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={48} />
+          return <Text style={{ fontSize: 13 }}>{record.payment_method_display || '-'}</Text>
+        }
       },
-      // 支付状态
       {
-        accessorKey: 'payment_status',
-        header: '支付状态',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className={cn("h-5 w-14", s.rounded)} />
-          }
+        title: '支付状态',
+        dataIndex: 'payment_status',
+        width: 90,
+        render: (status: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={56} />
           return (
-            <Badge className={cn('text-xs', paymentStatusColorMap[row.original.payment_status] || 'bg-gray-100', s.roundedBadge)}>
-              {row.original.payment_status_display}
-            </Badge>
+            <Tag color={paymentStatusColorMap[status] || 'grey'} shape="circle">
+              {record.payment_status_display}
+            </Tag>
           )
-        },
-        size: getColumnSize(90)
+        }
       },
-      // 审批状态
       {
-        accessorKey: 'approval_status',
-        header: '审批状态',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className={cn("h-5 w-16", s.rounded)} />
-          }
+        title: '审批状态',
+        dataIndex: 'approval_status',
+        width: 100,
+        render: (status: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
           return (
-            <Badge className={cn('text-xs', approvalStatusColorMap[row.original.approval_status] || 'bg-gray-100', s.roundedBadge)}>
-              {row.original.approval_status_display}
-            </Badge>
+            <Tag color={approvalStatusColorMap[status] || 'grey'} shape="circle">
+              {record.approval_status_display}
+            </Tag>
           )
-        },
-        size: getColumnSize(100)
+        }
       },
-      // 课程数
       {
-        accessorKey: 'items_count',
-        header: '课程数',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-5 w-14" />
-          }
+        title: '课程数',
+        dataIndex: 'items_count',
+        width: 70,
+        align: 'center' as const,
+        render: (_text: number, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={40} />
           return (
-            <Badge variant="outline" className={s.text.xs}>
-              {row.original.items_count} 门
-            </Badge>
+            <Tag>{record.items_count} 门</Tag>
           )
-        },
-        size: getColumnSize(70)
+        }
       },
-      // 校区
       {
-        accessorKey: 'campus_name',
-        header: '校区',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          return (
-            <div className={s.text.xs}>{row.original.campus_name || '-'}</div>
-          )
-        },
-        size: getColumnSize(100)
+        title: '校区',
+        dataIndex: 'campus_name',
+        width: 100,
+        ellipsis: true,
+        render: (_text: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
+          return <Text style={{ fontSize: 13 }}>{record.campus_name || '-'}</Text>
+        }
       },
-      // 创建时间
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-28" />
-          }
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 140,
+        render: (_text: string, record: OrderListItem) => {
+          if (isSkeletonRow(record.id)) return <SkeletonCell width={112} />
           return (
-            <div className={cn('text-muted-foreground', s.text.xs)}>{formatTime(row.original.created_at)}</div>
+            <Text type="tertiary" style={{ fontSize: 13 }}>
+              {formatTime(record.created_at)}
+            </Text>
           )
-        },
-        size: getColumnSize(140)
+        }
       }
     ],
-    [s, style, isLoading]
+    [isLoading]
   )
 
-  // 初始化表格
-  const table = useReactTable({
-    data: displayData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    enableRowSelection: !isLoading,
-    manualPagination: true,
-    pageCount: Math.ceil(total / pageSize),
-    onRowSelectionChange: setRowSelection,
-    state: {
-      rowSelection: isLoading ? {} : rowSelection
-    }
-  })
-
-  // 当数据变化时，清空选中状态
-  useEffect(() => {
-    setRowSelection({})
-  }, [data, page, pageSize])
-
-  // 当选中状态变化时，通知父组件
-  useEffect(() => {
-    if (isLoading) return
-    const selectedRowIndices = Object.keys(rowSelection).filter(
-      (key) => rowSelection[key]
-    )
-    const selectedRows = selectedRowIndices.map((index) => data[parseInt(index)])
-    onSelectionChange?.(selectedRows)
-  }, [rowSelection, isLoading])
-
-  // 虚拟滚动配置 - 动态行高
-  const { rows } = table.getRowModel()
-  const estimatedRowSize = style === 'mira' ? 44 : style === 'maia' ? 56 : 48
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => estimatedRowSize,
-    overscan: 10
-  })
-
-  // 风格切换时重新测量虚拟滚动
-  useEffect(() => {
-    rowVirtualizer.measure()
-  }, [style, rowVirtualizer])
-
-  const virtualRows = rowVirtualizer.getVirtualItems()
-  const totalSize = rowVirtualizer.getTotalSize()
-
-  const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0
-  const paddingBottom =
-    virtualRows.length > 0
-      ? totalSize - (virtualRows?.[virtualRows.length - 1]?.end || 0)
-      : 0
-
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-      {/* 表格容器 - 独立滚动区域 */}
-      <div
-        ref={tableContainerRef}
-        className={cn(
-          "min-h-0 flex-1 overflow-auto rounded-md border",
-          isLoading && "opacity-60 pointer-events-none transition-opacity duration-200"
-        )}
-      >
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-card">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    className={cn(s.text.xs, 'font-semibold', s.height.control)}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {paddingTop > 0 && (
-              <tr>
-                <td style={{ height: `${paddingTop}px` }} />
-              </tr>
-            )}
-            {virtualRows.map((virtualRow) => {
-              const row = rows[virtualRow.index]
-              const isSkeleton = isSkeletonRow(row.id)
-              return (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className={cn(
-                    !isSkeleton && "cursor-pointer hover:bg-muted/50"
-                  )}
-                  onClick={() => !isSkeleton && onRowClick?.(row.original)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className={cn(s.padding.cell, s.text.xs)}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              )
-            })}
-            {paddingBottom > 0 && (
-              <tr>
-                <td style={{ height: `${paddingBottom}px` }} />
-              </tr>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* 分页器 - 固定在底部 */}
-      <SimplePagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        selectedCount={isLoading ? 0 : table.getSelectedRowModel().rows.length}
-        className="mt-auto flex-shrink-0"
-        isLoading={isLoading}
+    <div
+      ref={wrapperRef}
+      style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+    >
+      <Table
+        columns={columns}
+        dataSource={displayData}
+        rowKey="id"
+        pagination={
+          total > 0
+            ? {
+                currentPage: page,
+                pageSize,
+                total,
+                onPageChange,
+                onPageSizeChange,
+                showSizeChanger: true,
+                pageSizeOpts: [10, 20, 50, 100],
+                showTotal: true,
+                formatPageText: (info: any) =>
+                  `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+              }
+            : false
+        }
+        scroll={{ y: scrollY }}
+        rowSelection={
+          !isLoading
+            ? {
+                selectedRowKeys,
+                onChange: handleSelectionChange,
+              }
+            : undefined
+        }
+        onRow={(record) => ({
+          style: !isSkeletonRow((record as OrderListItem).id) ? { cursor: 'pointer' } : undefined,
+          onClick: () => {
+            const r = record as OrderListItem
+            if (!isSkeletonRow(r.id)) {
+              onRowClick?.(r)
+            }
+          },
+        })}
+        loading={false}
+        empty={
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--semi-color-text-2)' }}>
+            暂无订单数据
+          </div>
+        }
+        style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
       />
     </div>
   )

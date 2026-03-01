@@ -1,12 +1,12 @@
 /*
- * Anthropic Brand Theme
+ * RMF CRM Theme (Semi Design 配色)
  *
  * Colors:
  * - Dark: #141413 - Primary text
  * - Light: #faf9f5 - Light backgrounds
  * - Mid Gray: #b0aea5 - Secondary elements
  * - Light Gray: #e8e6dc - Subtle backgrounds
- * - Orange: #d97757 - Primary accent (主色)
+ * - Blue: #0064FA - Primary accent (Semi Design 默认蓝)
  * - Green: #788c5d - Secondary accent
  *
  * Typography:
@@ -15,7 +15,7 @@
  */
 
 :root {
-  /* Anthropic 品牌圆角 */
+  /* 圆角 */
   --radius: 0.5rem;
 
   /* 基础颜色 */
@@ -30,9 +30,9 @@
   --popover: #ffffff;
   --popover-foreground: #141413;
 
-  /* 主要强调色 - Burnt Orange / Terracotta */
-  --primary: #d97757;
-  --primary-foreground: #faf9f5;
+  /* 主要强调色 - Semi Design 默认蓝 */
+  --primary: #0064FA;
+  --primary-foreground: #ffffff;
 
   /* 次要颜色 - Warm Gray */
   --secondary: #f0efe9;
@@ -52,10 +52,10 @@
   /* 边框和输入框 - Soft Warm Beige */
   --border: #e6e4dc;
   --input: #e6e4dc;
-  --ring: #d97757;
+  --ring: #0064FA;
 
-  /* 图表颜色 - Earthy Tones */
-  --chart-1: #d97757; /* Terracotta */
+  /* 图表颜色 */
+  --chart-1: #0064FA; /* Semi Blue */
   --chart-2: #8a8880; /* Warm Gray */
   --chart-3: #5c5a53; /* Dark Gray */
   --chart-4: #e6e4dc; /* Beige */
@@ -117,11 +117,11 @@
   --ring: #6366f1;
 }
 
-/* Orange - Anthropic Primary (Default) */
+/* Orange */
 :root.accent-orange {
-  --primary: #d97757;
-  --primary-foreground: #faf9f5;
-  --ring: #d97757;
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+  --ring: #f97316;
 }
 
 /* Pink */
@@ -181,7 +181,7 @@
 }
 
 @theme inline {
-  /* Anthropic 字体 */
+  /* 字体 */
   --font-poppins: 'Poppins', 'Arial', sans-serif;
   --font-lora: 'Lora', 'Georgia', serif;
 
@@ -196,7 +196,7 @@
   --spacing-18: 4.5rem;
   --spacing-88: 22rem;
 
-  /* Anthropic 风格：柔和圆角 */
+  /* 柔和圆角 */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;

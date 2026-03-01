@@ -1,56 +1,34 @@
 /**
  * 订单弹窗组件
+ * Semi Design 重构版 - Modal + Semi Form
  * 支持新建和编辑订单，包含多个课程明细
- * 重构版本 - 数据表展示 + 弹框编辑
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { z } from 'zod'
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
+  Modal,
+  Button,
+  Input,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import {
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+  Tag,
+  Toast,
+  Typography,
+  Form,
+  Spin,
+} from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import {
+  IconPlus,
+  IconDelete,
+  IconEdit,
+  IconTick,
+  IconSearch,
+  IconClose,
+} from '@douyinfe/semi-icons'
 import {
   User,
-  Search,
-  X,
-  Plus,
-  Trash2,
   BookOpen,
   CreditCard,
   FileText,
@@ -58,10 +36,8 @@ import {
   Wallet,
   Clock,
   UserCheck,
-  Tag,
+  Tag as TagIcon,
   CheckCircle2,
-  Loader2,
-  Pencil
 } from 'lucide-react'
 import { orderApi } from '../api'
 import { leadsApi } from '../../leads/api'
@@ -76,30 +52,7 @@ import {
 } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-// 课程明细 schema
-const orderItemSchema = z.object({
-  course_name: z.string().min(1, '请输入课程名称'),
-  course_hours: z.number().min(0, '课时数不能为负'),
-  unit_price: z.number().min(0, '单价不能为负'),
-  amount: z.number().min(0, '金额不能为负'),
-  remark: z.string().optional()
-})
-
-// 表单验证 schema
-const orderFormSchema = z.object({
-  lead_id: z.string().min(1, '请选择学员'),
-  payment_method: z.string().optional(),
-  payment_status: z.string().min(1, '请选择支付状态'),
-  payment_at: z.string().optional(),
-  collector_id: z.string().nullable().optional(),
-  discount_amount: z.number().min(0, '优惠金额不能为负'),
-  receipt_no: z.string().optional(),
-  contract_no: z.string().optional(),
-  remark: z.string().optional(),
-  items: z.array(orderItemSchema).min(1, '至少添加一个课程')
-})
-
-type OrderFormValues = z.infer<typeof orderFormSchema>
+const { Text } = Typography
 
 // 课程项类型
 type CourseItem = {
@@ -131,12 +84,15 @@ function SectionHeader({
   action?: React.ReactNode
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-md bg-primary/10">
-          <Icon className="h-4 w-4 text-primary" />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{
+          padding: 6, borderRadius: 6,
+          backgroundColor: 'var(--semi-color-primary-light-default)',
+        }}>
+          <Icon size={16} style={{ color: 'var(--semi-color-primary)' }} />
         </div>
-        <h3 className="font-semibold text-sm">{title}</h3>
+        <Text strong style={{ fontSize: 14 }}>{title}</Text>
       </div>
       {action}
     </div>
@@ -144,18 +100,12 @@ function SectionHeader({
 }
 
 // 表单区块容器
-function SectionCard({
-  children,
-  className
-}: {
-  children: React.ReactNode
-  className?: string
-}) {
+function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className={cn(
-      "rounded-xl border bg-card p-4 shadow-sm",
-      className
-    )}>
+    <div style={{
+      borderRadius: 12, border: '1px solid var(--semi-color-border)',
+      backgroundColor: 'var(--semi-color-bg-2)', padding: 16,
+    }}>
       {children}
     </div>
   )
@@ -179,152 +129,120 @@ function CourseEditDialog({
   coursesData,
   isEdit
 }: CourseEditDialogProps) {
-  const [formData, setFormData] = useState<CourseItem>({
-    course_name: '',
-    course_hours: 0,
-    unit_price: 0,
-    amount: 0,
-    remark: ''
-  })
-  const [errors, setErrors] = useState<{ course_name?: string }>({})
+  const courseFormRef = useRef<FormApi>()
+  const [computedAmount, setComputedAmount] = useState(0)
 
-  // 当弹框打开时，填充数据
   useEffect(() => {
-    if (open) {
+    if (open && courseFormRef.current) {
       if (courseItem) {
-        setFormData({ ...courseItem })
+        courseFormRef.current.setValues({ ...courseItem })
+        setComputedAmount(courseItem.amount || 0)
       } else {
-        setFormData({
+        courseFormRef.current.setValues({
           course_name: '',
           course_hours: 0,
           unit_price: 0,
           amount: 0,
           remark: ''
         })
+        setComputedAmount(0)
       }
-      setErrors({})
     }
   }, [open, courseItem])
 
-  // 自动计算金额
-  const handleFieldChange = (field: keyof CourseItem, value: any) => {
-    const newData = { ...formData, [field]: value }
-
-    // 自动计算小计
-    if (field === 'course_hours' || field === 'unit_price') {
-      newData.amount = (newData.course_hours || 0) * (newData.unit_price || 0)
-    }
-
-    setFormData(newData)
-
-    // 清除错误
-    if (field === 'course_name' && value) {
-      setErrors({})
-    }
+  const handleFieldChange = (values: any) => {
+    const hours = Number(values.course_hours) || 0
+    const price = Number(values.unit_price) || 0
+    const amt = hours * price
+    setComputedAmount(amt)
   }
 
-  // 保存
   const handleSave = () => {
-    // 验证
-    if (!formData.course_name) {
-      setErrors({ course_name: '请选择课程' })
-      return
-    }
-
-    onSave(formData)
-    onOpenChange(false)
+    courseFormRef.current?.validate().then((values: any) => {
+      const hours = Number(values.course_hours) || 0
+      const price = Number(values.unit_price) || 0
+      onSave({
+        course_name: values.course_name,
+        course_hours: hours,
+        unit_price: price,
+        amount: hours * price,
+        remark: values.remark || ''
+      })
+      onOpenChange(false)
+    })
   }
+
+  const activeCourses = coursesData?.filter(c => c.is_active) || []
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
-            {isEdit ? '编辑课程' : '添加课程'}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* 课程选择 */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">课程名称 *</label>
-            <Select
-              value={formData.course_name}
-              onValueChange={(value) => handleFieldChange('course_name', value)}
-            >
-              <SelectTrigger className={cn(errors.course_name && "border-red-500")}>
-                <SelectValue placeholder="请选择课程" />
-              </SelectTrigger>
-              <SelectContent>
-                {coursesData?.filter(c => c.is_active).map((course) => (
-                  <SelectItem key={course.id} value={course.name}>
-                    {course.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.course_name && (
-              <p className="text-xs text-red-500">{errors.course_name}</p>
-            )}
-          </div>
-
-          {/* 课时和单价 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">课时数</label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.course_hours}
-                onChange={(e) => handleFieldChange('course_hours', parseInt(e.target.value) || 0)}
-                placeholder="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">单价（元/课时）</label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.unit_price}
-                onChange={(e) => handleFieldChange('unit_price', parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          {/* 小计金额 - 只读显示 */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">小计金额</label>
-            <div className="h-10 px-3 py-2 rounded-md border bg-muted/50 flex items-center">
-              <span className="font-semibold text-emerald-600">¥{Number(formData.amount || 0).toFixed(2)}</span>
-              <span className="ml-2 text-xs text-muted-foreground">（自动计算）</span>
-            </div>
-          </div>
-
-          {/* 备注 */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">备注（可选）</label>
-            <Input
-              value={formData.remark || ''}
-              onChange={(e) => handleFieldChange('remark', e.target.value)}
-              placeholder="课程备注信息"
-            />
+    <Modal
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <BookOpen size={20} style={{ color: 'var(--semi-color-primary)' }} />
+          {isEdit ? '编辑课程' : '添加课程'}
+        </div>
+      }
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={() => onOpenChange(false)}>取消</Button>
+          <Button theme="solid" icon={<IconTick />} onClick={handleSave}>确定</Button>
+        </div>
+      }
+      width={480}
+    >
+      <Form
+        getFormApi={(api) => { courseFormRef.current = api }}
+        onValueChange={handleFieldChange}
+        labelPosition="top"
+      >
+        <Form.Select
+          field="course_name"
+          label="课程名称"
+          rules={[{ required: true, message: '请选择课程' }]}
+          placeholder="请选择课程"
+          style={{ width: '100%' }}
+          optionList={activeCourses.map(c => ({ value: c.name, label: c.name }))}
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Form.InputNumber
+            field="course_hours"
+            label="课时数"
+            min={0}
+            placeholder="0"
+            style={{ width: '100%' }}
+          />
+          <Form.InputNumber
+            field="unit_price"
+            label="单价（元/课时）"
+            min={0}
+            precision={2}
+            placeholder="0.00"
+            style={{ width: '100%' }}
+          />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <Text style={{ fontSize: 14, fontWeight: 500, display: 'block', marginBottom: 4 }}>小计金额</Text>
+          <div style={{
+            height: 36, padding: '0 12px', borderRadius: 6,
+            border: '1px solid var(--semi-color-border)',
+            backgroundColor: 'var(--semi-color-fill-0)',
+            display: 'flex', alignItems: 'center',
+          }}>
+            <Text strong style={{ color: 'var(--semi-color-success)' }}>
+              ¥{Number(computedAmount || 0).toFixed(2)}
+            </Text>
+            <Text type="tertiary" style={{ marginLeft: 8, fontSize: 12 }}>（自动计算）</Text>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button onClick={handleSave}>
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            确定
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <Form.Input
+          field="remark"
+          label="备注（可选）"
+          placeholder="课程备注信息"
+        />
+      </Form>
+    </Modal>
   )
 }
 
@@ -339,6 +257,7 @@ export function OrderDialog({
   onSuccess
 }: OrderDialogProps) {
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
   const isEdit = !!order?.id
   const [searchPhone, setSearchPhone] = useState('')
   const [selectedLead, setSelectedLead] = useState<{
@@ -347,9 +266,15 @@ export function OrderDialog({
     parent_phone: string
   } | null>(null)
 
-  // 课程编辑弹框状态
+  // 课程列表状态
+  const [courseItems, setCourseItems] = useState<CourseItem[]>([])
   const [courseDialogOpen, setCourseDialogOpen] = useState(false)
   const [editingCourseIndex, setEditingCourseIndex] = useState<number | null>(null)
+
+  // 金额计算
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const totalAmount = courseItems.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+  const actualAmount = totalAmount - Number(discountAmount || 0)
 
   // 获取收款人列表
   const { data: employeesData } = useQuery({
@@ -379,92 +304,65 @@ export function OrderDialog({
     enabled: searchPhone.length >= 3
   })
 
-  const form = useForm<OrderFormValues>({
-    resolver: zodResolver(orderFormSchema),
-    defaultValues: {
-      lead_id: '',
-      payment_method: OrderPaymentMethod.WECHAT,
-      payment_status: OrderPaymentStatus.PAID,
-      payment_at: new Date().toISOString().slice(0, 16),
-      collector_id: null,
-      discount_amount: 0,
-      receipt_no: '',
-      contract_no: '',
-      remark: '',
-      items: []
-    }
-  })
-
-  const { fields, append, remove, update } = useFieldArray({
-    control: form.control,
-    name: 'items'
-  })
-
-  // 计算总金额
-  const watchItems = form.watch('items')
-  const watchDiscount = form.watch('discount_amount')
-  const totalAmount = watchItems.reduce((sum, item) => sum + Number(item.amount || 0), 0)
-  const actualAmount = totalAmount - Number(watchDiscount || 0)
-
   // 填充编辑数据或预设学员
   useEffect(() => {
     if (order && open) {
-      form.reset({
-        lead_id: order.lead_id,
-        payment_method: order.payment_method || OrderPaymentMethod.WECHAT,
-        payment_status: order.payment_status,
-        payment_at: order.payment_at?.slice(0, 16) || '',
-        collector_id: order.collector_id || null,
-        discount_amount: order.discount_amount,
-        receipt_no: order.receipt_no || '',
-        contract_no: order.contract_no || '',
-        remark: order.remark || '',
-        items: order.items.map(item => ({
+      setTimeout(() => {
+        formRef.current?.setValues({
+          payment_method: order.payment_method || OrderPaymentMethod.WECHAT,
+          payment_status: order.payment_status,
+          payment_at: order.payment_at?.slice(0, 16) || '',
+          collector_id: order.collector_id || '',
+          discount_amount: order.discount_amount,
+          receipt_no: order.receipt_no || '',
+          contract_no: order.contract_no || '',
+          remark: order.remark || '',
+        })
+      }, 0)
+      setCourseItems(
+        order.items.map(item => ({
           course_name: item.course_name,
           course_hours: item.course_hours,
           unit_price: item.unit_price,
           amount: item.amount,
           remark: item.remark || ''
         }))
-      })
+      )
       setSelectedLead({
         id: order.lead_id,
         child_name: order.child_name || '',
         parent_phone: order.parent_phone || ''
       })
+      setDiscountAmount(order.discount_amount)
     } else if (!order && open) {
-      const defaultValues = {
-        lead_id: leadId || '',
-        payment_method: OrderPaymentMethod.WECHAT,
-        payment_status: OrderPaymentStatus.PAID,
-        payment_at: new Date().toISOString().slice(0, 16),
-        collector_id: null,
-        discount_amount: 0,
-        receipt_no: '',
-        contract_no: '',
-        remark: '',
-        items: []
-      }
-      form.reset(defaultValues)
-
-      if (leadId && leadName && leadPhone) {
-        setSelectedLead({
-          id: leadId,
-          child_name: leadName,
-          parent_phone: leadPhone
+      setTimeout(() => {
+        formRef.current?.setValues({
+          payment_method: OrderPaymentMethod.WECHAT,
+          payment_status: OrderPaymentStatus.PAID,
+          payment_at: new Date().toISOString().slice(0, 16),
+          collector_id: '',
+          discount_amount: 0,
+          receipt_no: '',
+          contract_no: '',
+          remark: '',
         })
+      }, 0)
+      setCourseItems([])
+      setDiscountAmount(0)
+      if (leadId && leadName && leadPhone) {
+        setSelectedLead({ id: leadId, child_name: leadName, parent_phone: leadPhone })
       } else {
         setSelectedLead(null)
       }
       setSearchPhone('')
     }
-  }, [order, open, form, leadId, leadName, leadPhone])
+  }, [order, open, leadId, leadName, leadPhone])
 
   // 创建订单
   const createMutation = useMutation({
     mutationFn: (data: OrderCreate) => orderApi.createOrder(data),
     onSuccess: () => {
-      toast.success('订单创建成功')
+      Toast.success('订单创建成功')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['order-stats'] })
       onOpenChange(false)
@@ -480,7 +378,7 @@ export function OrderDialog({
     mutationFn: ({ id, data }: { id: string; data: OrderUpdate }) =>
       orderApi.updateOrder(id, data),
     onSuccess: () => {
-      toast.success('订单更新成功')
+      Toast.success('订单更新成功')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['order-stats'] })
       onOpenChange(false)
@@ -494,525 +392,451 @@ export function OrderDialog({
   // 选择线索
   const handleSelectLead = (lead: { id: string; child_name: string; parent_phone: string }) => {
     setSelectedLead(lead)
-    form.setValue('lead_id', lead.id)
     setSearchPhone('')
   }
 
   // 清除选择的线索
   const handleClearLead = () => {
     setSelectedLead(null)
-    form.setValue('lead_id', '')
   }
 
-  // 打开添加课程弹框
+  // 课程操作
   const handleAddCourse = () => {
     setEditingCourseIndex(null)
     setCourseDialogOpen(true)
   }
 
-  // 打开编辑课程弹框
   const handleEditCourse = (index: number) => {
     setEditingCourseIndex(index)
     setCourseDialogOpen(true)
   }
 
-  // 保存课程
   const handleSaveCourse = (item: CourseItem) => {
     if (editingCourseIndex !== null) {
-      // 编辑模式
-      update(editingCourseIndex, item)
+      const newItems = [...courseItems]
+      newItems[editingCourseIndex] = item
+      setCourseItems(newItems)
     } else {
-      // 添加模式
-      append(item)
+      setCourseItems([...courseItems, item])
     }
   }
 
-  // 删除课程
   const handleDeleteCourse = (index: number) => {
-    remove(index)
+    setCourseItems(courseItems.filter((_, i) => i !== index))
   }
 
-  // 获取当前编辑的课程
-  const editingCourse = editingCourseIndex !== null ? watchItems[editingCourseIndex] : null
+  const editingCourse = editingCourseIndex !== null ? courseItems[editingCourseIndex] : null
 
   // 提交表单
-  const onSubmit = (values: OrderFormValues) => {
-    if (values.items.length === 0) {
-      toast.error('请至少添加一个课程')
+  const handleSubmit = () => {
+    if (!selectedLead) {
+      Toast.error('请选择学员')
+      return
+    }
+    if (courseItems.length === 0) {
+      Toast.error('请至少添加一个课程')
       return
     }
 
-    const data = {
-      lead_id: values.lead_id,
-      payment_method: values.payment_method || undefined,
-      payment_status: values.payment_status,
-      payment_at: values.payment_at ? new Date(values.payment_at).toISOString() : undefined,
-      collector_id: values.collector_id || undefined,
-      discount_amount: values.discount_amount,
-      receipt_no: values.receipt_no || undefined,
-      contract_no: values.contract_no || undefined,
-      remark: values.remark || undefined,
-      items: values.items.map((item, idx) => ({
-        course_name: item.course_name,
-        course_hours: item.course_hours,
-        unit_price: item.unit_price,
-        amount: item.amount,
-        remark: item.remark || undefined,
-        sort_order: idx
-      }))
-    }
+    formRef.current?.validate().then((values: any) => {
+      const data = {
+        lead_id: selectedLead.id,
+        payment_method: values.payment_method || undefined,
+        payment_status: values.payment_status,
+        payment_at: values.payment_at ? new Date(values.payment_at).toISOString() : undefined,
+        collector_id: values.collector_id || undefined,
+        discount_amount: Number(values.discount_amount) || 0,
+        receipt_no: values.receipt_no || undefined,
+        contract_no: values.contract_no || undefined,
+        remark: values.remark || undefined,
+        items: courseItems.map((item, idx) => ({
+          course_name: item.course_name,
+          course_hours: item.course_hours,
+          unit_price: item.unit_price,
+          amount: item.amount,
+          remark: item.remark || undefined,
+          sort_order: idx
+        }))
+      }
 
-    if (isEdit && order) {
-      updateMutation.mutate({ id: order.id, data })
-    } else {
-      createMutation.mutate(data as OrderCreate)
-    }
+      if (isEdit && order) {
+        updateMutation.mutate({ id: order.id, data })
+      } else {
+        createMutation.mutate(data as OrderCreate)
+      }
+    })
   }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
+  // 课程明细表格列
+  const courseColumns = [
+    {
+      title: '课程名称',
+      dataIndex: 'course_name',
+      render: (text: string, record: CourseItem) => (
+        <div>
+          <Text strong style={{ fontSize: 13 }}>{text || '-'}</Text>
+          {record.remark && (
+            <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)', marginTop: 2 }}>
+              {record.remark}
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      title: '课时',
+      dataIndex: 'course_hours',
+      width: 80,
+      align: 'center' as const,
+      render: (text: number) => <Text style={{ fontSize: 13 }}>{text || 0}</Text>
+    },
+    {
+      title: '单价',
+      dataIndex: 'unit_price',
+      width: 100,
+      align: 'right' as const,
+      render: (text: number) => <Text style={{ fontSize: 13 }}>¥{Number(text || 0).toFixed(2)}</Text>
+    },
+    {
+      title: '小计',
+      dataIndex: 'amount',
+      width: 110,
+      align: 'right' as const,
+      render: (text: number) => (
+        <Text strong style={{ fontSize: 13, color: 'var(--semi-color-success)' }}>
+          ¥{Number(text || 0).toFixed(2)}
+        </Text>
+      )
+    },
+    {
+      title: '操作',
+      width: 80,
+      align: 'center' as const,
+      render: (_: any, __: any, index: number) => (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <Button
+            type="tertiary"
+            theme="borderless"
+            icon={<IconEdit />}
+            size="small"
+            onClick={() => handleEditCourse(index)}
+          />
+          <Button
+            type="danger"
+            theme="borderless"
+            icon={<IconDelete />}
+            size="small"
+            onClick={() => handleDeleteCourse(index)}
+          />
+        </div>
+      )
+    }
+  ]
+
+  // 收款人选项
+  const collectorOptions = [
+    { value: '', label: '不指定' },
+    ...(employeesData?.map((emp) => ({ value: emp.id, label: emp.name })) || [])
+  ]
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-5xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
-          {/* 标题栏 - 渐变背景 */}
-          <DialogHeader className="px-6 py-4 bg-gradient-to-r from-primary/5 via-primary/3 to-transparent border-b">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Receipt className="h-5 w-5 text-primary" />
-              {isEdit ? '编辑订单' : '新建订单'}
-              {isEdit && order?.order_no && (
-                <Badge variant="secondary" className="ml-2 font-mono text-xs">
-                  {order.order_no}
-                </Badge>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-              {/* 内容区域 */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
-                <div className="grid grid-cols-12 gap-5">
-                  {/* ========== 左侧列 (7/12) ========== */}
-                  <div className="col-span-7 space-y-5">
-                    {/* 学员信息 */}
-                    <SectionCard>
-                      <SectionHeader icon={User} title="学员信息" />
-                      <FormField
-                        control={form.control}
-                        name="lead_id"
-                        render={() => (
-                          <FormItem>
-                            <FormControl>
-                              {selectedLead ? (
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-900">
-                                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-medium shadow-sm">
-                                    {selectedLead.child_name?.charAt(0) || '?'}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm">{selectedLead.child_name}</div>
-                                    <div className="text-xs text-muted-foreground font-mono">{selectedLead.parent_phone}</div>
-                                  </div>
-                                  {!leadId && (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
-                                      onClick={handleClearLead}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                      placeholder="输入手机号搜索学员..."
-                                      value={searchPhone}
-                                      onChange={(e) => setSearchPhone(e.target.value)}
-                                      className="pl-9 h-10"
-                                    />
-                                    {isSearching && (
-                                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                                    )}
-                                  </div>
-                                  {searchResults && searchResults.length > 0 && (
-                                    <div className="border rounded-lg divide-y max-h-32 overflow-y-auto shadow-sm">
-                                      {searchResults.map((lead: any) => (
-                                        <div
-                                          key={lead.id}
-                                          className="p-2.5 hover:bg-muted/50 cursor-pointer text-sm flex items-center gap-2 transition-colors"
-                                          onClick={() => handleSelectLead({
-                                            id: lead.id,
-                                            child_name: lead.child_name,
-                                            parent_phone: lead.parent_phone
-                                          })}
-                                        >
-                                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                                            {lead.child_name?.charAt(0)}
-                                          </div>
-                                          <span className="font-medium">{lead.child_name}</span>
-                                          <span className="text-muted-foreground font-mono text-xs">{lead.parent_phone}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </SectionCard>
-
-                    {/* 课程明细 - 数据表展示 */}
-                    <SectionCard>
-                      <SectionHeader
-                        icon={BookOpen}
-                        title="课程明细"
-                        action={
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs"
-                            onClick={handleAddCourse}
-                          >
-                            <Plus className="h-3.5 w-3.5 mr-1" />
-                            添加课程
-                          </Button>
-                        }
-                      />
-
-                      {/* 课程数据表 */}
-                      {fields.length > 0 ? (
-                        <div className="rounded-lg border overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/50">
-                                <TableHead className="text-xs font-semibold">课程名称</TableHead>
-                                <TableHead className="text-xs font-semibold text-center w-20">课时</TableHead>
-                                <TableHead className="text-xs font-semibold text-right w-24">单价</TableHead>
-                                <TableHead className="text-xs font-semibold text-right w-28">小计</TableHead>
-                                <TableHead className="text-xs font-semibold text-center w-20">操作</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {fields.map((field, index) => (
-                                <TableRow key={field.id} className="group">
-                                  <TableCell className="font-medium text-sm">
-                                    {watchItems[index]?.course_name || '-'}
-                                    {watchItems[index]?.remark && (
-                                      <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">
-                                        {watchItems[index].remark}
-                                      </div>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-center text-sm">
-                                    {watchItems[index]?.course_hours || 0}
-                                  </TableCell>
-                                  <TableCell className="text-right text-sm">
-                                    ¥{Number(watchItems[index]?.unit_price || 0).toFixed(2)}
-                                  </TableCell>
-                                  <TableCell className="text-right font-semibold text-sm text-emerald-600">
-                                    ¥{Number(watchItems[index]?.amount || 0).toFixed(2)}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 hover:bg-blue-100 hover:text-blue-600"
-                                        onClick={() => handleEditCourse(index)}
-                                      >
-                                        <Pencil className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 hover:bg-red-100 hover:text-red-600"
-                                        onClick={() => handleDeleteCourse(index)}
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
-                          <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">暂无课程</p>
-                          <p className="text-xs mt-1">点击上方"添加课程"按钮</p>
-                        </div>
-                      )}
-
-                      {/* 金额汇总 - 突出显示 */}
-                      <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/50 dark:to-slate-800/50 border">
-                        <div className="flex items-center justify-end gap-6 text-sm">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-muted-foreground">订单总额</span>
-                            <span className="font-semibold text-base">¥{Number(totalAmount || 0).toFixed(2)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Tag className="h-3.5 w-3.5 text-orange-500" />
-                            <span className="text-muted-foreground">优惠</span>
-                            <span className="font-semibold text-orange-500">-¥{Number(watchDiscount || 0).toFixed(2)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 pl-4 border-l">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                            <span className="text-muted-foreground">实付</span>
-                            <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">¥{Number(actualAmount || 0).toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </SectionCard>
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Receipt size={20} style={{ color: 'var(--semi-color-primary)' }} />
+            {isEdit ? '编辑订单' : '新建订单'}
+            {isEdit && order?.order_no && (
+              <Tag style={{ marginLeft: 8 }}>{order.order_no}</Tag>
+            )}
+          </div>
+        }
+        visible={open}
+        onCancel={() => onOpenChange(false)}
+        width={1040}
+        style={{ maxHeight: '92vh' }}
+        bodyStyle={{ overflow: 'auto', maxHeight: 'calc(92vh - 120px)', padding: '16px 24px' }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              取消
+            </Button>
+            <Button
+              theme="solid"
+              icon={isSubmitting ? undefined : <IconTick />}
+              loading={isSubmitting}
+              onClick={handleSubmit}
+            >
+              {isEdit ? '保存修改' : '创建订单'}
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '7fr 5fr', gap: 20 }}>
+          {/* 左侧列 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* 学员信息 */}
+            <SectionCard>
+              <SectionHeader icon={User} title="学员信息" />
+              {selectedLead ? (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 8,
+                  background: 'var(--semi-color-primary-light-default)',
+                  border: '1px solid var(--semi-color-primary-light-active)',
+                }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: '50%',
+                    background: 'var(--semi-color-primary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontWeight: 500,
+                  }}>
+                    {selectedLead.child_name?.charAt(0) || '?'}
                   </div>
-
-                  {/* ========== 右侧列 (5/12) ========== */}
-                  <div className="col-span-5 space-y-5">
-                    {/* 支付信息 */}
-                    <SectionCard>
-                      <SectionHeader icon={CreditCard} title="支付信息" />
-
-                      <div className="space-y-4">
-                        {/* 支付方式 & 状态 */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <FormField
-                            control={form.control}
-                            name="payment_method"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs flex items-center gap-1">
-                                  <Wallet className="h-3 w-3" />
-                                  支付方式
-                                </FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="h-9 w-full">
-                                      <SelectValue placeholder="选择" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {orderPaymentMethodOptions.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="payment_status"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  状态 *
-                                </FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="h-9 w-full">
-                                      <SelectValue placeholder="选择" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {orderPaymentStatusOptions.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormItem>
-                            )}
-                          />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text strong style={{ fontSize: 14 }}>{selectedLead.child_name}</Text>
+                    <div>
+                      <Text type="tertiary" style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                        {selectedLead.parent_phone}
+                      </Text>
+                    </div>
+                  </div>
+                  {!leadId && (
+                    <Button
+                      type="danger"
+                      theme="borderless"
+                      icon={<IconClose />}
+                      size="small"
+                      onClick={handleClearLead}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <Input
+                    prefix={<IconSearch />}
+                    placeholder="输入手机号搜索学员..."
+                    value={searchPhone}
+                    onChange={(val) => setSearchPhone(val)}
+                    suffix={isSearching ? <Spin size="small" /> : undefined}
+                  />
+                  {searchResults && searchResults.length > 0 && (
+                    <div style={{
+                      border: '1px solid var(--semi-color-border)',
+                      borderRadius: 8, maxHeight: 128, overflow: 'auto',
+                    }}>
+                      {searchResults.map((lead: any) => (
+                        <div
+                          key={lead.id}
+                          style={{
+                            padding: '8px 12px', cursor: 'pointer', fontSize: 13,
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            borderBottom: '1px solid var(--semi-color-border)',
+                          }}
+                          onClick={() => handleSelectLead({
+                            id: lead.id,
+                            child_name: lead.child_name,
+                            parent_phone: lead.parent_phone
+                          })}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--semi-color-fill-0)'
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLDivElement).style.backgroundColor = ''
+                          }}
+                        >
+                          <div style={{
+                            width: 28, height: 28, borderRadius: '50%',
+                            backgroundColor: 'var(--semi-color-fill-1)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12, fontWeight: 500,
+                          }}>
+                            {lead.child_name?.charAt(0)}
+                          </div>
+                          <Text strong>{lead.child_name}</Text>
+                          <Text type="tertiary" style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                            {lead.parent_phone}
+                          </Text>
                         </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </SectionCard>
 
-                        {/* 支付时间 */}
-                        <FormField
-                          control={form.control}
-                          name="payment_at"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                支付时间
-                              </FormLabel>
-                              <FormControl>
-                                <Input type="datetime-local" className="h-9" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
+            {/* 课程明细 */}
+            <SectionCard>
+              <SectionHeader
+                icon={BookOpen}
+                title="课程明细"
+                action={
+                  <Button
+                    icon={<IconPlus />}
+                    size="small"
+                    onClick={handleAddCourse}
+                  >
+                    添加课程
+                  </Button>
+                }
+              />
 
-                        {/* 收款人 & 优惠 */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <FormField
-                            control={form.control}
-                            name="collector_id"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs flex items-center gap-1">
-                                  <UserCheck className="h-3 w-3" />
-                                  收款人
-                                </FormLabel>
-                                <Select
-                                  onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
-                                  value={field.value || 'none'}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="h-9 w-full">
-                                      <SelectValue placeholder="选择" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="none">不指定</SelectItem>
-                                    {employeesData?.map((emp) => (
-                                      <SelectItem key={emp.id} value={emp.id}>
-                                        {emp.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormItem>
-                            )}
-                          />
+              {courseItems.length > 0 ? (
+                <Table
+                  columns={courseColumns}
+                  dataSource={courseItems}
+                  rowKey={(_, index) => String(index)}
+                  pagination={false}
+                  size="small"
+                />
+              ) : (
+                <div style={{
+                  textAlign: 'center', padding: '32px 0',
+                  color: 'var(--semi-color-text-2)',
+                  border: '1px dashed var(--semi-color-border)', borderRadius: 8,
+                }}>
+                  <BookOpen size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
+                  <div style={{ fontSize: 14 }}>暂无课程</div>
+                  <div style={{ fontSize: 12, marginTop: 4 }}>点击上方"添加课程"按钮</div>
+                </div>
+              )}
 
-                          <FormField
-                            control={form.control}
-                            name="discount_amount"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs flex items-center gap-1">
-                                  <Tag className="h-3 w-3" />
-                                  优惠金额
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">¥</span>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      placeholder="0.00"
-                                      className="pl-7 h-9"
-                                      {...field}
-                                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                    />
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-                    </SectionCard>
-
-                    {/* 其他信息 */}
-                    <SectionCard>
-                      <SectionHeader icon={FileText} title="其他信息" />
-
-                      <div className="space-y-4">
-                        {/* 收据 & 合同编号 */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <FormField
-                            control={form.control}
-                            name="receipt_no"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">收据编号</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="可选" className="h-9" {...field} />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="contract_no"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">合同编号</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="可选" className="h-9" {...field} />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        {/* 备注 */}
-                        <FormField
-                          control={form.control}
-                          name="remark"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">订单备注</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="订单备注信息（可选）"
-                                  rows={3}
-                                  className="resize-none text-sm"
-                                  {...field}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </SectionCard>
+              {/* 金额汇总 */}
+              <div style={{
+                marginTop: 16, padding: 16, borderRadius: 8,
+                background: 'var(--semi-color-fill-0)',
+                border: '1px solid var(--semi-color-border)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 24, fontSize: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Text type="tertiary">订单总额</Text>
+                    <Text strong style={{ fontSize: 16 }}>¥{Number(totalAmount || 0).toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <TagIcon size={14} style={{ color: 'var(--semi-color-warning)' }} />
+                    <Text type="tertiary">优惠</Text>
+                    <Text strong style={{ color: 'var(--semi-color-warning)' }}>
+                      -¥{Number(discountAmount || 0).toFixed(2)}
+                    </Text>
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    paddingLeft: 16, borderLeft: '1px solid var(--semi-color-border)',
+                  }}>
+                    <CheckCircle2 size={16} style={{ color: 'var(--semi-color-success)' }} />
+                    <Text type="tertiary">实付</Text>
+                    <Text strong style={{ fontSize: 18, color: 'var(--semi-color-success)' }}>
+                      ¥{Number(actualAmount || 0).toFixed(2)}
+                    </Text>
                   </div>
                 </div>
               </div>
+            </SectionCard>
+          </div>
 
-              {/* 底部操作栏 */}
-              <div className="flex-shrink-0 px-6 py-4 border-t bg-muted/30 flex items-center justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                  className="min-w-[80px]"
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="min-w-[100px] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      提交中...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      {isEdit ? '保存修改' : '创建订单'}
-                    </>
-                  )}
-                </Button>
+          {/* 右侧列 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* 支付信息 + 其他信息（共用一个 Form） */}
+            <Form
+              getFormApi={(api) => { formRef.current = api }}
+              labelPosition="top"
+              onValueChange={(values) => {
+                setDiscountAmount(Number(values.discount_amount) || 0)
+              }}
+            >
+              <SectionCard>
+                <SectionHeader icon={CreditCard} title="支付信息" />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Form.Select
+                    field="payment_method"
+                    label={
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <Wallet size={12} /> 支付方式
+                      </span>
+                    }
+                    optionList={orderPaymentMethodOptions}
+                    style={{ width: '100%' }}
+                  />
+                  <Form.Select
+                    field="payment_status"
+                    label={
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <CheckCircle2 size={12} /> 状态 *
+                      </span>
+                    }
+                    rules={[{ required: true, message: '请选择支付状态' }]}
+                    optionList={orderPaymentStatusOptions}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <Form.Input
+                  field="payment_at"
+                  label={
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                      <Clock size={12} /> 支付时间
+                    </span>
+                  }
+                  type="datetime-local"
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Form.Select
+                    field="collector_id"
+                    label={
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <UserCheck size={12} /> 收款人
+                      </span>
+                    }
+                    optionList={collectorOptions}
+                    style={{ width: '100%' }}
+                  />
+                  <Form.InputNumber
+                    field="discount_amount"
+                    label={
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <TagIcon size={12} /> 优惠金额
+                      </span>
+                    }
+                    min={0}
+                    precision={2}
+                    prefix="¥"
+                    placeholder="0.00"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </SectionCard>
+
+              {/* 其他信息 */}
+              <div style={{ marginTop: 20 }}>
+                <SectionCard>
+                  <SectionHeader icon={FileText} title="其他信息" />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <Form.Input
+                      field="receipt_no"
+                      label={<span style={{ fontSize: 12 }}>收据编号</span>}
+                      placeholder="可选"
+                    />
+                    <Form.Input
+                      field="contract_no"
+                      label={<span style={{ fontSize: 12 }}>合同编号</span>}
+                      placeholder="可选"
+                    />
+                  </div>
+                  <Form.TextArea
+                    field="remark"
+                    label={<span style={{ fontSize: 12 }}>订单备注</span>}
+                    placeholder="订单备注信息（可选）"
+                    rows={3}
+                    autosize={false}
+                  />
+                </SectionCard>
               </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            </Form>
+          </div>
+        </div>
+      </Modal>
 
       {/* 课程编辑弹框 */}
       <CourseEditDialog

@@ -27,7 +27,6 @@ import {
   Eye,
   PhoneCall,
   Library,
-  FileText,
   ClipboardList,
   Settings,
   Settings2,
@@ -49,6 +48,7 @@ import { type SidebarData, type NavGroup } from '../types'
 export const crmNavGroups: NavGroup[] = [
   {
     title: '市场部',
+    icon: TrendingUp,
     items: [
       {
         title: '批量导入',
@@ -64,6 +64,7 @@ export const crmNavGroups: NavGroup[] = [
   },
   {
     title: '咨询部',
+    icon: Headphones,
     items: [
       {
         title: '咨询工作台',
@@ -109,6 +110,7 @@ export const crmNavGroups: NavGroup[] = [
   },
   {
     title: '教管部',
+    icon: GraduationCap,
     items: [
       {
         title: '学员管理',
@@ -124,6 +126,7 @@ export const crmNavGroups: NavGroup[] = [
   },
   {
     title: '行政部',
+    icon: UserCog,
     items: [
       {
         title: '人事管理',
@@ -149,6 +152,7 @@ export const crmNavGroups: NavGroup[] = [
   },
   {
     title: '系统',
+    icon: Settings,
     items: [
       {
         title: '云客管理',
@@ -168,6 +172,7 @@ export const crmNavGroups: NavGroup[] = [
 export const adminNavGroups: NavGroup[] = [
   {
     title: '导航',
+    icon: Home,
     items: [
       {
         title: '返回 CRM',
@@ -183,6 +188,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     title: '组织架构',
+    icon: Network,
     items: [
       {
         title: '组织架构树',
@@ -213,6 +219,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     title: '部门职位',
+    icon: Briefcase,
     items: [
       {
         title: '部门管理',
@@ -233,6 +240,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     title: '人事管理',
+    icon: UsersRound,
     items: [
       {
         title: '员工管理',
@@ -253,6 +261,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     title: '业务数据',
+    icon: BarChart3,
     items: [
       {
         title: '来源渠道管理',
@@ -278,6 +287,7 @@ export const adminNavGroups: NavGroup[] = [
   },
   {
     title: '系统配置',
+    icon: Settings2,
     items: [
       {
         title: '页面访问权限',
@@ -317,6 +327,7 @@ export const adminNavGroups: NavGroup[] = [
 export const hrNavGroups: NavGroup[] = [
   {
     title: '导航',
+    icon: Home,
     items: [
       {
         title: '返回 CRM',
@@ -326,17 +337,13 @@ export const hrNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'DISC 性格测试',
+    title: '人事',
+    icon: ClipboardList,
     items: [
       {
         title: 'DISC 测试管理',
         url: '/hr/disc-test',
         icon: ClipboardList,
-      },
-      {
-        title: '临时 DISC 记录',
-        url: '/hr/temp-disc-records',
-        icon: FileText,
       },
     ],
   },
@@ -346,6 +353,7 @@ export const hrNavGroups: NavGroup[] = [
 export const yunkeNavGroups: NavGroup[] = [
   {
     title: '导航',
+    icon: Home,
     items: [
       {
         title: '返回 CRM',
@@ -361,6 +369,7 @@ export const yunkeNavGroups: NavGroup[] = [
   },
   {
     title: '账号管理',
+    icon: KeyRound,
     items: [
       {
         title: '账号凭证管理',
@@ -376,6 +385,7 @@ export const yunkeNavGroups: NavGroup[] = [
   },
   {
     title: '通话管理',
+    icon: PhoneCall,
     items: [
       {
         title: '通话记录',
@@ -391,6 +401,7 @@ export const yunkeNavGroups: NavGroup[] = [
   },
   {
     title: 'AI 工具',
+    icon: Bot,
     items: [
       {
         title: 'AI 数据助手',
@@ -401,6 +412,7 @@ export const yunkeNavGroups: NavGroup[] = [
   },
   {
     title: '系统配置',
+    icon: Settings,
     items: [
       {
         title: '管理员登录',

@@ -1,192 +1,192 @@
 import { useState } from 'react'
-import { type Table } from '@tanstack/react-table'
-import { Trash2, CircleArrowUp, ArrowUpDown, Download } from 'lucide-react'
+import { Button, Tooltip, Tag, Divider, Dropdown } from '@douyinfe/semi-ui-19'
+import { Trash2, CircleArrowUp, ArrowUpDown, Download, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { sleep } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
+import { cn } from '@/lib/utils'
 import { priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { TasksMultiDeleteDialog } from './tasks-multi-delete-dialog'
 
-type DataTableBulkActionsProps<TData> = {
-  table: Table<TData>
+type DataTableBulkActionsProps = {
+  selectedRows: Task[]
+  onClearSelection: () => void
+  entityName: string
 }
 
-export function DataTableBulkActions<TData>({
-  table,
-}: DataTableBulkActionsProps<TData>) {
+export function DataTableBulkActions({
+  selectedRows,
+  onClearSelection,
+  entityName,
+}: DataTableBulkActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const selectedRows = table.getFilteredSelectedRowModel().rows
+  const selectedCount = selectedRows.length
 
   const handleBulkStatusChange = (status: string) => {
-    const selectedTasks = selectedRows.map((row) => row.original as Task)
     toast.promise(sleep(2000), {
       loading: 'Updating status...',
       success: () => {
-        table.resetRowSelection()
-        return `Status updated to "${status}" for ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''}.`
+        onClearSelection()
+        return `Status updated to "${status}" for ${selectedCount} task${selectedCount > 1 ? 's' : ''}.`
       },
       error: 'Error',
     })
-    table.resetRowSelection()
   }
 
   const handleBulkPriorityChange = (priority: string) => {
-    const selectedTasks = selectedRows.map((row) => row.original as Task)
     toast.promise(sleep(2000), {
       loading: 'Updating priority...',
       success: () => {
-        table.resetRowSelection()
-        return `Priority updated to "${priority}" for ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''}.`
+        onClearSelection()
+        return `Priority updated to "${priority}" for ${selectedCount} task${selectedCount > 1 ? 's' : ''}.`
       },
       error: 'Error',
     })
-    table.resetRowSelection()
   }
 
   const handleBulkExport = () => {
-    const selectedTasks = selectedRows.map((row) => row.original as Task)
     toast.promise(sleep(2000), {
       loading: 'Exporting tasks...',
       success: () => {
-        table.resetRowSelection()
-        return `Exported ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''} to CSV.`
+        onClearSelection()
+        return `Exported ${selectedCount} task${selectedCount > 1 ? 's' : ''} to CSV.`
       },
       error: 'Error',
     })
-    table.resetRowSelection()
   }
+
+  if (selectedCount === 0) return null
 
   return (
     <>
-      <BulkActionsToolbar table={table} entityName='task'>
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant='outline'
-                  size='icon'
-                  className='size-8'
-                  aria-label='Update status'
-                  title='Update status'
-                >
-                  <CircleArrowUp />
-                  <span className='sr-only'>Update status</span>
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Update status</p>
-            </TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent sideOffset={14}>
-            {statuses.map((status) => (
-              <DropdownMenuItem
-                key={status.value}
-                defaultValue={status.value}
-                onClick={() => handleBulkStatusChange(status.value)}
-              >
-                {status.icon && (
-                  <status.icon className='size-4 text-muted-foreground' />
-                )}
-                {status.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant='outline'
-                  size='icon'
-                  className='size-8'
-                  aria-label='Update priority'
-                  title='Update priority'
-                >
-                  <ArrowUpDown />
-                  <span className='sr-only'>Update priority</span>
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Update priority</p>
-            </TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent sideOffset={14}>
-            {priorities.map((priority) => (
-              <DropdownMenuItem
-                key={priority.value}
-                defaultValue={priority.value}
-                onClick={() => handleBulkPriorityChange(priority.value)}
-              >
-                {priority.icon && (
-                  <priority.icon className='size-4 text-muted-foreground' />
-                )}
-                {priority.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
+      <div
+        className={cn(
+          'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl',
+          'transition-all delay-100 duration-300 ease-out hover:scale-105'
+        )}
+      >
+        <div
+          className={cn(
+            'p-2 shadow-xl',
+            'rounded-xl border',
+            'bg-background/95 backdrop-blur-lg supports-backdrop-filter:bg-background/60',
+            'flex items-center gap-x-2'
+          )}
+        >
+          <Tooltip content='Clear selection (Escape)'>
             <Button
-              variant='outline'
-              size='icon'
-              onClick={() => handleBulkExport()}
-              className='size-8'
-              aria-label='Export tasks'
-              title='Export tasks'
-            >
-              <Download />
-              <span className='sr-only'>Export tasks</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Export tasks</p>
-          </TooltipContent>
-        </Tooltip>
+              theme='borderless'
+              type='tertiary'
+              icon={<X size={14} />}
+              size='small'
+              onClick={onClearSelection}
+              style={{ borderRadius: '50%', width: 24, height: 24, padding: 0 }}
+            />
+          </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
+          <Divider layout='vertical' style={{ height: 20 }} />
+
+          <div className='flex items-center gap-x-1 text-sm'>
+            <Tag color='dark' size='large' shape='circle'>
+              {selectedCount}
+            </Tag>
+            <span className='hidden sm:inline'>
+              {entityName}
+              {selectedCount > 1 ? 's' : ''}
+            </span>{' '}
+            selected
+          </div>
+
+          <Divider layout='vertical' style={{ height: 20 }} />
+
+          <Dropdown
+            trigger='click'
+            position='topLeft'
+            clickToHide
+            render={
+              <Dropdown.Menu>
+                {statuses.map((status) => (
+                  <Dropdown.Item
+                    key={status.value}
+                    onClick={() => handleBulkStatusChange(status.value)}
+                  >
+                    {status.icon && (
+                      <status.icon className='size-4 text-muted-foreground mr-2 inline' />
+                    )}
+                    {status.label}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Menu>
+            }
+          >
+            <Tooltip content='Update status'>
+              <Button
+                theme='outline'
+                size='small'
+                icon={<CircleArrowUp size={16} />}
+                style={{ width: 32, height: 32 }}
+              />
+            </Tooltip>
+          </Dropdown>
+
+          <Dropdown
+            trigger='click'
+            position='topLeft'
+            clickToHide
+            render={
+              <Dropdown.Menu>
+                {priorities.map((priority) => (
+                  <Dropdown.Item
+                    key={priority.value}
+                    onClick={() => handleBulkPriorityChange(priority.value)}
+                  >
+                    {priority.icon && (
+                      <priority.icon className='size-4 text-muted-foreground mr-2 inline' />
+                    )}
+                    {priority.label}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Menu>
+            }
+          >
+            <Tooltip content='Update priority'>
+              <Button
+                theme='outline'
+                size='small'
+                icon={<ArrowUpDown size={16} />}
+                style={{ width: 32, height: 32 }}
+              />
+            </Tooltip>
+          </Dropdown>
+
+          <Tooltip content='Export tasks'>
             <Button
-              variant='destructive'
-              size='icon'
+              theme='outline'
+              size='small'
+              icon={<Download size={16} />}
+              onClick={handleBulkExport}
+              style={{ width: 32, height: 32 }}
+            />
+          </Tooltip>
+
+          <Tooltip content='Delete selected tasks'>
+            <Button
+              type='danger'
+              theme='solid'
+              size='small'
+              icon={<Trash2 size={16} />}
               onClick={() => setShowDeleteConfirm(true)}
-              className='size-8'
-              aria-label='Delete selected tasks'
-              title='Delete selected tasks'
-            >
-              <Trash2 />
-              <span className='sr-only'>Delete selected tasks</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Delete selected tasks</p>
-          </TooltipContent>
-        </Tooltip>
-      </BulkActionsToolbar>
+              style={{ width: 32, height: 32 }}
+            />
+          </Tooltip>
+        </div>
+      </div>
 
       <TasksMultiDeleteDialog
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
-        table={table}
+        selectedCount={selectedCount}
+        onSuccess={onClearSelection}
       />
     </>
   )

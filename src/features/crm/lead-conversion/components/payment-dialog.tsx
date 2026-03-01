@@ -1,39 +1,20 @@
 /**
- * 缴费记录弹窗组件
+ * 缴费记录弹窗组件 (Semi Design)
  * 支持新建和编辑缴费记录
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
+  Modal,
+  Button,
+  Input,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import {
+  Toast,
+  Typography,
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
+} from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { UserPlus, X } from 'lucide-react'
 import { paymentApi, employeeApi } from '../api'
 import type { Payment, PaymentCreate, PaymentUpdate } from '../types'
@@ -48,23 +29,7 @@ import {
 } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-// 表单验证 schema
-const paymentFormSchema = z.object({
-  lead_id: z.string().min(1, '请选择线索'),
-  amount: z.number().min(0.01, '金额必须大于0'),
-  payment_method: z.string().min(1, '请选择支付方式'),
-  payment_type: z.string().min(1, '请选择缴费类型'),
-  payment_at: z.string().min(1, '请选择缴费时间'),
-  status: z.string().min(1, '请选择状态'),
-  collector_id: z.string().nullable().optional(),
-  course_name: z.string().optional(),
-  course_hours: z.number().nullable().optional(),
-  receipt_no: z.string().optional(),
-  contract_no: z.string().optional(),
-  remark: z.string().optional()
-})
-
-type PaymentFormValues = z.infer<typeof paymentFormSchema>
+const { Text } = Typography
 
 interface PaymentDialogProps {
   open: boolean
@@ -77,12 +42,13 @@ export function PaymentDialog({
   open,
   onOpenChange,
   payment,
-  onSuccess
+  onSuccess,
 }: PaymentDialogProps) {
   const queryClient = useQueryClient()
   const isEdit = !!payment?.id
   const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
   const [leadSelectOpen, setLeadSelectOpen] = useState(false)
+  const formApiRef = useRef<FormApi>()
 
   // 获取收款人列表
   const { data: employeesData } = useQuery({
@@ -91,73 +57,55 @@ export function PaymentDialog({
       const response = await employeeApi.getEmployees({ is_active: true, size: 100 })
       return response.data?.items || []
     },
-    staleTime: 5 * 60 * 1000
-  })
-
-  const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentFormSchema),
-    defaultValues: {
-      lead_id: '',
-      amount: 0,
-      payment_method: PaymentMethod.WECHAT,
-      payment_type: PaymentType.FULL_PAY,
-      payment_at: new Date().toISOString().slice(0, 16),
-      status: PaymentStatus.CONFIRMED,
-      collector_id: null,
-      course_name: '',
-      course_hours: null,
-      receipt_no: '',
-      contract_no: '',
-      remark: ''
-    }
+    staleTime: 5 * 60 * 1000,
   })
 
   // 填充编辑数据
   useEffect(() => {
     if (payment && open) {
-      form.reset({
+      formApiRef.current?.setValues({
         lead_id: payment.lead_id,
         amount: payment.amount,
         payment_method: payment.payment_method,
         payment_type: payment.payment_type,
         payment_at: payment.payment_at.slice(0, 16),
         status: payment.status,
-        collector_id: payment.collector_id || null,
+        collector_id: payment.collector_id || '',
         course_name: payment.course_name || '',
-        course_hours: payment.course_hours || null,
+        course_hours: payment.course_hours || '',
         receipt_no: payment.receipt_no || '',
         contract_no: payment.contract_no || '',
-        remark: payment.remark || ''
+        remark: payment.remark || '',
       })
       setSelectedLead({
         id: payment.lead_id,
         child_name: payment.child_name || '',
-        parent_phone: payment.parent_phone || ''
+        parent_phone: payment.parent_phone || '',
       })
     } else if (!payment && open) {
-      form.reset({
+      formApiRef.current?.setValues({
         lead_id: '',
         amount: 0,
         payment_method: PaymentMethod.WECHAT,
         payment_type: PaymentType.FULL_PAY,
         payment_at: new Date().toISOString().slice(0, 16),
         status: PaymentStatus.CONFIRMED,
-        collector_id: null,
+        collector_id: '',
         course_name: '',
-        course_hours: null,
+        course_hours: '',
         receipt_no: '',
         contract_no: '',
-        remark: ''
+        remark: '',
       })
       setSelectedLead(null)
     }
-  }, [payment, open, form])
+  }, [payment, open])
 
   // 创建缴费记录
   const createMutation = useMutation({
     mutationFn: (data: PaymentCreate) => paymentApi.createPayment(data),
     onSuccess: () => {
-      toast.success('缴费记录创建成功')
+      Toast.success({ content: '缴费记录创建成功' })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['conversion-stats'] })
       onOpenChange(false)
@@ -165,7 +113,7 @@ export function PaymentDialog({
     },
     onError: (error: any) => {
       showApiErrorToast(error, '创建失败')
-    }
+    },
   })
 
   // 更新缴费记录
@@ -173,7 +121,7 @@ export function PaymentDialog({
     mutationFn: ({ id, data }: { id: string; data: PaymentUpdate }) =>
       paymentApi.updatePayment(id, data),
     onSuccess: () => {
-      toast.success('缴费记录更新成功')
+      Toast.success({ content: '缴费记录更新成功' })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['conversion-stats'] })
       onOpenChange(false)
@@ -181,36 +129,46 @@ export function PaymentDialog({
     },
     onError: (error: any) => {
       showApiErrorToast(error, '更新失败')
-    }
+    },
   })
 
   // 选择线索
   const handleSelectLead = (lead: SelectedLead) => {
     setSelectedLead(lead)
-    form.setValue('lead_id', lead.id)
+    formApiRef.current?.setValue('lead_id', lead.id)
   }
 
   // 清除选择的线索
   const handleClearLead = () => {
     setSelectedLead(null)
-    form.setValue('lead_id', '')
+    formApiRef.current?.setValue('lead_id', '')
   }
 
   // 提交表单
-  const onSubmit = (values: PaymentFormValues) => {
+  const handleSubmit = (values: Record<string, any>) => {
+    if (!values.lead_id) {
+      Toast.warning({ content: '请选择线索' })
+      return
+    }
+    const amount = parseFloat(values.amount)
+    if (!amount || amount <= 0) {
+      Toast.warning({ content: '金额必须大于0' })
+      return
+    }
+
     const data = {
       lead_id: values.lead_id,
-      amount: values.amount,
+      amount: amount,
       payment_method: values.payment_method,
       payment_type: values.payment_type,
       payment_at: new Date(values.payment_at).toISOString(),
       status: values.status,
       collector_id: values.collector_id || undefined,
       course_name: values.course_name || undefined,
-      course_hours: values.course_hours || undefined,
+      course_hours: values.course_hours ? parseInt(values.course_hours) : undefined,
       receipt_no: values.receipt_no || undefined,
       contract_no: values.contract_no || undefined,
-      remark: values.remark || undefined
+      remark: values.remark || undefined,
     }
 
     if (isEdit && payment) {
@@ -223,308 +181,158 @@ export function PaymentDialog({
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? '编辑缴费记录' : '新建缴费记录'}</DialogTitle>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* 线索选择 */}
-            <FormField
-              control={form.control}
-              name="lead_id"
-              render={() => (
-                <FormItem>
-                  <FormLabel>选择线索 *</FormLabel>
-                  <FormControl>
-                    <div>
-                      {selectedLead ? (
-                        <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                          <span className="font-medium">{selectedLead.child_name || '-'}</span>
-                          <span className="text-muted-foreground">-</span>
-                          <span>{selectedLead.parent_phone}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="ml-auto h-6 w-6"
-                            onClick={handleClearLead}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full justify-start text-muted-foreground"
-                          onClick={() => setLeadSelectOpen(true)}
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          点击选择线索
-                        </Button>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* 金额和支付方式 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>缴费金额 *</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">¥</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          className="pl-7"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="payment_method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>支付方式 *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择支付方式" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {paymentMethodOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* 缴费类型和时间 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="payment_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>缴费类型 *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择缴费类型" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {paymentTypeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="payment_at"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>缴费时间 *</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* 收款人和状态 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="collector_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>收款人</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(value || null)}
-                      value={field.value || ''}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择收款人" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">不指定</SelectItem>
-                        {employeesData?.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>缴费状态 *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择状态" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {paymentStatusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* 课程信息 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="course_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>课程名称</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入课程名称" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="course_hours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>课时数</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="请输入课时数"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* 收据和合同编号 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="receipt_no"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>收据编号</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入收据编号" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contract_no"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>合同编号</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入合同编号" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* 备注 */}
-            <FormField
-              control={form.control}
-              name="remark"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>备注</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="请输入备注信息" rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
+    <>
+      <Modal
+        title={isEdit ? '编辑缴费记录' : '新建缴费记录'}
+        visible={open}
+        onCancel={() => onOpenChange(false)}
+        width={672}
+        style={{ maxHeight: '90vh' }}
+        bodyStyle={{ overflow: 'auto' }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              取消
+            </Button>
+            <Button
+              theme="solid"
+              disabled={isSubmitting}
+              onClick={() => formApiRef.current?.submitForm()}
+            >
+              {isSubmitting ? '提交中...' : isEdit ? '保存' : '创建'}
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          getFormApi={(api) => (formApiRef.current = api)}
+          onSubmit={handleSubmit}
+          initValues={{
+            lead_id: '',
+            amount: 0,
+            payment_method: PaymentMethod.WECHAT,
+            payment_type: PaymentType.FULL_PAY,
+            payment_at: new Date().toISOString().slice(0, 16),
+            status: PaymentStatus.CONFIRMED,
+            collector_id: '',
+            course_name: '',
+            course_hours: '',
+            receipt_no: '',
+            contract_no: '',
+            remark: '',
+          }}
+          labelPosition="top"
+        >
+          {/* 线索选择 */}
+          <Form.Slot label="选择线索 *">
+            {selectedLead ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: 8, border: '1px solid var(--semi-color-border)',
+                borderRadius: 4, backgroundColor: 'var(--semi-color-fill-0)',
+              }}>
+                <Text strong>{selectedLead.child_name || '-'}</Text>
+                <Text type="tertiary">-</Text>
+                <Text>{selectedLead.parent_phone}</Text>
+                <Button
+                  type="tertiary"
+                  theme="borderless"
+                  icon={<X style={{ width: 16, height: 16 }} />}
+                  style={{ marginLeft: 'auto', padding: 4 }}
+                  onClick={handleClearLead}
+                />
+              </div>
+            ) : (
               <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--semi-color-text-2)' }}
+                icon={<UserPlus style={{ width: 16, height: 16 }} />}
+                onClick={() => setLeadSelectOpen(true)}
               >
-                取消
+                点击选择线索
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? '提交中...' : isEdit ? '保存' : '创建'}
-              </Button>
-            </DialogFooter>
-          </form>
+            )}
+          </Form.Slot>
+
+          {/* 金额和支付方式 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Slot label="缴费金额 *">
+              <div style={{ position: 'relative' }}>
+                <span style={{
+                  position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                  color: 'var(--semi-color-text-2)', zIndex: 1,
+                }}>¥</span>
+                <Input
+                  type="number"
+                  style={{ paddingLeft: 28 }}
+                  placeholder="0.00"
+                  value={formApiRef.current?.getValue('amount')?.toString()}
+                  onChange={(v) => formApiRef.current?.setValue('amount', v)}
+                />
+              </div>
+            </Form.Slot>
+            <Form.Select
+              field="payment_method"
+              label="支付方式 *"
+              rules={[{ required: true, message: '请选择支付方式' }]}
+              optionList={paymentMethodOptions.map(o => ({ label: o.label, value: o.value }))}
+            />
+          </div>
+
+          {/* 缴费类型和时间 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Select
+              field="payment_type"
+              label="缴费类型 *"
+              rules={[{ required: true, message: '请选择缴费类型' }]}
+              optionList={paymentTypeOptions.map(o => ({ label: o.label, value: o.value }))}
+            />
+            <Form.Input
+              field="payment_at"
+              label="缴费时间 *"
+              type="datetime-local"
+              rules={[{ required: true, message: '请选择缴费时间' }]}
+            />
+          </div>
+
+          {/* 收款人和状态 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Select
+              field="collector_id"
+              label="收款人"
+              placeholder="选择收款人"
+              showClear
+              optionList={[
+                { label: '不指定', value: '' },
+                ...(employeesData?.map((emp) => ({
+                  label: emp.name,
+                  value: emp.id,
+                })) || []),
+              ]}
+            />
+            <Form.Select
+              field="status"
+              label="缴费状态 *"
+              rules={[{ required: true, message: '请选择状态' }]}
+              optionList={paymentStatusOptions.map(o => ({ label: o.label, value: o.value }))}
+            />
+          </div>
+
+          {/* 课程信息 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Input field="course_name" label="课程名称" placeholder="请输入课程名称" />
+            <Form.InputNumber field="course_hours" label="课时数" min={0} placeholder="请输入课时数" />
+          </div>
+
+          {/* 收据和合同编号 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Input field="receipt_no" label="收据编号" placeholder="请输入收据编号" />
+            <Form.Input field="contract_no" label="合同编号" placeholder="请输入合同编号" />
+          </div>
+
+          {/* 备注 */}
+          <Form.TextArea field="remark" label="备注" placeholder="请输入备注信息" rows={3} />
         </Form>
-      </DialogContent>
+      </Modal>
 
       {/* 线索选择弹窗 */}
       <LeadSelectDialog
@@ -534,6 +342,6 @@ export function PaymentDialog({
         title="选择线索"
         description="选择要登记缴费的线索"
       />
-    </Dialog>
+    </>
   )
 }

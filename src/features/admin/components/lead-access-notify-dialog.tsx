@@ -6,27 +6,12 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
+import { Modal, Button, Select, Switch, Typography } from '@douyinfe/semi-ui-19'
 import { leadAccessStatsApi, dingtalkRobotsApi } from '../api'
-import type { LeadAccessNotifyConfig, DingtalkRobot } from '../types'
+import type { DingtalkRobot } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+
+const { Text } = Typography
 
 interface LeadAccessNotifyDialogProps {
   open: boolean
@@ -94,122 +79,117 @@ export function LeadAccessNotifyDialog({
 
   const isLoading = configLoading || robotsLoading
 
+  const robotOptions = [
+    { label: '不选择', value: 'none' },
+    ...robots.map((robot: DingtalkRobot) => ({
+      label: robot.name,
+      value: robot.id,
+    })),
+  ]
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>通知设置</DialogTitle>
-          <DialogDescription>
-            配置线索访问使用率达到阈值时的钉钉通知
-          </DialogDescription>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-6 py-4">
-            {/* 钉钉机器人选择 */}
-            <div className="space-y-2">
-              <Label htmlFor="robot">钉钉机器人</Label>
-              <Select
-                value={robotId || 'none'}
-                onValueChange={(value) => setRobotId(value === 'none' ? null : value)}
-              >
-                <SelectTrigger id="robot">
-                  <SelectValue placeholder="选择钉钉机器人" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">不选择</SelectItem>
-                  {robots.map((robot: DingtalkRobot) => (
-                    <SelectItem key={robot.id} value={robot.id}>
-                      {robot.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                选择用于发送通知的钉钉群机器人
-              </p>
-            </div>
-
-            {/* 80% 阈值通知 */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notify-80">80% 阈值通知</Label>
-                <p className="text-xs text-muted-foreground">
-                  当顾问访问线索使用率达到 80% 时发送通知
-                </p>
-              </div>
-              <Switch
-                id="notify-80"
-                checked={notifyAt80}
-                onCheckedChange={setNotifyAt80}
-              />
-            </div>
-
-            {/* 100% 阈值通知 */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notify-100">100% 阈值通知</Label>
-                <p className="text-xs text-muted-foreground">
-                  当顾问访问线索达到每日上限时发送通知
-                </p>
-              </div>
-              <Switch
-                id="notify-100"
-                checked={notifyAt100}
-                onCheckedChange={setNotifyAt100}
-              />
-            </div>
-
-            {/* 启用通知 */}
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="is-active" className="text-base">
-                  启用通知
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  开启后，当顾问访问使用率达到阈值时会自动发送钉钉通知
-                </p>
-              </div>
-              <Switch
-                id="is-active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
-            </div>
-
-            {/* 配置说明 */}
-            {config?.updated_at && (
-              <p className="text-xs text-muted-foreground">
-                上次更新：{config.updated_by_name || '系统'} 于{' '}
-                {new Date(config.updated_at).toLocaleString('zh-CN')}
-              </p>
-            )}
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
+    <Modal
+      title="通知设置"
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={() => onOpenChange(false)}>取消</Button>
           <Button
+            theme="solid"
+            type="primary"
             onClick={handleSave}
-            disabled={updateMutation.isPending || isLoading}
+            disabled={isLoading}
+            loading={updateMutation.isPending}
           >
-            {updateMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                保存中...
-              </>
-            ) : (
-              '保存'
-            )}
+            保存
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+      width={480}
+    >
+      <Text type="tertiary" size="small">
+        配置线索访问使用率达到阈值时的钉钉通知
+      </Text>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--semi-color-text-2)' }} />
+        </div>
+      ) : (
+        <div className="space-y-6 py-4">
+          {/* 钉钉机器人选择 */}
+          <div className="space-y-2">
+            <Text strong size="small">钉钉机器人</Text>
+            <Select
+              value={robotId || 'none'}
+              onChange={(value) => setRobotId(value === 'none' ? null : value as string)}
+              optionList={robotOptions}
+              style={{ width: '100%' }}
+              placeholder="选择钉钉机器人"
+            />
+            <Text type="tertiary" size="small">
+              选择用于发送通知的钉钉群机器人
+            </Text>
+          </div>
+
+          {/* 80% 阈值通知 */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Text strong size="small">80% 阈值通知</Text>
+              <div>
+                <Text type="tertiary" size="small">
+                  当顾问访问线索使用率达到 80% 时发送通知
+                </Text>
+              </div>
+            </div>
+            <Switch
+              checked={notifyAt80}
+              onChange={setNotifyAt80}
+            />
+          </div>
+
+          {/* 100% 阈值通知 */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Text strong size="small">100% 阈值通知</Text>
+              <div>
+                <Text type="tertiary" size="small">
+                  当顾问访问线索达到每日上限时发送通知
+                </Text>
+              </div>
+            </div>
+            <Switch
+              checked={notifyAt100}
+              onChange={setNotifyAt100}
+            />
+          </div>
+
+          {/* 启用通知 */}
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Text strong>启用通知</Text>
+              <div>
+                <Text type="tertiary" size="small">
+                  开启后，当顾问访问使用率达到阈值时会自动发送钉钉通知
+                </Text>
+              </div>
+            </div>
+            <Switch
+              checked={isActive}
+              onChange={setIsActive}
+            />
+          </div>
+
+          {/* 配置说明 */}
+          {config?.updated_at && (
+            <Text type="tertiary" size="small">
+              上次更新：{config.updated_by_name || '系统'} 于{' '}
+              {new Date(config.updated_at).toLocaleString('zh-CN')}
+            </Text>
+          )}
+        </div>
+      )}
+    </Modal>
   )
 }

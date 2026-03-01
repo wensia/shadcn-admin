@@ -9,16 +9,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Shield, Search, X, UserPlus, Loader2 } from 'lucide-react'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button, Input, Tag, Switch, Skeleton, Typography, Card } from '@douyinfe/semi-ui-19'
 import { adminApi } from '../api'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import type { PageAccessConfigItem } from '../types'
+
+const { Text } = Typography
 
 // 可配置的页面列表
 // yunke/call-records 已改为自动继承 CRM 权限（有身份+绑定云客即可访问），无需手动配置
@@ -43,12 +39,12 @@ export function PageAccessConfigPage() {
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center gap-3">
-          <Shield className="h-6 w-6 text-muted-foreground" />
+          <Shield className="h-6 w-6" style={{ color: 'var(--semi-color-text-2)' }} />
           <div>
             <h1 className="text-2xl font-bold">页面访问权限</h1>
-            <p className="text-sm text-muted-foreground">
+            <Text type="tertiary" size="small">
               配置哪些普通员工可以访问特定页面（超级管理员默认拥有所有权限）
-            </p>
+            </Text>
           </div>
         </div>
 
@@ -57,13 +53,9 @@ export function PageAccessConfigPage() {
             <div className="space-y-4">
               {[1, 2].map(i => (
                 <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-48" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-20 w-full" />
-                  </CardContent>
+                  <Skeleton.Paragraph rows={1} style={{ width: 128, marginBottom: 8 }} />
+                  <Skeleton.Paragraph rows={1} style={{ width: 192, marginBottom: 16 }} />
+                  <Skeleton.Paragraph rows={3} style={{ width: '100%' }} />
                 </Card>
               ))}
             </div>
@@ -171,48 +163,39 @@ function PageAccessCard({
   }, [config?.allowed_employee_ids, updateMutation])
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">{pageName}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Label htmlFor={`enabled-${pageKey}`} className="text-sm text-muted-foreground">
-              启用访问控制
-            </Label>
-            <Switch
-              id={`enabled-${pageKey}`}
-              checked={isEnabled}
-              onCheckedChange={handleToggleEnabled}
-              disabled={updateMutation.isPending}
-            />
-          </div>
+    <Card
+      title={pageName}
+      headerExtraContent={
+        <div className="flex items-center gap-2">
+          <Text type="tertiary" size="small">启用访问控制</Text>
+          <Switch
+            checked={isEnabled}
+            onChange={handleToggleEnabled}
+            disabled={updateMutation.isPending}
+          />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      }
+    >
+      <Text type="tertiary" size="small">{description}</Text>
+
+      <div className="mt-4 space-y-4">
         {/* 已授权员工列表 */}
         <div>
-          <Label className="text-sm font-medium">已授权员工 ({employees.length})</Label>
+          <Text strong size="small">已授权员工 ({employees.length})</Text>
           <div className="mt-2 flex flex-wrap gap-2">
             {employees.length === 0 ? (
-              <p className="text-sm text-muted-foreground">暂无已授权员工</p>
+              <Text type="tertiary" size="small">暂无已授权员工</Text>
             ) : (
               employees.map(emp => (
-                <Badge key={emp.id} variant="secondary" className="gap-1 pr-1">
+                <Tag
+                  key={emp.id}
+                  closable
+                  onClose={() => handleRemoveEmployee(emp.id)}
+                  size="large"
+                >
                   {emp.name}
-                  <span className="text-muted-foreground">({emp.username})</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 hover:bg-destructive/20"
-                    onClick={() => handleRemoveEmployee(emp.id)}
-                    disabled={updateMutation.isPending}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
+                  <Text type="tertiary" size="small"> ({emp.username})</Text>
+                </Tag>
               ))
             )}
           </div>
@@ -220,18 +203,15 @@ function PageAccessCard({
 
         {/* 搜索添加员工 */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">添加员工</Label>
+          <Text strong size="small">添加员工</Text>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              prefix={<Search className="h-4 w-4" />}
+              suffix={isSearching ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--semi-color-text-2)' }} /> : undefined}
               placeholder="搜索员工姓名或用户名..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-9"
+              onChange={(v) => setSearchTerm(v)}
             />
-            {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-            )}
           </div>
 
           {/* 搜索结果 */}
@@ -243,16 +223,16 @@ function PageAccessCard({
                   className="flex items-center justify-between border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
                 >
                   <span className="text-sm">
-                    {emp.name} <span className="text-muted-foreground">({emp.username})</span>
+                    {emp.name} <Text type="tertiary">({emp.username})</Text>
                   </span>
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1"
+                    theme="borderless"
+                    type="tertiary"
+                    size="small"
+                    icon={<UserPlus className="h-3.5 w-3.5" />}
                     onClick={() => handleAddEmployee(emp.id)}
                     disabled={updateMutation.isPending}
                   >
-                    <UserPlus className="h-3.5 w-3.5" />
                     添加
                   </Button>
                 </div>
@@ -260,10 +240,10 @@ function PageAccessCard({
             </div>
           )}
           {searchTerm.trim() && searchResults && searchResults.length === 0 && !isSearching && (
-            <p className="text-sm text-muted-foreground">未找到匹配的员工</p>
+            <Text type="tertiary" size="small">未找到匹配的员工</Text>
           )}
         </div>
-      </CardContent>
+      </div>
     </Card>
   )
 }

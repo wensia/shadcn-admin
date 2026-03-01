@@ -3,87 +3,32 @@
  * 用于集成配置页面的 Tab 内容
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Mic, Plus, Pencil, Trash2, Search, Play, CheckCircle, AlertCircle, RefreshCw, Star } from 'lucide-react'
+import { Mic, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Table, Button, Input, Modal, Form, Select, Switch, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { asrConfigApi, type ASRConfigCreate, type ASRConfigUpdate } from '../../api'
 import { ASR_PROVIDER_OPTIONS, type ASRConfigItem, type ASRProvider } from '../../types'
 import { StatusBadge } from '../../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
 
+const { Text } = Typography
+const { TextArea } = Input
+
 // 提供商字段配置
 const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, {
   required: string[]
   optional: string[]
-  toggles: string[]  // 布尔开关类型的字段
+  toggles: string[]
   labels: Record<string, string>
   descriptions?: Record<string, string>
 }> = {
   volcengine: {
-    // 按照火山引擎官方文档：https://www.volcengine.com/docs/6561/1354868
-    // 控制台显示名称：APP ID, Access Token, Secret Key
     required: ['app_id', 'access_token'],
     optional: ['resource_id'],
     toggles: ['enable_emotion_detection', 'enable_channel_split', 'enable_speaker_info', 'enable_itn', 'enable_punc'],
@@ -141,37 +86,10 @@ const VOLCENGINE_DEFAULTS = {
   enable_punc: true,
 }
 
-// 表单验证模式
-const formSchema = z.object({
-  provider: z.enum(['volcengine', 'tencent', 'alibaba']),
-  name: z.string().min(1, '请输入配置名称').max(100, '名称最多100个字符'),
-  notes: z.string().max(500, '备注最多500个字符').optional(),
-  is_default: z.boolean().default(false),
-  is_active: z.boolean().default(true),
-  // 火山引擎字段（控制台显示名称：APP ID, Access Token）
-  volcengine_app_id: z.string().optional(),
-  volcengine_access_token: z.string().optional(),
-  volcengine_resource_id: z.string().optional(),
-  volcengine_enable_emotion_detection: z.boolean().optional(),
-  volcengine_enable_channel_split: z.boolean().optional(),
-  volcengine_enable_speaker_info: z.boolean().optional(),
-  volcengine_enable_itn: z.boolean().optional(),
-  volcengine_enable_punc: z.boolean().optional(),
-  // 腾讯云字段
-  tencent_secret_id: z.string().optional(),
-  tencent_secret_key: z.string().optional(),
-  tencent_app_id: z.string().optional(),
-  tencent_engine_type: z.string().optional(),
-  // 阿里云字段
-  alibaba_access_key_id: z.string().optional(),
-  alibaba_access_key_secret: z.string().optional(),
-  alibaba_app_key: z.string().optional(),
-})
-
-type FormData = z.infer<typeof formSchema>
-
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+
 function createSkeletonData(count: number): ASRConfigItem[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_PREFIX}${i}`,
@@ -187,6 +105,7 @@ function createSkeletonData(count: number): ASRConfigItem[] {
 
 export function ASRConfigContent() {
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -195,24 +114,12 @@ export function ASRConfigContent() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ASRConfigItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<ASRConfigItem | null>(null)
+  const [selectedProvider, setSelectedProvider] = useState<ASRProvider>('volcengine')
   const [testStatus, setTestStatus] = useState<{ tested: boolean; success: boolean; message: string }>({
     tested: false,
     success: false,
     message: '',
   })
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      provider: 'volcengine',
-      name: '',
-      notes: '',
-      is_default: false,
-      is_active: true,
-    },
-  })
-
-  const selectedProvider = form.watch('provider')
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-asr-configs', page, pageSize, searchValue],
@@ -237,7 +144,6 @@ export function ASRConfigContent() {
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
-      form.reset()
       setTestStatus({ tested: false, success: false, message: '' })
       queryClient.invalidateQueries({ queryKey: ['admin-asr-configs'] })
     },
@@ -253,7 +159,6 @@ export function ASRConfigContent() {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       setTestStatus({ tested: false, success: false, message: '' })
       queryClient.invalidateQueries({ queryKey: ['admin-asr-configs'] })
     },
@@ -304,99 +209,101 @@ export function ASRConfigContent() {
     return option?.label || provider
   }
 
-  const getProviderBadgeVariant = (provider: string): 'default' | 'secondary' | 'outline' => {
+  const getProviderTagColor = (provider: string): string => {
     switch (provider) {
-      case 'volcengine': return 'default'
-      case 'tencent': return 'secondary'
-      case 'alibaba': return 'outline'
-      default: return 'secondary'
+      case 'volcengine': return 'blue'
+      case 'tencent': return 'green'
+      case 'alibaba': return 'orange'
+      default: return 'grey'
     }
   }
 
-  const columns: ColumnDef<ASRConfigItem>[] = useMemo(
+  const columns: ColumnProps<ASRConfigItem>[] = useMemo(
     () => [
       {
-        accessorKey: 'name',
-        header: '配置名称',
-        size: 250,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-40" />
+        title: '配置名称',
+        dataIndex: 'name',
+        width: 250,
+        render: (_: unknown, record: ASRConfigItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 160 }} />
           }
           return (
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <Mic className="h-4 w-4 text-blue-500" />
-                <span className="font-medium">{row.original.name}</span>
-                {row.original.is_default && (
+                <span className="font-medium">{record.name}</span>
+                {record.is_default && (
                   <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                 )}
               </div>
-              {row.original.notes && (
-                <span className="text-xs text-muted-foreground line-clamp-1">{row.original.notes}</span>
+              {record.notes && (
+                <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }} style={{ maxWidth: 200 }}>
+                  {record.notes}
+                </Text>
               )}
             </div>
           )
         },
       },
       {
-        accessorKey: 'provider',
-        header: '提供商',
-        size: 120,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
+        title: '提供商',
+        dataIndex: 'provider',
+        width: 120,
+        render: (_: unknown, record: ASRConfigItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
           return (
-            <Badge variant={getProviderBadgeVariant(row.original.provider)}>
-              {getProviderLabel(row.original.provider)}
-            </Badge>
+            <Tag color={getProviderTagColor(record.provider)} size="small">
+              {getProviderLabel(record.provider)}
+            </Tag>
           )
         },
       },
       {
-        accessorKey: 'is_active',
-        header: '状态',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 100,
+        render: (_: unknown, record: ASRConfigItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
           }
-          return <StatusBadge isActive={row.original.is_active} />
+          return <StatusBadge isActive={record.is_active} />
         },
       },
       {
-        accessorKey: 'last_verified_at',
-        header: '最后验证',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '最后验证',
+        dataIndex: 'last_verified_at',
+        width: 160,
+        render: (_: unknown, record: ASRConfigItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
-          return row.original.last_verified_at
-            ? formatTime(row.original.last_verified_at)
-            : <span className="text-muted-foreground">未验证</span>
+          return record.last_verified_at
+            ? formatTime(record.last_verified_at)
+            : <Text type="tertiary">未验证</Text>
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 150,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-24" />
+        title: '操作',
+        dataIndex: 'actions',
+        width: 150,
+        render: (_: unknown, record: ASRConfigItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
           }
           return (
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => handleEdit(row.original)} title="编辑">
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => handleTest(row.original.id)} disabled={testMutation.isPending} title="测试">
-                <Play className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(row.original)} title="删除">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <Tooltip content="编辑">
+                <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+              </Tooltip>
+              <Tooltip content="测试">
+                <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTest(record.id)} loading={testMutation.isPending} />
+              </Tooltip>
+              <Tooltip content="删除">
+                <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} size="small" onClick={() => handleDeleteClick(record)} />
+              </Tooltip>
             </div>
           )
         },
@@ -407,38 +314,49 @@ export function ASRConfigContent() {
 
   const tableData = isLoading ? createSkeletonData(5) : (data?.items || [])
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-  })
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total: data?.total || 0,
+    onPageChange: setPage,
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
+      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, data?.total])
 
   const handleCreate = () => {
     setEditingItem(null)
-    form.reset({
-      provider: 'volcengine',
-      name: '',
-      notes: '',
-      is_default: false,
-      is_active: true,
-      // 火山引擎默认值
-      volcengine_resource_id: VOLCENGINE_DEFAULTS.resource_id,
-      volcengine_enable_emotion_detection: VOLCENGINE_DEFAULTS.enable_emotion_detection,
-      volcengine_enable_channel_split: VOLCENGINE_DEFAULTS.enable_channel_split,
-      volcengine_enable_speaker_info: VOLCENGINE_DEFAULTS.enable_speaker_info,
-      volcengine_enable_itn: VOLCENGINE_DEFAULTS.enable_itn,
-      volcengine_enable_punc: VOLCENGINE_DEFAULTS.enable_punc,
-    })
+    setSelectedProvider('volcengine')
     setTestStatus({ tested: false, success: false, message: '' })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        provider: 'volcengine',
+        name: '',
+        notes: '',
+        is_default: false,
+        is_active: true,
+        volcengine_resource_id: VOLCENGINE_DEFAULTS.resource_id,
+        volcengine_enable_emotion_detection: VOLCENGINE_DEFAULTS.enable_emotion_detection,
+        volcengine_enable_channel_split: VOLCENGINE_DEFAULTS.enable_channel_split,
+        volcengine_enable_speaker_info: VOLCENGINE_DEFAULTS.enable_speaker_info,
+        volcengine_enable_itn: VOLCENGINE_DEFAULTS.enable_itn,
+        volcengine_enable_punc: VOLCENGINE_DEFAULTS.enable_punc,
+      })
+    }, 0)
   }
 
   const handleEdit = (item: ASRConfigItem) => {
     setEditingItem(item)
     const provider = item.provider as ASRProvider
+    setSelectedProvider(provider)
+    setTestStatus({ tested: false, success: false, message: '' })
+    setDialogOpen(true)
 
-    const formValues: FormData = {
+    const formValues: Record<string, unknown> = {
       provider,
       name: item.name,
       notes: item.notes || '',
@@ -450,7 +368,6 @@ export function ASRConfigContent() {
       formValues.volcengine_app_id = String(item.credentials.app_id || '')
       formValues.volcengine_access_token = String(item.credentials.access_token || '')
       formValues.volcengine_resource_id = String(item.credentials.resource_id || VOLCENGINE_DEFAULTS.resource_id)
-      // 布尔值字段（现在返回的是原始 boolean 类型）
       formValues.volcengine_enable_emotion_detection = Boolean(item.credentials.enable_emotion_detection)
       formValues.volcengine_enable_channel_split = Boolean(item.credentials.enable_channel_split)
       formValues.volcengine_enable_speaker_info = Boolean(item.credentials.enable_speaker_info)
@@ -467,9 +384,9 @@ export function ASRConfigContent() {
       formValues.alibaba_app_key = String(item.credentials.app_key || '')
     }
 
-    form.reset(formValues)
-    setTestStatus({ tested: false, success: false, message: '' })
-    setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues(formValues)
+    }, 0)
   }
 
   const handleDeleteClick = (item: ASRConfigItem) => {
@@ -487,32 +404,30 @@ export function ASRConfigContent() {
     testMutation.mutate(id)
   }
 
-  const handleSubmit = (formData: FormData) => {
-    const provider = formData.provider
+  const handleSubmit = (formData: Record<string, unknown>) => {
+    const provider = formData.provider as ASRProvider
     const config = PROVIDER_FIELD_CONFIGS[provider]
 
     const credentials: Record<string, string | boolean> = {}
 
     if (provider === 'volcengine') {
-      if (formData.volcengine_app_id) credentials.app_id = formData.volcengine_app_id
-      if (formData.volcengine_access_token) credentials.access_token = formData.volcengine_access_token
-      // 资源 ID 固定为 volc.seedasr.auc
+      if (formData.volcengine_app_id) credentials.app_id = formData.volcengine_app_id as string
+      if (formData.volcengine_access_token) credentials.access_token = formData.volcengine_access_token as string
       credentials.resource_id = VOLCENGINE_DEFAULTS.resource_id
-      // 布尔开关
-      credentials.enable_emotion_detection = formData.volcengine_enable_emotion_detection ?? VOLCENGINE_DEFAULTS.enable_emotion_detection
-      credentials.enable_channel_split = formData.volcengine_enable_channel_split ?? VOLCENGINE_DEFAULTS.enable_channel_split
-      credentials.enable_speaker_info = formData.volcengine_enable_speaker_info ?? VOLCENGINE_DEFAULTS.enable_speaker_info
-      credentials.enable_itn = formData.volcengine_enable_itn ?? VOLCENGINE_DEFAULTS.enable_itn
-      credentials.enable_punc = formData.volcengine_enable_punc ?? VOLCENGINE_DEFAULTS.enable_punc
+      credentials.enable_emotion_detection = (formData.volcengine_enable_emotion_detection as boolean) ?? VOLCENGINE_DEFAULTS.enable_emotion_detection
+      credentials.enable_channel_split = (formData.volcengine_enable_channel_split as boolean) ?? VOLCENGINE_DEFAULTS.enable_channel_split
+      credentials.enable_speaker_info = (formData.volcengine_enable_speaker_info as boolean) ?? VOLCENGINE_DEFAULTS.enable_speaker_info
+      credentials.enable_itn = (formData.volcengine_enable_itn as boolean) ?? VOLCENGINE_DEFAULTS.enable_itn
+      credentials.enable_punc = (formData.volcengine_enable_punc as boolean) ?? VOLCENGINE_DEFAULTS.enable_punc
     } else if (provider === 'tencent') {
-      if (formData.tencent_secret_id) credentials.secret_id = formData.tencent_secret_id
-      if (formData.tencent_secret_key) credentials.secret_key = formData.tencent_secret_key
-      if (formData.tencent_app_id) credentials.app_id = formData.tencent_app_id
-      if (formData.tencent_engine_type) credentials.engine_type = formData.tencent_engine_type
+      if (formData.tencent_secret_id) credentials.secret_id = formData.tencent_secret_id as string
+      if (formData.tencent_secret_key) credentials.secret_key = formData.tencent_secret_key as string
+      if (formData.tencent_app_id) credentials.app_id = formData.tencent_app_id as string
+      if (formData.tencent_engine_type) credentials.engine_type = formData.tencent_engine_type as string
     } else if (provider === 'alibaba') {
-      if (formData.alibaba_access_key_id) credentials.access_key_id = formData.alibaba_access_key_id
-      if (formData.alibaba_access_key_secret) credentials.access_key_secret = formData.alibaba_access_key_secret
-      if (formData.alibaba_app_key) credentials.app_key = formData.alibaba_app_key
+      if (formData.alibaba_access_key_id) credentials.access_key_id = formData.alibaba_access_key_id as string
+      if (formData.alibaba_access_key_secret) credentials.access_key_secret = formData.alibaba_access_key_secret as string
+      if (formData.alibaba_app_key) credentials.app_key = formData.alibaba_app_key as string
     }
 
     // 验证必填字段
@@ -525,13 +440,12 @@ export function ASRConfigContent() {
 
     if (editingItem) {
       const updateData: ASRConfigUpdate = {
-        name: formData.name,
-        notes: formData.notes,
-        is_active: formData.is_active,
-        is_default: formData.is_default,
+        name: formData.name as string,
+        notes: formData.notes as string,
+        is_active: formData.is_active as boolean,
+        is_default: formData.is_default as boolean,
       }
 
-      // 过滤掉脱敏的凭证值
       const filteredCredentials: Record<string, string | boolean> = {}
       for (const [key, value] of Object.entries(credentials)) {
         if (typeof value === 'boolean') {
@@ -548,10 +462,10 @@ export function ASRConfigContent() {
     } else {
       const createData: ASRConfigCreate = {
         provider,
-        name: formData.name,
+        name: formData.name as string,
         credentials,
-        is_default: formData.is_default,
-        notes: formData.notes,
+        is_default: formData.is_default as boolean,
+        notes: formData.notes as string,
       }
       createMutation.mutate(createData)
     }
@@ -567,77 +481,50 @@ export function ASRConfigContent() {
     const prefix = selectedProvider
 
     const renderTextField = (fieldKey: string, required: boolean) => {
-      const formKey = `${prefix}_${fieldKey}` as keyof FormData
+      const formKey = `${prefix}_${fieldKey}`
       const label = config.labels[fieldKey]
       const description = config.descriptions?.[fieldKey]
       const isPasswordField = fieldKey.includes('secret') || fieldKey.includes('token') || fieldKey.includes('key')
-      const isDisabled = fieldKey === 'resource_id' && prefix === 'volcengine'  // 资源 ID 只读
+      const isDisabled = fieldKey === 'resource_id' && prefix === 'volcengine'
 
       return (
-        <FormField
+        <Form.Input
           key={formKey}
-          control={form.control}
-          name={formKey}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                {label}
-                {required && <span className="text-destructive ml-1">*</span>}
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type={isPasswordField ? 'password' : 'text'}
-                  placeholder={`请输入${label}`}
-                  disabled={isDisabled}
-                  {...field}
-                  value={field.value as string || ''}
-                />
-              </FormControl>
-              {description && <FormDescription>{description}</FormDescription>}
-              <FormMessage />
-            </FormItem>
-          )}
+          field={formKey}
+          label={<span>{label}{required && <span className="text-red-500 ml-1">*</span>}</span>}
+          placeholder={`请输入${label}`}
+          mode={isPasswordField ? 'password' : undefined}
+          disabled={isDisabled}
+          extraText={description}
         />
       )
     }
 
     const renderToggleField = (fieldKey: string) => {
-      const formKey = `${prefix}_${fieldKey}` as keyof FormData
+      const formKey = `${prefix}_${fieldKey}`
       const label = config.labels[fieldKey]
       const description = config.descriptions?.[fieldKey]
 
       return (
-        <FormField
-          key={formKey}
-          control={form.control}
-          name={formKey}
-          render={({ field }) => (
-            <FormItem className="flex items-center justify-between rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <FormLabel className="text-sm">{label}</FormLabel>
-                {description && <FormDescription className="text-xs">{description}</FormDescription>}
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value as boolean}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
+        <div key={formKey} className="flex items-center justify-between rounded-lg border p-3">
+          <div className="space-y-0.5">
+            <div className="text-sm font-medium">{label}</div>
+            {description && <div className="text-xs text-gray-500">{description}</div>}
+          </div>
+          <Form.Switch field={formKey} noLabel />
+        </div>
       )
     }
 
     return (
       <div className="space-y-4">
-        <div className="text-sm font-medium text-muted-foreground">凭证信息</div>
+        <div className="text-sm font-medium text-gray-500">凭证信息</div>
         {config.required.map(field => renderTextField(field, true))}
         {config.optional.map(field => renderTextField(field, false))}
 
         {config.toggles.length > 0 && (
           <>
-            <div className="text-sm font-medium text-muted-foreground pt-2">功能配置</div>
+            <div className="text-sm font-medium text-gray-500 pt-2">功能配置</div>
             {config.toggles.map(field => renderToggleField(field))}
           </>
         )}
@@ -651,215 +538,130 @@ export function ASRConfigContent() {
         {/* 工具栏 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索配置名称或提供商..."
-                className="pl-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Button variant="outline" onClick={handleSearch}>搜索</Button>
-            <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索配置名称或提供商..."
+              style={{ width: 256 }}
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+            />
+            <Button theme="outline" onClick={handleSearch}>搜索</Button>
+            <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
             新增配置
           </Button>
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {data && data.total > 0 && (
-          <SimplePagination
-            page={page}
-            pageSize={pageSize}
-            total={data.total}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey="id"
+            pagination={data && data.total > 0 ? pagination : false}
+            loading={false}
+            empty="暂无数据"
           />
-        )}
+        </div>
       </div>
 
       {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>{editingItem ? '编辑 ASR 配置' : '新增 ASR 配置'}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? '修改语音识别服务配置' : '添加一个新的语音识别服务配置'}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="provider"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>服务提供商</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!!editingItem}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="请选择服务提供商" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {ASR_PROVIDER_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <Modal
+        title={editingItem ? '编辑 ASR 配置' : '新增 ASR 配置'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => formRef.current?.submitForm()} loading={createMutation.isPending || updateMutation.isPending}>
+              保存
+            </Button>
+          </div>
+        }
+        width={600}
+        style={{ maxHeight: '90vh' }}
+      >
+        <div className="text-sm text-gray-500 mb-4">
+          {editingItem ? '修改语音识别服务配置' : '添加一个新的语音识别服务配置'}
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto">
+          <Form
+            getFormApi={(api) => { formRef.current = api }}
+            onSubmit={handleSubmit}
+            labelPosition="top"
+          >
+            <Form.Select
+              field="provider"
+              label="服务提供商"
+              optionList={ASR_PROVIDER_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))}
+              disabled={!!editingItem}
+              onChange={(v) => setSelectedProvider(v as ASRProvider)}
+              rules={[{ required: true, message: '请选择服务提供商' }]}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>配置名称</FormLabel>
-                      <FormControl>
-                        <Input placeholder="请输入配置名称" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <Form.Input
+              field="name"
+              label="配置名称"
+              placeholder="请输入配置名称"
+              rules={[{ required: true, message: '请输入配置名称' }]}
+            />
 
-                {renderCredentialFields()}
+            {renderCredentialFields()}
 
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>备注</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="请输入备注（可选）" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <Form.TextArea
+              field="notes"
+              label="备注"
+              placeholder="请输入备注（可选）"
+            />
 
-                <FormField
-                  control={form.control}
-                  name="is_default"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>设为默认</FormLabel>
-                        <FormDescription>使用此配置作为默认 ASR 服务</FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {editingItem && (
-                  <FormField
-                    control={form.control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>启用状态</FormLabel>
-                          <FormDescription>设置该配置是否启用</FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {testStatus.tested && (
-                  <Alert variant={testStatus.success ? 'default' : 'destructive'}>
-                    {testStatus.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                    <AlertDescription>{testStatus.message}</AlertDescription>
-                  </Alert>
-                )}
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <div className="text-sm font-medium">设为默认</div>
+                <div className="text-xs text-gray-500">使用此配置作为默认 ASR 服务</div>
               </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {createMutation.isPending || updateMutation.isPending ? '保存中...' : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
+              <Form.Switch field="is_default" noLabel />
+            </div>
+
+            {editingItem && (
+              <div className="flex items-center justify-between rounded-lg border p-3 mt-4">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium">启用状态</div>
+                  <div className="text-xs text-gray-500">设置该配置是否启用</div>
+                </div>
+                <Form.Switch field="is_active" noLabel />
+              </div>
+            )}
           </Form>
-        </DialogContent>
-      </Dialog>
+
+          {testStatus.tested && (
+            <div className={`mt-4 rounded-md border p-3 ${testStatus.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+              <div className="flex items-center gap-2">
+                {testStatus.success ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-red-500" />}
+                <span className={testStatus.success ? 'text-green-700' : 'text-red-700'}>{testStatus.message}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除 ASR 配置「{deletingItem?.name}」吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除 ASR 配置「{deletingItem?.name}」吗？此操作不可撤销。
+      </Modal>
     </>
   )
 }

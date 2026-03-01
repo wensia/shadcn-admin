@@ -1,37 +1,35 @@
 /**
  * 订单审批弹窗组件
+ * Semi Design 重构版
  * 支持领导审批和财务确认
  */
 
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+  Modal,
+  Button,
+  Tag,
+  Typography,
+  TextArea,
+  Toast,
+  Descriptions,
+} from '@douyinfe/semi-ui-19'
+import { IconTick, IconClose } from '@douyinfe/semi-icons'
 import {
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Loader2,
-  FileText,
   User,
   DollarSign,
-  Clock
+  Clock,
+  FileText,
+  AlertCircle,
+  XCircle,
 } from 'lucide-react'
 import { orderApi } from '../api'
 import type { Order, OrderListItem } from '../types'
 import { formatTime } from '@/lib/utils/time'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+
+const { Text } = Typography
 
 // 审批类型
 type ApprovalType = 'leader' | 'finance'
@@ -46,13 +44,13 @@ interface ApprovalDialogProps {
 
 // 审批状态颜色映射
 const approvalStatusColorMap: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-800',
-  leader_pending: 'bg-blue-100 text-blue-800',
-  leader_rejected: 'bg-red-100 text-red-800',
-  finance_pending: 'bg-purple-100 text-purple-800',
-  finance_rejected: 'bg-red-100 text-red-800',
-  approved: 'bg-green-100 text-green-800',
-  cancelled: 'bg-gray-100 text-gray-600'
+  pending: 'grey',
+  leader_pending: 'blue',
+  leader_rejected: 'red',
+  finance_pending: 'violet',
+  finance_rejected: 'red',
+  approved: 'green',
+  cancelled: 'grey'
 }
 
 export function ApprovalDialog({
@@ -74,7 +72,7 @@ export function ApprovalDialog({
     mutationFn: ({ orderId, action }: { orderId: string; action: 'approve' | 'reject' }) =>
       orderApi.leaderApprove(orderId, { action, comment: comment || undefined }),
     onSuccess: (_, { action }) => {
-      toast.success(action === 'approve' ? '审批通过成功' : '审批驳回成功')
+      Toast.success(action === 'approve' ? '审批通过成功' : '审批驳回成功')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['pending-leader-approvals'] })
       onOpenChange(false)
@@ -91,7 +89,7 @@ export function ApprovalDialog({
     mutationFn: ({ orderId, action }: { orderId: string; action: 'approve' | 'reject' }) =>
       orderApi.financeApprove(orderId, { action, comment: comment || undefined }),
     onSuccess: (_, { action }) => {
-      toast.success(action === 'approve' ? '确认通过成功' : '确认驳回成功')
+      Toast.success(action === 'approve' ? '确认通过成功' : '确认驳回成功')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['pending-finance-approvals'] })
       onOpenChange(false)
@@ -115,7 +113,7 @@ export function ApprovalDialog({
   const handleReject = () => {
     if (!order) return
     if (!comment.trim()) {
-      toast.error('驳回时必须填写审批意见')
+      Toast.error('驳回时必须填写审批意见')
       return
     }
     if (approvalType === 'leader') {
@@ -130,112 +128,107 @@ export function ApprovalDialog({
   if (!order) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {approvalType === 'leader' ? (
-              <User className="h-5 w-5 text-blue-500" />
-            ) : (
-              <DollarSign className="h-5 w-5 text-purple-500" />
-            )}
-            {title}
-          </DialogTitle>
-          <DialogDescription>
-            请审核以下订单信息，并决定是否通过
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* 订单摘要 */}
-        <div className="space-y-4 py-4">
-          <div className="rounded-lg border p-4 bg-muted/30">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-1">
-                <div className="text-muted-foreground">订单编号</div>
-                <div className="font-mono font-medium">{order.order_no}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">学员姓名</div>
-                <div className="font-medium">{order.child_name || '-'}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">订单金额</div>
-                <div className="font-semibold text-green-600">
-                  ¥{order.actual_amount.toLocaleString()}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">当前状态</div>
-                <Badge className={cn('text-xs', approvalStatusColorMap[order.approval_status] || 'bg-gray-100')}>
-                  {order.approval_status_display}
-                </Badge>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">支付状态</div>
-                <div>{order.payment_status_display}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-muted-foreground">创建时间</div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {formatTime(order.created_at)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 审批意见 */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              审批意见
-              <span className="text-muted-foreground text-xs">（驳回时必填）</span>
-            </label>
-            <Textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="请输入审批意见..."
-              rows={3}
-              className="resize-none"
-            />
-          </div>
+    <Modal
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {approvalType === 'leader' ? (
+            <User size={20} style={{ color: 'var(--semi-color-primary)' }} />
+          ) : (
+            <DollarSign size={20} style={{ color: '#7c3aed' }} />
+          )}
+          {title}
         </div>
-
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isLoading}
-          >
+      }
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      width={520}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={() => onOpenChange(false)} disabled={isLoading}>
             取消
           </Button>
           <Button
-            variant="destructive"
+            type="danger"
+            icon={<IconClose />}
+            loading={isLoading}
             onClick={handleReject}
-            disabled={isLoading}
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-            ) : (
-              <XCircle className="h-4 w-4 mr-1" />
-            )}
             {rejectLabel}
           </Button>
           <Button
+            theme="solid"
+            style={{ backgroundColor: 'var(--semi-color-success)', borderColor: 'var(--semi-color-success)' }}
+            icon={<IconTick />}
+            loading={isLoading}
             onClick={handleApprove}
-            disabled={isLoading}
-            className="bg-green-600 hover:bg-green-700"
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 mr-1" />
-            )}
             {approveLabel}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <Text type="tertiary" style={{ display: 'block', marginBottom: 16 }}>
+        请审核以下订单信息，并决定是否通过
+      </Text>
+
+      {/* 订单摘要 */}
+      <div style={{
+        borderRadius: 8, padding: 16,
+        background: 'var(--semi-color-fill-0)',
+        border: '1px solid var(--semi-color-border)',
+        marginBottom: 16,
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>订单编号</Text>
+            <Text style={{ fontFamily: 'monospace', fontWeight: 500 }}>{order.order_no}</Text>
+          </div>
+          <div>
+            <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>学员姓名</Text>
+            <Text strong>{order.child_name || '-'}</Text>
+          </div>
+          <div>
+            <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>订单金额</Text>
+            <Text strong style={{ color: 'var(--semi-color-success)' }}>
+              ¥{order.actual_amount.toLocaleString()}
+            </Text>
+          </div>
+          <div>
+            <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>当前状态</Text>
+            <Tag color={approvalStatusColorMap[order.approval_status] || 'grey'} shape="circle">
+              {order.approval_status_display}
+            </Tag>
+          </div>
+          <div>
+            <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>支付状态</Text>
+            <Text>{order.payment_status_display}</Text>
+          </div>
+          <div>
+            <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>创建时间</Text>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Clock size={12} style={{ color: 'var(--semi-color-text-2)' }} />
+              <Text type="tertiary">{formatTime(order.created_at)}</Text>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 审批意见 */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+          <FileText size={14} />
+          <Text strong style={{ fontSize: 14 }}>审批意见</Text>
+          <Text type="tertiary" style={{ fontSize: 12 }}>（驳回时必填）</Text>
+        </div>
+        <TextArea
+          value={comment}
+          onChange={(val) => setComment(val)}
+          placeholder="请输入审批意见..."
+          rows={3}
+          autosize={false}
+        />
+      </div>
+    </Modal>
   )
 }
 
@@ -258,7 +251,7 @@ export function SubmitApprovalDialog({
   const submitMutation = useMutation({
     mutationFn: (orderId: string) => orderApi.submitForApproval(orderId),
     onSuccess: () => {
-      toast.success('提交审批成功')
+      Toast.success('提交审批成功')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       onOpenChange(false)
       onSuccess?.()
@@ -276,59 +269,59 @@ export function SubmitApprovalDialog({
   if (!order) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
-            确认提交审批
-          </DialogTitle>
-          <DialogDescription>
-            提交后订单将进入审批流程，请确认订单信息无误
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-4">
-          <div className="rounded-lg border p-4 bg-muted/30">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-muted-foreground">订单编号：</span>
-                <span className="font-mono">{order.order_no}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">学员：</span>
-                <span>{order.child_name || '-'}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">金额：</span>
-                <span className="font-semibold text-green-600">¥{order.actual_amount.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
+    <Modal
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertCircle size={20} style={{ color: 'var(--semi-color-warning)' }} />
+          确认提交审批
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={submitMutation.isPending}
-          >
+      }
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      width={460}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={() => onOpenChange(false)} disabled={submitMutation.isPending}>
             取消
           </Button>
           <Button
+            theme="solid"
+            icon={<IconTick />}
+            loading={submitMutation.isPending}
             onClick={handleSubmit}
-            disabled={submitMutation.isPending}
           >
-            {submitMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 mr-1" />
-            )}
             确认提交
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <Text type="tertiary" style={{ display: 'block', marginBottom: 16 }}>
+        提交后订单将进入审批流程，请确认订单信息无误
+      </Text>
+
+      <div style={{
+        borderRadius: 8, padding: 16,
+        background: 'var(--semi-color-fill-0)',
+        border: '1px solid var(--semi-color-border)',
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
+          <div>
+            <Text type="tertiary">订单编号：</Text>
+            <Text style={{ fontFamily: 'monospace' }}>{order.order_no}</Text>
+          </div>
+          <div>
+            <Text type="tertiary">学员：</Text>
+            <Text>{order.child_name || '-'}</Text>
+          </div>
+          <div>
+            <Text type="tertiary">金额：</Text>
+            <Text strong style={{ color: 'var(--semi-color-success)' }}>
+              ¥{order.actual_amount.toLocaleString()}
+            </Text>
+          </div>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
@@ -352,7 +345,7 @@ export function CancelOrderDialog({
   const cancelMutation = useMutation({
     mutationFn: (orderId: string) => orderApi.cancelOrder(orderId, { reason: reason || undefined }),
     onSuccess: () => {
-      toast.success('订单已取消')
+      Toast.success('订单已取消')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       onOpenChange(false)
       setReason('')
@@ -371,70 +364,71 @@ export function CancelOrderDialog({
   if (!order) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <XCircle className="h-5 w-5" />
-            取消订单
-          </DialogTitle>
-          <DialogDescription>
-            取消后订单将无法恢复，请谨慎操作
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="rounded-lg border p-4 bg-muted/30">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-muted-foreground">订单编号：</span>
-                <span className="font-mono">{order.order_no}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">学员：</span>
-                <span>{order.child_name || '-'}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">金额：</span>
-                <span className="font-semibold text-green-600">¥{order.actual_amount.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">取消原因（可选）</label>
-            <Textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="请输入取消原因..."
-              rows={2}
-              className="resize-none"
-            />
-          </div>
+    <Modal
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--semi-color-danger)' }}>
+          <XCircle size={20} />
+          取消订单
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={cancelMutation.isPending}
-          >
+      }
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      width={460}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={() => onOpenChange(false)} disabled={cancelMutation.isPending}>
             返回
           </Button>
           <Button
-            variant="destructive"
+            type="danger"
+            theme="solid"
+            icon={<IconClose />}
+            loading={cancelMutation.isPending}
             onClick={handleCancel}
-            disabled={cancelMutation.isPending}
           >
-            {cancelMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-            ) : (
-              <XCircle className="h-4 w-4 mr-1" />
-            )}
             确认取消
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <Text type="tertiary" style={{ display: 'block', marginBottom: 16 }}>
+        取消后订单将无法恢复，请谨慎操作
+      </Text>
+
+      <div style={{
+        borderRadius: 8, padding: 16,
+        background: 'var(--semi-color-fill-0)',
+        border: '1px solid var(--semi-color-border)',
+        marginBottom: 16,
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
+          <div>
+            <Text type="tertiary">订单编号：</Text>
+            <Text style={{ fontFamily: 'monospace' }}>{order.order_no}</Text>
+          </div>
+          <div>
+            <Text type="tertiary">学员：</Text>
+            <Text>{order.child_name || '-'}</Text>
+          </div>
+          <div>
+            <Text type="tertiary">金额：</Text>
+            <Text strong style={{ color: 'var(--semi-color-success)' }}>
+              ¥{order.actual_amount.toLocaleString()}
+            </Text>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 8 }}>取消原因（可选）</Text>
+        <TextArea
+          value={reason}
+          onChange={(val) => setReason(val)}
+          placeholder="请输入取消原因..."
+          rows={2}
+          autosize={false}
+        />
+      </div>
+    </Modal>
   )
 }

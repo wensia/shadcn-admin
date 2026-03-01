@@ -1,78 +1,93 @@
 /**
  * 线索状态和跟进结果标签组件
- * 封装 StatusBadge，提供便捷的使用方式
+ * Semi Design 版本 - 使用 Tag 替代 StatusBadge
  */
 
-import { StatusBadge } from '@/components/ui/status-badge'
-import {
-  getLeadStatusStyle,
-  getFollowupResultStyle,
-  getIntentionLevelStyle
-} from '@/lib/status-styles'
+import { Tag } from '@douyinfe/semi-ui-19'
 import { LeadStatus, FollowupResult, IntentionLevel } from '../types'
+import { leadStatusLabels, intentionLevelLabels, followupResultLabels } from '../types'
+
+/* ── 状态颜色映射 ── */
+const statusColorMap: Record<string, string> = {
+  pending_assign: 'orange',
+  pending_followup: 'amber',
+  following_up: 'blue',
+  followed_up: 'cyan',
+  trial_scheduled: 'violet',
+  visited: 'green',
+  paid: 'green',
+  invalid: 'red',
+  closed: 'grey',
+}
+
+const intentionColorMap: Record<string, string> = {
+  high: 'red',
+  medium: 'orange',
+  low: 'grey',
+}
+
+const followupResultColorMap: Record<string, string> = {
+  not_connected: 'grey',
+  hung_up: 'red',
+  no_need: 'red',
+  wrong_number: 'red',
+  yunke_risk_control: 'orange',
+  no_child: 'grey',
+  age_mismatch: 'grey',
+  temporarily_unavailable: 'amber',
+  can_continue: 'blue',
+  appointment_scheduled: 'green',
+  wechat_added: 'cyan',
+  other: 'grey',
+}
 
 interface LeadStatusBadgeProps {
   status: LeadStatus
-  showDot?: boolean
   className?: string
 }
 
-/**
- * 线索状态标签
- * 直接传入状态值即可渲染对应样式的标签
- */
-export function LeadStatusBadge({ status, showDot = true, className }: LeadStatusBadgeProps) {
-  const config = getLeadStatusStyle(status)
+export function LeadStatusBadge({ status, className }: LeadStatusBadgeProps) {
   return (
-    <StatusBadge
-      label={config.label}
-      color={config.color}
-      showDot={showDot}
+    <Tag
+      color={statusColorMap[status] || 'grey'}
+      shape="circle"
       className={className}
-    />
+    >
+      {leadStatusLabels[status] || status}
+    </Tag>
   )
 }
 
 interface FollowupResultBadgeProps {
   result: FollowupResult
-  showDot?: boolean
   className?: string
 }
 
-/**
- * 跟进结果标签
- * 直接传入结果值即可渲染对应样式的标签
- */
-export function FollowupResultBadge({ result, showDot = true, className }: FollowupResultBadgeProps) {
-  const config = getFollowupResultStyle(result)
+export function FollowupResultBadge({ result, className }: FollowupResultBadgeProps) {
   return (
-    <StatusBadge
-      label={config.label}
-      color={config.color}
-      showDot={showDot}
+    <Tag
+      color={followupResultColorMap[result] || 'grey'}
+      shape="circle"
       className={className}
-    />
+    >
+      {followupResultLabels[result] || result}
+    </Tag>
   )
 }
 
 interface IntentionLevelBadgeProps {
   level: IntentionLevel
-  showDot?: boolean
   className?: string
 }
 
-/**
- * 意向等级标签
- * 直接传入等级值即可渲染对应样式的标签
- */
-export function IntentionLevelBadge({ level, showDot = true, className }: IntentionLevelBadgeProps) {
-  const config = getIntentionLevelStyle(level)
+export function IntentionLevelBadge({ level, className }: IntentionLevelBadgeProps) {
   return (
-    <StatusBadge
-      label={config.label}
-      color={config.color}
-      showDot={showDot}
+    <Tag
+      color={intentionColorMap[level] || 'grey'}
+      shape="circle"
       className={className}
-    />
+    >
+      {intentionLevelLabels[level] || level}
+    </Tag>
   )
 }

@@ -32,6 +32,7 @@ import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedYunkeRouteRouteImport } from './routes/_authenticated/yunke/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedHrRouteRouteImport } from './routes/_authenticated/hr/route'
+import { Route as AuthenticatedCrmRouteRouteImport } from './routes/_authenticated/crm/route'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedYunkeIndexRouteImport } from './routes/_authenticated/yunke/index'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
@@ -55,9 +56,9 @@ import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
-import { Route as AuthenticatedHrTempDiscRecordsRouteImport } from './routes/_authenticated/hr/temp-disc-records'
 import { Route as AuthenticatedHrDiscTestRouteImport } from './routes/_authenticated/hr/disc-test'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedDemoTdesignLeadsRouteImport } from './routes/_authenticated/demo/tdesign-leads'
 import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authenticated/crm/workbench'
 import { Route as AuthenticatedCrmVisitScheduleRouteImport } from './routes/_authenticated/crm/visit-schedule'
 import { Route as AuthenticatedCrmPendingApprovalsRouteImport } from './routes/_authenticated/crm/pending-approvals'
@@ -211,6 +212,11 @@ const AuthenticatedHrRouteRoute = AuthenticatedHrRouteRouteImport.update({
   path: '/hr',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCrmRouteRoute = AuthenticatedCrmRouteRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -244,9 +250,9 @@ const AuthenticatedHelpCenterIndexRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCrmIndexRoute = AuthenticatedCrmIndexRouteImport.update({
-  id: '/crm/',
-  path: '/crm/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedCrmRouteRoute,
 } as any)
 const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
   id: '/chats/',
@@ -339,12 +345,6 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
-const AuthenticatedHrTempDiscRecordsRoute =
-  AuthenticatedHrTempDiscRecordsRouteImport.update({
-    id: '/temp-disc-records',
-    path: '/temp-disc-records',
-    getParentRoute: () => AuthenticatedHrRouteRoute,
-  } as any)
 const AuthenticatedHrDiscTestRoute = AuthenticatedHrDiscTestRouteImport.update({
   id: '/disc-test',
   path: '/disc-test',
@@ -356,58 +356,64 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDemoTdesignLeadsRoute =
+  AuthenticatedDemoTdesignLeadsRouteImport.update({
+    id: '/demo/tdesign-leads',
+    path: '/demo/tdesign-leads',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCrmWorkbenchRoute =
   AuthenticatedCrmWorkbenchRouteImport.update({
-    id: '/crm/workbench',
-    path: '/crm/workbench',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/workbench',
+    path: '/workbench',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmVisitScheduleRoute =
   AuthenticatedCrmVisitScheduleRouteImport.update({
-    id: '/crm/visit-schedule',
-    path: '/crm/visit-schedule',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/visit-schedule',
+    path: '/visit-schedule',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmPendingApprovalsRoute =
   AuthenticatedCrmPendingApprovalsRouteImport.update({
-    id: '/crm/pending-approvals',
-    path: '/crm/pending-approvals',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/pending-approvals',
+    path: '/pending-approvals',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmOrdersRoute = AuthenticatedCrmOrdersRouteImport.update({
-  id: '/crm/orders',
-  path: '/crm/orders',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AuthenticatedCrmRouteRoute,
 } as any)
 const AuthenticatedCrmLeadConversionRoute =
   AuthenticatedCrmLeadConversionRouteImport.update({
-    id: '/crm/lead-conversion',
-    path: '/crm/lead-conversion',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/lead-conversion',
+    path: '/lead-conversion',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmContinuousCallRoute =
   AuthenticatedCrmContinuousCallRouteImport.update({
-    id: '/crm/continuous-call',
-    path: '/crm/continuous-call',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/continuous-call',
+    path: '/continuous-call',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmCallRecordsRoute =
   AuthenticatedCrmCallRecordsRouteImport.update({
-    id: '/crm/call-records',
-    path: '/crm/call-records',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/call-records',
+    path: '/call-records',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmBatchImportRoute =
   AuthenticatedCrmBatchImportRouteImport.update({
-    id: '/crm/batch-import',
-    path: '/crm/batch-import',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/batch-import',
+    path: '/batch-import',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmAiAssistantRoute =
   AuthenticatedCrmAiAssistantRouteImport.update({
-    id: '/crm/ai-assistant',
-    path: '/crm/ai-assistant',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/ai-assistant',
+    path: '/ai-assistant',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedAdminYunkeAccountsRoute =
   AuthenticatedAdminYunkeAccountsRouteImport.update({
@@ -572,27 +578,27 @@ const AuthenticatedAdminAiConfigRoute =
   } as any)
 const AuthenticatedCrmLeadsIndexRoute =
   AuthenticatedCrmLeadsIndexRouteImport.update({
-    id: '/crm/leads/',
-    path: '/crm/leads/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/leads/',
+    path: '/leads/',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmLeadsPoolRoute =
   AuthenticatedCrmLeadsPoolRouteImport.update({
-    id: '/crm/leads/pool',
-    path: '/crm/leads/pool',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/leads/pool',
+    path: '/leads/pool',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmDataStatisticsMarketingRoute =
   AuthenticatedCrmDataStatisticsMarketingRouteImport.update({
-    id: '/crm/data-statistics/marketing',
-    path: '/crm/data-statistics/marketing',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/data-statistics/marketing',
+    path: '/data-statistics/marketing',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmDataStatisticsConsultingRoute =
   AuthenticatedCrmDataStatisticsConsultingRouteImport.update({
-    id: '/crm/data-statistics/consulting',
-    path: '/crm/data-statistics/consulting',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/data-statistics/consulting',
+    path: '/data-statistics/consulting',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -601,6 +607,7 @@ export interface FileRoutesByFullPath {
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/crm': typeof AuthenticatedCrmRouteRouteWithChildren
   '/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
@@ -652,9 +659,9 @@ export interface FileRoutesByFullPath {
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
+  '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
-  '/hr/temp-disc-records': typeof AuthenticatedHrTempDiscRecordsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -671,7 +678,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
-  '/crm': typeof AuthenticatedCrmIndexRoute
+  '/crm/': typeof AuthenticatedCrmIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
@@ -736,9 +743,9 @@ export interface FileRoutesByTo {
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
+  '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
-  '/hr/temp-disc-records': typeof AuthenticatedHrTempDiscRecordsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -775,6 +782,7 @@ export interface FileRoutesById {
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/crm': typeof AuthenticatedCrmRouteRouteWithChildren
   '/_authenticated/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/_authenticated/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
@@ -828,9 +836,9 @@ export interface FileRoutesById {
   '/_authenticated/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/_authenticated/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/_authenticated/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
+  '/_authenticated/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
-  '/_authenticated/hr/temp-disc-records': typeof AuthenticatedHrTempDiscRecordsRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -866,6 +874,7 @@ export interface FileRouteTypes {
     | '/lead-submit'
     | '/login'
     | '/admin'
+    | '/crm'
     | '/hr'
     | '/settings'
     | '/yunke'
@@ -917,9 +926,9 @@ export interface FileRouteTypes {
     | '/crm/pending-approvals'
     | '/crm/visit-schedule'
     | '/crm/workbench'
+    | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
-    | '/hr/temp-disc-records'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -936,7 +945,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/apps'
     | '/chats'
-    | '/crm'
+    | '/crm/'
     | '/help-center'
     | '/settings/'
     | '/tasks'
@@ -1001,9 +1010,9 @@ export interface FileRouteTypes {
     | '/crm/pending-approvals'
     | '/crm/visit-schedule'
     | '/crm/workbench'
+    | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
-    | '/hr/temp-disc-records'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -1039,6 +1048,7 @@ export interface FileRouteTypes {
     | '/lead-submit'
     | '/login'
     | '/_authenticated/admin'
+    | '/_authenticated/crm'
     | '/_authenticated/hr'
     | '/_authenticated/settings'
     | '/_authenticated/yunke'
@@ -1092,9 +1102,9 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/pending-approvals'
     | '/_authenticated/crm/visit-schedule'
     | '/_authenticated/crm/workbench'
+    | '/_authenticated/demo/tdesign-leads'
     | '/_authenticated/errors/$error'
     | '/_authenticated/hr/disc-test'
-    | '/_authenticated/hr/temp-disc-records'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
@@ -1305,6 +1315,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHrRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/crm': {
+      id: '/_authenticated/crm'
+      path: '/crm'
+      fullPath: '/crm'
+      preLoaderRoute: typeof AuthenticatedCrmRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -1349,10 +1366,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/crm/': {
       id: '/_authenticated/crm/'
-      path: '/crm'
-      fullPath: '/crm'
+      path: '/'
+      fullPath: '/crm/'
       preLoaderRoute: typeof AuthenticatedCrmIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/chats/': {
       id: '/_authenticated/chats/'
@@ -1466,13 +1483,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/hr/temp-disc-records': {
-      id: '/_authenticated/hr/temp-disc-records'
-      path: '/temp-disc-records'
-      fullPath: '/hr/temp-disc-records'
-      preLoaderRoute: typeof AuthenticatedHrTempDiscRecordsRouteImport
-      parentRoute: typeof AuthenticatedHrRouteRoute
-    }
     '/_authenticated/hr/disc-test': {
       id: '/_authenticated/hr/disc-test'
       path: '/disc-test'
@@ -1487,68 +1497,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/demo/tdesign-leads': {
+      id: '/_authenticated/demo/tdesign-leads'
+      path: '/demo/tdesign-leads'
+      fullPath: '/demo/tdesign-leads'
+      preLoaderRoute: typeof AuthenticatedDemoTdesignLeadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/crm/workbench': {
       id: '/_authenticated/crm/workbench'
-      path: '/crm/workbench'
+      path: '/workbench'
       fullPath: '/crm/workbench'
       preLoaderRoute: typeof AuthenticatedCrmWorkbenchRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/visit-schedule': {
       id: '/_authenticated/crm/visit-schedule'
-      path: '/crm/visit-schedule'
+      path: '/visit-schedule'
       fullPath: '/crm/visit-schedule'
       preLoaderRoute: typeof AuthenticatedCrmVisitScheduleRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/pending-approvals': {
       id: '/_authenticated/crm/pending-approvals'
-      path: '/crm/pending-approvals'
+      path: '/pending-approvals'
       fullPath: '/crm/pending-approvals'
       preLoaderRoute: typeof AuthenticatedCrmPendingApprovalsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/orders': {
       id: '/_authenticated/crm/orders'
-      path: '/crm/orders'
+      path: '/orders'
       fullPath: '/crm/orders'
       preLoaderRoute: typeof AuthenticatedCrmOrdersRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/lead-conversion': {
       id: '/_authenticated/crm/lead-conversion'
-      path: '/crm/lead-conversion'
+      path: '/lead-conversion'
       fullPath: '/crm/lead-conversion'
       preLoaderRoute: typeof AuthenticatedCrmLeadConversionRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/continuous-call': {
       id: '/_authenticated/crm/continuous-call'
-      path: '/crm/continuous-call'
+      path: '/continuous-call'
       fullPath: '/crm/continuous-call'
       preLoaderRoute: typeof AuthenticatedCrmContinuousCallRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/call-records': {
       id: '/_authenticated/crm/call-records'
-      path: '/crm/call-records'
+      path: '/call-records'
       fullPath: '/crm/call-records'
       preLoaderRoute: typeof AuthenticatedCrmCallRecordsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/batch-import': {
       id: '/_authenticated/crm/batch-import'
-      path: '/crm/batch-import'
+      path: '/batch-import'
       fullPath: '/crm/batch-import'
       preLoaderRoute: typeof AuthenticatedCrmBatchImportRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/ai-assistant': {
       id: '/_authenticated/crm/ai-assistant'
-      path: '/crm/ai-assistant'
+      path: '/ai-assistant'
       fullPath: '/crm/ai-assistant'
       preLoaderRoute: typeof AuthenticatedCrmAiAssistantRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/admin/yunke-accounts': {
       id: '/_authenticated/admin/yunke-accounts'
@@ -1741,31 +1758,31 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/crm/leads/': {
       id: '/_authenticated/crm/leads/'
-      path: '/crm/leads'
+      path: '/leads'
       fullPath: '/crm/leads'
       preLoaderRoute: typeof AuthenticatedCrmLeadsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/leads/pool': {
       id: '/_authenticated/crm/leads/pool'
-      path: '/crm/leads/pool'
+      path: '/leads/pool'
       fullPath: '/crm/leads/pool'
       preLoaderRoute: typeof AuthenticatedCrmLeadsPoolRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/data-statistics/marketing': {
       id: '/_authenticated/crm/data-statistics/marketing'
-      path: '/crm/data-statistics/marketing'
+      path: '/data-statistics/marketing'
       fullPath: '/crm/data-statistics/marketing'
       preLoaderRoute: typeof AuthenticatedCrmDataStatisticsMarketingRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/data-statistics/consulting': {
       id: '/_authenticated/crm/data-statistics/consulting'
-      path: '/crm/data-statistics/consulting'
+      path: '/data-statistics/consulting'
       fullPath: '/crm/data-statistics/consulting'
       preLoaderRoute: typeof AuthenticatedCrmDataStatisticsConsultingRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCrmRouteRoute
     }
   }
 }
@@ -1845,14 +1862,53 @@ const AuthenticatedAdminRouteRouteWithChildren =
     AuthenticatedAdminRouteRouteChildren,
   )
 
+interface AuthenticatedCrmRouteRouteChildren {
+  AuthenticatedCrmAiAssistantRoute: typeof AuthenticatedCrmAiAssistantRoute
+  AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
+  AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
+  AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
+  AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
+  AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
+  AuthenticatedCrmPendingApprovalsRoute: typeof AuthenticatedCrmPendingApprovalsRoute
+  AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
+  AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
+  AuthenticatedCrmIndexRoute: typeof AuthenticatedCrmIndexRoute
+  AuthenticatedCrmDataStatisticsConsultingRoute: typeof AuthenticatedCrmDataStatisticsConsultingRoute
+  AuthenticatedCrmDataStatisticsMarketingRoute: typeof AuthenticatedCrmDataStatisticsMarketingRoute
+  AuthenticatedCrmLeadsPoolRoute: typeof AuthenticatedCrmLeadsPoolRoute
+  AuthenticatedCrmLeadsIndexRoute: typeof AuthenticatedCrmLeadsIndexRoute
+}
+
+const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
+  AuthenticatedCrmAiAssistantRoute: AuthenticatedCrmAiAssistantRoute,
+  AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
+  AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
+  AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
+  AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
+  AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
+  AuthenticatedCrmPendingApprovalsRoute: AuthenticatedCrmPendingApprovalsRoute,
+  AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
+  AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
+  AuthenticatedCrmIndexRoute: AuthenticatedCrmIndexRoute,
+  AuthenticatedCrmDataStatisticsConsultingRoute:
+    AuthenticatedCrmDataStatisticsConsultingRoute,
+  AuthenticatedCrmDataStatisticsMarketingRoute:
+    AuthenticatedCrmDataStatisticsMarketingRoute,
+  AuthenticatedCrmLeadsPoolRoute: AuthenticatedCrmLeadsPoolRoute,
+  AuthenticatedCrmLeadsIndexRoute: AuthenticatedCrmLeadsIndexRoute,
+}
+
+const AuthenticatedCrmRouteRouteWithChildren =
+  AuthenticatedCrmRouteRoute._addFileChildren(
+    AuthenticatedCrmRouteRouteChildren,
+  )
+
 interface AuthenticatedHrRouteRouteChildren {
   AuthenticatedHrDiscTestRoute: typeof AuthenticatedHrDiscTestRoute
-  AuthenticatedHrTempDiscRecordsRoute: typeof AuthenticatedHrTempDiscRecordsRoute
 }
 
 const AuthenticatedHrRouteRouteChildren: AuthenticatedHrRouteRouteChildren = {
   AuthenticatedHrDiscTestRoute: AuthenticatedHrDiscTestRoute,
-  AuthenticatedHrTempDiscRecordsRoute: AuthenticatedHrTempDiscRecordsRoute,
 }
 
 const AuthenticatedHrRouteRouteWithChildren =
@@ -1909,60 +1965,34 @@ const AuthenticatedYunkeRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedCrmRouteRoute: typeof AuthenticatedCrmRouteRouteWithChildren
   AuthenticatedHrRouteRoute: typeof AuthenticatedHrRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedYunkeRouteRoute: typeof AuthenticatedYunkeRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedCrmAiAssistantRoute: typeof AuthenticatedCrmAiAssistantRoute
-  AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
-  AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
-  AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
-  AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
-  AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
-  AuthenticatedCrmPendingApprovalsRoute: typeof AuthenticatedCrmPendingApprovalsRoute
-  AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
-  AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
+  AuthenticatedDemoTdesignLeadsRoute: typeof AuthenticatedDemoTdesignLeadsRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
-  AuthenticatedCrmIndexRoute: typeof AuthenticatedCrmIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
-  AuthenticatedCrmDataStatisticsConsultingRoute: typeof AuthenticatedCrmDataStatisticsConsultingRoute
-  AuthenticatedCrmDataStatisticsMarketingRoute: typeof AuthenticatedCrmDataStatisticsMarketingRoute
-  AuthenticatedCrmLeadsPoolRoute: typeof AuthenticatedCrmLeadsPoolRoute
-  AuthenticatedCrmLeadsIndexRoute: typeof AuthenticatedCrmLeadsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedCrmRouteRoute: AuthenticatedCrmRouteRouteWithChildren,
   AuthenticatedHrRouteRoute: AuthenticatedHrRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedYunkeRouteRoute: AuthenticatedYunkeRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedCrmAiAssistantRoute: AuthenticatedCrmAiAssistantRoute,
-  AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
-  AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
-  AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
-  AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
-  AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
-  AuthenticatedCrmPendingApprovalsRoute: AuthenticatedCrmPendingApprovalsRoute,
-  AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
-  AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
+  AuthenticatedDemoTdesignLeadsRoute: AuthenticatedDemoTdesignLeadsRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
-  AuthenticatedCrmIndexRoute: AuthenticatedCrmIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
-  AuthenticatedCrmDataStatisticsConsultingRoute:
-    AuthenticatedCrmDataStatisticsConsultingRoute,
-  AuthenticatedCrmDataStatisticsMarketingRoute:
-    AuthenticatedCrmDataStatisticsMarketingRoute,
-  AuthenticatedCrmLeadsPoolRoute: AuthenticatedCrmLeadsPoolRoute,
-  AuthenticatedCrmLeadsIndexRoute: AuthenticatedCrmLeadsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

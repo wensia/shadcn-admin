@@ -1,54 +1,12 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
-import {
-  type SortingState,
-  type VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import { cn } from '@/lib/utils'
-import { useTableUrlState } from '@/hooks/use-table-url-state'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
-import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
-import { priorities, statuses } from '../data/data'
+import { Table, Input, Skeleton, Button } from '@douyinfe/semi-ui-19'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { type Task } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { tasksColumns as columns } from './tasks-columns'
 
 const route = getRouteApi('/_authenticated/tasks/')
-
-// 骨架屏 ID 前缀
-const SKELETON_ID_PREFIX = '__skeleton__'
-
-// 判断是否是骨架屏行
-function isSkeletonRow(id: string): boolean {
-  return id.startsWith(SKELETON_ID_PREFIX)
-}
-
-// 生成骨架屏占位数据
-function createSkeletonData(count: number): Task[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_ID_PREFIX}${i}`,
-    title: '',
-    status: 'todo' as const,
-    label: 'bug' as const,
-    priority: 'medium' as const,
-  }))
-}
 
 type DataTableProps = {
   data: Task[]
@@ -56,185 +14,92 @@ type DataTableProps = {
 }
 
 export function TasksTable({ data, isLoading = false }: DataTableProps) {
-  // Local UI-only states
-  const [rowSelection, setRowSelection] = useState({})
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const search = route.useSearch()
+  const navigate = route.useNavigate()
 
-  // 加载时使用骨架屏数据
-  const displayData = useMemo(() => {
-    return isLoading ? createSkeletonData(10) : data
-  }, [isLoading, data])
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
+  const [searchText, setSearchText] = useState((search?.filter as string) ?? '')
 
-  // Local state management for table (uncomment to use local-only state, not synced with URL)
-  // const [globalFilter, onGlobalFilterChange] = useState('')
-  // const [columnFilters, onColumnFiltersChange] = useState<ColumnFiltersState>([])
-  // const [pagination, onPaginationChange] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 })
+  const filteredData = useMemo(() => {
+    if (!searchText) return data
+    const lower = searchText.toLowerCase()
+    return data.filter(
+      (t) =>
+        t.id.toLowerCase().includes(lower) ||
+        t.title.toLowerCase().includes(lower)
+    )
+  }, [data, searchText])
 
-  // Synced with URL states (updated to match route search schema defaults)
-  const {
-    globalFilter,
-    onGlobalFilterChange,
-    columnFilters,
-    onColumnFiltersChange,
-    pagination,
-    onPaginationChange,
-    ensurePageInRange,
-  } = useTableUrlState({
-    search: route.useSearch(),
-    navigate: route.useNavigate(),
-    pagination: { defaultPage: 1, defaultPageSize: 10 },
-    globalFilter: { enabled: true, key: 'filter' },
-    columnFilters: [
-      { columnId: 'status', searchKey: 'status', type: 'array' },
-      { columnId: 'priority', searchKey: 'priority', type: 'array' },
-    ],
-  })
+  const handleSearch = (value: string) => {
+    setSearchText(value)
+    navigate({
+      search: (prev: Record<string, unknown>) => ({ ...prev, filter: value || undefined, page: 1 }),
+    })
+  }
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
-    data: displayData,
-    columns,
-    state: {
-      sorting,
-      columnVisibility,
-      rowSelection,
-      columnFilters,
-      globalFilter,
-      pagination,
+  const handleReset = () => {
+    setSearchText('')
+    navigate({
+      search: (prev: Record<string, unknown>) => ({ ...prev, filter: undefined, page: 1 }),
+    })
+  }
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (_keys: (string | number)[], rows: Task[]) => {
+      setSelectedRowKeys(rows.map((r) => r.id))
     },
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    globalFilterFn: (row, _columnId, filterValue) => {
-      const id = String(row.getValue('id')).toLowerCase()
-      const title = String(row.getValue('title')).toLowerCase()
-      const searchValue = String(filterValue).toLowerCase()
+  }
 
-      return id.includes(searchValue) || title.includes(searchValue)
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    onPaginationChange,
-    onGlobalFilterChange,
-    onColumnFiltersChange,
-  })
-
-  const pageCount = table.getPageCount()
-  useEffect(() => {
-    ensurePageInRange(pageCount)
-  }, [pageCount, ensurePageInRange])
+  const skeletonColumns = useMemo(() => {
+    if (!isLoading) return columns
+    return columns.map((col) => ({
+      ...col,
+      render: () => <Skeleton.Paragraph rows={1} style={{ width: 80 }} />,
+    }))
+  }, [isLoading])
 
   return (
-    <div
-      className={cn(
-        'max-sm:has-[div[role="toolbar"]]:mb-16', // Add margin bottom to the table on mobile when the toolbar is visible
-        'flex flex-1 flex-col gap-4'
-      )}
-    >
-      <DataTableToolbar
-        table={table}
-        searchPlaceholder='Filter by title or ID...'
-        filters={[
-          {
-            columnId: 'status',
-            title: 'Status',
-            options: statuses,
-          },
-          {
-            columnId: 'priority',
-            title: 'Priority',
-            options: priorities,
-          },
-        ]}
-      />
-      <div className='overflow-auto rounded-md border max-h-[calc(100vh-300px)]'>
-        <Table className='min-w-xl'>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      className={cn(
-                        header.column.columnDef.meta?.className,
-                        header.column.columnDef.meta?.thClassName
-                      )}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => {
-                const isSkeleton = isSkeletonRow(row.original.id)
-                return (
-                  <TableRow
-                    key={row.id}
-                    data-state={!isSkeleton && row.getIsSelected() && 'selected'}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className={cn(
-                          cell.column.columnDef.meta?.className,
-                          cell.column.columnDef.meta?.tdClassName
-                        )}
-                      >
-                        {isSkeleton ? (
-                          cell.column.id === 'select' ? null : (
-                            <Skeleton className={cn(
-                              'h-4',
-                              cell.column.id === 'id' && 'w-20',
-                              cell.column.id === 'title' && 'w-[70%]',
-                              cell.column.id === 'status' && 'w-20 rounded-full',
-                              cell.column.id === 'priority' && 'w-16 rounded-full',
-                              cell.column.id === 'actions' && 'w-8',
-                              !['id', 'title', 'status', 'priority', 'actions'].includes(cell.column.id) && 'w-[70%]'
-                            )} />
-                          )
-                        ) : (
-                          flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                )
-              })
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className='h-24 text-center'
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+    <div className='flex flex-1 flex-col gap-4'>
+      <div className='flex items-center gap-2'>
+        <Input
+          prefix={<IconSearch />}
+          placeholder='Filter by title or ID...'
+          value={searchText}
+          onChange={handleSearch}
+          showClear
+          style={{ width: 280 }}
+        />
+        {searchText && (
+          <Button
+            theme='borderless'
+            type='tertiary'
+            icon={<IconRefresh />}
+            onClick={handleReset}
+          >
+            Reset
+          </Button>
+        )}
       </div>
-      <DataTablePagination table={table} className='mt-auto' />
-      <DataTableBulkActions table={table} />
+      <Table
+        columns={skeletonColumns}
+        dataSource={isLoading ? [] : filteredData}
+        rowKey='id'
+        rowSelection={rowSelection}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: true,
+          pageSizeOpts: [10, 20, 50],
+        }}
+        style={{ maxHeight: 'calc(100vh - 300px)' }}
+        loading={isLoading}
+      />
+      <DataTableBulkActions
+        selectedRows={filteredData.filter((r) => selectedRowKeys.includes(r.id))}
+        onClearSelection={() => setSelectedRowKeys([])}
+        entityName='task'
+      />
     </div>
   )
 }

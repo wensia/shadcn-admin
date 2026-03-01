@@ -1,11 +1,24 @@
 import { useEffect, useState } from 'react'
+import { PanelLeftIcon } from 'lucide-react'
+import { Button } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
-import { Separator } from '@/components/ui/separator'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { useSidebar } from '@/context/sidebar-context'
 
 type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean
   ref?: React.Ref<HTMLElement>
+}
+
+function SidebarTrigger() {
+  const { toggleSidebar } = useSidebar()
+  return (
+    <Button
+      theme='borderless'
+      icon={<PanelLeftIcon style={{ width: 16, height: 16 }} />}
+      onClick={toggleSidebar}
+      style={{ color: 'var(--semi-color-text-2)' }}
+    />
+  )
 }
 
 export function Header({ className, fixed, children, ...props }: HeaderProps) {
@@ -15,11 +28,7 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
     const onScroll = () => {
       setOffset(document.body.scrollTop || document.documentElement.scrollTop)
     }
-
-    // Add scroll listener to the body
     document.addEventListener('scroll', onScroll, { passive: true })
-
-    // Clean up the event listener on unmount
     return () => document.removeEventListener('scroll', onScroll)
   }, [])
 
@@ -41,8 +50,14 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
             'after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg'
         )}
       >
-        <SidebarTrigger variant='outline' className='max-md:scale-125' />
-        <Separator orientation='vertical' className='h-6' />
+        <SidebarTrigger />
+        <div
+          style={{
+            width: 1,
+            height: 24,
+            backgroundColor: 'var(--semi-color-border)',
+          }}
+        />
         {children}
       </div>
     </header>

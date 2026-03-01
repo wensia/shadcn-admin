@@ -1,80 +1,43 @@
-import { type ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { DataTableColumnHeader } from '@/components/data-table'
+import { type ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { Tag } from '@douyinfe/semi-ui-19'
 import { labels, priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
 
-export const tasksColumns: ColumnDef<Task>[] = [
+export const tasksColumns: ColumnProps<Task>[] = [
   {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label='Select all'
-        className='translate-y-[2px]'
-      />
+    title: 'Task',
+    dataIndex: 'id',
+    width: 100,
+    render: (_text, record) => (
+      <div className='w-[80px]'>{record?.id}</div>
     ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label='Select row'
-        className='translate-y-[2px]'
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
-    accessorKey: 'id',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Task' />
-    ),
-    cell: ({ row }) => <div className='w-[80px]'>{row.getValue('id')}</div>,
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'title',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Title' />
-    ),
-    meta: {
-      className: 'ps-1 max-w-0 w-2/3',
-      tdClassName: 'ps-4',
-    },
-    cell: ({ row }) => {
-      const label = labels.find((label) => label.value === row.original.label)
-
+    title: 'Title',
+    dataIndex: 'title',
+    sorter: (a, b) => (a?.title ?? '').localeCompare(b?.title ?? ''),
+    render: (_text, record) => {
+      const label = labels.find((l) => l.value === record?.label)
       return (
         <div className='flex space-x-2'>
-          {label && <Badge variant='outline'>{label.label}</Badge>}
-          <span className='truncate font-medium'>{row.getValue('title')}</span>
+          {label && (
+            <Tag size='large' shape='circle'>
+              {label.label}
+            </Tag>
+          )}
+          <span className='truncate font-medium'>{record?.title}</span>
         </div>
       )
     },
   },
   {
-    accessorKey: 'status',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Status' />
-    ),
-    meta: { className: 'ps-1', tdClassName: 'ps-4' },
-    cell: ({ row }) => {
-      const status = statuses.find(
-        (status) => status.value === row.getValue('status')
-      )
-
-      if (!status) {
-        return null
-      }
-
+    title: 'Status',
+    dataIndex: 'status',
+    width: 140,
+    render: (_text, record) => {
+      const status = statuses.find((s) => s.value === record?.status)
+      if (!status) return null
       return (
         <div className='flex w-[100px] items-center gap-2'>
           {status.icon && (
@@ -84,25 +47,16 @@ export const tasksColumns: ColumnDef<Task>[] = [
         </div>
       )
     },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
-    },
+    filters: statuses.map((s) => ({ text: s.label, value: s.value })),
+    onFilter: (value, record) => record?.status === value,
   },
   {
-    accessorKey: 'priority',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Priority' />
-    ),
-    meta: { className: 'ps-1', tdClassName: 'ps-3' },
-    cell: ({ row }) => {
-      const priority = priorities.find(
-        (priority) => priority.value === row.getValue('priority')
-      )
-
-      if (!priority) {
-        return null
-      }
-
+    title: 'Priority',
+    dataIndex: 'priority',
+    width: 140,
+    render: (_text, record) => {
+      const priority = priorities.find((p) => p.value === record?.priority)
+      if (!priority) return null
       return (
         <div className='flex items-center gap-2'>
           {priority.icon && (
@@ -112,12 +66,13 @@ export const tasksColumns: ColumnDef<Task>[] = [
         </div>
       )
     },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
-    },
+    filters: priorities.map((p) => ({ text: p.label, value: p.value })),
+    onFilter: (value, record) => record?.priority === value,
   },
   {
-    id: 'actions',
-    cell: ({ row }) => <DataTableRowActions row={row} />,
+    title: '',
+    dataIndex: 'actions',
+    width: 50,
+    render: (_text, record) => record ? <DataTableRowActions row={record} /> : null,
   },
 ]

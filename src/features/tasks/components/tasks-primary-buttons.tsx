@@ -1,5 +1,5 @@
+import { Button } from '@douyinfe/semi-ui-19'
 import { Download, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useTasks } from './tasks-provider'
 
 export function TasksPrimaryButtons() {
@@ -7,14 +7,18 @@ export function TasksPrimaryButtons() {
   return (
     <div className='flex gap-2'>
       <Button
-        variant='outline'
-        className='space-x-1'
+        theme='outline'
+        icon={<Download size={18} />}
         onClick={() => setOpen('import')}
       >
-        <span>Import</span> <Download size={18} />
+        Import
       </Button>
-      <Button className='space-x-1' onClick={() => setOpen('create')}>
-        <span>Create</span> <Plus size={18} />
+      <Button
+        theme='solid'
+        icon={<Plus size={18} />}
+        onClick={() => setOpen('create')}
+      >
+        Create
       </Button>
     </div>
   )

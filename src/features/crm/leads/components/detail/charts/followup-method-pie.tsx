@@ -11,8 +11,6 @@ import {
   Legend,
   Tooltip,
 } from 'recharts'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
 
 export interface MethodDistributionData {
   name: string
@@ -27,7 +25,7 @@ interface FollowupMethodPieProps {
 
 // 默认颜色配置
 const COLORS = [
-  'hsl(var(--primary))',
+  'var(--semi-color-primary)',
   'hsl(142, 76%, 36%)',  // green
   'hsl(38, 92%, 50%)',   // yellow
   'hsl(262, 83%, 58%)',  // purple
@@ -38,11 +36,12 @@ export function FollowupMethodPie({
   data,
   className,
 }: FollowupMethodPieProps) {
-  const s = useStyleClasses()
-
   if (!data || data.length === 0) {
     return (
-      <div className={cn('flex items-center justify-center h-[200px]', s.text.xs, 'text-muted-foreground')}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: 200, fontSize: 12, color: 'var(--semi-color-text-2)',
+      }}>
         暂无数据
       </div>
     )
@@ -72,12 +71,15 @@ export function FollowupMethodPie({
             if (!active || !payload?.length) return null
             const item = payload[0].payload as MethodDistributionData
             return (
-              <div className={cn(
-                'bg-popover border shadow-md p-2',
-                s.rounded
-              )}>
-                <p className={cn(s.text.xs, 'font-medium')}>{item.name}</p>
-                <p className={cn(s.text.xs, 'text-muted-foreground')}>
+              <div style={{
+                background: 'var(--semi-color-bg-3)',
+                border: '1px solid var(--semi-color-border)',
+                boxShadow: 'var(--semi-shadow-elevated)',
+                padding: 8,
+                borderRadius: 'var(--semi-border-radius-medium)',
+              }}>
+                <p style={{ fontSize: 12, fontWeight: 500 }}>{item.name}</p>
+                <p style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
                   次数: {item.value}
                 </p>
               </div>
@@ -86,7 +88,7 @@ export function FollowupMethodPie({
         />
         <Legend
           formatter={(value) => (
-            <span className={cn(s.text.xs)}>{value}</span>
+            <span style={{ fontSize: 12 }}>{value}</span>
           )}
           wrapperStyle={{ fontSize: '12px' }}
         />

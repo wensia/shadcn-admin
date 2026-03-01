@@ -1,31 +1,26 @@
-'use client'
-
 import { useState } from 'react'
-import { type Table } from '@tanstack/react-table'
+import { Input, Banner } from '@douyinfe/semi-ui-19'
 import { AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { sleep } from '@/lib/utils'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
-type UserMultiDeleteDialogProps<TData> = {
+type UserMultiDeleteDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  table: Table<TData>
+  selectedCount: number
+  onSuccess: () => void
 }
 
 const CONFIRM_WORD = 'DELETE'
 
-export function UsersMultiDeleteDialog<TData>({
+export function UsersMultiDeleteDialog({
   open,
   onOpenChange,
-  table,
-}: UserMultiDeleteDialogProps<TData>) {
+  selectedCount,
+  onSuccess,
+}: UserMultiDeleteDialogProps) {
   const [value, setValue] = useState('')
-
-  const selectedRows = table.getFilteredSelectedRowModel().rows
 
   const handleDelete = () => {
     if (value.trim() !== CONFIRM_WORD) {
@@ -39,9 +34,9 @@ export function UsersMultiDeleteDialog<TData>({
       loading: 'Deleting users...',
       success: () => {
         setValue('')
-        table.resetRowSelection()
-        return `Deleted ${selectedRows.length} ${
-          selectedRows.length > 1 ? 'users' : 'user'
+        onSuccess()
+        return `Deleted ${selectedCount} ${
+          selectedCount > 1 ? 'users' : 'user'
         }`
       },
       error: 'Error',
@@ -60,8 +55,8 @@ export function UsersMultiDeleteDialog<TData>({
             className='me-1 inline-block stroke-destructive'
             size={18}
           />{' '}
-          Delete {selectedRows.length}{' '}
-          {selectedRows.length > 1 ? 'users' : 'user'}
+          Delete {selectedCount}{' '}
+          {selectedCount > 1 ? 'users' : 'user'}
         </span>
       }
       desc={
@@ -71,21 +66,21 @@ export function UsersMultiDeleteDialog<TData>({
             This action cannot be undone.
           </p>
 
-          <Label className='my-4 flex flex-col items-start gap-1.5'>
-            <span className=''>Confirm by typing "{CONFIRM_WORD}":</span>
+          <div className='my-4 flex flex-col items-start gap-1.5'>
+            <label className='text-sm font-medium'>
+              Confirm by typing "{CONFIRM_WORD}":
+            </label>
             <Input
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(v) => setValue(v)}
               placeholder={`Type "${CONFIRM_WORD}" to confirm.`}
             />
-          </Label>
+          </div>
 
-          <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
-            <AlertDescription>
-              Please be careful, this operation can not be rolled back.
-            </AlertDescription>
-          </Alert>
+          <Banner
+            type='danger'
+            description='Please be careful, this operation can not be rolled back.'
+          />
         </div>
       }
       confirmText='Delete'

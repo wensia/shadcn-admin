@@ -1,43 +1,12 @@
 /**
- * 缴费 Tab - 显示缴费记录列表
- * 简化版本：移除审批流程，改用批量导入日控表
+ * 缴费 Tab - Semi Design 版
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-  type RowSelectionState,
-} from '@tanstack/react-table'
-import { CheckCircle, MoreHorizontal, RefreshCw, Pencil, Trash2, Plus, FileUp, FileX } from 'lucide-react'
-import { toast } from 'sonner'
-
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { cn } from '@/lib/utils'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { Button, Card, Skeleton, Table, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
+import { IconPlus, IconRefresh, IconMore, IconEdit, IconTickCircle, IconDelete, IconUpload } from '@douyinfe/semi-icons'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { useAuthStore } from '@/stores/auth-store'
-
 import {
   getPayments,
   updatePaymentStatus,
@@ -46,22 +15,19 @@ import {
   batchCancelImportPayments,
   type PaymentItem,
   paymentStatusLabels,
-  paymentStatusColors,
   paymentMethodLabels,
   paymentTypeLabels,
 } from '../api'
 import { PaymentDialog } from '@/features/crm/lead-conversion/components/payment-dialog'
 import { CopyableCell } from './copyable-cell'
-import { ColumnToggle } from './column-toggle'
+import { SemiTablePagination } from '@/components/semi/table-pagination'
 
 // 星期映射
 const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
-// 格式化日期带星期
 function formatDateWithWeekday(dateStr: string | undefined): string {
   if (!dateStr) return '-'
   try {
-    // 处理 ISO 格式日期，取日期部分
     const datePart = dateStr.split('T')[0]
     const date = new Date(datePart)
     const weekday = weekDays[date.getDay()]
@@ -71,30 +37,24 @@ function formatDateWithWeekday(dateStr: string | undefined): string {
   }
 }
 
-// 骨架屏占位数据标识
+// 骨架屏
 const SKELETON_ID_PREFIX = '__skeleton__'
-
 function createSkeletonData(count: number): PaymentItem[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_ID_PREFIX}${i}`,
-    lead_id: '',
-    child_name: '',
-    parent_phone: '',
-    amount: 0,
-    payment_method: 'cash' as const,
-    payment_type: 'deposit' as const,
-    status: 'pending' as const,
-    payment_at: '',
-    collector_name: '',
-    campus_name: '',
-    course_name: '',
-    remark: '',
-    created_at: '',
+    lead_id: '', child_name: '', parent_phone: '', amount: 0,
+    payment_method: 'cash' as const, payment_type: 'deposit' as const,
+    status: 'pending' as const, payment_at: '', collector_name: '',
+    campus_name: '', course_name: '', remark: '', created_at: '',
   }))
 }
-
 function isSkeletonRow(id: string): boolean {
   return id.startsWith(SKELETON_ID_PREFIX)
+}
+
+// 状态颜色
+const paymentStatusColor: Record<string, 'orange' | 'green' | 'red' | 'grey'> = {
+  pending: 'orange', confirmed: 'green', rejected: 'red', refunded: 'grey',
 }
 
 interface PaymentTabProps {
@@ -111,40 +71,42 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<PaymentItem | null>(null)
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [isImporting, setIsImporting] = useState(false)
 
-  // 获取用户信息
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(400)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const measure = () => {
+      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+      const available = el.clientHeight - headerH
+      if (available > 100) setScrollY(available)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const user = useAuthStore((state) => state.user)
   const isSuperUser = user?.is_superuser ?? false
 
-  // 判断是否可以显示批量操作按钮（超级管理员或部门经理）
   const canBatchOperate = useMemo(() => {
     if (isSuperUser) return true
-    // 如果有任意记录的 can_approve 为 true，则当前用户是部门经理
     return data.some(item => item.can_approve)
   }, [isSuperUser, data])
 
-  // 加载数据
   const fetchData = useCallback(async () => {
     setIsLoading(true)
-    setRowSelection({}) // 重置选择
+    setSelectedRowKeys([])
     try {
-      const params: Record<string, unknown> = {
-        page,
-        size: pageSize,
-      }
-
-      if (dateFrom) {
-        params.date_from = dateFrom
-      }
-      if (dateTo) {
-        params.date_to = dateTo
-      }
-      if (creatorCampusId) {
-        params.creator_campus_id = creatorCampusId
-      }
-
+      const params: Record<string, unknown> = { page, size: pageSize }
+      if (dateFrom) params.date_from = dateFrom
+      if (dateTo) params.date_to = dateTo
+      if (creatorCampusId) params.creator_campus_id = creatorCampusId
       const result = await getPayments(params)
       if (result) {
         setData(result.items || [])
@@ -152,559 +114,234 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
       }
     } catch (error) {
       console.error('获取缴费列表失败:', error)
-      toast.error('获取缴费列表失败')
+      Toast.error('获取缴费列表失败')
     } finally {
       setIsLoading(false)
     }
   }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData])
 
-  // 获取选中的记录ID
-  const selectedIds = useMemo(() => {
-    return Object.keys(rowSelection)
-      .filter(key => rowSelection[key])
-      .map(index => data[parseInt(index)]?.id)
-      .filter(Boolean) as string[]
-  }, [rowSelection, data])
-
-  // 获取选中的未导入记录
   const selectedNotImportedIds = useMemo(() => {
-    return Object.keys(rowSelection)
-      .filter(key => rowSelection[key])
-      .map(index => data[parseInt(index)])
-      .filter(item => item && !item.is_counted)
-      .map(item => item.id)
-  }, [rowSelection, data])
+    return data.filter(item => selectedRowKeys.includes(item.id) && !item.is_counted).map(item => item.id)
+  }, [selectedRowKeys, data])
 
-  // 获取选中的已导入记录
   const selectedImportedIds = useMemo(() => {
-    return Object.keys(rowSelection)
-      .filter(key => rowSelection[key])
-      .map(index => data[parseInt(index)])
-      .filter(item => item && item.is_counted)
-      .map(item => item.id)
-  }, [rowSelection, data])
+    return data.filter(item => selectedRowKeys.includes(item.id) && item.is_counted).map(item => item.id)
+  }, [selectedRowKeys, data])
 
-  // 批量导入
   const handleBatchImport = async () => {
-    if (selectedNotImportedIds.length === 0) {
-      toast.warning('请选择未导入的记录')
-      return
-    }
-
+    if (selectedNotImportedIds.length === 0) { Toast.warning('请选择未导入的记录'); return }
     setIsImporting(true)
     try {
       const result = await batchImportPayments(selectedNotImportedIds)
-      if (result.success_count > 0) {
-        toast.success(`成功导入 ${result.success_count} 条记录`)
-      }
-      if (result.failed_records.length > 0) {
-        const reasons = result.failed_records.map(r => r.reason).join('；')
-        toast.warning(`${result.failed_records.length} 条记录导入失败：${reasons}`)
-      }
+      if (result.success_count > 0) Toast.success(`成功导入 ${result.success_count} 条记录`)
+      if (result.failed_records.length > 0) Toast.warning(`${result.failed_records.length} 条记录导入失败`)
       fetchData()
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      const message = err?.response?.data?.message || '批量导入失败'
-      toast.error(message)
-    } finally {
-      setIsImporting(false)
-    }
+    } catch { Toast.error('批量导入失败') } finally { setIsImporting(false) }
   }
 
-  // 批量取消导入
   const handleBatchCancelImport = async () => {
-    if (selectedImportedIds.length === 0) {
-      toast.warning('请选择已导入的记录')
-      return
-    }
-
+    if (selectedImportedIds.length === 0) { Toast.warning('请选择已导入的记录'); return }
     setIsImporting(true)
     try {
       const result = await batchCancelImportPayments(selectedImportedIds)
-      if (result.success_count > 0) {
-        toast.success(`成功取消导入 ${result.success_count} 条记录`)
-      }
-      if (result.failed_records.length > 0) {
-        const reasons = result.failed_records.map(r => r.reason).join('；')
-        toast.warning(`${result.failed_records.length} 条记录取消失败：${reasons}`)
-      }
+      if (result.success_count > 0) Toast.success(`成功取消导入 ${result.success_count} 条记录`)
+      if (result.failed_records.length > 0) Toast.warning(`${result.failed_records.length} 条记录取消失败`)
       fetchData()
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      const message = err?.response?.data?.message || '批量取消导入失败'
-      toast.error(message)
-    } finally {
-      setIsImporting(false)
-    }
+    } catch { Toast.error('批量取消导入失败') } finally { setIsImporting(false) }
   }
 
-  // 确认缴费
   const handleConfirm = async (item: PaymentItem) => {
-    try {
-      await updatePaymentStatus(item.id, 'confirmed')
-      toast.success('已确认缴费')
-      fetchData()
-    } catch (error) {
-      toast.error('操作失败')
-    }
+    try { await updatePaymentStatus(item.id, 'confirmed'); Toast.success('已确认缴费'); fetchData() }
+    catch { Toast.error('操作失败') }
   }
 
-  // 编辑
-  const handleEdit = (item: PaymentItem) => {
-    setEditData(item)
-    setDialogOpen(true)
-  }
+  const handleEdit = (item: PaymentItem) => { setEditData(item); setDialogOpen(true) }
+  const handleCreate = () => { setEditData(null); setDialogOpen(true) }
 
-  // 新建
-  const handleCreate = () => {
-    setEditData(null)
-    setDialogOpen(true)
-  }
-
-  // 删除
   const handleDelete = async (item: PaymentItem) => {
-    // 已导入的记录前端也提示不可删除
-    if (item.is_counted) {
-      toast.error('已导入日控表的记录不可删除，请先取消导入')
-      return
-    }
-    if (!confirm(`确定要删除 ${item.child_name || '该学生'} 的缴费记录吗？`)) {
-      return
-    }
-    try {
-      await deletePayment(item.id)
-      toast.success('删除成功')
-      fetchData()
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } }
-      const message = err?.response?.data?.message || '删除失败'
-      toast.error(message)
-    }
+    if (item.is_counted) { Toast.error('已导入日控表的记录不可删除，请先取消导入'); return }
+    if (!confirm(`确定要删除 ${item.child_name || '该学生'} 的缴费记录吗？`)) return
+    try { await deletePayment(item.id); Toast.success('删除成功'); fetchData() }
+    catch { Toast.error('删除失败') }
   }
 
-  // 显示数据
-  const displayData = useMemo(() => {
-    return isLoading ? createSkeletonData(pageSize) : data
-  }, [isLoading, data, pageSize])
+  const displayData = useMemo(() => isLoading ? createSkeletonData(pageSize) : data, [isLoading, data, pageSize])
 
-  // 列名映射（用于列可见性控制显示）
-  const columnLabels: Record<string, string> = {
-    select: '选择',
-    child_name: '学生姓名',
-    parent_phone: '联系电话',
-    amount: '缴费金额',
-    payment_method: '支付方式',
-    payment_type: '缴费类型',
-    payment_at: '缴费日期',
-    status: '状态',
-    is_counted: '导入状态',
-    collector_name: '收款人',
-    course_name: '课程',
-    remark: '备注',
-    actions: '操作',
-  }
-
-  // 表格列定义
-  const columns = useMemo<ColumnDef<PaymentItem>[]>(
-    () => [
-      // 复选框列
-      {
-        id: 'select',
-        header: ({ table }) => {
-          if (isLoading) return <Skeleton className="h-4 w-4" />
-          return (
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && 'indeterminate')
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="全选"
-            />
-          )
-        },
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-4" />
-          }
-          return (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="选择行"
-            />
-          )
-        },
-        size: 40,
-        enableHiding: false,
+  const columns: ColumnProps<PaymentItem>[] = [
+    {
+      title: '学生姓名', dataIndex: 'child_name', width: 120,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 500 }}>{record.child_name || '-'}</span>
+            {record.lead_deleted && <Tag size="small" color="red">线索已删</Tag>}
+          </div>
+        )
       },
-      {
-        accessorKey: 'child_name',
-        header: '学生姓名',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          const item = row.original
-          return (
-            <div className="flex items-center gap-1">
-              <span className="font-medium">{item.child_name || '-'}</span>
-              {item.lead_deleted && (
-                <Badge variant="outline" className="text-[10px] px-1 py-0 bg-red-50 text-red-600 border-red-200">
-                  线索已删
-                </Badge>
-              )}
-            </div>
-          )
-        },
-        size: 120,
+    },
+    {
+      title: '联系电话', dataIndex: 'parent_phone', width: 120,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+        return <span>{record.parent_phone || '-'}</span>
       },
-      {
-        accessorKey: 'parent_phone',
-        header: '联系电话',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-28" />
-          }
-          return <span>{row.original.parent_phone || '-'}</span>
-        },
-        size: 120,
+    },
+    {
+      title: '缴费金额', dataIndex: 'amount', width: 100,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+        return <span style={{ fontWeight: 500, color: 'var(--semi-color-success)' }}>¥{record.amount?.toLocaleString() || 0}</span>
       },
-      {
-        accessorKey: 'amount',
-        header: '缴费金额',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          return (
-            <span className="font-medium text-green-600">
-              ¥{row.original.amount?.toLocaleString() || 0}
-            </span>
-          )
-        },
-        size: 100,
+    },
+    {
+      title: '支付方式', dataIndex: 'payment_method', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+        return <span>{record.payment_method_display || paymentMethodLabels[record.payment_method] || '-'}</span>
       },
-      {
-        accessorKey: 'payment_method',
-        header: '支付方式',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          const method = row.original.payment_method
-          return <span>{row.original.payment_method_display || paymentMethodLabels[method] || '-'}</span>
-        },
-        size: 80,
+    },
+    {
+      title: '缴费类型', dataIndex: 'payment_type', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+        return <span>{record.payment_type_display || paymentTypeLabels[record.payment_type] || '-'}</span>
       },
-      {
-        accessorKey: 'payment_type',
-        header: '缴费类型',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          const type = row.original.payment_type
-          return <span>{row.original.payment_type_display || paymentTypeLabels[type] || '-'}</span>
-        },
-        size: 80,
+    },
+    {
+      title: '缴费日期', dataIndex: 'payment_at', width: 120,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+        return <span>{formatDateWithWeekday(record.payment_at)}</span>
       },
-      {
-        accessorKey: 'payment_at',
-        header: '缴费日期',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-28" />
-          }
-          return <span>{formatDateWithWeekday(row.original.payment_at)}</span>
-        },
-        size: 120,
+    },
+    {
+      title: '状态', dataIndex: 'status', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+        return <Tag size="small" color={paymentStatusColor[record.status] || 'grey'}>{record.status_display || paymentStatusLabels[record.status]}</Tag>
       },
-      {
-        accessorKey: 'status',
-        header: '状态',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
-          }
-          const status = row.original.status
-          return (
-            <Badge variant="outline" className={cn('text-xs', paymentStatusColors[status])}>
-              {row.original.status_display || paymentStatusLabels[status]}
-            </Badge>
-          )
-        },
-        size: 80,
+    },
+    {
+      title: '导入状态', dataIndex: 'is_counted', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+        return <Tag size="small" color={record.is_counted ? 'green' : 'grey'}>{record.is_counted ? '已导入' : '待导入'}</Tag>
       },
-      {
-        accessorKey: 'is_counted',
-        header: '导入状态',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
-          }
-          const isCounted = row.original.is_counted
-          return (
-            <Badge
-              variant="outline"
-              className={cn(
-                'text-xs',
-                isCounted
-                  ? 'bg-green-50 text-green-700 border-green-200'
-                  : 'bg-gray-50 text-gray-600 border-gray-200'
-              )}
-            >
-              {isCounted ? '已导入' : '待导入'}
-            </Badge>
-          )
-        },
-        size: 80,
+    },
+    {
+      title: '收款人', dataIndex: 'collector_name', width: 80,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+        return <span>{record.collector_name || '-'}</span>
       },
-      {
-        accessorKey: 'collector_name',
-        header: '收款人',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          return <span>{row.original.collector_name || '-'}</span>
-        },
-        size: 80,
+    },
+    {
+      title: '课程', dataIndex: 'course_name', width: 100,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+        return record.course_name ? <CopyableCell content={record.course_name} maxWidthClass="max-w-[100px]" /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
       },
-      {
-        accessorKey: 'course_name',
-        header: '课程',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
-          }
-          const courseName = row.original.course_name
-          return courseName ? (
-            <CopyableCell content={courseName} maxWidthClass="max-w-[100px]" />
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )
-        },
-        size: 100,
+    },
+    {
+      title: '备注', dataIndex: 'remark', width: 100,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+        return record.remark ? <CopyableCell content={record.remark} maxWidthClass="max-w-[100px]" /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
       },
-      {
-        accessorKey: 'remark',
-        header: '备注',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
-          }
-          const remark = row.original.remark
-          return remark ? (
-            <CopyableCell content={remark} maxWidthClass="max-w-[100px]" className="text-muted-foreground" />
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )
-        },
-        size: 100,
-      },
-      {
-        id: 'actions',
-        header: '操作',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-8 w-8" />
-          }
-          const item = row.original
-
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleEdit(item)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  编辑
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {/* 状态变更操作 */}
-                {item.status === 'pending' && (
-                  <DropdownMenuItem onClick={() => handleConfirm(item)}>
-                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                    确认缴费
-                  </DropdownMenuItem>
+    },
+    {
+      title: '操作', dataIndex: 'actions', width: 60, fixed: 'right' as const,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+        return (
+          <Dropdown
+            trigger="click"
+            clickToHide
+            position="bottomRight"
+            render={
+              <Dropdown.Menu>
+                <Dropdown.Item icon={<IconEdit />} onClick={() => handleEdit(record)}>编辑</Dropdown.Item>
+                <Dropdown.Divider />
+                {record.status === 'pending' && (
+                  <Dropdown.Item icon={<IconTickCircle style={{ color: 'var(--semi-color-success)' }} />} onClick={() => handleConfirm(record)}>确认缴费</Dropdown.Item>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleDelete(item)} className="text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  删除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
-        },
-        size: 60,
-        enableHiding: false,
+                <Dropdown.Divider />
+                <Dropdown.Item type="danger" icon={<IconDelete />} onClick={() => handleDelete(record)}>删除</Dropdown.Item>
+              </Dropdown.Menu>
+            }
+          >
+            <Button theme="borderless" icon={<IconMore />} size="small" />
+          </Dropdown>
+        )
       },
-    ],
-    [isLoading]
-  )
+    },
+  ]
 
-  const table = useReactTable({
-    data: displayData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    pageCount: Math.ceil(total / pageSize),
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      rowSelection,
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (_keys: any, rows: PaymentItem[]) => {
+      setSelectedRowKeys(rows.map(r => r.id))
     },
-    getRowId: (row, index) => String(index),
-    initialState: {
-      columnVisibility: {
-        is_counted: true, // 导入状态列默认显示
-      },
-    },
-  })
+    getCheckboxProps: (record: PaymentItem) => ({
+      disabled: isSkeletonRow(record?.id || ''),
+    }),
+  }
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
-      <CardHeader className="flex flex-shrink-0 flex-row items-center justify-between space-y-0 px-4 py-3">
-        <div className="flex items-center gap-4">
-          <CardTitle className="text-base font-medium">缴费列表</CardTitle>
-          {selectedIds.length > 0 && (
-            <span className="text-sm text-muted-foreground">
-              已选择 {selectedIds.length} 条
-            </span>
-          )}
+    <Card
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 16px' }}
+      header={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 16, fontWeight: 500 }}>缴费列表</span>
+            {selectedRowKeys.length > 0 && (
+              <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>已选择 {selectedRowKeys.length} 条</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {canBatchOperate && selectedNotImportedIds.length > 0 && (
+              <Button icon={<IconUpload />} theme="solid" style={{ background: 'var(--semi-color-success)' }} onClick={handleBatchImport} disabled={isImporting}>
+                导入日控表 ({selectedNotImportedIds.length})
+              </Button>
+            )}
+            {canBatchOperate && selectedImportedIds.length > 0 && (
+              <Button icon={<IconDelete />} onClick={handleBatchCancelImport} disabled={isImporting}>
+                取消导入 ({selectedImportedIds.length})
+              </Button>
+            )}
+            <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>新建缴费</Button>
+            <Button icon={<IconRefresh spin={isLoading} />} onClick={fetchData} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* 批量导入按钮 - 仅主管可见 */}
-          {canBatchOperate && selectedNotImportedIds.length > 0 && (
-            <Button
-              size="sm"
-              className="h-8 gap-1 bg-green-600 hover:bg-green-700"
-              onClick={handleBatchImport}
-              disabled={isImporting}
-            >
-              <FileUp className="h-4 w-4" />
-              导入日控表 ({selectedNotImportedIds.length})
-            </Button>
-          )}
-          {/* 批量取消导入按钮 - 仅主管可见 */}
-          {canBatchOperate && selectedImportedIds.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1"
-              onClick={handleBatchCancelImport}
-              disabled={isImporting}
-            >
-              <FileX className="h-4 w-4" />
-              取消导入 ({selectedImportedIds.length})
-            </Button>
-          )}
-          <Button size="sm" className="h-8 gap-1" onClick={handleCreate}>
-            <Plus className="h-4 w-4" />
-            新建缴费
-          </Button>
-          <ColumnToggle table={table} columnLabels={columnLabels} />
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={fetchData}>
-            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4 pt-0">
-        {/* 数据表 */}
-        <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-card">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const isActionsColumn = header.id === 'actions'
-                    return (
-                      <TableHead
-                        key={header.id}
-                        style={{ width: header.getSize() }}
-                        className={cn(
-                          "text-xs font-semibold",
-                          isActionsColumn && "sticky right-0 z-20 bg-card shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]"
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map((row) => {
-                  const isImported = row.original.is_counted
-                  return (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                      className={cn(isImported && "bg-green-50/50")}
-                    >
-                      {row.getVisibleCells().map((cell) => {
-                        const isActionsColumn = cell.column.id === 'actions'
-                        return (
-                          <TableCell
-                            key={cell.id}
-                            style={{ width: cell.column.getSize() }}
-                            className={cn(
-                              "py-2 text-xs",
-                              isActionsColumn && "sticky right-0 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]",
-                              isActionsColumn && (isImported ? "bg-green-50/50" : "bg-card")
-                            )}
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        )
-                      })}
-                    </TableRow>
-                  )
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                    暂无缴费记录
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        <SimplePagination
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size)
-            setPage(1)
-          }}
-          className="flex-shrink-0"
-          isLoading={isLoading}
+      }
+    >
+      <div ref={wrapperRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={displayData}
+          rowKey="id"
+          rowSelection={rowSelection}
+          pagination={false}
+          scroll={{ y: scrollY }}
+          style={{ fontSize: 12 }}
+          size="middle"
+          rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
+          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无缴费记录</div>}
         />
-      </CardContent>
-
-      {/* 新建/编辑缴费弹窗 */}
+      </div>
+      <div style={{ flexShrink: 0, paddingTop: 16 }}>
+        <SemiTablePagination
+          page={page} pageSize={pageSize} total={total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        />
+      </div>
       <PaymentDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSuccess={fetchData}
+        open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={fetchData}
         payment={editData ? {
           ...editData,
           payment_method_display: editData.payment_method_display || '',

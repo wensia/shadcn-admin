@@ -1,38 +1,34 @@
 /**
- * 公海线索页面
- * 从 Vue 项目 LeadsPoolView.vue 迁移
+ * 公海线索页面 - 使用 DataTableLayout + SemiDataTable 通用组件
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { toast } from 'sonner'
 import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef
-} from '@tanstack/react-table'
-import { Download, ListFilter, RefreshCw, Search, UserPlus, X, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
+  Button,
+  Input,
+  Tag,
+  Typography,
+  Toast,
+  Modal,
+  Spin,
+  Space,
+} from '@douyinfe/semi-ui-19'
+import {
+  IconSearch,
+  IconFilter,
+  IconDownload,
+  IconUserAdd,
+  IconClose,
+} from '@douyinfe/semi-icons'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { formatTime } from '@/lib/utils/time'
-import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import type { FilterTag } from '@/components/semi/filter-tags-bar'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
 import { FilterSheet } from '../leads/components/filter-sheet'
@@ -45,10 +41,11 @@ import { showApiErrorToast } from '@/lib/api/error-toast'
 import { leadsApi } from '../leads/api'
 import { apiClient } from '@/lib/api/client'
 
+const { Text } = Typography
+
 export function LeadsPoolPage() {
   useDocumentTitle('公海线索')
   const queryClient = useQueryClient()
-  const s = useStyleClasses()
   const isSuperUser = useIsSuperUser()
 
   // 分页状态
@@ -72,7 +69,7 @@ export function LeadsPoolPage() {
   // 搜索防抖
   const debouncedSearch = useDebouncedValue(searchValue, 500)
 
-  // 获取筛选选项（用于显示筛选标签的名称）
+  // 获取筛选选项
   const { data: filterOptions } = useQuery({
     queryKey: ['filter-options'],
     queryFn: async () => {
@@ -82,7 +79,7 @@ export function LeadsPoolPage() {
     staleTime: 5 * 60 * 1000
   })
 
-  // 获取来源渠道列表（用于显示筛选标签的名称）
+  // 获取来源渠道列表
   const { data: sourceChannels } = useQuery({
     queryKey: ['source-channels-active'],
     queryFn: async () => {
@@ -110,7 +107,6 @@ export function LeadsPoolPage() {
     all: '全部为'
   }
 
-  // 辅助函数：将 ID 数组转换为名称显示
   const getFilterLabel = (ids: string[] | undefined, map: Map<string, string> | undefined, fieldName: string) => {
     if (!ids || ids.length === 0) return null
     if (!map) return `${fieldName} (${ids.length})`
@@ -129,8 +125,8 @@ export function LeadsPoolPage() {
   }
 
   // 选中的行
+  const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([])
   const [selectedRows, setSelectedRows] = useState<LeadPoolItem[]>([])
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   // 弹窗状态
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
@@ -143,16 +139,13 @@ export function LeadsPoolPage() {
       page: pagination.page,
       size: pagination.size
     }
-    // 搜索：toolbar 搜索优先，否则取 FilterSheet 中的 search
     if (debouncedSearch) params.search = debouncedSearch
     else if (filters.search) params.search = filters.search
-    // 意向等级：从高级筛选取（pool API 支持单选，取第一个值）
     if (filters.intention_level && filters.intention_level.length > 0) {
       params.intention_level = filters.intention_level[0] as IntentionLevel
     }
     if (daysMin) params.days_in_pool_min = parseInt(daysMin)
     if (daysMax) params.days_in_pool_max = parseInt(daysMax)
-    // 高级筛选条件
     if (filters.status && filters.status.length > 0) params.status = filters.status
     if (filters.source_channel_id && filters.source_channel_id.length > 0) params.source_channel_id = filters.source_channel_id
     if (filters.owner_campus_id && filters.owner_campus_id.length > 0) params.owner_campus_id = filters.owner_campus_id
@@ -181,8 +174,8 @@ export function LeadsPoolPage() {
     }
   })
 
-  // 稳定的表格数据引用 - 避免每次渲染创建新数组
   const tableData = useMemo(() => data?.items || [], [data?.items])
+  const total = data?.total ?? 0
 
   // 批量领取 mutation
   const claimMutation = useMutation({
@@ -193,9 +186,9 @@ export function LeadsPoolPage() {
       })
     },
     onSuccess: () => {
-      toast.success(`成功领取 ${selectedRows.length} 条线索`)
+      Toast.success({ content: `成功领取 ${selectedRows.length} 条线索` })
       setSelectedRows([])
-      setRowSelection({})
+      setSelectedRowKeys([])
       setClaimDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['pool-leads'] })
     },
@@ -208,11 +201,9 @@ export function LeadsPoolPage() {
   useEffect(() => {
     if (data && !isLoading) {
       const items = data.items || []
-      const total = data.total || 0
-      // 当前页没有数据，但总数据量大于0，且不在第一页
-      if (items.length === 0 && total > 0 && pagination.page > 1) {
-        const lastPage = Math.max(1, Math.ceil(total / pagination.size))
-        // 只有当 lastPage 与当前页不同时才跳转，防止无限循环
+      const totalCount = data.total || 0
+      if (items.length === 0 && totalCount > 0 && pagination.page > 1) {
+        const lastPage = Math.max(1, Math.ceil(totalCount / pagination.size))
         if (lastPage !== pagination.page) {
           setPagination(prev => ({ ...prev, page: lastPage }))
         }
@@ -220,113 +211,95 @@ export function LeadsPoolPage() {
     }
   }, [data, isLoading, pagination.page, pagination.size])
 
-  // 同步选中状态 - 只在选择变化时更新
-  useEffect(() => {
-    if (tableData.length > 0) {
-      const selected = tableData.filter(item => rowSelection[item.id])
-      // 只有当选中的行数变化时才更新，避免不必要的渲染
-      setSelectedRows(prev => {
-        if (prev.length !== selected.length) return selected
-        // 比较 ID 是否相同
-        const prevIds = new Set(prev.map(r => r.id))
-        const sameSelection = selected.every(r => prevIds.has(r.id))
-        return sameSelection ? prev : selected
-      })
-    } else {
-      setSelectedRows([])
-    }
-  }, [rowSelection, tableData])
-
-  // 表格列定义 - 使用 useMemo 防止每次渲染重新创建
-  const columns: ColumnDef<LeadPoolItem>[] = useMemo(() => [
+  // Semi Table 列定义
+  const columns: ColumnProps<LeadPoolItem>[] = useMemo(() => [
     {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="全选"
-          className="translate-y-[2px]"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="选择行"
-          className="translate-y-[2px]"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-      size: 40,
-      enableSorting: false,
-      enableHiding: false
+      title: '孩子姓名',
+      dataIndex: 'child_name',
+      width: 100,
+      fixed: 'left' as const,
+      render: (_text: string, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width="80%" />
+        return <Text strong style={{ fontSize: 13 }}>{record.child_name || '-'}</Text>
+      },
     },
     {
-      accessorKey: 'child_name',
-      header: '孩子姓名',
-      size: 100,
-      cell: ({ row }) => row.original.child_name || '-'
+      title: '家长姓名',
+      dataIndex: 'parent_name',
+      width: 100,
+      render: (_text: string, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return <Text style={{ fontSize: 13 }}>{record.parent_name || '-'}</Text>
+      },
     },
     {
-      accessorKey: 'parent_name',
-      header: '家长姓名',
-      size: 100,
-      cell: ({ row }) => row.original.parent_name || '-'
+      title: '年龄',
+      dataIndex: 'age',
+      width: 60,
+      align: 'center' as const,
+      render: (_text: number, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={32} />
+        return <Text style={{ fontSize: 13 }}>{record.age ? `${record.age}岁` : '-'}</Text>
+      },
     },
     {
-      accessorKey: 'age',
-      header: '年龄',
-      size: 60,
-      cell: ({ row }) => row.original.age ? `${row.original.age}岁` : '-'
+      title: '来源渠道',
+      dataIndex: 'source_channel_name',
+      width: 120,
+      ellipsis: true,
+      render: (_text: string, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
+        return <Text style={{ fontSize: 13 }}>{record.source_channel_name || '-'}</Text>
+      },
     },
     {
-      accessorKey: 'source_channel_name',
-      header: '来源渠道',
-      size: 120,
-      cell: ({ row }) => row.original.source_channel_name || '-'
-    },
-    {
-      accessorKey: 'intention_level',
-      header: '意向等级',
-      size: 100,
-      cell: ({ row }) => {
-        const level = row.original.intention_level
-        if (!level) return '-'
+      title: '意向等级',
+      dataIndex: 'intention_level',
+      width: 100,
+      render: (_text: string, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        const level = record.intention_level
+        if (!level) return <Text type="quaternary" style={{ fontSize: 13 }}>-</Text>
         return <IntentionLevelBadge level={level} showDot={false} />
-      }
+      },
     },
     {
-      accessorKey: 'pool_info.previous_advisor_name',
-      header: '原负责顾问',
-      size: 120,
-      cell: ({ row }) => row.original.pool_info?.previous_advisor_name || '-'
+      title: '原负责顾问',
+      key: 'previous_advisor',
+      dataIndex: 'pool_info',
+      width: 120,
+      render: (_text: any, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        return <Text style={{ fontSize: 13 }}>{record.pool_info?.previous_advisor_name || '-'}</Text>
+      },
     },
     {
-      accessorKey: 'pool_info.days_in_pool',
-      header: '公海天数',
-      size: 80,
-      cell: ({ row }) => row.original.pool_info?.days_in_pool != null ? `${row.original.pool_info.days_in_pool}天` : '-'
+      title: '公海天数',
+      key: 'days_in_pool',
+      dataIndex: 'pool_info',
+      width: 80,
+      render: (_text: any, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={48} />
+        return (
+          <Text style={{ fontSize: 13 }}>
+            {record.pool_info?.days_in_pool != null ? `${record.pool_info.days_in_pool}天` : '-'}
+          </Text>
+        )
+      },
     },
     {
-      accessorKey: 'pool_info.pooled_at',
-      header: '进入公海时间',
-      size: 150,
-      cell: ({ row }) => formatTime(row.original.pool_info?.pooled_at)
-    }
+      title: '进入公海时间',
+      key: 'pooled_at',
+      dataIndex: 'pool_info',
+      width: 150,
+      render: (_text: any, record: LeadPoolItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={120} />
+        return <Text style={{ fontSize: 12 }}>{formatTime(record.pool_info?.pooled_at)}</Text>
+      },
+    },
   ], [])
 
-  // 创建表格实例
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: setRowSelection,
-    state: { rowSelection },
-    getRowId: (row) => row.id
-  })
-
-  // 分页处理 - 使用 useCallback 防止每次渲染重新创建
+  // 分页处理
   const handlePageChange = useCallback((page: number) => {
     setPagination(prev => ({ ...prev, page }))
   }, [])
@@ -336,19 +309,15 @@ export function LeadsPoolPage() {
   }, [])
 
   // 行点击处理
-  const handleRowClick = (row: LeadPoolItem, event: React.MouseEvent) => {
-    const target = event.target as HTMLElement
-    if (target.closest('[role="checkbox"]') || target.closest('button')) {
-      return
-    }
-    setCurrentLeadId(row.id)
+  const handleRowClick = (record: LeadPoolItem) => {
+    setCurrentLeadId(record.id)
     setDetailSheetOpen(true)
   }
 
   // 刷新数据
   const handleRefresh = () => {
     refetch()
-    toast.success('已刷新')
+    Toast.success({ content: '已刷新' })
   }
 
   // 应用高级筛选
@@ -369,7 +338,7 @@ export function LeadsPoolPage() {
   // 批量领取
   const handleBatchClaim = () => {
     if (selectedRows.length === 0) {
-      toast.warning('请先选择线索')
+      Toast.warning({ content: '请先选择线索' })
       return
     }
     setClaimDialogOpen(true)
@@ -383,39 +352,31 @@ export function LeadsPoolPage() {
   // 导出公海线索
   const handleExport = async () => {
     if (isExporting) return
-
     setIsExporting(true)
     try {
       const params = buildParams()
-      // 移除分页参数，导出全部数据
       delete params.page
       delete params.size
-
       const response = await leadsPoolApi.exportPoolLeads(params)
-
       if (response instanceof Blob) {
-        // 同步导出：直接下载文件
         downloadBlob(response, `公海线索导出_${new Date().toISOString().slice(0, 10)}.xlsx`)
-        toast.success('导出成功')
+        Toast.success({ content: '导出成功' })
       } else if (response.success && response.data?.task_id) {
-        // 异步导出：显示进度对话框
         setExportTaskId(response.data.task_id)
         setExportDialogOpen(true)
-        toast.info(response.data.message || '正在后台导出...')
-        // 开始轮询任务状态
+        Toast.info({ content: response.data.message || '正在后台导出...' })
         pollExportStatus(response.data.task_id)
       } else {
-        toast.error(response.message || '导出失败')
+        Toast.error({ content: response.message || '导出失败' })
       }
     } catch (error) {
-      toast.error('导出失败，请稍后重试')
+      Toast.error({ content: '导出失败，请稍后重试' })
       console.error('Export error:', error)
     } finally {
       setIsExporting(false)
     }
   }
 
-  // 下载 Blob 文件
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -427,36 +388,30 @@ export function LeadsPoolPage() {
     document.body.removeChild(a)
   }
 
-  // 轮询导出任务状态
   const pollExportStatus = async (taskId: string) => {
-    const maxAttempts = 120 // 最多轮询 10 分钟（每 5 秒一次）
+    const maxAttempts = 120
     let attempts = 0
-
     const poll = async () => {
       if (attempts >= maxAttempts) {
-        toast.error('导出超时，请稍后重试')
+        Toast.error({ content: '导出超时，请稍后重试' })
         setExportDialogOpen(false)
         return
       }
-
       try {
         const response = await leadsPoolApi.getExportStatus(taskId)
         if (response.success && response.data) {
           setExportStatus(response.data)
-
           if (response.data.status === 'SUCCESS' && response.data.success) {
-            // 导出完成，下载文件
-            toast.success(response.data.message || '导出完成')
+            Toast.success({ content: response.data.message || '导出完成' })
             const blob = await leadsPoolApi.downloadExportFile(taskId)
             downloadBlob(blob, response.data.file_name || '公海线索导出.xlsx')
             setExportDialogOpen(false)
           } else if (response.data.status === 'FAILURE') {
-            toast.error(response.data.message || '导出失败')
+            Toast.error({ content: response.data.message || '导出失败' })
             setExportDialogOpen(false)
           } else {
-            // 继续轮询
             attempts++
-            setTimeout(poll, 5000) // 5 秒后再次查询
+            setTimeout(poll, 5000)
           }
         }
       } catch (error) {
@@ -465,7 +420,6 @@ export function LeadsPoolPage() {
         setTimeout(poll, 5000)
       }
     }
-
     poll()
   }
 
@@ -476,462 +430,250 @@ export function LeadsPoolPage() {
     return value !== undefined && value !== '' && value !== null
   }).length
 
-  // 计算是否有筛选条件
   const hasFilters = searchValue || advancedFiltersCount > 0 || daysMin || daysMax
+
+  /* -- 筛选标签数组 -- */
+  const filterTags: FilterTag[] = []
+
+  if (searchValue) {
+    filterTags.push({
+      key: 'search',
+      label: '搜索',
+      value: searchValue,
+      onClose: () => { setSearchValue(''); setPagination(prev => ({ ...prev, page: 1 })) },
+    })
+  }
+
+  if (daysMin || daysMax) {
+    filterTags.push({
+      key: 'days',
+      label: '公海天数',
+      value: `${daysMin || '0'} - ${daysMax || '∞'}天`,
+      onClose: () => { setDaysMin(''); setDaysMax(''); setPagination(prev => ({ ...prev, page: 1 })) },
+    })
+  }
+
+  if (filters.intention_level && filters.intention_level.length > 0) {
+    filterTags.push({
+      key: 'intention',
+      label: '意向',
+      value: filters.intention_level.map(l => intentionLevelLabels[l]).join(', '),
+      onClose: () => { const { intention_level, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.status && filters.status.length > 0) {
+    filterTags.push({
+      key: 'status',
+      label: '状态',
+      value: filters.status.map(s => leadStatusLabels[s]).join(', '),
+      onClose: () => { const { status, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.source_channel_id && filters.source_channel_id.length > 0) {
+    filterTags.push({
+      key: 'channel',
+      label: '渠道',
+      value: getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道') || '',
+      onClose: () => { const { source_channel_id, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.advisor_name) {
+    filterTags.push({
+      key: 'advisor',
+      label: '顾问',
+      value: filters.advisor_name,
+      onClose: () => { const { advisor_name, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.created_by_name) {
+    filterTags.push({
+      key: 'created_by',
+      label: '创建人',
+      value: filters.created_by_name,
+      onClose: () => { const { created_by_name, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.owner_campus_id && filters.owner_campus_id.length > 0) {
+    filterTags.push({
+      key: 'campus',
+      label: '校区',
+      value: getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区') || '',
+      onClose: () => { const { owner_campus_id, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.grade && filters.grade.length > 0) {
+    filterTags.push({
+      key: 'grade',
+      label: '年级',
+      value: filters.grade.map(g => gradeLabels[g]).join(', '),
+      onClose: () => { const { grade, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.followup_results && filters.followup_results.length > 0 && filters.followup_result_mode) {
+    filterTags.push({
+      key: 'followup',
+      label: '回访',
+      value: `${followupModeLabels[filters.followup_result_mode] || filters.followup_result_mode} ${getFollowupResultLabel(filters.followup_results)}`,
+      onClose: () => { const { followup_results, followup_result_mode, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.created_from || filters.created_to) {
+    filterTags.push({
+      key: 'time',
+      label: '时间',
+      value: `${filters.created_from || '...'} ~ ${filters.created_to || '...'}`,
+      onClose: () => { const { created_from, created_to, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  if (filters.tag) {
+    filterTags.push({
+      key: 'tag',
+      label: '标签',
+      value: filters.tag,
+      onClose: () => { const { tag, ...rest } = filters; setFilters(rest) },
+    })
+  }
+
+  // 标题右侧操作按钮
+  const headerActions = (
+    <Space spacing={8}>
+      {selectedRows.length > 0 && (
+        <>
+          <Tag color="blue">已选择 {selectedRows.length} 条</Tag>
+          <Button
+            theme="solid"
+            icon={<IconUserAdd />}
+            onClick={handleBatchClaim}
+          >
+            批量领取
+          </Button>
+        </>
+      )}
+      {isSuperUser && (
+        <Button
+          icon={<IconDownload />}
+          onClick={handleExport}
+          disabled={isExporting}
+          loading={isExporting}
+        >
+          导出
+        </Button>
+      )}
+    </Space>
+  )
+
+  // 工具栏
+  const toolbar = (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+      <Input
+        prefix={<IconSearch />}
+        placeholder="搜索姓名或手机号..."
+        value={searchValue}
+        onChange={(value) => {
+          setSearchValue(value)
+          setPagination(prev => ({ ...prev, page: 1 }))
+        }}
+        showClear
+        style={{ width: 240 }}
+      />
+
+      <Button
+        icon={<IconFilter />}
+        onClick={() => setFilterSheetOpen(true)}
+      >
+        高级筛选
+        {advancedFiltersCount > 0 && (
+          <Tag
+            color="blue"
+            shape="circle"
+            style={{ marginLeft: 6, minWidth: 20, height: 20, lineHeight: '20px' }}
+          >
+            {advancedFiltersCount}
+          </Tag>
+        )}
+      </Button>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <Input
+          type="number"
+          placeholder="最少天数"
+          value={daysMin}
+          onChange={(value) => {
+            setDaysMin(value)
+            setPagination(prev => ({ ...prev, page: 1 }))
+          }}
+          style={{ width: 100 }}
+        />
+        <Text type="tertiary">-</Text>
+        <Input
+          type="number"
+          placeholder="最多天数"
+          value={daysMax}
+          onChange={(value) => {
+            setDaysMax(value)
+            setPagination(prev => ({ ...prev, page: 1 }))
+          }}
+          style={{ width: 100 }}
+        />
+      </div>
+
+      {hasFilters && (
+        <Button
+          type="tertiary"
+          theme="borderless"
+          icon={<IconClose />}
+          onClick={handleClearFilters}
+        >
+          清除筛选
+        </Button>
+      )}
+    </div>
+  )
 
   return (
     <>
-      <Main fixed className="min-h-0">
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-          {/* 工具栏 */}
-          <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-            {/* 搜索框 */}
-            <div className="relative w-64">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="搜索姓名或手机号..."
-                value={searchValue}
-                onChange={(e) => {
-                  setSearchValue(e.target.value)
-                  setPagination(prev => ({ ...prev, page: 1 }))
-                }}
-                className="pl-8"
-              />
-            </div>
-
-            {/* 高级筛选按钮 */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFilterSheetOpen(true)}
-              className="relative"
-            >
-              <ListFilter className="mr-1.5 h-4 w-4" />
-              高级筛选
-              {advancedFiltersCount > 0 && (
-                <Badge variant="default" className="ml-1.5 h-5 min-w-5 px-1 text-xs">
-                  {advancedFiltersCount}
-                </Badge>
-              )}
-            </Button>
-
-            {/* 公海天数范围 */}
-            <div className="flex items-center gap-1">
-              <Input
-                type="number"
-                placeholder="最少天数"
-                value={daysMin}
-                onChange={(e) => {
-                  setDaysMin(e.target.value)
-                  setPagination(prev => ({ ...prev, page: 1 }))
-                }}
-                className="w-24"
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="number"
-                placeholder="最多天数"
-                value={daysMax}
-                onChange={(e) => {
-                  setDaysMax(e.target.value)
-                  setPagination(prev => ({ ...prev, page: 1 }))
-                }}
-                className="w-24"
-              />
-            </div>
-
-            {/* 清除筛选 */}
-            {hasFilters && (
-              <Button variant="ghost" size="sm" onClick={handleClearFilters}>
-                <X className="mr-1 h-4 w-4" />
-                清除筛选
-              </Button>
-            )}
-
-            <div className="flex-1" />
-
-            {/* 选中提示和批量操作 */}
-            {selectedRows.length > 0 && (
-              <>
-                <Badge variant="secondary">
-                  已选择 {selectedRows.length} 条
-                </Badge>
-                <Button size="sm" onClick={handleBatchClaim}>
-                  <UserPlus className="mr-1.5 h-4 w-4" />
-                  批量领取
-                </Button>
-              </>
-            )}
-
-            {/* 导出按钮（仅超管可见） */}
-            {isSuperUser && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExport}
-                disabled={isExporting}
-              >
-                {isExporting ? (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-1.5 h-4 w-4" />
-                )}
-                导出
-              </Button>
-            )}
-
-            {/* 刷新按钮 */}
-            <Button variant="outline" size="icon" onClick={handleRefresh} title="刷新">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* 筛选条件标签栏 */}
-          {(advancedFiltersCount > 0 || searchValue || daysMin || daysMax) && (
-            <div className={cn('flex flex-shrink-0 items-center flex-wrap', s.gap.tight)}>
-              <span className={cn(s.text.xs, 'text-muted-foreground')}>筛选条件:</span>
-
-              {/* 搜索关键词标签 */}
-              {searchValue && (
-                <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-                  搜索: {searchValue}
-                  <X
-                    className="h-3 w-3 cursor-pointer hover:text-destructive"
-                    onClick={() => { setSearchValue(''); setPagination(prev => ({ ...prev, page: 1 })) }}
-                  />
-                </Badge>
-              )}
-
-              {/* 公海天数标签 */}
-              {(daysMin || daysMax) && (
-                <Badge variant="secondary" className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded)}>
-                  公海天数: {daysMin || '0'} - {daysMax || '∞'}天
-                  <X
-                    className="h-3 w-3 cursor-pointer hover:text-destructive"
-                    onClick={() => { setDaysMin(''); setDaysMax(''); setPagination(prev => ({ ...prev, page: 1 })) }}
-                  />
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 意向等级 */}
-              {filters.intention_level && filters.intention_level.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  意向: {filters.intention_level.map(l => intentionLevelLabels[l]).join(', ')}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { intention_level, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 线索状态 */}
-              {filters.status && filters.status.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  状态: {filters.status.map(s => leadStatusLabels[s]).join(', ')}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { status, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 来源渠道 */}
-              {filters.source_channel_id && filters.source_channel_id.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  渠道: {getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道')}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { source_channel_id, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 负责顾问 */}
-              {filters.advisor_name && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  顾问: {filters.advisor_name}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { advisor_name, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 创建人 */}
-              {filters.created_by_name && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  创建人: {filters.created_by_name}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { created_by_name, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 归属校区 */}
-              {filters.owner_campus_id && filters.owner_campus_id.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  校区: {getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区')}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { owner_campus_id, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 年级 */}
-              {filters.grade && filters.grade.length > 0 && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  年级: {filters.grade.map(g => gradeLabels[g]).join(', ')}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { grade, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 回访状态 */}
-              {filters.followup_results && filters.followup_results.length > 0 && filters.followup_result_mode && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  回访: {followupModeLabels[filters.followup_result_mode] || filters.followup_result_mode}{' '}
-                  {getFollowupResultLabel(filters.followup_results)}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { followup_results, followup_result_mode, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 创建时间 */}
-              {(filters.created_from || filters.created_to) && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  时间: {filters.created_from || '...'} ~ {filters.created_to || '...'}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { created_from, created_to, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 高级筛选 - 标签 */}
-              {filters.tag && (
-                <Badge
-                  variant="secondary"
-                  className={cn(s.height.badge, 'px-2', s.text.xs, s.gap.tight, s.rounded, 'cursor-pointer hover:bg-secondary/80')}
-                  onClick={() => setFilterSheetOpen(true)}
-                >
-                  标签: {filters.tag}
-                  <span
-                    role="button"
-                    className="ml-1 -mr-1 p-0.5 rounded-sm hover:bg-muted-foreground/20"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const { tag, ...rest } = filters
-                      setFilters(rest)
-                    }}
-                  >
-                    <X className="h-3 w-3 hover:text-destructive" />
-                  </span>
-                </Badge>
-              )}
-
-              {/* 清除全部按钮 */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearFilters}
-                className={cn(s.height.badge, 'px-2', s.text.xs, 'text-muted-foreground hover:text-foreground')}
-              >
-                清除全部
-              </Button>
-            </div>
-          )}
-
-          {/* 数据表格 */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
-            <div className="flex-1 overflow-auto">
-              <table className="w-full">
-                <thead className="sticky top-0 z-10 bg-muted/50">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className={cn(
-                            'h-10 px-3 text-left align-middle font-medium text-muted-foreground',
-                            s.text.xs
-                          )}
-                          style={{ width: header.getSize() }}
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    // 骨架屏
-                    Array.from({ length: 10 }).map((_, i) => (
-                      <tr key={i} className="border-b">
-                        {columns.map((_, j) => (
-                          <td key={j} className="px-3 py-2">
-                            <Skeleton className="h-4 w-full" />
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  ) : table.getRowModel().rows.length === 0 ? (
-                    // 空状态
-                    <tr>
-                      <td
-                        colSpan={columns.length}
-                        className="h-32 text-center text-muted-foreground"
-                      >
-                        暂无公海线索
-                      </td>
-                    </tr>
-                  ) : (
-                    // 数据行
-                    table.getRowModel().rows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className={cn(
-                          'border-b transition-colors hover:bg-muted/50 cursor-pointer',
-                          row.getIsSelected() && 'bg-muted'
-                        )}
-                        onClick={(e) => handleRowClick(row.original, e)}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <td
-                            key={cell.id}
-                            className={cn('px-3 py-2', s.text.xs)}
-                            style={{ width: cell.column.getSize() }}
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* 分页 */}
-            <div className="border-t px-4 py-2">
-              <SimplePagination
-                page={pagination.page}
-                pageSize={pagination.size}
-                total={data?.total || 0}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </div>
-          </div>
-        </div>
-      </Main>
+      <DataTableLayout
+        title="公海线索"
+        total={total}
+        headerActions={headerActions}
+        onRefresh={handleRefresh}
+        isRefreshing={isLoading}
+        toolbar={toolbar}
+        filterTags={filterTags}
+        onClearAllFilters={handleClearFilters}
+      >
+        <SemiDataTable<LeadPoolItem>
+          columns={columns}
+          data={tableData}
+          total={total}
+          page={pagination.page}
+          pageSize={pagination.size}
+          isLoading={isLoading}
+          scrollX={830}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          onRowClick={handleRowClick}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys, rows) => {
+              setSelectedRowKeys(keys)
+              setSelectedRows(rows)
+            },
+            fixed: 'left',
+            width: 48,
+          }}
+          emptyText="暂无公海线索"
+        />
+      </DataTableLayout>
 
       {/* 线索详情抽屉 */}
       <LeadDetailSheet
@@ -941,25 +683,20 @@ export function LeadsPoolPage() {
       />
 
       {/* 批量领取确认对话框 */}
-      <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>批量领取线索</DialogTitle>
-            <DialogDescription>
-              确定要领取选中的 {selectedRows.length} 条线索吗？
-              领取后这些线索将分配给您。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClaimDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={confirmClaim} disabled={claimMutation.isPending}>
-              {claimMutation.isPending ? '领取中...' : '确认领取'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title="批量领取线索"
+        visible={claimDialogOpen}
+        onCancel={() => setClaimDialogOpen(false)}
+        onOk={confirmClaim}
+        okButtonProps={{ loading: claimMutation.isPending }}
+        okText="确认领取"
+        cancelText="取消"
+      >
+        <div style={{ padding: '8px 0' }}>
+          确定要领取选中的 <Text strong>{selectedRows.length}</Text> 条线索吗？
+          领取后这些线索将分配给您。
+        </div>
+      </Modal>
 
       {/* 高级筛选Sheet */}
       <FilterSheet
@@ -970,43 +707,41 @@ export function LeadsPoolPage() {
       />
 
       {/* 导出进度对话框 */}
-      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>正在导出公海线索</DialogTitle>
-            <DialogDescription>
-              数据量较大，正在后台处理中，请稍候...
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="flex items-center justify-center gap-3">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">
-                {exportStatus?.status === 'PENDING' && '等待处理...'}
-                {exportStatus?.status === 'STARTED' && '正在导出...'}
-                {!exportStatus && '正在准备...'}
-              </span>
-            </div>
-            {exportStatus?.total && (
-              <p className="mt-2 text-center text-sm text-muted-foreground">
-                共 {exportStatus.total} 条数据
-              </p>
-            )}
+      <Modal
+        title="正在导出公海线索"
+        visible={exportDialogOpen}
+        onCancel={() => {
+          setExportDialogOpen(false)
+          setExportTaskId(null)
+          setExportStatus(null)
+        }}
+        footer={
+          <Button onClick={() => {
+            setExportDialogOpen(false)
+            setExportTaskId(null)
+            setExportStatus(null)
+          }}>
+            取消
+          </Button>
+        }
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Text type="tertiary">数据量较大，正在后台处理中，请稍候...</Text>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 16 }}>
+            <Spin />
+            <Text type="tertiary">
+              {exportStatus?.status === 'PENDING' && '等待处理...'}
+              {exportStatus?.status === 'STARTED' && '正在导出...'}
+              {!exportStatus && '正在准备...'}
+            </Text>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setExportDialogOpen(false)
-                setExportTaskId(null)
-                setExportStatus(null)
-              }}
-            >
-              取消
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {exportStatus?.total && (
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
+              <Text type="tertiary">共 {exportStatus.total} 条数据</Text>
+            </div>
+          )}
+        </div>
+      </Modal>
     </>
   )
 }

@@ -1,10 +1,9 @@
 /**
- * 通话统计卡片组件 - 紧凑单行展示
+ * 通话统计卡片组件 - 紧凑单行展示 (Semi Design)
  */
 
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@douyinfe/semi-ui-19'
 import { PhoneCall, Clock, PhoneIncoming, Percent, Database } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { CallRecordStats } from '../../types'
 
 interface StatsCardsProps {
@@ -31,6 +30,8 @@ function formatDuration(seconds: number): string {
   }
 }
 
+const iconStyle = { width: 16, height: 16, flexShrink: 0 } as const
+
 export function StatsCards({ stats, isLoading }: StatsCardsProps) {
   const items = [
     {
@@ -38,45 +39,53 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       value: stats?.today_count ?? 0,
       suffix: '通',
       icon: PhoneCall,
-      color: 'text-blue-500',
+      color: 'var(--semi-color-primary)',
     },
     {
       label: '今日时长',
       value: stats?.today_duration ?? 0,
       formatter: formatDuration,
       icon: Clock,
-      color: 'text-green-500',
+      color: 'var(--semi-color-success)',
     },
     {
       label: '今日接通',
       value: stats?.answered_count ?? 0,
       suffix: '通',
       icon: PhoneIncoming,
-      color: 'text-purple-500',
+      color: '#722ed1',
     },
     {
       label: '接通率',
       value: stats?.answer_rate ?? 0,
       suffix: '%',
       icon: Percent,
-      color: 'text-amber-500',
+      color: 'var(--semi-color-warning)',
     },
     {
       label: '总记录',
       value: stats?.total_count ?? 0,
       suffix: '条',
       icon: Database,
-      color: 'text-muted-foreground',
+      color: 'var(--semi-color-text-2)',
     },
   ]
 
   if (isLoading) {
     return (
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card px-4 py-2.5">
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 16,
+        borderRadius: 8,
+        border: '1px solid var(--semi-color-border)',
+        backgroundColor: 'var(--semi-color-bg-2)',
+        padding: '10px 16px',
+      }}>
         {items.map((_, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4" />
-            <Skeleton className="h-4 w-16" />
+          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           </div>
         ))}
       </div>
@@ -84,7 +93,17 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border bg-card px-4 py-2.5">
+    <div style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      columnGap: 24,
+      rowGap: 8,
+      borderRadius: 8,
+      border: '1px solid var(--semi-color-border)',
+      backgroundColor: 'var(--semi-color-bg-2)',
+      padding: '10px 16px',
+    }}>
       {items.map((item, index) => {
         const Icon = item.icon
         const displayValue = item.formatter
@@ -92,12 +111,17 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
           : `${item.value.toLocaleString()}${item.suffix || ''}`
 
         return (
-          <div key={item.label} className="flex items-center gap-2">
-            <Icon className={cn('h-4 w-4', item.color)} />
-            <span className="text-sm text-muted-foreground">{item.label}</span>
-            <span className="text-sm font-semibold">{displayValue}</span>
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon style={{ ...iconStyle, color: item.color }} />
+            <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{item.label}</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{displayValue}</span>
             {index < items.length - 1 && (
-              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+              <span style={{
+                marginLeft: 16,
+                height: 16,
+                width: 1,
+                backgroundColor: 'var(--semi-color-border)',
+              }} />
             )}
           </div>
         )

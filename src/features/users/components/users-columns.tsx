@@ -1,138 +1,88 @@
-import { type ColumnDef } from '@tanstack/react-table'
-import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { DataTableColumnHeader } from '@/components/data-table'
+import { type ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { Tag } from '@douyinfe/semi-ui-19'
 import { LongText } from '@/components/long-text'
 import { callTypes, roles } from '../data/data'
 import { type User } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
 
-export const usersColumns: ColumnDef<User>[] = [
+export const usersColumns: ColumnProps<User>[] = [
   {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label='Select all'
-        className='translate-y-[2px]'
-      />
+    title: 'Username',
+    dataIndex: 'username',
+    sorter: (a, b) => (a?.username ?? '').localeCompare(b?.username ?? ''),
+    render: (_text, record) => (
+      <LongText className='max-w-36'>{record?.username}</LongText>
     ),
-    meta: {
-      className: cn('max-md:sticky start-0 z-10 rounded-tl-[inherit]'),
-    },
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label='Select row'
-        className='translate-y-[2px]'
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
-    accessorKey: 'username',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Username' />
-    ),
-    cell: ({ row }) => (
-      <LongText className='max-w-36 ps-3'>{row.getValue('username')}</LongText>
-    ),
-    meta: {
-      className: cn(
-        'drop-shadow-[0_1px_2px_rgb(0_0_0_/_0.1)] dark:drop-shadow-[0_1px_2px_rgb(255_255_255_/_0.1)]',
-        'ps-0.5 max-md:sticky start-6 @4xl/content:table-cell @4xl/content:drop-shadow-none'
-      ),
-    },
-    enableHiding: false,
-  },
-  {
-    id: 'fullName',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Name' />
-    ),
-    cell: ({ row }) => {
-      const { firstName, lastName } = row.original
-      const fullName = `${firstName} ${lastName}`
+    title: 'Name',
+    dataIndex: 'fullName',
+    render: (_text, record) => {
+      const fullName = `${record?.firstName ?? ''} ${record?.lastName ?? ''}`
       return <LongText className='max-w-36'>{fullName}</LongText>
     },
-    meta: { className: 'w-36' },
+    width: 144,
   },
   {
-    accessorKey: 'email',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Email' />
-    ),
-    cell: ({ row }) => (
-      <div className='w-fit ps-2 text-nowrap'>{row.getValue('email')}</div>
+    title: 'Email',
+    dataIndex: 'email',
+    render: (_text, record) => (
+      <div className='w-fit text-nowrap'>{record?.email}</div>
     ),
   },
   {
-    accessorKey: 'phoneNumber',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Phone Number' />
-    ),
-    cell: ({ row }) => <div>{row.getValue('phoneNumber')}</div>,
-    enableSorting: false,
+    title: 'Phone Number',
+    dataIndex: 'phoneNumber',
   },
   {
-    accessorKey: 'status',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Status' />
-    ),
-    cell: ({ row }) => {
-      const { status } = row.original
+    title: 'Status',
+    dataIndex: 'status',
+    render: (_text, record) => {
+      const status = record?.status
+      if (!status) return null
       const badgeColor = callTypes.get(status)
       return (
-        <div className='flex space-x-2'>
-          <Badge variant='outline' className={cn('capitalize', badgeColor)}>
-            {row.getValue('status')}
-          </Badge>
-        </div>
+        <Tag
+          size='large'
+          shape='circle'
+          className={badgeColor}
+          style={{ textTransform: 'capitalize' }}
+        >
+          {status}
+        </Tag>
       )
     },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
-    },
-    enableHiding: false,
-    enableSorting: false,
+    filters: [
+      { text: 'Active', value: 'active' },
+      { text: 'Inactive', value: 'inactive' },
+      { text: 'Invited', value: 'invited' },
+      { text: 'Suspended', value: 'suspended' },
+    ],
+    onFilter: (value, record) => record?.status === value,
   },
   {
-    accessorKey: 'role',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Role' />
-    ),
-    cell: ({ row }) => {
-      const { role } = row.original
+    title: 'Role',
+    dataIndex: 'role',
+    render: (_text, record) => {
+      const role = record?.role
       const userType = roles.find(({ value }) => value === role)
-
-      if (!userType) {
-        return null
-      }
-
+      if (!userType) return null
       return (
         <div className='flex items-center gap-x-2'>
           {userType.icon && (
             <userType.icon size={16} className='text-muted-foreground' />
           )}
-          <span className='text-sm capitalize'>{row.getValue('role')}</span>
+          <span className='text-sm capitalize'>{role}</span>
         </div>
       )
     },
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
-    },
-    enableSorting: false,
-    enableHiding: false,
+    filters: roles.map((r) => ({ text: r.label, value: r.value })),
+    onFilter: (value, record) => record?.role === value,
   },
   {
-    id: 'actions',
-    cell: DataTableRowActions,
+    title: '',
+    dataIndex: 'actions',
+    width: 50,
+    render: (_text, record) => record ? <DataTableRowActions row={record} /> : null,
   },
 ]

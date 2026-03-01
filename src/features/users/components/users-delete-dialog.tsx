@@ -1,11 +1,7 @@
-'use client'
-
 import { useState } from 'react'
+import { Input, Banner } from '@douyinfe/semi-ui-19'
 import { AlertTriangle } from 'lucide-react'
 import { showSubmittedData } from '@/lib/show-submitted-data'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { type User } from '../data/schema'
 
@@ -57,21 +53,19 @@ export function UsersDeleteDialog({
             from the system. This cannot be undone.
           </p>
 
-          <Label className='my-2'>
-            Username:
+          <div className='my-2'>
+            <label className='text-sm font-medium mb-1 block'>Username:</label>
             <Input
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(v) => setValue(v)}
               placeholder='Enter username to confirm deletion.'
             />
-          </Label>
+          </div>
 
-          <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
-            <AlertDescription>
-              Please be careful, this operation can not be rolled back.
-            </AlertDescription>
-          </Alert>
+          <Banner
+            type='danger'
+            description='Please be careful, this operation can not be rolled back.'
+          />
         </div>
       }
       confirmText='Delete'

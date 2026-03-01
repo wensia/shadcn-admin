@@ -1,6 +1,7 @@
 import { type SVGProps } from 'react'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
 import { Check, CircleCheck, RotateCcw, Settings } from 'lucide-react'
+import { SideSheet, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
 import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
@@ -16,17 +17,7 @@ import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'
 import { useTheme } from '@/context/theme-provider'
 import { useAccentColor, ACCENT_COLORS, type AccentColor } from '@/context/accent-color-provider'
-import { Button } from '@/components/ui/button'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet'
-import { useSidebar } from './ui/sidebar'
+import { useSidebar } from '@/context/sidebar-context'
 
 interface ConfigDrawerProps {
   open?: boolean
@@ -50,45 +41,46 @@ export function ConfigDrawer({ open, onOpenChange, showTrigger = true }: ConfigD
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <>
       {showTrigger && (
-        <SheetTrigger asChild>
-          <Button
-            size='icon'
-            variant='ghost'
-            aria-label='Open theme settings'
-            aria-describedby='config-drawer-description'
-            className='rounded-full'
-          >
-            <Settings aria-hidden='true' />
-          </Button>
-        </SheetTrigger>
+        <SemiButton
+          theme='borderless'
+          icon={<Settings className='size-4' />}
+          className='!rounded-full'
+          aria-label='Open theme settings'
+          onClick={() => onOpenChange?.(true)}
+        />
       )}
-      <SheetContent className='flex flex-col'>
-        <SheetHeader className='pb-0 text-start'>
-          <SheetTitle>Theme Settings</SheetTitle>
-          <SheetDescription id='config-drawer-description'>
-            Adjust the appearance and layout to suit your preferences.
-          </SheetDescription>
-        </SheetHeader>
-        <div className='space-y-6 overflow-y-auto'>
+      <SideSheet
+        visible={!!open}
+        onCancel={() => onOpenChange?.(false)}
+        title='Theme Settings'
+        placement='right'
+        width={340}
+        footer={
+          <div className='flex justify-end'>
+            <SemiButton
+              type='danger'
+              onClick={handleReset}
+              aria-label='Reset all settings to default values'
+            >
+              Reset
+            </SemiButton>
+          </div>
+        }
+      >
+        <p className='text-sm text-[var(--semi-color-text-2)] mb-4'>
+          Adjust the appearance and layout to suit your preferences.
+        </p>
+        <div className='space-y-6'>
           <ThemeConfig />
           <AccentColorConfig />
           <SidebarConfig />
           <LayoutConfig />
           <DirConfig />
         </div>
-        <SheetFooter className='gap-2'>
-          <Button
-            variant='destructive'
-            onClick={handleReset}
-            aria-label='Reset all settings to default values'
-          >
-            Reset
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+      </SideSheet>
+    </>
   )
 }
 
@@ -106,20 +98,19 @@ function SectionTitle({
   return (
     <div
       className={cn(
-        'mb-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground',
+        'mb-2 flex items-center gap-2 text-sm font-semibold text-[var(--semi-color-text-2)]',
         className
       )}
     >
       {title}
       {showReset && onReset && (
-        <Button
-          size='icon'
-          variant='secondary'
-          className='size-4 rounded-full'
+        <SemiButton
+          theme='light'
+          size='small'
+          icon={<RotateCcw className='size-3' />}
+          className='!size-4 !rounded-full'
           onClick={onReset}
-        >
-          <RotateCcw className='size-3' />
-        </Button>
+        />
       )}
     </div>
   )
@@ -259,10 +250,10 @@ function AccentColorConfig() {
           </button>
         ))}
       </div>
-      <div className='mt-2 text-xs text-muted-foreground'>
+      <div className='mt-2 text-xs text-[var(--semi-color-text-2)]'>
         {currentColor?.label}
         {currentColor?.description && (
-          <span className='ml-1 text-muted-foreground/70'>
+          <span className='ml-1 opacity-70'>
             - {currentColor.description}
           </span>
         )}

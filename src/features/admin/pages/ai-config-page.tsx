@@ -6,7 +6,7 @@
 import { BrainCircuit, Settings2, FileText, Layers, BookOpen } from 'lucide-react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import { AIConfigContent } from '../components/integrations/ai-config-content'
 import { AISceneConfigContent } from '../components/integrations/ai-scene-config'
 import { AIPromptManager } from '../components/integrations/ai-prompt-manager'
@@ -19,47 +19,27 @@ export function AIConfigPage() {
     <Main fixed>
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center gap-3">
-          <BrainCircuit className="h-6 w-6 text-muted-foreground" />
+          <BrainCircuit className="h-6 w-6" style={{ color: 'var(--semi-color-text-2)' }} />
           <div>
             <h1 className="text-2xl font-bold">AI 配置</h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm" style={{ color: 'var(--semi-color-text-2)' }}>
               管理 AI 大模型服务、场景配置、Prompt 模板和资料库
             </p>
           </div>
         </div>
-        <Tabs defaultValue="models" className="flex flex-1 flex-col overflow-hidden">
-          <TabsList>
-            <TabsTrigger value="models" className="gap-2">
-              <Settings2 className="h-4 w-4" />
-              模型配置
-            </TabsTrigger>
-            <TabsTrigger value="scenes" className="gap-2">
-              <Layers className="h-4 w-4" />
-              场景配置
-            </TabsTrigger>
-            <TabsTrigger value="prompts" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Prompt 管理
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="gap-2">
-              <BookOpen className="h-4 w-4" />
-              资料库
-            </TabsTrigger>
-          </TabsList>
-          <div className="flex-1 overflow-hidden pt-4">
-            <TabsContent value="models" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <AIConfigContent />
-            </TabsContent>
-            <TabsContent value="scenes" className="h-full m-0 overflow-auto">
-              <AISceneConfigContent />
-            </TabsContent>
-            <TabsContent value="prompts" className="h-full m-0 overflow-auto">
-              <AIPromptManager />
-            </TabsContent>
-            <TabsContent value="documents" className="h-full m-0 overflow-auto">
-              <AIDocumentLibrary />
-            </TabsContent>
-          </div>
+        <Tabs defaultActiveKey="models" className="flex flex-1 flex-col overflow-hidden">
+          <TabPane tab={<span style={{display:'inline-flex',alignItems:'center',gap:8}}><Settings2 size={16}/>模型配置</span>} itemKey="models">
+            <AIConfigContent />
+          </TabPane>
+          <TabPane tab={<span style={{display:'inline-flex',alignItems:'center',gap:8}}><Layers size={16}/>场景配置</span>} itemKey="scenes">
+            <AISceneConfigContent />
+          </TabPane>
+          <TabPane tab={<span style={{display:'inline-flex',alignItems:'center',gap:8}}><FileText size={16}/>Prompt 管理</span>} itemKey="prompts">
+            <AIPromptManager />
+          </TabPane>
+          <TabPane tab={<span style={{display:'inline-flex',alignItems:'center',gap:8}}><BookOpen size={16}/>资料库</span>} itemKey="documents">
+            <AIDocumentLibrary />
+          </TabPane>
         </Tabs>
       </div>
     </Main>

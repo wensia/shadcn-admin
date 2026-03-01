@@ -1,39 +1,22 @@
 /**
- * ChangeHistoryTimeline 变更历史组件
- * 以表格形式展示信息变更和归属变更记录
- *
- * Anthropic 品牌色:
- * - Orange: #d97757 (主要强调色)
- * - Green: #788c5d (次要强调色)
- * - Mid Gray: #b0aea5 (次要元素)
+ * ChangeHistoryTimeline 变更历史组件 - Semi Design 版本
  */
 
 import * as React from 'react'
+import { Table, Tag, Button, Pagination } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { FileEdit, UserCog, ArrowRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
-
-// Anthropic 品牌色
-const anthropicColors = {
-  orange: '#d97757',
-  green: '#788c5d',
-  midGray: '#b0aea5',
-}
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
 import { formatTime } from '@/lib/utils/time'
 import { EmptyState } from './empty-state'
 import type { LeadInfoChangeLog, LeadOwnershipChangeLog } from '../../types'
 import { infoChangeTypeLabels, ownershipChangeTypeLabels } from '../../types'
+
+// Semi Design 配色
+const semiColors = {
+  orange: '#ff7d00',
+  green: '#00b42a',
+  midGray: '#86909c',
+}
 
 type ChangeFilter = 'all' | 'info' | 'ownership'
 
@@ -50,12 +33,11 @@ export function ChangeHistoryTimeline({
   isLoading,
   className,
 }: ChangeHistoryTimelineProps) {
-  const s = useStyleClasses()
   const [filter, setFilter] = React.useState<ChangeFilter>('all')
 
   if (isLoading) {
     return (
-      <div className={cn('flex items-center justify-center py-12', s.text.xs, 'text-muted-foreground')}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0', fontSize: 13, color: 'var(--semi-color-text-2)' }}>
         加载中...
       </div>
     )
@@ -66,30 +48,27 @@ export function ChangeHistoryTimeline({
   const hasNoData = !hasInfoChanges && !hasOwnershipChanges
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* 筛选按钮 */}
-      <div className={cn('flex gap-2', s.gap.tight)}>
+      <div style={{ display: 'flex', gap: 8 }}>
         <Button
-          size="sm"
-          variant={filter === 'all' ? 'default' : 'outline'}
+          size="small"
+          theme={filter === 'all' ? 'solid' : 'light'}
           onClick={() => setFilter('all')}
-          className={cn(s.height.controlSm, s.text.xs)}
         >
           全部 ({(infoChanges?.length || 0) + (ownershipChanges?.length || 0)})
         </Button>
         <Button
-          size="sm"
-          variant={filter === 'info' ? 'default' : 'outline'}
+          size="small"
+          theme={filter === 'info' ? 'solid' : 'light'}
           onClick={() => setFilter('info')}
-          className={cn(s.height.controlSm, s.text.xs)}
         >
           信息变更 ({infoChanges?.length || 0})
         </Button>
         <Button
-          size="sm"
-          variant={filter === 'ownership' ? 'default' : 'outline'}
+          size="small"
+          theme={filter === 'ownership' ? 'solid' : 'light'}
           onClick={() => setFilter('ownership')}
-          className={cn(s.height.controlSm, s.text.xs)}
         >
           归属变更 ({ownershipChanges?.length || 0})
         </Button>
@@ -103,36 +82,17 @@ export function ChangeHistoryTimeline({
         />
       ) : (
         <>
-          {/* 信息变更表格 */}
           {(filter === 'all' || filter === 'info') && hasInfoChanges && (
-            <InfoChangeTable
-              data={infoChanges}
-              showTitle={filter === 'all'}
-            />
+            <InfoChangeTable data={infoChanges} showTitle={filter === 'all'} />
           )}
-
-          {/* 归属变更表格 */}
           {(filter === 'all' || filter === 'ownership') && hasOwnershipChanges && (
-            <OwnershipChangeTable
-              data={ownershipChanges}
-              showTitle={filter === 'all'}
-            />
+            <OwnershipChangeTable data={ownershipChanges} showTitle={filter === 'all'} />
           )}
-
-          {/* 当筛选后无数据时的提示 */}
           {filter === 'info' && !hasInfoChanges && (
-            <EmptyState
-              icon={<FileEdit />}
-              title="暂无信息变更"
-              description="线索信息变更记录将在这里展示"
-            />
+            <EmptyState icon={<FileEdit />} title="暂无信息变更" description="线索信息变更记录将在这里展示" />
           )}
           {filter === 'ownership' && !hasOwnershipChanges && (
-            <EmptyState
-              icon={<UserCog />}
-              title="暂无归属变更"
-              description="线索归属变更记录将在这里展示"
-            />
+            <EmptyState icon={<UserCog />} title="暂无归属变更" description="线索归属变更记录将在这里展示" />
           )}
         </>
       )}
@@ -140,21 +100,12 @@ export function ChangeHistoryTimeline({
   )
 }
 
-/**
- * 信息变更表格
- */
-function InfoChangeTable({
-  data,
-  showTitle,
-}: {
-  data: LeadInfoChangeLog[]
-  showTitle?: boolean
-}) {
-  const s = useStyleClasses()
+/** 信息变更表格 */
+function InfoChangeTable({ data, showTitle }: { data: LeadInfoChangeLog[]; showTitle?: boolean }) {
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
 
-  // 展开 changes 数组，每个字段变更一行
+  // 展开 changes 数组
   const flattenedData = React.useMemo(() => {
     const rows: Array<{
       id: string
@@ -165,13 +116,11 @@ function InfoChangeTable({
       field_name: string
       old_value: string | null | undefined
       new_value: string | null | undefined
-      change_reason?: string
       isFirstInGroup: boolean
       groupSize: number
     }> = []
 
     data.forEach((log) => {
-      // 多字段变更
       if (log.changes && log.changes.length > 0) {
         log.changes.forEach((change, idx) => {
           rows.push({
@@ -183,14 +132,11 @@ function InfoChangeTable({
             field_name: change.field_name,
             old_value: change.old_value,
             new_value: change.new_value,
-            change_reason: log.change_reason,
             isFirstInGroup: idx === 0,
             groupSize: log.changes!.length,
           })
         })
-      }
-      // 单字段变更
-      else if (log.field_name) {
+      } else if (log.field_name) {
         rows.push({
           id: log.id,
           rowKey: log.id,
@@ -200,233 +146,233 @@ function InfoChangeTable({
           field_name: log.field_name,
           old_value: log.old_value,
           new_value: log.new_value,
-          change_reason: log.change_reason,
           isFirstInGroup: true,
           groupSize: 1,
         })
       }
     })
-
     return rows
   }, [data])
 
-  // 客户端分页
   const paginatedData = React.useMemo(() => {
     const start = (page - 1) * pageSize
-    const end = start + pageSize
-    return flattenedData.slice(start, end)
+    return flattenedData.slice(start, start + pageSize)
   }, [flattenedData, page, pageSize])
 
-  // 数据变化时重置页码
-  React.useEffect(() => {
-    setPage(1)
-  }, [data])
+  React.useEffect(() => { setPage(1) }, [data])
+
+  const columns: ColumnProps<(typeof flattenedData)[0]>[] = [
+    {
+      title: '变更时间',
+      dataIndex: 'changed_at',
+      width: 140,
+      render: (text, record) => {
+        if (!record) return null
+        if (record.isFirstInGroup) {
+          return { children: <span style={{ fontSize: 13 }}>{formatTime(text as string)}</span>, props: { rowSpan: record.groupSize } }
+        }
+        return { children: null, props: { rowSpan: 0 } }
+      },
+    },
+    {
+      title: '变更类型',
+      dataIndex: 'change_type',
+      width: 90,
+      render: (text, record) => {
+        if (!record) return null
+        if (record.isFirstInGroup) {
+          return {
+            children: <Tag size="small">{infoChangeTypeLabels[text as keyof typeof infoChangeTypeLabels] || text}</Tag>,
+            props: { rowSpan: record.groupSize },
+          }
+        }
+        return { children: null, props: { rowSpan: 0 } }
+      },
+    },
+    {
+      title: '字段',
+      dataIndex: 'field_name',
+      width: 100,
+      render: (text) => <span style={{ fontSize: 13, fontWeight: 500 }}>{text as string}</span>,
+    },
+    {
+      title: '原值',
+      dataIndex: 'old_value',
+      render: (text) => (
+        <span style={{ textDecoration: 'line-through', color: semiColors.midGray, fontSize: 13 }}>
+          {(text as string) || '-'}
+        </span>
+      ),
+    },
+    {
+      title: '',
+      dataIndex: 'arrow',
+      width: 30,
+      render: () => <ArrowRight style={{ width: 12, height: 12, color: 'var(--semi-color-text-2)' }} />,
+    },
+    {
+      title: '新值',
+      dataIndex: 'new_value',
+      render: (text) => (
+        <span style={{ color: semiColors.green, fontSize: 13 }}>
+          {(text as string) || '-'}
+        </span>
+      ),
+    },
+    {
+      title: '操作人',
+      dataIndex: 'changed_by_name',
+      width: 80,
+      render: (text, record) => {
+        if (!record) return null
+        if (record.isFirstInGroup) {
+          return { children: <span style={{ fontSize: 13 }}>{text as string}</span>, props: { rowSpan: record.groupSize } }
+        }
+        return { children: null, props: { rowSpan: 0 } }
+      },
+    },
+  ]
 
   return (
-    <div className="space-y-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {showTitle && (
-        <div className="flex items-center gap-2">
-          <FileEdit className={cn(s.size.icon)} style={{ color: anthropicColors.orange }} />
-          <h3 className={cn(s.text.sm, 'font-semibold')}>信息变更</h3>
-          <Badge className={cn(s.text.xs, s.height.badge, 'text-white')} style={{ backgroundColor: anthropicColors.orange }}>
-            {data.length}
-          </Badge>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FileEdit style={{ width: 14, height: 14, color: semiColors.orange }} />
+          <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>信息变更</h3>
+          <Tag size="small" style={{ background: semiColors.orange, color: '#fff' }}>{data.length}</Tag>
         </div>
       )}
-      <div className={cn('rounded-md border', s.rounded)}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className={cn(s.text.xs, 'w-[140px]')}>变更时间</TableHead>
-              <TableHead className={cn(s.text.xs, 'w-[90px]')}>变更类型</TableHead>
-              <TableHead className={cn(s.text.xs, 'w-[100px]')}>字段</TableHead>
-              <TableHead className={cn(s.text.xs)}>原值</TableHead>
-              <TableHead className={cn(s.text.xs, 'w-[30px]')}></TableHead>
-              <TableHead className={cn(s.text.xs)}>新值</TableHead>
-              <TableHead className={cn(s.text.xs, 'w-[80px]')}>操作人</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedData.map((row) => (
-              <TableRow key={row.rowKey}>
-                {row.isFirstInGroup ? (
-                  <TableCell
-                    className={cn(s.text.xs, 'align-top')}
-                    rowSpan={row.groupSize}
-                  >
-                    {formatTime(row.changed_at)}
-                  </TableCell>
-                ) : null}
-                {row.isFirstInGroup ? (
-                  <TableCell
-                    className={cn(s.text.xs, 'align-top')}
-                    rowSpan={row.groupSize}
-                  >
-                    <Badge variant="outline" className={cn(s.text.xs, 'h-5')}>
-                      {infoChangeTypeLabels[row.change_type as keyof typeof infoChangeTypeLabels] || row.change_type}
-                    </Badge>
-                  </TableCell>
-                ) : null}
-                <TableCell className={cn(s.text.xs, 'font-medium')}>
-                  {row.field_name}
-                </TableCell>
-                <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                  <span className="line-through" style={{ color: anthropicColors.midGray }}>
-                    {row.old_value || '-'}
-                  </span>
-                </TableCell>
-                <TableCell className={cn(s.text.xs)}>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                </TableCell>
-                <TableCell className={cn(s.text.xs)}>
-                  <span style={{ color: anthropicColors.green }}>
-                    {row.new_value || '-'}
-                  </span>
-                </TableCell>
-                {row.isFirstInGroup ? (
-                  <TableCell
-                    className={cn(s.text.xs, 'align-top')}
-                    rowSpan={row.groupSize}
-                  >
-                    {row.changed_by_name}
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      {/* 分页器 */}
+      <Table
+        columns={columns}
+        dataSource={paginatedData}
+        rowKey="rowKey"
+        pagination={false}
+        size="small"
+        bordered
+      />
       {flattenedData.length > 10 && (
-        <SimplePagination
-          page={page}
-          pageSize={pageSize}
-          total={flattenedData.length}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size)
-            setPage(1)
-          }}
-        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Pagination
+            total={flattenedData.length}
+            currentPage={page}
+            pageSize={pageSize}
+            pageSizeOpts={[10, 20, 50]}
+            showSizeChanger
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          />
+        </div>
       )}
     </div>
   )
 }
 
-/**
- * 归属变更表格
- */
-function OwnershipChangeTable({
-  data,
-  showTitle,
-}: {
-  data: LeadOwnershipChangeLog[]
-  showTitle?: boolean
-}) {
-  const s = useStyleClasses()
+/** 归属变更表格 */
+function OwnershipChangeTable({ data, showTitle }: { data: LeadOwnershipChangeLog[]; showTitle?: boolean }) {
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
 
-  // 客户端分页
   const paginatedData = React.useMemo(() => {
     const start = (page - 1) * pageSize
-    const end = start + pageSize
-    return data.slice(start, end)
+    return data.slice(start, start + pageSize)
   }, [data, page, pageSize])
 
-  // 数据变化时重置页码
-  React.useEffect(() => {
-    setPage(1)
-  }, [data])
+  React.useEffect(() => { setPage(1) }, [data])
+
+  const columns: ColumnProps<LeadOwnershipChangeLog>[] = [
+    {
+      title: '变更时间',
+      dataIndex: 'changed_at',
+      width: 140,
+      render: (text) => <span style={{ fontSize: 13 }}>{formatTime(text as string)}</span>,
+    },
+    {
+      title: '变更类型',
+      dataIndex: 'change_type',
+      width: 90,
+      render: (text) => (
+        <Tag size="small">
+          {ownershipChangeTypeLabels[text as keyof typeof ownershipChangeTypeLabels] || text}
+        </Tag>
+      ),
+    },
+    {
+      title: '顾问变更',
+      dataIndex: 'advisor_change',
+      render: (_text, record) => {
+        if (!record) return null
+        const hasChange = record.previous_advisor_name || record.current_advisor_name
+        if (!hasChange) return <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+            <span style={{ textDecoration: 'line-through', color: semiColors.midGray }}>
+              {record.previous_advisor_name || '无'}
+            </span>
+            <ArrowRight style={{ width: 12, height: 12, color: 'var(--semi-color-text-2)', flexShrink: 0 }} />
+            <span style={{ color: semiColors.green }}>
+              {record.current_advisor_name || '无'}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      title: '校区变更',
+      dataIndex: 'campus_change',
+      render: (_text, record) => {
+        if (!record) return null
+        const hasChange = record.previous_campus_name || record.current_campus_name
+        if (!hasChange) return <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+            <span style={{ textDecoration: 'line-through', color: semiColors.midGray }}>
+              {record.previous_campus_name || '无'}
+            </span>
+            <ArrowRight style={{ width: 12, height: 12, color: 'var(--semi-color-text-2)', flexShrink: 0 }} />
+            <span style={{ color: semiColors.green }}>
+              {record.current_campus_name || '无'}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      title: '操作人',
+      dataIndex: 'changed_by_name',
+      width: 80,
+      render: (text) => <span style={{ fontSize: 13 }}>{(text as string) || '-'}</span>,
+    },
+  ]
 
   return (
-    <div className="space-y-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {showTitle && (
-        <div className="flex items-center gap-2">
-          <UserCog className={cn(s.size.icon)} style={{ color: anthropicColors.orange }} />
-          <h3 className={cn(s.text.sm, 'font-semibold')}>归属变更</h3>
-          <Badge className={cn(s.text.xs, s.height.badge, 'text-white')} style={{ backgroundColor: anthropicColors.orange }}>
-            {data.length}
-          </Badge>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <UserCog style={{ width: 14, height: 14, color: semiColors.orange }} />
+          <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>归属变更</h3>
+          <Tag size="small" style={{ background: semiColors.orange, color: '#fff' }}>{data.length}</Tag>
         </div>
       )}
-      <div className={cn('rounded-md border', s.rounded)}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className={cn(s.text.xs, 'w-[140px]')}>变更时间</TableHead>
-              <TableHead className={cn(s.text.xs, 'w-[90px]')}>变更类型</TableHead>
-              <TableHead className={cn(s.text.xs)}>顾问变更</TableHead>
-              <TableHead className={cn(s.text.xs)}>校区变更</TableHead>
-              <TableHead className={cn(s.text.xs, 'w-[80px]')}>操作人</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedData.map((log) => {
-              const hasAdvisorChange = log.previous_advisor_name || log.current_advisor_name
-              const hasCampusChange = log.previous_campus_name || log.current_campus_name
-
-              return (
-                <TableRow key={log.id}>
-                  <TableCell className={cn(s.text.xs)}>
-                    {formatTime(log.changed_at)}
-                  </TableCell>
-                  <TableCell className={cn(s.text.xs)}>
-                    <Badge variant="outline" className={cn(s.text.xs, 'h-5')}>
-                      {ownershipChangeTypeLabels[log.change_type as keyof typeof ownershipChangeTypeLabels] || log.change_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className={cn(s.text.xs)}>
-                    {hasAdvisorChange ? (
-                      <div className="flex items-center gap-1">
-                        <span className="line-through" style={{ color: anthropicColors.midGray }}>
-                          {log.previous_advisor_name || '无'}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span style={{ color: anthropicColors.green }}>
-                          {log.current_advisor_name || '无'}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={cn(s.text.xs)}>
-                    {hasCampusChange ? (
-                      <div className="flex items-center gap-1">
-                        <span className="line-through" style={{ color: anthropicColors.midGray }}>
-                          {log.previous_campus_name || '无'}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span style={{ color: anthropicColors.green }}>
-                          {log.current_campus_name || '无'}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={cn(s.text.xs)}>
-                    {log.changed_by_name || '-'}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      {/* 分页器 */}
+      <Table
+        columns={columns}
+        dataSource={paginatedData}
+        rowKey="id"
+        pagination={false}
+        size="small"
+        bordered
+      />
       {data.length > 10 && (
-        <SimplePagination
-          page={page}
-          pageSize={pageSize}
-          total={data.length}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size)
-            setPage(1)
-          }}
-        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Pagination
+            total={data.length}
+            currentPage={page}
+            pageSize={pageSize}
+            pageSizeOpts={[10, 20, 50]}
+            showSizeChanger
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          />
+        </div>
       )}
     </div>
   )

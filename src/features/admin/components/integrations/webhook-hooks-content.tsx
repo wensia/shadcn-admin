@@ -2,87 +2,27 @@
  * Webhook钩子配置 - Tab 内容组件
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table'
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import {
   Webhook,
   Plus,
   Pencil,
   Trash2,
-  Search,
   Play,
   Copy,
   X,
   Info,
   Bot,
   Building2,
-  RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Table, Button, Input, Modal, Form, Select, Switch, Tag, Skeleton, Typography, Tooltip, Radio } from '@douyinfe/semi-ui-19'
+import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { webhookHooksApi, dingtalkRobotsApi, adminApi } from '../../api'
 import type {
   WebhookHook,
@@ -94,32 +34,19 @@ import { StatusBadge } from '../status-badge'
 import { formatTime } from '@/lib/utils/time'
 import { MultiSelect } from '@/components/multi-select'
 
+const { Text } = Typography
+const { TextArea } = Input
+
 // 校区机器人映射规则
 interface CampusRobotRule {
   campus_id: string
   robot_ids: string[]
 }
 
-// 表单验证模式
-const formSchema = z.object({
-  name: z.string().min(1, '请输入钩子名称').max(50, '名称最多50个字符'),
-  hook_key: z.string().min(1, '钩子标识不能为空'),
-  description: z.string().max(500, '描述最多500个字符').optional(),
-  robot_ids: z.array(z.string()).default([]),
-  message_template: z.string().optional(),
-  message_type: z.enum(['text', 'markdown']).default('text'),
-  is_active: z.boolean().default(true),
-  sort_order: z.coerce.number().int().min(0).default(0),
-  campus_robot_rules: z.array(z.object({
-    campus_id: z.string(),
-    robot_ids: z.array(z.string()),
-  })).default([]),
-})
-
-type FormData = z.infer<typeof formSchema>
-
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string | undefined) => id?.startsWith(SKELETON_PREFIX)
+
 function createSkeletonData(count: number): WebhookHook[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_PREFIX}${i}`,
@@ -135,6 +62,7 @@ function createSkeletonData(count: number): WebhookHook[] {
 
 export function WebhookHooksContent() {
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -148,27 +76,8 @@ export function WebhookHooksContent() {
   const [deletingItem, setDeletingItem] = useState<WebhookHook | null>(null)
   const [testingItem, setTestingItem] = useState<WebhookHook | null>(null)
   const [testDataString, setTestDataString] = useState('')
-
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      hook_key: '',
-      description: '',
-      robot_ids: [],
-      message_template: '',
-      message_type: 'text',
-      is_active: true,
-      sort_order: 0,
-      campus_robot_rules: [],
-    },
-  })
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'campus_robot_rules',
-  })
+  // 校区规则状态 (替代 useFieldArray)
+  const [campusRobotRules, setCampusRobotRules] = useState<CampusRobotRule[]>([])
 
   // 查询钩子列表
   const { data, isLoading, refetch } = useQuery({
@@ -223,7 +132,6 @@ export function WebhookHooksContent() {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-webhook-hooks'] })
     },
     onError: (error: Error) => {
@@ -264,192 +172,170 @@ export function WebhookHooksContent() {
   })
 
   // 列定义
-  const columns: ColumnDef<WebhookHook>[] = useMemo(
+  const columns: ColumnProps<WebhookHook>[] = useMemo(
     () => [
       {
-        accessorKey: 'name',
-        header: '钩子名称',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-10 w-40" />
+        title: '钩子名称',
+        dataIndex: 'name',
+        width: 200,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={2} style={{ width: 160 }} />
           }
           return (
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <Webhook className="h-4 w-4 text-blue-500" />
-                <span className="font-medium">{row.original.name}</span>
+                <span className="font-medium">{record.name}</span>
               </div>
-              <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded w-fit">
-                {row.original.hook_key}
+              <code className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded w-fit">
+                {record.hook_key}
               </code>
             </div>
           )
         },
       },
       {
-        accessorKey: 'description',
-        header: '描述',
-        size: 250,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '描述',
+        dataIndex: 'description',
+        width: 250,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
           return (
-            <span className="text-sm text-muted-foreground line-clamp-2">
-              {row.original.description || '-'}
-            </span>
+            <Text type="tertiary" size="small" ellipsis={{ showTooltip: true, rows: 2 }} style={{ maxWidth: 230 }}>
+              {record.description || '-'}
+            </Text>
           )
         },
       },
       {
-        accessorKey: 'robots',
-        header: '关联机器人',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-24" />
+        title: '关联机器人',
+        dataIndex: 'robots',
+        width: 200,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
           }
-          const hookRobots = row.original.robots || []
+          const hookRobots = record.robots || []
           if (hookRobots.length === 0) {
-            return <Badge variant="outline">未配置</Badge>
+            return <Tag>未配置</Tag>
           }
           return (
             <div className="flex flex-wrap gap-1">
               {hookRobots.slice(0, 2).map((robot) => (
-                <Badge
+                <Tag
                   key={robot.id}
-                  variant={robot.is_active ? 'default' : 'secondary'}
-                  className="text-xs"
+                  color={robot.is_active ? 'blue' : 'grey'}
+                  size="small"
                 >
-                  <Bot className="h-3 w-3 mr-1" />
+                  <Bot className="h-3 w-3 mr-1 inline" />
                   {robot.name}
-                </Badge>
+                </Tag>
               ))}
               {hookRobots.length > 2 && (
-                <Badge variant="outline" className="text-xs">
-                  +{hookRobots.length - 2}
-                </Badge>
+                <Tag size="small">+{hookRobots.length - 2}</Tag>
               )}
             </div>
           )
         },
       },
       {
-        id: 'campus_rules',
-        header: '校区匹配',
-        size: 140,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
+        title: '校区匹配',
+        dataIndex: 'campus_rules',
+        width: 140,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
-          const rules = (row.original.extra_config as { campus_robot_map?: CampusRobotRule[] })?.campus_robot_map || []
+          const rules = (record.extra_config as { campus_robot_map?: CampusRobotRule[] })?.campus_robot_map || []
           if (rules.length === 0) {
-            return <Badge variant="outline">未配置</Badge>
+            return <Tag>未配置</Tag>
           }
           return (
-            <Badge variant="secondary" className="text-xs">
-              <Building2 className="h-3 w-3 mr-1" />
+            <Tag color="blue" size="small">
+              <Building2 className="h-3 w-3 mr-1 inline" />
               {rules.length} 条规则
-            </Badge>
+            </Tag>
           )
         },
       },
       {
-        accessorKey: 'message_type',
-        header: '消息格式',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
+        title: '消息格式',
+        dataIndex: 'message_type',
+        width: 100,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
           return (
-            <Badge variant={row.original.message_type === 'markdown' ? 'default' : 'secondary'}>
-              {row.original.message_type === 'markdown' ? 'Markdown' : '文本'}
-            </Badge>
+            <Tag color={record.message_type === 'markdown' ? 'blue' : 'grey'} size="small">
+              {record.message_type === 'markdown' ? 'Markdown' : '文本'}
+            </Tag>
           )
         },
       },
       {
-        accessorKey: 'trigger_count',
-        header: '触发次数',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-12" />
+        title: '触发次数',
+        dataIndex: 'trigger_count',
+        width: 100,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
           }
           return (
             <span className="text-sm font-medium">
-              {row.original.trigger_count || 0}
+              {record.trigger_count || 0}
             </span>
           )
         },
       },
       {
-        accessorKey: 'is_active',
-        header: '状态',
-        size: 80,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 80,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
           }
-          return <StatusBadge isActive={row.original.is_active} />
+          return <StatusBadge isActive={record.is_active} />
         },
       },
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 160,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
-          return formatTime(row.original.created_at)
+          return formatTime(record.created_at)
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 150,
-        meta: { sticky: 'right' },
-        cell: ({ row }) => {
-          if (row.original.id?.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-28" />
+        title: '操作',
+        dataIndex: 'actions',
+        width: 150,
+        fixed: 'right' as const,
+        render: (_: unknown, record: WebhookHook) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
           return (
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-                title="配置"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleTestClick(row.original)}
-                title="测试"
-              >
-                <Play className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleCopyHookKey(row.original.hook_key)}
-                title="复制标识"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-                title="删除"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <Tooltip content="配置">
+                <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+              </Tooltip>
+              <Tooltip content="测试">
+                <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTestClick(record)} />
+              </Tooltip>
+              <Tooltip content="复制标识">
+                <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} size="small" onClick={() => handleCopyHookKey(record.hook_key)} />
+              </Tooltip>
+              <Tooltip content="删除">
+                <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} size="small" onClick={() => handleDeleteClick(record)} />
+              </Tooltip>
             </div>
           )
         },
@@ -481,32 +367,40 @@ export function WebhookHooksContent() {
 
   const tableData = isLoading ? createSkeletonData(5) : paginatedHooks
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-  })
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total: filteredHooks.length,
+    onPageChange: setPage,
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
+      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, filteredHooks.length])
 
   // 打开编辑对话框
   const handleEdit = (item: WebhookHook) => {
     setEditingItem(item)
     const campusRules = (item.extra_config as { campus_robot_map?: Array<{ campus_id: string; campus_name?: string; robot_ids: string[] }> })?.campus_robot_map || []
-    form.reset({
-      name: item.name,
-      hook_key: item.hook_key,
-      description: item.description || '',
-      robot_ids: item.robot_ids || [],
-      message_template: item.message_template || '',
-      message_type: item.message_type,
-      is_active: item.is_active,
-      sort_order: item.sort_order,
-      campus_robot_rules: campusRules.map((rule) => ({
-        campus_id: rule.campus_id || '',
-        robot_ids: rule.robot_ids || [],
-      })),
-    })
+    setCampusRobotRules(campusRules.map((rule) => ({
+      campus_id: rule.campus_id || '',
+      robot_ids: rule.robot_ids || [],
+    })))
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        name: item.name,
+        hook_key: item.hook_key,
+        description: item.description || '',
+        robot_ids: item.robot_ids || [],
+        message_template: item.message_template || '',
+        message_type: item.message_type,
+        is_active: item.is_active,
+        sort_order: item.sort_order,
+      })
+    }, 0)
   }
 
   // 点击删除按钮
@@ -561,11 +455,11 @@ export function WebhookHooksContent() {
   }
 
   // 提交表单
-  const handleSubmit = (data: FormData) => {
+  const handleSubmit = (formData: Record<string, unknown>) => {
     if (!editingItem?.id) return
 
     // 处理校区机器人映射规则
-    const campusRobotMap = data.campus_robot_rules
+    const campusRobotMap = campusRobotRules
       .filter((rule) => rule.campus_id && rule.robot_ids.length > 0)
       .map((rule) => ({
         campus_id: rule.campus_id,
@@ -574,13 +468,13 @@ export function WebhookHooksContent() {
       }))
 
     const updateData: WebhookHookUpdate = {
-      name: data.name,
-      description: data.description,
-      robot_ids: data.robot_ids,
-      message_template: data.message_template,
-      message_type: data.message_type,
-      is_active: data.is_active,
-      sort_order: data.sort_order,
+      name: formData.name as string,
+      description: formData.description as string,
+      robot_ids: formData.robot_ids as string[],
+      message_template: formData.message_template as string,
+      message_type: formData.message_type as 'text' | 'markdown',
+      is_active: formData.is_active as boolean,
+      sort_order: formData.sort_order as number,
       extra_config: campusRobotMap.length > 0 ? { campus_robot_map: campusRobotMap } : undefined,
     }
 
@@ -592,9 +486,17 @@ export function WebhookHooksContent() {
     setPage(1)
   }
 
-  // 添加校区规则
+  // 校区规则操作
   const handleAddCampusRule = () => {
-    append({ campus_id: '', robot_ids: [] })
+    setCampusRobotRules(prev => [...prev, { campus_id: '', robot_ids: [] }])
+  }
+
+  const handleRemoveCampusRule = (index: number) => {
+    setCampusRobotRules(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleUpdateCampusRule = (index: number, field: 'campus_id' | 'robot_ids', value: string | string[]) => {
+    setCampusRobotRules(prev => prev.map((rule, i) => i === index ? { ...rule, [field]: value } : rule))
   }
 
   return (
@@ -603,455 +505,255 @@ export function WebhookHooksContent() {
         {/* 工具栏 */}
         <div className="flex items-center gap-2">
           <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索钩子名称或标识..."
-                className="pl-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="状态筛选" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="active">启用</SelectItem>
-                <SelectItem value="inactive">禁用</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索钩子名称或标识..."
+              style={{ width: 256 }}
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+            />
+            <Select
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as string)}
+              style={{ width: 120 }}
+              optionList={[
+                { value: 'all', label: '全部状态' },
+                { value: 'active', label: '启用' },
+                { value: 'inactive', label: '禁用' },
+              ]}
+            />
+            <Button theme="outline" onClick={handleSearch}>搜索</Button>
+            <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
           </div>
-          <Alert className="w-auto py-2">
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              钩子已预定义，点击配置按钮设置机器人和消息模板
-            </AlertDescription>
-          </Alert>
+          <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 flex items-center gap-2">
+            <Info className="h-4 w-4 text-blue-500" />
+            <span className="text-xs text-blue-700">钩子已预定义，点击配置按钮设置机器人和消息模板</span>
+          </div>
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const isSticky = (header.column.columnDef.meta as { sticky?: string })?.sticky === 'right'
-                    return (
-                      <TableHead
-                        key={header.id}
-                        style={{ width: header.getSize() }}
-                        className={isSticky ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]' : ''}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => {
-                      const isSticky = (cell.column.columnDef.meta as { sticky?: string })?.sticky === 'right'
-                      return (
-                        <TableCell
-                          key={cell.id}
-                          className={isSticky ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]' : ''}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      )
-                    })}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {filteredHooks.length > 0 && (
-          <SimplePagination
-            page={page}
-            pageSize={pageSize}
-            total={filteredHooks.length}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey="id"
+            pagination={filteredHooks.length > 0 ? pagination : false}
+            loading={false}
+            empty="暂无数据"
           />
-        )}
+        </div>
       </div>
 
       {/* 编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>配置钩子</DialogTitle>
-            <DialogDescription>
-              配置钩子的机器人关联和消息模板
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
-                <TabsList className="mx-6 grid w-auto grid-cols-2">
-                  <TabsTrigger value="basic">基本配置</TabsTrigger>
-                  <TabsTrigger value="campus-rules">
-                    校区匹配规则
-                    {fields.length > 0 && (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        ({fields.length})
-                      </span>
+      <Modal
+        title="配置钩子"
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => formRef.current?.submitForm()} loading={updateMutation.isPending}>
+              保存配置
+            </Button>
+          </div>
+        }
+        width={700}
+        style={{ maxHeight: '90vh' }}
+      >
+        <div className="text-sm text-gray-500 mb-4">配置钩子的机器人关联和消息模板</div>
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleSubmit}
+          labelPosition="top"
+        >
+          <Tabs defaultActiveKey="basic">
+            <TabPane tab="基本配置" itemKey="basic">
+              <div className="mt-4 space-y-4">
+                <Form.Input field="name" label="钩子名称" placeholder="钩子名称" disabled />
+                <Form.Input field="hook_key" label="钩子标识" placeholder="唯一标识" disabled />
+                <Form.TextArea field="description" label="描述" placeholder="钩子描述" disabled />
+
+                <div>
+                  <div className="text-sm font-medium mb-2">关联机器人</div>
+                  <Form.Slot label="">
+                    {({ values }: { values: Record<string, unknown> }) => (
+                      <MultiSelect
+                        options={robotOptions}
+                        value={(values.robot_ids as string[]) || []}
+                        onValueChange={(v) => formRef.current?.setValue('robot_ids', v)}
+                        placeholder="选择关联的钉钉机器人"
+                      />
                     )}
-                  </TabsTrigger>
-                </TabsList>
+                  </Form.Slot>
+                  <div className="text-xs text-gray-500 mt-1">选择触发此钩子时发送消息的机器人</div>
+                </div>
 
-                <TabsContent value="basic" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>钩子名称</FormLabel>
-                        <FormControl>
-                          <Input placeholder="钩子名称" {...field} disabled />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div>
+                  <div className="text-sm font-medium mb-2">消息格式</div>
+                  <Form.RadioGroup field="message_type" direction="horizontal">
+                    <Radio value="text">文本</Radio>
+                    <Radio value="markdown">Markdown</Radio>
+                  </Form.RadioGroup>
+                </div>
 
-                  <FormField
-                    control={form.control}
-                    name="hook_key"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>钩子标识</FormLabel>
-                        <FormControl>
-                          <Input placeholder="唯一标识" {...field} disabled />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <Form.TextArea
+                  field="message_template"
+                  label="消息模板"
+                  placeholder={'消息模板，支持变量替换，如：${user} 执行了 ${action}'}
+                  rows={4}
+                  extraText={'支持变量替换：使用 ${变量名} 格式，如 ${user}、${time}、${data}'}
+                />
 
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>描述</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="钩子描述"
-                            rows={2}
-                            {...field}
-                            disabled
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium">启用状态</div>
+                    <div className="text-xs text-gray-500">设置该钩子是否启用</div>
+                  </div>
+                  <Form.Switch field="is_active" noLabel />
+                </div>
+              </div>
+            </TabPane>
 
-                  <FormField
-                    control={form.control}
-                    name="robot_ids"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>关联机器人</FormLabel>
-                        <FormControl>
-                          <MultiSelect
-                            options={robotOptions}
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            placeholder="选择关联的钉钉机器人"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          选择触发此钩子时发送消息的机器人
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <TabPane
+              tab={
+                <span>
+                  校区匹配规则
+                  {campusRobotRules.length > 0 && (
+                    <span className="ml-1 text-xs text-gray-400">
+                      ({campusRobotRules.length})
+                    </span>
+                  )}
+                </span>
+              }
+              itemKey="campus-rules"
+            >
+              <div className="mt-4 space-y-4">
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 flex items-center gap-2">
+                  <Info className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm text-blue-700">
+                    如果设置了规则，钩子会优先匹配顾问所属校区对应的机器人；
+                    当没有匹配规则时，会发送给上方选择的默认机器人列表。
+                  </span>
+                </div>
 
-                  <FormField
-                    control={form.control}
-                    name="message_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>消息格式</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            className="flex gap-4"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="text" id="text" />
-                              <Label htmlFor="text">文本</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="markdown" id="markdown" />
-                              <Label htmlFor="markdown">Markdown</Label>
-                            </div>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="message_template"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>消息模板</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="消息模板，支持变量替换，如：${user} 执行了 ${action}"
-                            rows={4}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          支持变量替换：使用 {'${变量名}'} 格式，如 {'${user}'}、{'${time}'}、{'${data}'}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>启用状态</FormLabel>
-                          <div className="text-sm text-muted-foreground">
-                            设置该钩子是否启用
-                          </div>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </TabsContent>
-
-                <TabsContent value="campus-rules" className="flex-1 overflow-y-auto px-6 mt-4 space-y-4">
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      如果设置了规则，钩子会优先匹配顾问所属校区对应的机器人；
-                      当没有匹配规则时，会发送给上方选择的默认机器人列表。
-                    </AlertDescription>
-                  </Alert>
-
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-start gap-2 p-3 border rounded-lg">
-                      <div className="flex-1 space-y-3">
-                        <FormField
-                          control={form.control}
-                          name={`campus_robot_rules.${index}.campus_id`}
-                          render={({ field: selectField }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">校区</FormLabel>
-                              <Select
-                                value={selectField.value}
-                                onValueChange={selectField.onChange}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="选择校区" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {campusOptions.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`campus_robot_rules.${index}.robot_ids`}
-                          render={({ field: multiField }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">机器人</FormLabel>
-                              <FormControl>
-                                <MultiSelect
-                                  options={robotOptions}
-                                  value={multiField.value}
-                                  onValueChange={multiField.onChange}
-                                  placeholder="选择机器人"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
+                {campusRobotRules.map((rule, index) => (
+                  <div key={index} className="flex items-start gap-2 p-3 border rounded-lg">
+                    <div className="flex-1 space-y-3">
+                      <div>
+                        <div className="text-xs font-medium mb-1">校区</div>
+                        <Select
+                          value={rule.campus_id}
+                          onChange={(v) => handleUpdateCampusRule(index, 'campus_id', v as string)}
+                          optionList={campusOptions}
+                          placeholder="选择校区"
+                          style={{ width: '100%' }}
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 mt-6"
-                        onClick={() => remove(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <div>
+                        <div className="text-xs font-medium mb-1">机器人</div>
+                        <MultiSelect
+                          options={robotOptions}
+                          value={rule.robot_ids}
+                          onValueChange={(v) => handleUpdateCampusRule(index, 'robot_ids', v)}
+                          placeholder="选择机器人"
+                        />
+                      </div>
                     </div>
-                  ))}
+                    <Button
+                      theme="borderless"
+                      type="tertiary"
+                      icon={<X className="h-4 w-4" />}
+                      size="small"
+                      className="shrink-0 mt-6"
+                      onClick={() => handleRemoveCampusRule(index)}
+                    />
+                  </div>
+                ))}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddCampusRule}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    新增匹配规则
-                  </Button>
-                </TabsContent>
-              </Tabs>
-
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
+                  theme="outline"
+                  size="small"
+                  icon={<Plus className="h-4 w-4" />}
+                  onClick={handleAddCampusRule}
                 >
-                  取消
+                  新增匹配规则
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                >
-                  {updateMutation.isPending ? '保存中...' : '保存配置'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+              </div>
+            </TabPane>
+          </Tabs>
+        </Form>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除钩子「{deletingItem?.name}」吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除钩子「{deletingItem?.name}」吗？此操作不可撤销。
+      </Modal>
 
       {/* 测试对话框 */}
-      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>测试钩子</DialogTitle>
-            <DialogDescription>
-              将使用测试数据触发钩子，发送消息到配置的钉钉群
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                将使用测试数据触发钩子，发送消息到配置的钉钉群
-              </AlertDescription>
-            </Alert>
+      <Modal
+        title="测试钩子"
+        visible={testDialogOpen}
+        onCancel={() => setTestDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setTestDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={handleTestSubmit} loading={testMutation.isPending}>
+              发送测试消息
+            </Button>
+          </div>
+        }
+        width={600}
+      >
+        <div className="text-sm text-gray-500 mb-4">
+          将使用测试数据触发钩子，发送消息到配置的钉钉群
+        </div>
+        <div className="space-y-4">
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 flex items-center gap-2">
+            <Info className="h-4 w-4 text-blue-500" />
+            <span className="text-sm text-blue-700">将使用测试数据触发钩子，发送消息到配置的钉钉群</span>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <span className="font-medium">钩子名称：</span>
-                <span>{testingItem?.name}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="font-medium">钩子标识：</span>
-                <code className="text-sm bg-muted px-1.5 py-0.5 rounded">
-                  {testingItem?.hook_key}
-                </code>
-              </div>
-              <div className="flex gap-2">
-                <span className="font-medium">关联机器人数：</span>
-                <span>{testingItem?.robot_ids?.length || 0} 个</span>
-              </div>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <span className="font-medium">钩子名称：</span>
+              <span>{testingItem?.name}</span>
             </div>
-
-            <div className="space-y-2">
-              <Label>测试数据 (JSON格式)</Label>
-              <Textarea
-                value={testDataString}
-                onChange={(e) => setTestDataString(e.target.value)}
-                rows={6}
-                placeholder='{"user": "测试用户", "action": "测试动作", "time": "2024-01-01 12:00:00"}'
-              />
+            <div className="flex gap-2">
+              <span className="font-medium">钩子标识：</span>
+              <code className="text-sm bg-gray-100 px-1.5 py-0.5 rounded">
+                {testingItem?.hook_key}
+              </code>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-medium">关联机器人数：</span>
+              <span>{testingItem?.robot_ids?.length || 0} 个</span>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTestDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleTestSubmit} disabled={testMutation.isPending}>
-              {testMutation.isPending ? '发送中...' : '发送测试消息'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+          <div className="space-y-2">
+            <div className="text-sm font-medium">测试数据 (JSON格式)</div>
+            <TextArea
+              value={testDataString}
+              onChange={(v) => setTestDataString(v)}
+              rows={6}
+              placeholder='{"user": "测试用户", "action": "测试动作", "time": "2024-01-01 12:00:00"}'
+            />
+          </div>
+        </div>
+      </Modal>
     </>
   )
 }

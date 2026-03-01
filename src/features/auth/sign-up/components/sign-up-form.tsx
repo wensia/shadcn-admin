@@ -1,57 +1,21 @@
-import { useState } from 'react'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { IconFacebook, IconGithub } from '@/assets/brand-icons'
+import { useState, useRef } from 'react'
+import { Form, Button } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconGithubLogo } from '@douyinfe/semi-icons'
+import { IconFacebook } from '@/assets/brand-icons'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { PasswordInput } from '@/components/password-input'
-
-const formSchema = z
-  .object({
-    email: z.email({
-      error: (iss) =>
-        iss.input === '' ? 'Please enter your email' : undefined,
-    }),
-    password: z
-      .string()
-      .min(1, 'Please enter your password')
-      .min(7, 'Password must be at least 7 characters long'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match.",
-    path: ['confirmPassword'],
-  })
 
 export function SignUpForm({
   className,
   ...props
 }: React.HTMLAttributes<HTMLFormElement>) {
   const [isLoading, setIsLoading] = useState(false)
+  const formRef = useRef<FormApi>()
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-      confirmPassword: '',
-    },
-  })
-
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  function handleSubmit(values: Record<string, any>) {
     setIsLoading(true)
     // eslint-disable-next-line no-console
-    console.log(data)
+    console.log(values)
 
     setTimeout(() => {
       setIsLoading(false)
@@ -59,85 +23,92 @@ export function SignUpForm({
   }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-3', className)}
-        {...props}
+    <Form
+      getFormApi={(api) => { formRef.current = api }}
+      onSubmit={handleSubmit}
+      className={cn('grid gap-3', className)}
+    >
+      <Form.Input
+        field='email'
+        label='Email'
+        placeholder='name@example.com'
+        rules={[{ required: true, message: 'Please enter your email' }]}
+      />
+
+      <Form.Input
+        field='password'
+        label='Password'
+        mode='password'
+        placeholder='********'
+        rules={[
+          { required: true, message: 'Please enter your password' },
+          { min: 7, message: 'Password must be at least 7 characters long' },
+        ]}
+      />
+
+      <Form.Input
+        field='confirmPassword'
+        label='Confirm Password'
+        mode='password'
+        placeholder='********'
+        rules={[
+          { required: true, message: 'Please confirm your password' },
+          {
+            validator: (_rule: any, value: string) => {
+              const password = formRef.current?.getValue('password')
+              if (value && password && value !== password) {
+                return false
+              }
+              return true
+            },
+            message: "Passwords don't match.",
+          },
+        ]}
+      />
+
+      <Button
+        htmlType='submit'
+        theme='solid'
+        block
+        loading={isLoading}
+        style={{ marginTop: 8 }}
       >
-        <FormField
-          control={form.control}
-          name='email'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder='name@example.com' {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='password'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <PasswordInput placeholder='********' {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='confirmPassword'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
-              <FormControl>
-                <PasswordInput placeholder='********' {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button className='mt-2' disabled={isLoading}>
-          Create Account
+        Create Account
+      </Button>
+
+      <div className='relative my-2'>
+        <div className='absolute inset-0 flex items-center'>
+          <span className='w-full border-t' />
+        </div>
+        <div className='relative flex justify-center text-xs uppercase'>
+          <span className='bg-[var(--semi-color-bg-0)] px-2' style={{ color: 'var(--semi-color-text-2)' }}>
+            Or continue with
+          </span>
+        </div>
+      </div>
+
+      <div className='grid grid-cols-2 gap-2'>
+        <Button
+          theme='borderless'
+          className='w-full'
+          type='button'
+          disabled={isLoading}
+          icon={<IconGithubLogo />}
+          style={{ border: '1px solid var(--semi-color-border)' }}
+        >
+          GitHub
         </Button>
-
-        <div className='relative my-2'>
-          <div className='absolute inset-0 flex items-center'>
-            <span className='w-full border-t' />
-          </div>
-          <div className='relative flex justify-center text-xs uppercase'>
-            <span className='bg-background px-2 text-muted-foreground'>
-              Or continue with
-            </span>
-          </div>
-        </div>
-
-        <div className='grid grid-cols-2 gap-2'>
-          <Button
-            variant='outline'
-            className='w-full'
-            type='button'
-            disabled={isLoading}
-          >
-            <IconGithub className='h-4 w-4' /> GitHub
-          </Button>
-          <Button
-            variant='outline'
-            className='w-full'
-            type='button'
-            disabled={isLoading}
-          >
-            <IconFacebook className='h-4 w-4' /> Facebook
-          </Button>
-        </div>
-      </form>
+        <Button
+          theme='borderless'
+          className='w-full'
+          type='button'
+          disabled={isLoading}
+          icon={<IconFacebook className='h-4 w-4' />}
+          style={{ border: '1px solid var(--semi-color-border)' }}
+        >
+          Facebook
+        </Button>
+      </div>
     </Form>
   )
 }

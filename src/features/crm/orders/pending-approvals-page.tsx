@@ -1,28 +1,35 @@
 /**
  * 待审批订单页面
- * 包含领导审批和财务确认两个Tab
+ * Semi Design 重构版 - 包含领导审批和财务确认两个Tab
  */
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Button,
+  Input,
+  Tabs,
+  TabPane,
+  Tag,
+  Typography,
+} from '@douyinfe/semi-ui-19'
+import { IconRefresh, IconSearch } from '@douyinfe/semi-icons'
+import { User, DollarSign, ClipboardList } from 'lucide-react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { RefreshCw, Search, User, DollarSign, ClipboardList } from 'lucide-react'
 import { orderApi } from './api'
 import { OrdersTable } from './components/orders-table'
 import { ApprovalDialog } from './components/approval-dialog'
 import type { OrderListItem, PendingApprovalParams } from './types'
+
+const { Title: SemiTitle, Text } = Typography
 
 export function PendingApprovalsPage() {
   useDocumentTitle('待审批订单')
   const queryClient = useQueryClient()
 
   // 当前Tab
-  const [activeTab, setActiveTab] = useState<'leader' | 'finance'>('leader')
+  const [activeTab, setActiveTab] = useState<string>('leader')
 
   // 状态
   const [leaderPagination, setLeaderPagination] = useState({ page: 1, size: 20 })
@@ -102,120 +109,107 @@ export function PendingApprovalsPage() {
   const financeTotal = financeData?.total || 0
 
   return (
-    <Main fixed className="min-h-0">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+    <Main fixed style={{ minHeight: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 16, overflow: 'hidden' }}>
         {/* 页面标题 */}
-        <div className="flex flex-shrink-0 items-center justify-between">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <ClipboardList className="h-6 w-6" />
+            <SemiTitle heading={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ClipboardList size={24} />
               待审批订单
-            </h1>
-            <p className="text-muted-foreground">审核订单并决定是否通过</p>
+            </SemiTitle>
+            <Text type="tertiary">审核订单并决定是否通过</Text>
           </div>
         </div>
 
         {/* Tabs */}
         <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as 'leader' | 'finance')}
-          className="flex flex-1 flex-col min-h-0"
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key)}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
+          tabBarExtraContent={
+            <Button icon={<IconRefresh />} onClick={handleRefresh} />
+          }
         >
-          <div className="flex items-center justify-between flex-shrink-0">
-            <TabsList>
-              <TabsTrigger value="leader" className="gap-2">
-                <User className="h-4 w-4" />
+          <TabPane
+            tab={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <User size={14} />
                 领导审批
                 {leaderTotal > 0 && (
-                  <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
-                    {leaderTotal}
-                  </Badge>
+                  <Tag style={{ marginLeft: 4 }}>{leaderTotal}</Tag>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="finance" className="gap-2">
-                <DollarSign className="h-4 w-4" />
-                财务确认
-                {financeTotal > 0 && (
-                  <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
-                    {financeTotal}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* 领导审批Tab */}
-          <TabsContent value="leader" className="flex-1 flex flex-col min-h-0 mt-4">
-            {/* 搜索栏 */}
-            <div className="flex gap-4 items-center mb-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </span>
+            }
+            itemKey="leader"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 16, paddingTop: 16 }}>
+              {/* 搜索栏 */}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <Input
+                  prefix={<IconSearch />}
                   placeholder="搜索学员姓名、电话、订单号..."
                   value={leaderKeyword}
-                  onChange={(e) => setLeaderKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setLeaderPagination({ ...leaderPagination, page: 1 })
-                    }
-                  }}
-                  className="pl-9"
+                  onChange={(val) => setLeaderKeyword(val)}
+                  onEnterPress={() => setLeaderPagination({ ...leaderPagination, page: 1 })}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              {/* 表格 */}
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <OrdersTable
+                  data={leaderOrders}
+                  total={leaderTotal}
+                  page={leaderPagination.page}
+                  pageSize={leaderPagination.size}
+                  isLoading={isLeaderLoading}
+                  onPageChange={(page) => setLeaderPagination({ ...leaderPagination, page })}
+                  onPageSizeChange={(size) => setLeaderPagination({ page: 1, size })}
+                  onRowClick={handleRowClick}
                 />
               </div>
             </div>
+          </TabPane>
 
-            {/* 表格 */}
-            <div className="flex-1 min-h-0">
-              <OrdersTable
-                data={leaderOrders}
-                total={leaderTotal}
-                page={leaderPagination.page}
-                pageSize={leaderPagination.size}
-                isLoading={isLeaderLoading}
-                onPageChange={(page) => setLeaderPagination({ ...leaderPagination, page })}
-                onPageSizeChange={(size) => setLeaderPagination({ page: 1, size })}
-                onRowClick={handleRowClick}
-              />
-            </div>
-          </TabsContent>
-
-          {/* 财务确认Tab */}
-          <TabsContent value="finance" className="flex-1 flex flex-col min-h-0 mt-4">
-            {/* 搜索栏 */}
-            <div className="flex gap-4 items-center mb-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <TabPane
+            tab={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <DollarSign size={14} />
+                财务确认
+                {financeTotal > 0 && (
+                  <Tag style={{ marginLeft: 4 }}>{financeTotal}</Tag>
+                )}
+              </span>
+            }
+            itemKey="finance"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 16, paddingTop: 16 }}>
+              {/* 搜索栏 */}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <Input
+                  prefix={<IconSearch />}
                   placeholder="搜索学员姓名、电话、订单号..."
                   value={financeKeyword}
-                  onChange={(e) => setFinanceKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setFinancePagination({ ...financePagination, page: 1 })
-                    }
-                  }}
-                  className="pl-9"
+                  onChange={(val) => setFinanceKeyword(val)}
+                  onEnterPress={() => setFinancePagination({ ...financePagination, page: 1 })}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              {/* 表格 */}
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <OrdersTable
+                  data={financeOrders}
+                  total={financeTotal}
+                  page={financePagination.page}
+                  pageSize={financePagination.size}
+                  isLoading={isFinanceLoading}
+                  onPageChange={(page) => setFinancePagination({ ...financePagination, page })}
+                  onPageSizeChange={(size) => setFinancePagination({ page: 1, size })}
+                  onRowClick={handleRowClick}
                 />
               </div>
             </div>
-
-            {/* 表格 */}
-            <div className="flex-1 min-h-0">
-              <OrdersTable
-                data={financeOrders}
-                total={financeTotal}
-                page={financePagination.page}
-                pageSize={financePagination.size}
-                isLoading={isFinanceLoading}
-                onPageChange={(page) => setFinancePagination({ ...financePagination, page })}
-                onPageSizeChange={(size) => setFinancePagination({ page: 1, size })}
-                onRowClick={handleRowClick}
-              />
-            </div>
-          </TabsContent>
+          </TabPane>
         </Tabs>
       </div>
 
@@ -224,7 +218,7 @@ export function PendingApprovalsPage() {
         open={approvalDialogOpen}
         onOpenChange={setApprovalDialogOpen}
         order={selectedOrder}
-        approvalType={activeTab}
+        approvalType={activeTab as 'leader' | 'finance'}
         onSuccess={handleApprovalSuccess}
       />
     </Main>

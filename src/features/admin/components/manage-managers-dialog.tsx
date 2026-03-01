@@ -6,35 +6,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Users, UserPlus, Trash2, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Label } from '@/components/ui/label'
+import { Users, UserPlus, Trash2 } from 'lucide-react'
+import { Button, Modal, Select, Tag, Typography } from '@douyinfe/semi-ui-19'
+import { IconLoading } from '@douyinfe/semi-icons'
 import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
 import { adminApi } from '../api'
 import type {
@@ -46,6 +20,8 @@ import type {
 import { MANAGER_TYPE_OPTIONS } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
+const { Text } = Typography
+
 interface ManageManagersDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -54,10 +30,10 @@ interface ManageManagersDialogProps {
 }
 
 /** 负责人类型显示配置 */
-const managerTypeBadgeVariants: Record<ManagerType, 'default' | 'secondary' | 'outline'> = {
-  manager: 'default',
-  deputy: 'secondary',
-  supervisor: 'outline',
+const managerTypeTagColors: Record<ManagerType, string> = {
+  manager: 'blue',
+  deputy: 'cyan',
+  supervisor: 'grey',
 }
 
 const managerTypeLabels: Record<ManagerType, string> = {
@@ -80,10 +56,6 @@ export function ManageManagersDialog({
 
   // 员工选择器弹窗状态
   const [employeeSelectorOpen, setEmployeeSelectorOpen] = useState(false)
-
-  // 删除确认对话框状态
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deletingManager, setDeletingManager] = useState<DepartmentManagerItem | null>(null)
 
   // 获取负责人列表
   const {
@@ -132,8 +104,6 @@ export function ManageManagersDialog({
     },
     onSuccess: () => {
       toast.success('移除负责人成功')
-      setDeleteDialogOpen(false)
-      setDeletingManager(null)
       refetchManagers()
       queryClient.invalidateQueries({ queryKey: ['admin-campus-departments'] })
       onSuccess?.()
@@ -155,163 +125,160 @@ export function ManageManagersDialog({
     })
   }
 
-  // 处理删除点击
+  // 处理删除点击 - 使用 Semi Modal.warning 确认
   const handleDeleteClick = (manager: DepartmentManagerItem) => {
-    setDeletingManager(manager)
-    setDeleteDialogOpen(true)
-  }
-
-  // 处理删除确认
-  const handleDeleteConfirm = () => {
-    if (deletingManager) {
-      removeMutation.mutate(deletingManager.id)
-    }
+    Modal.warning({
+      title: '确认移除负责人',
+      content: (
+        <span>
+          确定要移除「{manager.employee?.name}」的
+          {managerTypeLabels[manager.manager_type]}
+          职责吗？此操作不可撤销。
+        </span>
+      ),
+      okText: '移除',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: () => {
+        removeMutation.mutate(manager.id)
+      },
+    })
   }
 
   // 关闭对话框时重置状态
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setSelectedEmployee(null)
-      setSelectedManagerType('manager')
-    }
-    onOpenChange(newOpen)
+  const handleClose = () => {
+    setSelectedEmployee(null)
+    setSelectedManagerType('manager')
+    onOpenChange(false)
   }
+
+  // 负责人类型选项
+  const managerTypeOptions = MANAGER_TYPE_OPTIONS.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }))
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              负责人管理
-            </DialogTitle>
-            <DialogDescription>
-              {campusDepartment
-                ? `管理「${campusDepartment.campus_name} - ${campusDepartment.department_name}」的负责人`
-                : '管理部门负责人'}
-            </DialogDescription>
-          </DialogHeader>
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            负责人管理
+          </div>
+        }
+        visible={open}
+        onCancel={handleClose}
+        footer={null}
+        width={600}
+        style={{ maxHeight: '85vh' }}
+      >
+        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 16 }}>
+          {campusDepartment
+            ? `管理「${campusDepartment.campus_name} - ${campusDepartment.department_name}」的负责人`
+            : '管理部门负责人'}
+        </Text>
 
-          <div className="flex-1 overflow-y-auto space-y-6 py-4">
-            {/* 当前负责人列表 */}
-            <div>
-              <h4 className="text-sm font-medium mb-3">当前负责人</h4>
-              {isLoadingManagers ? (
-                <div className="space-y-2">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="flex-1 space-y-1.5">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-3 w-32" />
-                      </div>
-                      <Skeleton className="h-6 w-14" />
+        <div className="space-y-6" style={{ maxHeight: 'calc(85vh - 160px)', overflowY: 'auto' }}>
+          {/* 当前负责人列表 */}
+          <div>
+            <h4 className="text-sm font-medium mb-3">当前负责人</h4>
+            {isLoadingManagers ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div className="h-10 w-10 rounded-full bg-[var(--semi-color-fill-0)] animate-pulse" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-4 w-24 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
+                      <div className="h-3 w-32 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
                     </div>
-                  ))}
-                </div>
-              ) : managers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
-                  暂无负责人，请添加
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {managers.map((manager) => (
-                    <div
-                      key={manager.id}
-                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">
-                          {manager.employee?.name || '未知员工'}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {manager.employee?.phone || manager.employee?.email || '-'}
-                        </div>
-                      </div>
-                      <Badge variant={managerTypeBadgeVariants[manager.manager_type]}>
-                        {managerTypeLabels[manager.manager_type]}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0"
-                        onClick={() => handleDeleteClick(manager)}
-                        disabled={removeMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 添加负责人表单 */}
-            <div className="border-t pt-6">
-              <h4 className="text-sm font-medium mb-3">添加负责人</h4>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2 min-w-0">
-                    <Label>选择员工</Label>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start font-normal"
-                      onClick={() => setEmployeeSelectorOpen(true)}
-                    >
-                      {selectedEmployee ? (
-                        <span>{selectedEmployee.name}</span>
-                      ) : (
-                        <span className="text-muted-foreground">点击选择员工...</span>
-                      )}
-                    </Button>
+                    <div className="h-6 w-14 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
                   </div>
-
-                  <div className="space-y-2 min-w-0">
-                    <Label>负责人类型</Label>
-                    <Select
-                      value={selectedManagerType}
-                      onValueChange={(value) => setSelectedManagerType(value as ManagerType)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MANAGER_TYPE_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleAddManager}
-                  disabled={!selectedEmployee || addMutation.isPending}
-                  className="w-full"
-                >
-                  {addMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      添加中...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      添加负责人
-                    </>
-                  )}
-                </Button>
+                ))}
               </div>
+            ) : managers.length === 0 ? (
+              <div className="text-center py-8 border rounded-lg border-dashed" style={{ color: 'var(--semi-color-text-2)' }}>
+                暂无负责人，请添加
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {managers.map((manager) => (
+                  <div
+                    key={manager.id}
+                    className="flex items-center gap-3 p-3 border rounded-lg hover:bg-[var(--semi-color-fill-0)] transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--semi-color-primary-light-default)' }}>
+                      <Users className="h-5 w-5" style={{ color: 'var(--semi-color-primary)' }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">
+                        {manager.employee?.name || '未知员工'}
+                      </div>
+                      <Text type="tertiary" size="small" className="truncate block">
+                        {manager.employee?.phone || manager.employee?.email || '-'}
+                      </Text>
+                    </div>
+                    <Tag color={managerTypeTagColors[manager.manager_type]} type="light">
+                      {managerTypeLabels[manager.manager_type]}
+                    </Tag>
+                    <Button
+                      theme="borderless"
+                      type="danger"
+                      icon={<Trash2 className="h-4 w-4" />}
+                      onClick={() => handleDeleteClick(manager)}
+                      disabled={removeMutation.isPending}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 添加负责人表单 */}
+          <div className="border-t pt-6">
+            <h4 className="text-sm font-medium mb-3">添加负责人</h4>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 min-w-0">
+                  <label className="text-sm font-medium">选择员工</label>
+                  <Button
+                    theme="light"
+                    style={{ width: '100%', justifyContent: 'flex-start', fontWeight: 'normal' }}
+                    onClick={() => setEmployeeSelectorOpen(true)}
+                  >
+                    {selectedEmployee ? (
+                      <span>{selectedEmployee.name}</span>
+                    ) : (
+                      <span style={{ color: 'var(--semi-color-text-2)' }}>点击选择员工...</span>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="space-y-2 min-w-0">
+                  <label className="text-sm font-medium">负责人类型</label>
+                  <Select
+                    value={selectedManagerType}
+                    onChange={(value) => setSelectedManagerType(value as ManagerType)}
+                    style={{ width: '100%' }}
+                    optionList={managerTypeOptions}
+                  />
+                </div>
+              </div>
+
+              <Button
+                theme="solid"
+                type="primary"
+                onClick={handleAddManager}
+                disabled={!selectedEmployee || addMutation.isPending}
+                block
+                icon={addMutation.isPending ? <IconLoading spin /> : <UserPlus className="h-4 w-4" />}
+              >
+                {addMutation.isPending ? '添加中...' : '添加负责人'}
+              </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </Modal>
 
       {/* 员工选择器弹窗 */}
       <EmployeeSelectorDialog
@@ -326,29 +293,6 @@ export function ManageManagersDialog({
         excludeIds={existingManagerIds}
         filterByAdvisorPosition={false}
       />
-
-      {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认移除负责人</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要移除「{deletingManager?.employee?.name}」的
-              {deletingManager?.manager_type && managerTypeLabels[deletingManager.manager_type]}
-              职责吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {removeMutation.isPending ? '移除中...' : '移除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }

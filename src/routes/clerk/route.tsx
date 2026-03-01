@@ -2,9 +2,9 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { ClerkProvider } from '@clerk/clerk-react'
 import { ExternalLink, Key } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { PanelLeftIcon } from 'lucide-react'
+import { Banner, Divider } from '@douyinfe/semi-ui-19'
+import { useSidebar } from '@/context/sidebar-context'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Main } from '@/components/layout/main'
@@ -42,7 +42,7 @@ function MissingClerkPubKey() {
   return (
     <AuthenticatedLayout>
       <div className='bg-backgroundh-16 flex justify-between p-4'>
-        <SidebarTrigger variant='outline' className='scale-125 sm:scale-100' />
+        <ClerkSidebarTrigger />
         <div className='space-x-4'>
           <ThemeSwitch />
           <ConfigDrawer />
@@ -50,16 +50,17 @@ function MissingClerkPubKey() {
       </div>
       <Main className='flex flex-col items-center justify-start'>
         <div className='max-w-2xl'>
-          <Alert>
-            <Key className='size-4' />
-            <AlertTitle>No Publishable Key Found!</AlertTitle>
-            <AlertDescription>
+          <Banner
+            type='warning'
+            icon={<Key className='size-4' />}
+            title='No Publishable Key Found!'
+            description={
               <p className='text-balance'>
                 You need to generate a publishable key from Clerk and put it
                 inside the <code className={codeBlock}>.env</code> file.
               </p>
-            </AlertDescription>
-          </Alert>
+            }
+          />
 
           <h1 className='mt-4 text-2xl font-bold'>Set your Clerk API key</h1>
           <div className='mt-4 flex flex-col gap-y-4 text-foreground/75'>
@@ -105,31 +106,47 @@ function MissingClerkPubKey() {
             </div>
           </div>
 
-          <Separator className='my-4 w-full' />
+          <Divider className='my-4 w-full' />
 
-          <Alert>
-            <AlertTitle>Clerk Integration is Optional</AlertTitle>
-            <AlertDescription>
-              <p className='text-balance'>
-                The Clerk integration lives entirely inside{' '}
-                <code className={codeBlock}>src/routes/clerk</code>. If you plan
-                to use Clerk as your auth service, you might want to place{' '}
-                <code className={codeBlock}>ClerkProvider</code> at the root
-                route.
-              </p>
-              <p>
-                However, if you don't plan to use Clerk, you can safely remove
-                this directory and related dependency_{' '}
-                <code className={codeBlock}>@clerk/clerk-react</code>.
-              </p>
-              <p className='mt-2 text-sm'>
-                This setup is modular by design and won't affect the rest of the
-                application.
-              </p>
-            </AlertDescription>
-          </Alert>
+          <Banner
+            type='info'
+            title='Clerk Integration is Optional'
+            description={
+              <div>
+                <p className='text-balance'>
+                  The Clerk integration lives entirely inside{' '}
+                  <code className={codeBlock}>src/routes/clerk</code>. If you plan
+                  to use Clerk as your auth service, you might want to place{' '}
+                  <code className={codeBlock}>ClerkProvider</code> at the root
+                  route.
+                </p>
+                <p>
+                  However, if you don't plan to use Clerk, you can safely remove
+                  this directory and related dependency_{' '}
+                  <code className={codeBlock}>@clerk/clerk-react</code>.
+                </p>
+                <p className='mt-2 text-sm'>
+                  This setup is modular by design and won't affect the rest of the
+                  application.
+                </p>
+              </div>
+            }
+          />
         </div>
       </Main>
     </AuthenticatedLayout>
+  )
+}
+
+function ClerkSidebarTrigger() {
+  const { toggleSidebar } = useSidebar()
+  return (
+    <button
+      onClick={toggleSidebar}
+      className='inline-flex items-center justify-center rounded-md border border-input bg-background p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground scale-125 sm:scale-100'
+    >
+      <PanelLeftIcon className='size-4' />
+      <span className='sr-only'>Toggle Sidebar</span>
+    </button>
   )
 }

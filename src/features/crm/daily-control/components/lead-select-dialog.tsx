@@ -1,33 +1,13 @@
 /**
- * 线索选择弹窗组件
- * 用于在新建到访/缴费记录时选择线索
+ * 线索选择弹窗组件 - Semi Design 版
  * 需要输入完整手机号（11位）才能搜索
  */
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Check } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn } from '@/lib/utils'
+import { Modal, Button, Input, Table, Tag } from '@douyinfe/semi-ui-19'
+import { IconSearch, IconTick } from '@douyinfe/semi-icons'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { leadsApi } from '@/features/crm/leads/api'
 import { leadStatusLabels } from '@/features/crm/leads/types'
 
@@ -37,7 +17,6 @@ export interface SelectedLead {
   parent_phone: string
 }
 
-// 搜索结果类型（使用 checkPhoneDuplicate 返回的格式）
 interface SearchResultItem {
   id: string
   child_name: string
@@ -64,27 +43,23 @@ export function LeadSelectDialog({
   onOpenChange,
   onSelect,
   title = '选择线索',
-  description = '请输入完整手机号搜索线索'
+  description = '请输入完整手机号搜索线索',
 }: LeadSelectDialogProps) {
-  // 状态
   const [selectedLead, setSelectedLead] = useState<SearchResultItem | null>(null)
   const [phoneInput, setPhoneInput] = useState('')
   const [searchPhone, setSearchPhone] = useState('')
 
-  // 判断是否为有效的完整手机号（11位数字）
   const isValidPhone = (phone: string) => /^1\d{10}$/.test(phone)
 
-  // 通过手机号搜索线索（使用 checkPhoneDuplicate，可查询包括公海在内的所有线索）
   const { data: searchData, isLoading, isFetched } = useQuery({
     queryKey: ['check-phone-for-select', searchPhone],
     queryFn: async () => {
       const response = await leadsApi.checkPhoneDuplicate(searchPhone)
       return response.data
     },
-    enabled: open && isValidPhone(searchPhone)
+    enabled: open && isValidPhone(searchPhone),
   })
 
-  // 弹框关闭时重置状态
   useEffect(() => {
     if (!open) {
       setSelectedLead(null)
@@ -93,7 +68,6 @@ export function LeadSelectDialog({
     }
   }, [open])
 
-  // 处理搜索
   const handleSearch = () => {
     if (isValidPhone(phoneInput)) {
       setSearchPhone(phoneInput)
@@ -101,19 +75,12 @@ export function LeadSelectDialog({
     }
   }
 
-  // 按回车搜索
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch()
-    }
+    if (e.key === 'Enter') handleSearch()
   }
 
   const handleSelectLead = (lead: SearchResultItem) => {
-    if (selectedLead?.id === lead.id) {
-      setSelectedLead(null)
-    } else {
-      setSelectedLead(lead)
-    }
+    setSelectedLead(selectedLead?.id === lead.id ? null : lead)
   }
 
   const handleConfirm = () => {
@@ -121,158 +88,137 @@ export function LeadSelectDialog({
       onSelect({
         id: selectedLead.id,
         child_name: selectedLead.child_name || '',
-        parent_phone: selectedLead.parent_phone || searchPhone || ''
+        parent_phone: selectedLead.parent_phone || searchPhone || '',
       })
       onOpenChange(false)
     }
   }
 
-  // checkPhoneDuplicate 返回 duplicate_leads 数组
   const searchResults = searchData?.duplicate_leads || []
   const hasSearched = isFetched && isValidPhone(searchPhone)
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-0 max-h-[70vh] flex flex-col">
-        <DialogHeader className="px-4 py-3 border-b shrink-0">
-          <DialogTitle className="text-base">{title}</DialogTitle>
-          <DialogDescription className="text-xs">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-hidden flex flex-col p-4 space-y-4">
-          {/* 搜索栏 */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={phoneInput}
-                onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                onKeyDown={handleKeyDown}
-                placeholder="请输入完整手机号（11位）"
-                className="h-9 pl-9"
-              />
-            </div>
-            <Button
-              onClick={handleSearch}
-              disabled={!isValidPhone(phoneInput) || isLoading}
-              className="h-9"
-            >
-              {isLoading ? '搜索中...' : '搜索'}
-            </Button>
+  const columns: ColumnProps<SearchResultItem>[] = [
+    {
+      title: '选择', dataIndex: 'select', width: 56, align: 'center' as const,
+      render: (_text, record) => {
+        if (!record) return null
+        const isSelected = selectedLead?.id === record.id
+        return (
+          <div style={{
+            width: 16, height: 16, borderRadius: '50%',
+            border: `2px solid ${isSelected ? 'var(--semi-color-primary)' : 'var(--semi-color-border)'}`,
+            background: isSelected ? 'var(--semi-color-primary)' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto',
+          }}>
+            {isSelected && <IconTick size="extra-small" style={{ color: '#fff' }} />}
           </div>
+        )
+      },
+    },
+    {
+      title: '学生姓名', dataIndex: 'child_name', width: 96,
+      render: (text, record) => {
+        const isSelected = selectedLead?.id === record?.id
+        return <span style={{ fontSize: 12, fontWeight: isSelected ? 600 : 400, color: isSelected ? 'var(--semi-color-primary)' : undefined }}>{text || '-'}</span>
+      },
+    },
+    {
+      title: '联系电话', dataIndex: 'parent_phone', width: 128,
+      render: (text) => <span style={{ fontSize: 12 }}>{text || searchPhone || '-'}</span>,
+    },
+    {
+      title: '状态', dataIndex: 'status', width: 96,
+      render: (text) => <Tag size="small">{leadStatusLabels[text as keyof typeof leadStatusLabels] || text}</Tag>,
+    },
+    {
+      title: '课程顾问', dataIndex: 'advisor_name', width: 96,
+      render: (text) => <span style={{ fontSize: 12 }}>{text || '-'}</span>,
+    },
+    {
+      title: '校区', dataIndex: 'owner_campus_name',
+      render: (text) => <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>{text || '-'}</span>,
+    },
+  ]
 
-          {/* 提示信息或搜索结果 */}
-          {!hasSearched ? (
-            <div className="flex-1 flex items-center justify-center border rounded-md bg-muted/30">
-              <p className="text-sm text-muted-foreground">
-                请输入完整的11位手机号进行搜索
-              </p>
-            </div>
-          ) : (
-            <ScrollArea className="flex-1 border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-14 text-xs text-center">选择</TableHead>
-                    <TableHead className="w-24 text-xs">学生姓名</TableHead>
-                    <TableHead className="w-32 text-xs">联系电话</TableHead>
-                    <TableHead className="w-24 text-xs">状态</TableHead>
-                    <TableHead className="w-24 text-xs">课程顾问</TableHead>
-                    <TableHead className="text-xs">校区</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-xs text-muted-foreground">
-                        搜索中...
-                      </TableCell>
-                    </TableRow>
-                  ) : searchResults.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-xs text-muted-foreground">
-                        未找到匹配的线索
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    searchResults.map((lead) => {
-                      const isSelected = selectedLead?.id === lead.id
-                      return (
-                        <TableRow
-                          key={lead.id}
-                          className={cn(
-                            'cursor-pointer hover:bg-muted/50 transition-colors',
-                            isSelected && 'bg-primary/5'
-                          )}
-                          onClick={() => handleSelectLead(lead)}
-                        >
-                          <TableCell className="text-center">
-                            <div
-                              className={cn(
-                                'w-4 h-4 rounded-full border-2 mx-auto flex items-center justify-center transition-colors',
-                                isSelected
-                                  ? 'border-primary bg-primary'
-                                  : 'border-muted-foreground/30'
-                              )}
-                            >
-                              {isSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
-                            </div>
-                          </TableCell>
-                          <TableCell className={cn('text-xs', isSelected && 'font-semibold text-primary')}>
-                            {lead.child_name || '-'}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {lead.parent_phone || searchPhone || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-xs h-5">
-                              {leadStatusLabels[lead.status as keyof typeof leadStatusLabels] || lead.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {lead.advisor_name || '-'}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {lead.owner_campus_name || '-'}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          )}
-
-          {/* 搜索结果统计 */}
-          {hasSearched && searchResults.length > 0 && (
-            <div className="text-xs text-muted-foreground text-center shrink-0">
-              找到 {searchResults.length} 条线索
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="px-4 py-3 border-t gap-2 shrink-0">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            size="sm"
-            className="h-8 text-xs"
-          >
-            取消
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            size="sm"
-            className="h-8 text-xs"
-            disabled={!selectedLead}
-          >
+  return (
+    <Modal
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      title={title}
+      width={680}
+      style={{ maxHeight: '70vh' }}
+      bodyStyle={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 16, gap: 16, maxHeight: 'calc(70vh - 120px)' }}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button size="small" onClick={() => onOpenChange(false)}>取消</Button>
+          <Button size="small" theme="solid" onClick={handleConfirm} disabled={!selectedLead}>
             {selectedLead ? `确定选择 ${selectedLead.child_name || selectedLead.parent_phone}` : '请先选择线索'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      }
+    >
+      <p style={{ fontSize: 12, color: 'var(--semi-color-text-2)', margin: 0 }}>{description}</p>
+
+      {/* 搜索栏 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <Input
+          value={phoneInput}
+          onChange={(v) => setPhoneInput(v.replace(/\D/g, '').slice(0, 11))}
+          onKeyDown={handleKeyDown as any}
+          placeholder="请输入完整手机号（11位）"
+          prefix={<IconSearch />}
+          style={{ flex: 1 }}
+        />
+        <Button
+          onClick={handleSearch}
+          disabled={!isValidPhone(phoneInput) || isLoading}
+          theme="solid"
+        >
+          {isLoading ? '搜索中...' : '搜索'}
+        </Button>
+      </div>
+
+      {/* 搜索结果 */}
+      {!hasSearched ? (
+        <div style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: '1px solid var(--semi-color-border)', borderRadius: 6,
+          background: 'var(--semi-color-fill-0)',
+        }}>
+          <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>
+            请输入完整的11位手机号进行搜索
+          </p>
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--semi-color-border)', borderRadius: 6 }}>
+          <Table
+            columns={columns}
+            dataSource={searchResults}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            onRow={(record) => ({
+              onClick: () => record && handleSelectLead(record),
+              style: {
+                cursor: 'pointer',
+                background: selectedLead?.id === record?.id ? 'var(--semi-color-primary-light-default)' : undefined,
+              },
+            })}
+            empty={
+              <div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)', fontSize: 12 }}>
+                {isLoading ? '搜索中...' : '未找到匹配的线索'}
+              </div>
+            }
+          />
+        </div>
+      )}
+
+      {hasSearched && searchResults.length > 0 && (
+        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--semi-color-text-2)', flexShrink: 0 }}>
+          找到 {searchResults.length} 条线索
+        </div>
+      )}
+    </Modal>
   )
 }

@@ -1,13 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Button, Dropdown } from '@douyinfe/semi-ui-19'
 
 type TopNavProps = React.HTMLAttributes<HTMLElement> & {
   links: {
@@ -22,26 +16,32 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
   return (
     <>
       <div className='lg:hidden'>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <Button size='icon' variant='outline' className='md:size-7'>
-              <Menu />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side='bottom' align='start'>
-            {links.map(({ title, href, isActive, disabled }) => (
-              <DropdownMenuItem key={`${title}-${href}`} asChild>
-                <Link
-                  to={href}
-                  className={!isActive ? 'text-muted-foreground' : ''}
-                  disabled={disabled}
-                >
-                  {title}
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Dropdown
+          trigger='click'
+          position='bottomLeft'
+          clickToHide
+          render={
+            <Dropdown.Menu>
+              {links.map(({ title, href, isActive, disabled }) => (
+                <Dropdown.Item key={`${title}-${href}`} disabled={disabled}>
+                  <Link
+                    to={href}
+                    className={!isActive ? 'text-muted-foreground' : ''}
+                    disabled={disabled}
+                  >
+                    {title}
+                  </Link>
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          }
+        >
+          <Button
+            theme='outline'
+            icon={<Menu className='h-4 w-4' />}
+            className='md:size-7'
+          />
+        </Dropdown>
       </div>
 
       <nav

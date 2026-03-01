@@ -1,24 +1,9 @@
 /**
- * 通话记录数据表格
+ * 通话记录数据表格 - 使用 SemiDataTable 通用组件
  */
 
-import { useMemo, useRef, useState } from 'react'
-import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-} from '@tanstack/react-table'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { createSkeletonData } from '@/components/ui/table-skeleton'
-import { cn } from '@/lib/utils'
+import { useMemo, useState } from 'react'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { createCallRecordsColumns } from './call-records-columns'
 import { RecordDetailModal } from './record-detail-modal'
 import type { CallRecord } from '../../types'
@@ -44,23 +29,11 @@ export function CallRecordsTable({
   onSizeChange,
   onViewLead,
 }: CallRecordsTableProps) {
-  const tableContainerRef = useRef<HTMLDivElement>(null)
   const [selectedRecord, setSelectedRecord] = useState<CallRecord | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  // 生成表格数据（加载时使用骨架屏占位数据）
-  const displayData = useMemo(() => {
-    return isLoading ? createSkeletonData<CallRecord>(size) : records
-  }, [isLoading, records, size])
-
-  // 处理播放录音
+  // 处理查看详情（录音/转写）
   const handlePlayRecord = (record: CallRecord) => {
-    setSelectedRecord(record)
-    setModalOpen(true)
-  }
-
-  // 处理查看转写
-  const handleViewTranscript = (record: CallRecord) => {
     setSelectedRecord(record)
     setModalOpen(true)
   }
@@ -70,101 +43,23 @@ export function CallRecordsTable({
     () =>
       createCallRecordsColumns({
         onPlayRecord: handlePlayRecord,
-        onViewTranscript: handleViewTranscript,
         onViewLead,
       }),
     [onViewLead]
   )
 
-  // 初始化表格
-  const table = useReactTable({
-    data: displayData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    pageCount: Math.ceil(total / size),
-  })
-
-  const totalPages = Math.ceil(total / size)
-
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-      <div
-        ref={tableContainerRef}
-        className={cn(
-          'min-h-0 flex-1 overflow-auto rounded-md border',
-          isLoading && 'opacity-60 pointer-events-none'
-        )}
-      >
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-background">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-muted/50">
-                {headerGroup.headers.map((header) => {
-                  const sticky = (header.column.columnDef.meta as any)?.sticky as string | undefined
-                  return (
-                    <TableHead
-                      key={header.id}
-                      style={{ width: header.column.columnDef.size }}
-                      className={cn(
-                        'whitespace-nowrap',
-                        sticky === 'left' && 'sticky left-0 z-20 bg-muted/50 after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border',
-                        sticky === 'right' && 'sticky right-0 z-20 bg-muted/50 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-border',
-                      )}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-muted/30">
-                  {row.getVisibleCells().map((cell) => {
-                    const sticky = (cell.column.columnDef.meta as any)?.sticky as string | undefined
-                    return (
-                      <TableCell
-                        key={cell.id}
-                        style={{ width: cell.column.columnDef.size }}
-                        className={cn(
-                          sticky === 'left' && 'sticky left-0 z-[1] bg-background after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border',
-                          sticky === 'right' && 'sticky right-0 z-[1] bg-background before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-border',
-                        )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    )
-                  })}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  暂无通话记录
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* 分页 */}
-      <SimplePagination
+    <>
+      <SemiDataTable<CallRecord>
+        columns={columns}
+        data={records}
+        total={total}
         page={page}
         pageSize={size}
-        total={total}
-        totalPages={totalPages}
+        isLoading={isLoading}
         onPageChange={onPageChange}
         onPageSizeChange={onSizeChange}
-        pageSizeOptions={[10, 20, 50, 100]}
+        emptyText="暂无通话记录"
       />
 
       {/* 录音详情弹窗 */}
@@ -173,6 +68,6 @@ export function CallRecordsTable({
         open={modalOpen}
         onOpenChange={setModalOpen}
       />
-    </div>
+    </>
   )
 }

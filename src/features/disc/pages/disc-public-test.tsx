@@ -2,7 +2,7 @@
  * DISC 性格测试公开页
  *
  * Design: Nature Distilled + Flat hybrid, mobile-first
- * Palette: warm earth tones — dark #2c2c2a, cream #faf9f5, sand #e8e6dc, terracotta #d97757
+ * Palette: warm earth tones — dark #2c2c2a, cream #faf9f5, sand #e8e6dc, blue #0064FA
  * Touch target ≥ 44 px, focus-visible, prefers-reduced-motion
  */
 
@@ -33,14 +33,14 @@ const c = {
   cream: '#faf9f5',
   sand: '#e8e6dc',
   muted: '#b0aea5',
-  terracotta: '#d97757',
+  accent: '#0064FA',
   green: '#788c5d',
   red: '#c9554a',
 } as const
 
 /* ─── DISC 四维 Logo ─── */
 const DISC_BADGES = [
-  { letter: 'D', bg: '#d97757', label: '支配' },
+  { letter: 'D', bg: '#dc2626', label: '支配' },
   { letter: 'I', bg: '#6a9bcc', label: '影响' },
   { letter: 'S', bg: '#788c5d', label: '稳健' },
   { letter: 'C', bg: '#3d3d3a', label: '谨慎' },
@@ -74,7 +74,7 @@ function DiscLogo() {
 
 /* ─── 完成动画：涟漪绽放 ─── */
 const DISC_PARTICLES = [
-  { color: '#d97757', angle: -50, dist: 64 },  // D
+  { color: '#dc2626', angle: -50, dist: 64 },  // D
   { color: '#6a9bcc', angle: 35, dist: 60 },   // I
   { color: '#788c5d', angle: 145, dist: 62 },   // S
   { color: '#3d3d3a', angle: -145, dist: 58 },  // C
@@ -88,7 +88,7 @@ function CompletionAnimation() {
         className="absolute rounded-full"
         style={{
           width: 220, height: 220,
-          background: `radial-gradient(circle, ${c.green}14 0%, ${c.terracotta}06 40%, transparent 70%)`,
+          background: `radial-gradient(circle, ${c.green}14 0%, ${c.accent}06 40%, transparent 70%)`,
         }}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -225,9 +225,9 @@ export function DiscPublicTest() {
 
   /* ─── 按钮样式工具 ─── */
   const cta = {
-    background: `linear-gradient(135deg, ${c.terracotta}, #c4654a)`,
+    background: `linear-gradient(135deg, ${c.accent}, #0050C8)`,
     color: '#fff',
-    boxShadow: '0 4px 14px rgba(217,119,87,0.22)',
+    boxShadow: '0 4px 14px rgba(0,100,250,0.22)',
   }
   const ctaOff = { backgroundColor: c.sand, color: c.muted }
 
@@ -247,7 +247,7 @@ export function DiscPublicTest() {
             >
               <div
                 className="h-8 w-8 animate-spin rounded-full border-[3px] border-t-transparent"
-                style={{ borderColor: c.sand, borderTopColor: c.terracotta }}
+                style={{ borderColor: c.sand, borderTopColor: c.accent }}
               />
               <p className="mt-4 text-sm" style={{ color: c.muted }}>正在验证测试链接...</p>
             </motion.div>
@@ -298,7 +298,7 @@ export function DiscPublicTest() {
               <div className="space-y-4 rounded-2xl bg-white/70 p-6 shadow-[0_2px_12px_rgba(0,0,0,0.05)] backdrop-blur-sm">
                 <Field label="姓名" error={nameErr}>
                   <input
-                    className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#d97757]/40"
+                    className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#0064FA]/40"
                     style={{ color: c.text }}
                     placeholder="请输入您的姓名"
                     autoComplete="name"
@@ -310,7 +310,7 @@ export function DiscPublicTest() {
 
                 <Field label="手机号" error={phoneErr}>
                   <input
-                    className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#d97757]/40"
+                    className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#0064FA]/40"
                     style={{ color: c.text }}
                     placeholder="请输入您的手机号"
                     inputMode="tel" autoComplete="tel"
@@ -362,14 +362,14 @@ export function DiscPublicTest() {
                   <span className="text-xs font-medium" style={{ color: c.muted }}>
                     已完成 {done} / {TOTAL}
                   </span>
-                  <span className="text-xs font-bold tabular-nums" style={{ color: c.terracotta }}>
+                  <span className="text-xs font-bold tabular-nums" style={{ color: c.accent }}>
                     {Math.round((done / TOTAL) * 100)}%
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: c.sand }}>
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: `linear-gradient(90deg, ${c.terracotta}, #c4654a)` }}
+                    style={{ background: `linear-gradient(90deg, ${c.accent}, #0050C8)` }}
                     initial={false}
                     animate={{ width: `${(done / TOTAL) * 100}%` }}
                     transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -503,7 +503,7 @@ function NavBtn({
       onClick={onClick}
       className={cn(
         'flex h-12 flex-1 items-center justify-center gap-1 rounded-xl text-sm font-semibold',
-        'outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#d97757]/40 focus-visible:ring-offset-1',
+        'outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#0064FA]/40 focus-visible:ring-offset-1',
         'motion-reduce:transition-none',
         disabled ? 'pointer-events-none' : 'cursor-pointer active:scale-[0.97] motion-reduce:active:scale-100',
       )}

@@ -1,19 +1,10 @@
 /**
- * 定时任务管理页面
+ * 定时任务管理页面 - Semi Design 版本
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import {
   Clock,
   Plus,
@@ -26,7 +17,6 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  RefreshCw,
   FileText,
   AlertCircle,
   Activity,
@@ -37,57 +27,10 @@ import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Table, Button, Input, Select, Modal, Form, Tag, Skeleton, Typography, Switch, Tabs, TabPane, TextArea } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconRefresh } from '@douyinfe/semi-icons'
 import { scheduledTasksApi } from '../api'
 import {
   INTERVAL_PERIOD_OPTIONS,
@@ -102,36 +45,15 @@ import {
 import { formatTime } from '@/lib/utils/time'
 import { ASRTaskForm } from '../components/asr-task-form'
 
+const { Text } = Typography
+
 // ASR 任务名称常量
 const ASR_TASK_NAME = 'rmf.asr_transcribe'
 
-// 表单验证模式
-const formSchema = z.object({
-  name: z.string().min(1, '请输入任务名称').max(100, '名称最多100个字符'),
-  task: z.string().min(1, '请选择任务'),
-  description: z.string().default(''),
-  enabled: z.boolean().default(true),
-  schedule_type: z.enum(['interval', 'crontab']).default('interval'),
-  // Interval 配置
-  interval_every: z.coerce.number().int().min(1, '间隔值必须大于0').default(1),
-  interval_period: z.enum(['seconds', 'minutes', 'hours', 'days']).default('hours'),
-  // Crontab 配置
-  crontab_minute: z.string().default('*'),
-  crontab_hour: z.string().default('*'),
-  crontab_day_of_week: z.string().default('*'),
-  crontab_day_of_month: z.string().default('*'),
-  crontab_month_of_year: z.string().default('*'),
-  // 高级配置
-  queue: z.string().default(''),
-  one_off: z.boolean().default(false),
-  args_json: z.string().default(''),
-  kwargs_json: z.string().default(''),
-})
-
-type FormData = z.infer<typeof formSchema>
-
-// 骨架屏数据
+// 骨架屏前缀
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (name: string) => name.startsWith(SKELETON_PREFIX)
+
 function createSkeletonData(count: number): ScheduledTask[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
@@ -190,31 +112,10 @@ export function ScheduledTasksPage() {
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null)
   const [viewingTaskName, setViewingTaskName] = useState<string>('')
   const [scheduleType, setScheduleType] = useState<'interval' | 'crontab'>('interval')
-  // ASR 任务参数（当选择 ASR 任务时使用）
   const [asrTaskKwargs, setAsrTaskKwargs] = useState<Record<string, unknown>>({})
 
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      task: '',
-      description: '',
-      enabled: true,
-      schedule_type: 'interval',
-      interval_every: 1,
-      interval_period: 'hours',
-      crontab_minute: '*',
-      crontab_hour: '*',
-      crontab_day_of_week: '*',
-      crontab_day_of_month: '*',
-      crontab_month_of_year: '*',
-      queue: '',
-      one_off: false,
-      args_json: '',
-      kwargs_json: '',
-    },
-  })
+  // Semi Form ref
+  const formRef = useRef<FormApi>()
 
   // 查询任务列表
   const { data, isLoading } = useQuery({
@@ -258,14 +159,14 @@ export function ScheduledTasksPage() {
       const response = await scheduledTasksApi.getStats()
       return response
     },
-    refetchInterval: 30000, // 每 30 秒刷新一次
+    refetchInterval: 30000,
   })
 
   const tasks = data?.items || []
   const availableTasks = availableTasksData?.items || []
   const executionHistory = historyData?.items || []
 
-  // 查询任务执行结果（用于日志对话框）
+  // 查询任务执行结果
   const { data: taskResultData, isLoading: taskResultLoading, refetch: refetchTaskResult } = useQuery({
     queryKey: ['task-result', viewingTaskId],
     queryFn: async () => {
@@ -275,7 +176,6 @@ export function ScheduledTasksPage() {
     },
     enabled: !!viewingTaskId && logDialogOpen,
     refetchInterval: (data) => {
-      // 如果任务还在执行中，每 2 秒轮询一次
       const status = data?.state?.data?.status
       if (status === 'PENDING' || status === 'STARTED') {
         return 2000
@@ -290,7 +190,6 @@ export function ScheduledTasksPage() {
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] })
     },
     onError: (error: Error) => {
@@ -306,7 +205,6 @@ export function ScheduledTasksPage() {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] })
     },
     onError: (error: Error) => {
@@ -345,13 +243,11 @@ export function ScheduledTasksPage() {
     mutationFn: (id: number) => scheduledTasksApi.runNow(id),
     onSuccess: (data) => {
       toast.success(`任务已提交执行`)
-      // 打开日志对话框查看执行状态
       setViewingTaskId(data.task_id)
       setViewingTaskName(runningItem?.name || '任务')
       setRunDialogOpen(false)
       setLogDialogOpen(true)
       setRunningItem(null)
-      // 刷新执行历史
       queryClient.invalidateQueries({ queryKey: ['execution-history'] })
     },
     onError: (error: Error) => {
@@ -359,26 +255,30 @@ export function ScheduledTasksPage() {
     },
   })
 
-  // 列定义
-  const columns: ColumnDef<ScheduledTask>[] = useMemo(
+  // 监听 selectedTask
+  const [selectedTask, setSelectedTask] = useState('')
+  const isASRTask = selectedTask === ASR_TASK_NAME
+
+  // 任务列表列定义
+  const taskColumns: ColumnProps<ScheduledTask>[] = useMemo(
     () => [
       {
-        accessorKey: 'name',
-        header: '任务名称',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.name.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-32" />
+        title: '任务名称',
+        dataIndex: 'name',
+        width: 200,
+        render: (_: unknown, record: ScheduledTask) => {
+          if (isSkeletonRow(record.name)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
           return (
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Clock className="h-4 w-4 text-blue-500" />
               <div>
-                <div className="font-medium">{row.original.name}</div>
-                {row.original.description && (
-                  <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                    {row.original.description}
-                  </div>
+                <div style={{ fontWeight: 500 }}>{record.name}</div>
+                {record.description && (
+                  <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }} style={{ maxWidth: 200 }}>
+                    {record.description}
+                  </Text>
                 )}
               </div>
             </div>
@@ -386,119 +286,114 @@ export function ScheduledTasksPage() {
         },
       },
       {
-        accessorKey: 'task',
-        header: '任务路径',
-        size: 250,
-        cell: ({ row }) => {
-          if (row.original.name.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-40" />
+        title: '任务路径',
+        dataIndex: 'task',
+        width: 250,
+        render: (_: unknown, record: ScheduledTask) => {
+          if (isSkeletonRow(record.name)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 160 }} />
           }
           return (
-            <code className="text-xs bg-muted px-2 py-1 rounded">
-              {row.original.task}
+            <code style={{ fontSize: 12, backgroundColor: 'var(--semi-color-fill-0)', padding: '2px 8px', borderRadius: 4 }}>
+              {record.task}
             </code>
           )
         },
       },
       {
-        accessorKey: 'schedule',
-        header: '调度配置',
-        size: 180,
-        cell: ({ row }) => {
-          if (row.original.name.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
+        title: '调度配置',
+        dataIndex: 'schedule',
+        width: 180,
+        render: (_: unknown, record: ScheduledTask) => {
+          if (isSkeletonRow(record.name)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
-          const scheduleType = getScheduleType(row.original)
+          const st = getScheduleType(record)
           return (
-            <div className="flex items-center gap-2">
-              {scheduleType === 'interval' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {st === 'interval' ? (
                 <Timer className="h-4 w-4 text-orange-500" />
               ) : (
                 <Calendar className="h-4 w-4 text-green-500" />
               )}
-              <span className="text-sm">{formatSchedule(row.original)}</span>
+              <span style={{ fontSize: 14 }}>{formatSchedule(record)}</span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'enabled',
-        header: '状态',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.name.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-14 rounded-full" />
+        title: '状态',
+        dataIndex: 'enabled',
+        width: 100,
+        render: (_: unknown, record: ScheduledTask) => {
+          if (isSkeletonRow(record.name)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
           }
           return (
             <Switch
-              checked={row.original.enabled}
-              onCheckedChange={() => toggleMutation.mutate(row.original.id)}
+              checked={record.enabled}
+              onChange={() => toggleMutation.mutate(record.id)}
               disabled={toggleMutation.isPending}
+              size="small"
             />
           )
         },
       },
       {
-        accessorKey: 'last_run_at',
-        header: '上次运行',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.name.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
+        title: '上次运行',
+        dataIndex: 'last_run_at',
+        width: 160,
+        render: (_: unknown, record: ScheduledTask) => {
+          if (isSkeletonRow(record.name)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
-          return row.original.last_run_at
-            ? formatTime(row.original.last_run_at)
-            : '-'
+          return record.last_run_at ? formatTime(record.last_run_at) : '-'
         },
       },
       {
-        accessorKey: 'total_run_count',
-        header: '运行次数',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.name.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-12" />
+        title: '运行次数',
+        dataIndex: 'total_run_count',
+        width: 100,
+        render: (_: unknown, record: ScheduledTask) => {
+          if (isSkeletonRow(record.name)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
           }
-          return (
-            <Badge variant="secondary">{row.original.total_run_count}</Badge>
-          )
+          return <Tag size="small">{record.total_run_count}</Tag>
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 150,
-        cell: ({ row }) => {
-          if (row.original.name.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-24" />
+        title: '操作',
+        dataIndex: 'actions',
+        width: 150,
+        fixed: 'right' as const,
+        render: (_: unknown, record: ScheduledTask) => {
+          if (isSkeletonRow(record.name)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
           }
           return (
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-                title="编辑"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Pencil className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleEdit(record)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRunClick(row.original)}
+                theme="borderless"
+                type="tertiary"
+                icon={<Play className="h-4 w-4 text-green-500" />}
+                size="small"
+                onClick={() => handleRunClick(record)}
                 disabled={runNowMutation.isPending}
-                title="立即执行"
-              >
-                <Play className="h-4 w-4 text-green-500" />
-              </Button>
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-                title="删除"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Trash2 className="h-4 w-4" style={{ color: 'var(--semi-color-danger)' }} />}
+                size="small"
+                onClick={() => handleDeleteClick(record)}
+              />
             </div>
           )
         },
@@ -507,41 +402,153 @@ export function ScheduledTasksPage() {
     [toggleMutation.isPending, runNowMutation.isPending]
   )
 
-  // 表格数据
-  const tableData = isLoading ? createSkeletonData(5) : tasks
+  // 执行记录列定义
+  const historyColumns: ColumnProps<TaskExecutionHistory>[] = useMemo(
+    () => [
+      {
+        title: '任务名称',
+        dataIndex: 'task_name',
+        width: 160,
+        render: (_: unknown, record: TaskExecutionHistory) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Clock className="h-4 w-4 text-blue-500" style={{ flexShrink: 0 }} />
+            <Text ellipsis={{ showTooltip: true }} style={{ maxWidth: 130, fontWeight: 500 }}>
+              {record.task_name}
+            </Text>
+          </div>
+        ),
+      },
+      {
+        title: '触发方式',
+        dataIndex: 'trigger_type',
+        width: 80,
+        render: (_: unknown, record: TaskExecutionHistory) => (
+          <Tag size="small" color={record.trigger_type === 'manual' ? undefined : 'blue'}>
+            {record.trigger_type === 'manual' ? '手动' : '定时'}
+          </Tag>
+        ),
+      },
+      {
+        title: '状态',
+        dataIndex: 'status',
+        width: 90,
+        render: (_: unknown, record: TaskExecutionHistory) => (
+          <TaskStatusBadge status={record.status} />
+        ),
+      },
+      {
+        title: '结果摘要',
+        dataIndex: 'result',
+        width: 200,
+        render: (_: unknown, record: TaskExecutionHistory) => {
+          const getResultSummary = () => {
+            if (!record.result) return '-'
+            const formatted = formatTaskResult(record.result)
+            if (formatted) {
+              const messageLine = formatted.lines.find(l => l.label === '执行结果')
+              if (messageLine) return messageLine.value
+            }
+            return record.result.length > 50 ? record.result.slice(0, 50) + '...' : record.result
+          }
+          return (
+            <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }} style={{ maxWidth: 180 }}>
+              {getResultSummary()}
+            </Text>
+          )
+        },
+      },
+      {
+        title: '执行时间',
+        dataIndex: 'created_at',
+        width: 150,
+        render: (_: unknown, record: TaskExecutionHistory) => (
+          <span style={{ fontSize: 14 }}>{record.created_at ? formatTime(record.created_at) : '-'}</span>
+        ),
+      },
+      {
+        title: '耗时',
+        dataIndex: 'duration',
+        width: 80,
+        render: (_: unknown, record: TaskExecutionHistory) => (
+          <Text type="tertiary" size="small">
+            {record.duration != null ? `${record.duration.toFixed(2)}s` : '-'}
+          </Text>
+        ),
+      },
+      {
+        title: '操作',
+        dataIndex: 'actions',
+        width: 60,
+        render: (_: unknown, record: TaskExecutionHistory) => (
+          <Button
+            theme="borderless"
+            type="tertiary"
+            icon={<FileText className="h-4 w-4 text-blue-500" />}
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewLog(record)
+            }}
+          />
+        ),
+      },
+    ],
+    []
+  )
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => String(row.id),
-  })
+  const taskDisplayData = isLoading ? createSkeletonData(5) : tasks
+
+  const taskTablePagination = useMemo(() => ({
+    currentPage: tasksPagination.page,
+    pageSize: tasksPagination.size,
+    total: data?.total || 0,
+    onPageChange: (p: number) => setTasksPagination(prev => ({ ...prev, page: p })),
+    onPageSizeChange: (s: number) => setTasksPagination({ page: 1, size: s }),
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [tasksPagination.page, tasksPagination.size, data?.total])
+
+  const historyTablePagination = useMemo(() => ({
+    currentPage: historyPagination.page,
+    pageSize: historyPagination.size,
+    total: historyData?.total || 0,
+    onPageChange: (p: number) => setHistoryPagination(prev => ({ ...prev, page: p })),
+    onPageSizeChange: (s: number) => setHistoryPagination({ page: 1, size: s }),
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [historyPagination.page, historyPagination.size, historyData?.total])
 
   // 打开新增对话框
   const handleCreate = () => {
     setEditingItem(null)
     setScheduleType('interval')
-    // 清空 ASR 任务参数
     setAsrTaskKwargs({})
-    form.reset({
-      name: '',
-      task: '',
-      description: '',
-      enabled: true,
-      schedule_type: 'interval',
-      interval_every: 1,
-      interval_period: 'hours',
-      crontab_minute: '*',
-      crontab_hour: '*',
-      crontab_day_of_week: '*',
-      crontab_day_of_month: '*',
-      crontab_month_of_year: '*',
-      queue: '',
-      one_off: false,
-      args_json: '',
-      kwargs_json: '',
-    })
+    setSelectedTask('')
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.reset()
+      formRef.current?.setValues({
+        name: '',
+        task: '',
+        description: '',
+        enabled: true,
+        interval_every: 1,
+        interval_period: 'hours',
+        crontab_minute: '*',
+        crontab_hour: '*',
+        crontab_day_of_week: '*',
+        crontab_day_of_month: '*',
+        crontab_month_of_year: '*',
+        queue: '',
+        one_off: false,
+        args_json: '',
+        kwargs_json: '',
+      })
+    }, 0)
   }
 
   // 打开编辑对话框
@@ -549,102 +556,89 @@ export function ScheduledTasksPage() {
     setEditingItem(item)
     const type = getScheduleType(item) || 'interval'
     setScheduleType(type)
-    // 初始化 ASR 任务参数（如果是 ASR 任务）
+    setSelectedTask(item.task)
     if (item.task === ASR_TASK_NAME && item.kwargs) {
       setAsrTaskKwargs(item.kwargs as Record<string, unknown>)
     } else {
       setAsrTaskKwargs({})
     }
-    form.reset({
-      name: item.name,
-      task: item.task,
-      description: item.description || '',
-      enabled: item.enabled,
-      schedule_type: type,
-      interval_every: item.interval?.every || 1,
-      interval_period: (item.interval?.period as IntervalPeriod) || 'hours',
-      crontab_minute: item.crontab?.minute || '*',
-      crontab_hour: item.crontab?.hour || '*',
-      crontab_day_of_week: item.crontab?.day_of_week || '*',
-      crontab_day_of_month: item.crontab?.day_of_month || '*',
-      crontab_month_of_year: item.crontab?.month_of_year || '*',
-      queue: item.queue || '',
-      one_off: item.one_off,
-      args_json: item.args ? JSON.stringify(item.args) : '',
-      kwargs_json: item.kwargs ? JSON.stringify(item.kwargs) : '',
-    })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        name: item.name,
+        task: item.task,
+        description: item.description || '',
+        enabled: item.enabled,
+        interval_every: item.interval?.every || 1,
+        interval_period: (item.interval?.period as IntervalPeriod) || 'hours',
+        crontab_minute: item.crontab?.minute || '*',
+        crontab_hour: item.crontab?.hour || '*',
+        crontab_day_of_week: item.crontab?.day_of_week || '*',
+        crontab_day_of_month: item.crontab?.day_of_month || '*',
+        crontab_month_of_year: item.crontab?.month_of_year || '*',
+        queue: item.queue || '',
+        one_off: item.one_off,
+        args_json: item.args ? JSON.stringify(item.args) : '',
+        kwargs_json: item.kwargs ? JSON.stringify(item.kwargs) : '',
+      })
+    }, 0)
   }
 
-  // 点击删除按钮
   const handleDeleteClick = (item: ScheduledTask) => {
     setDeletingItem(item)
     setDeleteDialogOpen(true)
   }
 
-  // 确认删除
   const handleDeleteConfirm = () => {
     if (deletingItem) {
       deleteMutation.mutate(deletingItem.id)
     }
   }
 
-  // 点击执行按钮
   const handleRunClick = (item: ScheduledTask) => {
     setRunningItem(item)
     setRunDialogOpen(true)
   }
 
-  // 确认执行
   const handleRunConfirm = () => {
     if (runningItem) {
       runNowMutation.mutate(runningItem.id)
     }
   }
 
-  // 查看执行日志
   const handleViewLog = (item: TaskExecutionHistory) => {
     setViewingTaskId(item.task_id)
     setViewingTaskName(item.task_name)
     setLogDialogOpen(true)
   }
 
-  // 应用 Crontab 预设
   const handleApplyPreset = (preset: typeof CRONTAB_PRESETS[number]) => {
-    form.setValue('crontab_minute', preset.value.minute)
-    form.setValue('crontab_hour', preset.value.hour)
-    form.setValue('crontab_day_of_week', preset.value.day_of_week)
-    form.setValue('crontab_day_of_month', preset.value.day_of_month)
-    form.setValue('crontab_month_of_year', preset.value.month_of_year)
+    formRef.current?.setValue('crontab_minute', preset.value.minute)
+    formRef.current?.setValue('crontab_hour', preset.value.hour)
+    formRef.current?.setValue('crontab_day_of_week', preset.value.day_of_week)
+    formRef.current?.setValue('crontab_day_of_month', preset.value.day_of_month)
+    formRef.current?.setValue('crontab_month_of_year', preset.value.month_of_year)
   }
 
-  // 监听任务类型变化
-  const selectedTask = form.watch('task')
-  const isASRTask = selectedTask === ASR_TASK_NAME
-
   // 提交表单
-  const handleSubmit = (data: FormData) => {
-    // 解析 JSON 参数
+  const handleFormSubmit = (values: Record<string, any>) => {
     let args: unknown[] | undefined
     let kwargs: Record<string, unknown> | undefined
 
-    // 如果是 ASR 任务，使用专用表单的参数
     if (isASRTask) {
       kwargs = asrTaskKwargs
     } else {
-      // 非 ASR 任务，使用 JSON 输入
-      if (data.args_json) {
+      if (values.args_json) {
         try {
-          args = JSON.parse(data.args_json)
+          args = JSON.parse(values.args_json)
         } catch {
           toast.error('位置参数 JSON 格式错误')
           return
         }
       }
-
-      if (data.kwargs_json) {
+      if (values.kwargs_json) {
         try {
-          kwargs = JSON.parse(data.kwargs_json)
+          kwargs = JSON.parse(values.kwargs_json)
         } catch {
           toast.error('关键字参数 JSON 格式错误')
           return
@@ -653,29 +647,28 @@ export function ScheduledTasksPage() {
     }
 
     const taskData: ScheduledTaskCreate | ScheduledTaskUpdate = {
-      name: data.name,
-      task: data.task,
-      description: data.description || undefined,
-      enabled: data.enabled,
-      queue: data.queue || undefined,
-      one_off: data.one_off,
+      name: values.name,
+      task: values.task,
+      description: values.description || undefined,
+      enabled: values.enabled,
+      queue: values.queue || undefined,
+      one_off: values.one_off,
       args,
       kwargs,
     }
 
-    // 根据调度类型设置配置
     if (scheduleType === 'interval') {
       taskData.interval = {
-        every: data.interval_every || 1,
-        period: data.interval_period || 'hours',
+        every: values.interval_every || 1,
+        period: values.interval_period || 'hours',
       }
     } else {
       taskData.crontab = {
-        minute: data.crontab_minute,
-        hour: data.crontab_hour,
-        day_of_week: data.crontab_day_of_week,
-        day_of_month: data.crontab_day_of_month,
-        month_of_year: data.crontab_month_of_year,
+        minute: values.crontab_minute,
+        hour: values.crontab_hour,
+        day_of_week: values.crontab_day_of_week,
+        day_of_month: values.crontab_day_of_month,
+        month_of_year: values.crontab_month_of_year,
       }
     }
 
@@ -693,782 +686,413 @@ export function ScheduledTasksPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">定时任务管理</h1>
-            <p className="text-sm text-muted-foreground">
-              管理 Celery Beat 定时任务
-            </p>
+            <Text type="tertiary" size="small">管理 Celery Beat 定时任务</Text>
           </div>
           {activeTab === 'tasks' && (
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
               新建任务
             </Button>
           )}
           {activeTab === 'history' && (
-            <Button variant="outline" onClick={() => refetchHistory()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+            <Button theme="outline" icon={<IconRefresh />} onClick={() => refetchHistory()}>
               刷新
             </Button>
           )}
         </div>
 
-        {/* 统计卡片 - 紧凑单行展示 */}
+        {/* 统计卡片 */}
         {statsLoading ? (
-          <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card px-4 py-2.5">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: '10px 16px' }}>
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Skeleton className="h-4 w-4" />
-                <Skeleton className="h-4 w-16" />
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border bg-card px-4 py-2.5">
-            <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 24px', border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: '10px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Activity className="h-4 w-4 text-blue-500" />
-              <span className="text-sm text-muted-foreground">今日执行</span>
-              <span className="text-sm font-semibold">{statsData?.today?.total ?? 0}</span>
-              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+              <Text type="tertiary" size="small">今日执行</Text>
+              <Text strong size="small">{statsData?.today?.total ?? 0}</Text>
+              <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
             </div>
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-muted-foreground">成功率</span>
-              <span className="text-sm font-semibold">{statsData?.today?.success_rate ?? 0}%</span>
-              <span className="text-xs text-muted-foreground ml-1">({statsData?.today?.success ?? 0} 成功 / {statsData?.today?.failure ?? 0} 失败)</span>
-              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+              <Text type="tertiary" size="small">成功率</Text>
+              <Text strong size="small">{statsData?.today?.success_rate ?? 0}%</Text>
+              <Text type="tertiary" size="small" style={{ marginLeft: 4 }}>({statsData?.today?.success ?? 0} 成功 / {statsData?.today?.failure ?? 0} 失败)</Text>
+              <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
             </div>
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Timer className="h-4 w-4 text-purple-500" />
-              <span className="text-sm text-muted-foreground">平均耗时</span>
-              <span className="text-sm font-semibold">{statsData?.today?.avg_duration ?? 0}s</span>
-              <span className="ml-4 hidden h-4 w-px bg-border sm:block" />
+              <Text type="tertiary" size="small">平均耗时</Text>
+              <Text strong size="small">{statsData?.today?.avg_duration ?? 0}s</Text>
+              <span style={{ marginLeft: 16, height: 16, width: 1, backgroundColor: 'var(--semi-color-border)', display: 'inline-block' }} />
             </div>
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <AlertTriangle className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-muted-foreground">最近失败</span>
-              <span className="text-sm font-semibold">{statsData?.recent_failures?.length ?? 0}</span>
+              <Text type="tertiary" size="small">最近失败</Text>
+              <Text strong size="small">{statsData?.recent_failures?.length ?? 0}</Text>
               {statsData?.recent_failures?.[0]?.task_name && (
-                <span className="text-xs text-muted-foreground truncate max-w-32" title={statsData.recent_failures[0].task_name}>
+                <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }} style={{ maxWidth: 128 }}>
                   ({statsData.recent_failures[0].task_name})
-                </span>
+                </Text>
               )}
             </div>
           </div>
         )}
 
         {/* 顶层 Tab */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'history')} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="w-fit">
-            <TabsTrigger value="tasks" className="gap-2">
-              <Clock className="h-4 w-4" />
-              定时任务
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
-              <History className="h-4 w-4" />
-              执行记录
-            </TabsTrigger>
-          </TabsList>
-
-          {/* 定时任务 Tab */}
-          <TabsContent value="tasks" className="flex-1 mt-4 min-h-0 flex flex-col gap-4">
-            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          style={{ width: header.getSize() }}
-                          className={
-                            header.id === 'actions'
-                              ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
-                              : undefined
-                          }
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            className={
-                              cell.column.id === 'actions'
-                                ? 'sticky right-0 bg-background shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
-                                : undefined
-                            }
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="h-24 text-center"
-                      >
-                        暂无定时任务
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+        <Tabs activeKey={activeTab} onChange={(v) => setActiveTab(v as 'tasks' | 'history')} className="flex-1 flex flex-col min-h-0">
+          <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Clock size={16}/>定时任务</span>} itemKey="tasks">
+            <div style={{ marginTop: 16 }}>
+              <Table
+                columns={taskColumns}
+                dataSource={taskDisplayData}
+                rowKey="id"
+                pagination={taskTablePagination}
+              />
             </div>
-            {/* 分页器 */}
-            <SimplePagination
-              page={tasksPagination.page}
-              pageSize={tasksPagination.size}
-              total={data?.total || 0}
-              onPageChange={(page) => setTasksPagination((prev) => ({ ...prev, page }))}
-              onPageSizeChange={(size) => setTasksPagination({ page: 1, size })}
-              className="flex-shrink-0"
-              isLoading={isLoading}
-            />
-          </TabsContent>
+          </TabPane>
 
-          {/* 执行记录 Tab */}
-          <TabsContent value="history" className="flex-1 mt-4 min-h-0 flex flex-col gap-4">
-            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead style={{ width: 160 }}>任务名称</TableHead>
-                    <TableHead style={{ width: 80 }}>触发方式</TableHead>
-                    <TableHead style={{ width: 90 }}>状态</TableHead>
-                    <TableHead style={{ width: 200 }}>结果摘要</TableHead>
-                    <TableHead style={{ width: 150 }}>执行时间</TableHead>
-                    <TableHead style={{ width: 80 }}>耗时</TableHead>
-                    <TableHead style={{ width: 60 }}>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {historyLoading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-14" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-36" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-                      </TableRow>
-                    ))
-                  ) : executionHistory.length > 0 ? (
-                    executionHistory.map((item: TaskExecutionHistory) => {
-                      // 提取结果摘要
-                      const getResultSummary = () => {
-                        if (!item.result) return '-'
-                        const formatted = formatTaskResult(item.result)
-                        if (formatted) {
-                          const messageLine = formatted.lines.find(l => l.label === '执行结果')
-                          if (messageLine) return messageLine.value
-                        }
-                        return item.result.length > 50 ? item.result.slice(0, 50) + '...' : item.result
-                      }
-
-                      return (
-                        <TableRow
-                          key={item.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleViewLog(item)}
-                        >
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-blue-500 shrink-0" />
-                              <span className="font-medium truncate max-w-[130px]" title={item.task_name}>
-                                {item.task_name}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.trigger_type === 'manual' ? 'outline' : 'secondary'}>
-                              {item.trigger_type === 'manual' ? '手动' : '定时'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <TaskStatusBadge status={item.status} />
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground truncate block max-w-[180px]" title={item.result || ''}>
-                              {getResultSummary()}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {item.created_at ? formatTime(item.created_at) : '-'}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {item.duration != null ? `${item.duration.toFixed(2)}s` : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleViewLog(item)
-                              }}
-                              title="查看详情"
-                            >
-                              <FileText className="h-4 w-4 text-blue-500" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
-                        暂无执行记录
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+          <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><History size={16}/>执行记录</span>} itemKey="history">
+            <div style={{ marginTop: 16 }}>
+              <Table
+                columns={historyColumns}
+                dataSource={historyLoading ? [] : executionHistory}
+                rowKey="id"
+                pagination={historyTablePagination}
+                loading={historyLoading}
+                onRow={(record) => ({
+                  onClick: () => handleViewLog(record as TaskExecutionHistory),
+                  style: { cursor: 'pointer' },
+                })}
+              />
             </div>
-            {/* 分页器 */}
-            <SimplePagination
-              page={historyPagination.page}
-              pageSize={historyPagination.size}
-              total={historyData?.total || 0}
-              onPageChange={(page) => setHistoryPagination((prev) => ({ ...prev, page }))}
-              onPageSizeChange={(size) => setHistoryPagination({ page: 1, size })}
-              className="flex-shrink-0"
-              isLoading={historyLoading}
-            />
-          </TabsContent>
+          </TabPane>
         </Tabs>
       </div>
 
       {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>{editingItem ? '编辑任务' : '新建任务'}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? '修改定时任务配置' : '创建一个新的定时任务'}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-                {/* 基本信息 */}
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>任务名称</FormLabel>
-                      <FormControl>
-                        <Input placeholder="请输入任务名称" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="task"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>任务函数</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="请选择任务函数" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableTasks.map((task: AvailableTask) => (
-                            <SelectItem key={task.name} value={task.name}>
-                              <div>
-                                <div className="font-medium">{task.name}</div>
-                                {task.description && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {task.description}
-                                  </div>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>描述（可选）</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="请输入任务描述"
-                          className="resize-none"
-                          rows={2}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* 调度配置 */}
-                <div className="space-y-3">
-                  <FormLabel>调度配置</FormLabel>
-                  <Tabs
-                    value={scheduleType}
-                    onValueChange={(v) => setScheduleType(v as 'interval' | 'crontab')}
-                  >
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="interval">
-                        <Timer className="h-4 w-4 mr-2" />
-                        间隔调度
-                      </TabsTrigger>
-                      <TabsTrigger value="crontab">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Crontab
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="interval" className="space-y-3 mt-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm">每</span>
-                        <FormField
-                          control={form.control}
-                          name="interval_every"
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  {...field}
-                                  onChange={(e) =>
-                                    field.onChange(parseInt(e.target.value) || 1)
-                                  }
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="interval_period"
-                          render={({ field }) => (
-                            <FormItem className="w-32">
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {INTERVAL_PERIOD_OPTIONS.map((option) => (
-                                    <SelectItem
-                                      key={option.value}
-                                      value={option.value}
-                                    >
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <span className="text-sm">执行一次</span>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="crontab" className="space-y-3 mt-3">
-                      {/* 预设模板 */}
-                      <div className="flex flex-wrap gap-2">
-                        {CRONTAB_PRESETS.map((preset) => (
-                          <Button
-                            key={preset.label}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleApplyPreset(preset)}
-                          >
-                            {preset.label}
-                          </Button>
-                        ))}
-                      </div>
-
-                      {/* Crontab 字段 */}
-                      <div className="grid grid-cols-5 gap-2">
-                        <FormField
-                          control={form.control}
-                          name="crontab_minute"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">分钟</FormLabel>
-                              <FormControl>
-                                <Input placeholder="*" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="crontab_hour"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">小时</FormLabel>
-                              <FormControl>
-                                <Input placeholder="*" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="crontab_day_of_month"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">日期</FormLabel>
-                              <FormControl>
-                                <Input placeholder="*" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="crontab_month_of_year"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">月份</FormLabel>
-                              <FormControl>
-                                <Input placeholder="*" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="crontab_day_of_week"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">星期</FormLabel>
-                              <FormControl>
-                                <Input placeholder="*" {...field} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        格式：分钟(0-59) 小时(0-23) 日期(1-31) 月份(1-12) 星期(0-6，0=周日)
-                      </p>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-
-                {/* 高级选项 */}
-                <div className="space-y-3 pt-2 border-t">
-                  <FormLabel>高级选项</FormLabel>
-
-                  <FormField
-                    control={form.control}
-                    name="enabled"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>启用任务</FormLabel>
-                          <FormDescription>
-                            任务创建后是否立即启用
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="one_off"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>一次性任务</FormLabel>
-                          <FormDescription>
-                            执行一次后自动禁用
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="queue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>任务队列（可选）</FormLabel>
-                        <FormControl>
-                          <Input placeholder="默认队列" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* 根据任务类型显示不同的参数表单 */}
-                  {isASRTask ? (
-                    <div className="space-y-3 rounded-lg border p-4 bg-blue-50/50">
-                      <div className="flex items-center gap-2 text-sm font-medium text-blue-700">
-                        <Clock className="h-4 w-4" />
-                        ASR 任务参数
-                      </div>
-                      <ASRTaskForm
-                        initialValues={editingItem?.kwargs as Record<string, unknown> | undefined}
-                        onChange={setAsrTaskKwargs}
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="args_json"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>位置参数（可选，JSON 数组）</FormLabel>
-                            <FormControl>
-                              <Input placeholder='例如：["arg1", "arg2"]' {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="kwargs_json"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>关键字参数（可选，JSON 对象）</FormLabel>
-                            <FormControl>
-                              <Input placeholder='例如：{"key": "value"}' {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? '保存中...'
-                    : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除定时任务「{deletingItem?.name}」吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      <Modal
+        title={editingItem ? '编辑任务' : '新建任务'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        width={600}
+        style={{ maxHeight: '90vh' }}
+        bodyStyle={{ overflow: 'auto', maxHeight: 'calc(90vh - 130px)' }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={() => formRef.current?.submitForm()}
+              loading={createMutation.isPending || updateMutation.isPending}
             >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* 执行确认对话框 */}
-      <AlertDialog open={runDialogOpen} onOpenChange={setRunDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认执行</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要立即执行任务「{runningItem?.name}」吗？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRunConfirm}>
-              {runNowMutation.isPending ? '执行中...' : '确认执行'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* 任务执行日志对话框 */}
-      <Dialog open={logDialogOpen} onOpenChange={(open) => {
-        setLogDialogOpen(open)
-        if (!open) {
-          setViewingTaskId(null)
-          setViewingTaskName('')
+              保存
+            </Button>
+          </div>
         }
-      }}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              任务执行日志
-            </DialogTitle>
-            <DialogDescription>
-              {viewingTaskName} - {viewingTaskId}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* 执行状态 */}
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">执行状态：</span>
-              {taskResultLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <TaskStatusBadge status={taskResultData?.status} />
-              )}
+      >
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleFormSubmit}
+          labelPosition="top"
+        >
+          <Form.Input
+            field="name"
+            label="任务名称"
+            placeholder="请输入任务名称"
+            rules={[{ required: true, message: '请输入任务名称' }]}
+          />
+
+          <Form.Select
+            field="task"
+            label="任务函数"
+            placeholder="请选择任务函数"
+            rules={[{ required: true, message: '请选择任务' }]}
+            onChange={(value) => setSelectedTask(value as string)}
+            optionList={availableTasks.map((task: AvailableTask) => ({
+              label: task.description ? `${task.name} - ${task.description}` : task.name,
+              value: task.name,
+            }))}
+          />
+
+          <Form.TextArea
+            field="description"
+            label="描述（可选）"
+            placeholder="请输入任务描述"
+            autosize={{ minRows: 2, maxRows: 4 }}
+          />
+
+          {/* 调度配置 */}
+          <div style={{ marginTop: 8 }}>
+            <Text strong size="small">调度配置</Text>
+            <Tabs
+              activeKey={scheduleType}
+              onChange={(v) => setScheduleType(v as 'interval' | 'crontab')}
+              style={{ marginTop: 8 }}
+            >
+              <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Timer size={16}/>间隔调度</span>} itemKey="interval">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                  <span style={{ fontSize: 14 }}>每</span>
+                  <Form.InputNumber
+                    field="interval_every"
+                    noLabel
+                    min={1}
+                    style={{ width: 120 }}
+                  />
+                  <Form.Select
+                    field="interval_period"
+                    noLabel
+                    style={{ width: 120 }}
+                    optionList={INTERVAL_PERIOD_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
+                  />
+                  <span style={{ fontSize: 14 }}>执行一次</span>
+                </div>
+              </TabPane>
+
+              <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Calendar size={16}/>Crontab</span>} itemKey="crontab">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {CRONTAB_PRESETS.map((preset) => (
+                      <Button
+                        key={preset.label}
+                        type="tertiary"
+                        theme="outline"
+                        size="small"
+                        onClick={() => handleApplyPreset(preset)}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                    <Form.Input field="crontab_minute" label="分钟" placeholder="*" labelPosition="top" />
+                    <Form.Input field="crontab_hour" label="小时" placeholder="*" labelPosition="top" />
+                    <Form.Input field="crontab_day_of_month" label="日期" placeholder="*" labelPosition="top" />
+                    <Form.Input field="crontab_month_of_year" label="月份" placeholder="*" labelPosition="top" />
+                    <Form.Input field="crontab_day_of_week" label="星期" placeholder="*" labelPosition="top" />
+                  </div>
+                  <Text type="tertiary" size="small">
+                    格式：分钟(0-59) 小时(0-23) 日期(1-31) 月份(1-12) 星期(0-6，0=周日)
+                  </Text>
+                </div>
+              </TabPane>
+            </Tabs>
+          </div>
+
+          {/* 高级选项 */}
+          <div style={{ borderTop: '1px solid var(--semi-color-border)', marginTop: 16, paddingTop: 16 }}>
+            <Text strong size="small">高级选项</Text>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: 12, marginTop: 12 }}>
+              <div>
+                <Text strong size="small">启用任务</Text>
+                <Text type="tertiary" size="small" style={{ display: 'block' }}>任务创建后是否立即启用</Text>
+              </div>
+              <Form.Switch field="enabled" noLabel />
             </div>
 
-            {/* 完成时间 */}
-            {taskResultData?.date_done && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">完成时间：</span>
-                <span className="text-sm">{formatTime(taskResultData.date_done)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: 12, marginTop: 8 }}>
+              <div>
+                <Text strong size="small">一次性任务</Text>
+                <Text type="tertiary" size="small" style={{ display: 'block' }}>执行一次后自动禁用</Text>
               </div>
-            )}
+              <Form.Switch field="one_off" noLabel />
+            </div>
 
-            {/* 执行结果 */}
-            {taskResultData?.result && (() => {
-              const formatted = formatTaskResult(taskResultData.result)
-              if (formatted) {
-                return (
-                  <div className="space-y-3">
-                    <span className="text-sm font-medium">执行详情：</span>
-                    <div className="rounded-md border bg-muted/30 p-4 space-y-2">
-                      {formatted.lines.map((line, index) => (
-                        <div key={index} className="flex items-center gap-3 text-sm">
-                          <span className="text-muted-foreground min-w-[80px]">{line.label}：</span>
-                          <span className={
-                            line.type === 'success' ? 'text-green-600 font-medium' :
-                            line.type === 'error' ? 'text-red-600 font-medium' :
-                            line.type === 'warning' ? 'text-yellow-600' :
-                            ''
-                          }>
-                            {line.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              }
-              // 无法解析时显示原始内容
-              return (
-                <div className="space-y-2">
-                  <span className="text-sm text-muted-foreground">执行结果：</span>
-                  <ScrollArea className="h-[200px] rounded-md border bg-muted/50 p-3">
-                    <pre className="text-xs whitespace-pre-wrap break-all font-mono">
-                      {taskResultData.result}
-                    </pre>
-                  </ScrollArea>
+            <Form.Input
+              field="queue"
+              label="任务队列（可选）"
+              placeholder="默认队列"
+              style={{ marginTop: 12 }}
+            />
+
+            {isASRTask ? (
+              <div style={{ borderRadius: 8, border: '1px solid var(--semi-color-primary-light-default)', padding: 16, marginTop: 12, backgroundColor: 'rgba(var(--semi-blue-0), 0.3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--semi-color-primary)' }}>
+                  <Clock className="h-4 w-4" />
+                  <Text strong size="small">ASR 任务参数</Text>
                 </div>
-              )
-            })()}
-
-            {/* 错误信息 */}
-            {taskResultData?.traceback && (
-              <div className="space-y-2">
-                <span className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-4 w-4" />
-                  错误信息：
-                </span>
-                <ScrollArea className="h-[200px] rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                  <pre className="text-xs whitespace-pre-wrap break-all font-mono text-destructive">
-                    {taskResultData.traceback}
-                  </pre>
-                </ScrollArea>
+                <ASRTaskForm
+                  initialValues={editingItem?.kwargs as Record<string, unknown> | undefined}
+                  onChange={setAsrTaskKwargs}
+                />
               </div>
-            )}
-
-            {/* 轮询提示 */}
-            {(taskResultData?.status === 'PENDING' || taskResultData?.status === 'STARTED') && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                任务执行中，自动更新状态...
-              </div>
+            ) : (
+              <>
+                <Form.Input
+                  field="args_json"
+                  label="位置参数（可选，JSON 数组）"
+                  placeholder='例如：["arg1", "arg2"]'
+                  style={{ marginTop: 12 }}
+                />
+                <Form.Input
+                  field="kwargs_json"
+                  label="关键字参数（可选，JSON 对象）"
+                  placeholder='例如：{"key": "value"}'
+                />
+              </>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => refetchTaskResult()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+        </Form>
+      </Modal>
+
+      {/* 删除确认对话框 */}
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="danger"
+              onClick={handleDeleteConfirm}
+              loading={deleteMutation.isPending}
+            >
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除定时任务「{deletingItem?.name}」吗？此操作不可撤销。
+      </Modal>
+
+      {/* 执行确认对话框 */}
+      <Modal
+        title="确认执行"
+        visible={runDialogOpen}
+        onCancel={() => setRunDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setRunDialogOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={handleRunConfirm}
+              loading={runNowMutation.isPending}
+            >
+              确认执行
+            </Button>
+          </div>
+        }
+      >
+        确定要立即执行任务「{runningItem?.name}」吗？
+      </Modal>
+
+      {/* 任务执行日志对话框 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileText className="h-5 w-5" />
+            任务执行日志
+          </div>
+        }
+        visible={logDialogOpen}
+        onCancel={() => {
+          setLogDialogOpen(false)
+          setViewingTaskId(null)
+          setViewingTaskName('')
+        }}
+        width={600}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button theme="outline" icon={<IconRefresh />} onClick={() => refetchTaskResult()}>
               刷新
             </Button>
-            <Button onClick={() => setLogDialogOpen(false)}>
-              关闭
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button theme="solid" type="primary" onClick={() => setLogDialogOpen(false)}>关闭</Button>
+          </div>
+        }
+      >
+        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 16 }}>
+          {viewingTaskName} - {viewingTaskId}
+        </Text>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* 执行状态 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Text type="tertiary" size="small">执行状态：</Text>
+            {taskResultLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <TaskStatusBadge status={taskResultData?.status} />
+            )}
+          </div>
+
+          {/* 完成时间 */}
+          {taskResultData?.date_done && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Text type="tertiary" size="small">完成时间：</Text>
+              <span style={{ fontSize: 14 }}>{formatTime(taskResultData.date_done)}</span>
+            </div>
+          )}
+
+          {/* 执行结果 */}
+          {taskResultData?.result && (() => {
+            const formatted = formatTaskResult(taskResultData.result)
+            if (formatted) {
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <Text strong size="small">执行详情：</Text>
+                  <div style={{ borderRadius: 6, border: '1px solid var(--semi-color-border)', backgroundColor: 'var(--semi-color-fill-0)', padding: 16 }}>
+                    {formatted.lines.map((line, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, marginBottom: index < formatted.lines.length - 1 ? 8 : 0 }}>
+                        <Text type="tertiary" style={{ minWidth: 80 }}>{line.label}：</Text>
+                        <span style={{
+                          color: line.type === 'success' ? 'var(--semi-color-success)' :
+                            line.type === 'error' ? 'var(--semi-color-danger)' :
+                            line.type === 'warning' ? 'var(--semi-color-warning)' : undefined,
+                          fontWeight: (line.type === 'success' || line.type === 'error') ? 500 : undefined,
+                        }}>
+                          {line.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Text type="tertiary" size="small">执行结果：</Text>
+                <div style={{ height: 200, overflow: 'auto', borderRadius: 6, border: '1px solid var(--semi-color-border)', backgroundColor: 'var(--semi-color-fill-0)', padding: 12 }}>
+                  <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', margin: 0 }}>
+                    {taskResultData.result}
+                  </pre>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* 错误信息 */}
+          {taskResultData?.traceback && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--semi-color-danger)' }}>
+                <AlertCircle className="h-4 w-4" />
+                <Text size="small" style={{ color: 'var(--semi-color-danger)' }}>错误信息：</Text>
+              </div>
+              <div style={{ height: 200, overflow: 'auto', borderRadius: 6, border: '1px solid var(--semi-color-danger-light-default)', backgroundColor: 'rgba(var(--semi-red-0), 0.3)', padding: 12 }}>
+                <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', color: 'var(--semi-color-danger)', margin: 0 }}>
+                  {taskResultData.traceback}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {/* 轮询提示 */}
+          {(taskResultData?.status === 'PENDING' || taskResultData?.status === 'STARTED') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <Text type="tertiary" size="small">任务执行中，自动更新状态...</Text>
+            </div>
+          )}
+        </div>
+      </Modal>
     </Main>
   )
 }
@@ -1480,7 +1104,6 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
   if (!result) return null
 
   try {
-    // 尝试解析 Python dict 字符串格式 (单引号) 或 JSON 格式 (双引号)
     const normalized = result
       .replace(/'/g, '"')
       .replace(/True/g, 'true')
@@ -1490,7 +1113,6 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
     const data = JSON.parse(normalized)
     const lines: Array<{ label: string; value: string; type?: 'success' | 'info' | 'warning' | 'error' }> = []
 
-    // 执行状态
     if (typeof data.success === 'boolean') {
       lines.push({
         label: '执行状态',
@@ -1499,12 +1121,10 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
       })
     }
 
-    // 消息
     if (data.message) {
       lines.push({ label: '执行结果', value: data.message, type: 'info' })
     }
 
-    // 同步时间范围
     if (data.time_range) {
       const { start, end } = data.time_range
       if (start && end) {
@@ -1512,7 +1132,6 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
       }
     }
 
-    // 同步统计
     if (typeof data.total_fetched === 'number') {
       lines.push({ label: '获取记录数', value: `${data.total_fetched} 条` })
     }
@@ -1527,7 +1146,6 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
       lines.push({ label: '跳过记录', value: `${data.total_skipped} 条（已存在）` })
     }
 
-    // 刷新凭证任务
     if (typeof data.success_count === 'number' && typeof data.failed_count === 'number') {
       lines.push({ label: '成功数', value: `${data.success_count} 个`, type: 'success' })
       if (data.failed_count > 0) {
@@ -1535,7 +1153,6 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
       }
     }
 
-    // 清理任务
     if (typeof data.timeout_count === 'number') {
       lines.push({ label: '清理数量', value: `${data.timeout_count} 条` })
     }
@@ -1543,7 +1160,6 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
       lines.push({ label: '清理数量', value: `${data.cleaned_count} 条` })
     }
 
-    // 执行时间
     if (data.synced_at || data.refreshed_at || data.cleaned_at) {
       const timestamp = data.synced_at || data.refreshed_at || data.cleaned_at
       const date = new Date(timestamp)
@@ -1562,63 +1178,72 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
 
     return lines.length > 0 ? { lines } : null
   } catch {
-    // 解析失败，返回 null 使用原始显示
     return null
   }
 }
 
 /**
- * 任务状态徽章组件
+ * 任务状态徽章组件 - Semi Tag 版本
  */
 function TaskStatusBadge({ status }: { status?: string }) {
   switch (status) {
     case 'SUCCESS':
       return (
-        <Badge variant="default" className="gap-1 bg-green-500">
-          <CheckCircle className="h-3 w-3" />
-          成功
-        </Badge>
+        <Tag color="green" size="small">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <CheckCircle className="h-3 w-3" />
+            成功
+          </span>
+        </Tag>
       )
     case 'FAILURE':
       return (
-        <Badge variant="destructive" className="gap-1">
-          <XCircle className="h-3 w-3" />
-          失败
-        </Badge>
+        <Tag color="red" size="small">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <XCircle className="h-3 w-3" />
+            失败
+          </span>
+        </Tag>
       )
     case 'PENDING':
       return (
-        <Badge variant="secondary" className="gap-1">
-          <Clock className="h-3 w-3" />
-          等待中
-        </Badge>
+        <Tag size="small">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Clock className="h-3 w-3" />
+            等待中
+          </span>
+        </Tag>
       )
     case 'STARTED':
       return (
-        <Badge variant="default" className="gap-1 bg-blue-500">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          执行中
-        </Badge>
+        <Tag color="blue" size="small">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Loader2 className="h-3 w-3 animate-spin" />
+            执行中
+          </span>
+        </Tag>
       )
     case 'RETRY':
       return (
-        <Badge variant="outline" className="gap-1">
-          <RefreshCw className="h-3 w-3" />
-          重试中
-        </Badge>
+        <Tag size="small">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <IconRefresh size="extra-small" />
+            重试中
+          </span>
+        </Tag>
       )
     case 'REVOKED':
       return (
-        <Badge variant="secondary" className="gap-1">
-          <XCircle className="h-3 w-3" />
-          已撤销
-        </Badge>
+        <Tag size="small">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <XCircle className="h-3 w-3" />
+            已撤销
+          </span>
+        </Tag>
       )
     default:
       return (
-        <Badge variant="outline" className="gap-1">
-          未知
-        </Badge>
+        <Tag size="small">未知</Tag>
       )
   }
 }

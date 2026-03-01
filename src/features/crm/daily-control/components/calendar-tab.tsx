@@ -1,11 +1,12 @@
 /**
- * 日控表日历视图组件
- * 简洁商务风格 - 基于 Anthropic 品牌色彩系统
+ * 日控表日历视图组件 - Semi Design 版
+ * 简洁商务风格 - 基于 Semi Design 官方配色
  */
 
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { Toast, Button, Spin, DatePicker } from '@douyinfe/semi-ui-19'
+import { IconChevronLeft, IconChevronRight, IconCalendar, IconUser } from '@douyinfe/semi-icons'
 import {
   format,
   startOfMonth,
@@ -23,25 +24,6 @@ import {
   isToday,
 } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import {
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Calendar as CalendarIcon,
-  CalendarDays,
-  CalendarRange,
-  User,
-  Wallet,
-  GraduationCap,
-  MapPin,
-  ChevronRight as ArrowRight,
-  UserCheck,
-  CalendarCheck,
-} from 'lucide-react'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { cn } from '@/lib/utils'
 import { getVisitSchedules, getPayments } from '../api'
 import type { VisitScheduleItem, PaymentItem } from '../api'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
@@ -69,86 +51,45 @@ interface CalendarItem {
   raw: VisitScheduleItem | PaymentItem
 }
 
-// 简洁的类型配置 - 使用品牌色
+// 类型配置
 const typeConfig = {
-  promised: {
-    label: '诺到',
-    icon: UserCheck,
-    color: brandColors.orange,
-    dot: 'bg-[#d97757]',
-    text: 'text-[#d97757]',
-    bgSubtle: 'bg-[#d97757]/5',
-    bgLight: 'bg-[#d97757]/10',
-    border: 'border-[#d97757]/20',
-  },
-  visited: {
-    label: '到访',
-    icon: CalendarCheck,
-    color: brandColors.blue,
-    dot: 'bg-[#6a9bcc]',
-    text: 'text-[#6a9bcc]',
-    bgSubtle: 'bg-[#6a9bcc]/5',
-    bgLight: 'bg-[#6a9bcc]/10',
-    border: 'border-[#6a9bcc]/20',
-  },
-  payment: {
-    label: '缴费',
-    icon: Wallet,
-    color: brandColors.green,
-    dot: 'bg-[#788c5d]',
-    text: 'text-[#788c5d]',
-    bgSubtle: 'bg-[#788c5d]/5',
-    bgLight: 'bg-[#788c5d]/10',
-    border: 'border-[#788c5d]/20',
-  },
+  promised: { label: '诺到', color: brandColors.orange },
+  visited: { label: '到访', color: brandColors.blue },
+  payment: { label: '缴费', color: brandColors.green },
 }
 
 export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabProps) {
   const initialMonth = useMemo(() => {
-    if (dateFrom) {
-      return parseISO(dateFrom)
-    }
+    if (dateFrom) return parseISO(dateFrom)
     return new Date()
   }, [dateFrom])
 
   const [currentMonth, setCurrentMonth] = useState(initialMonth)
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('week') // 默认周视图
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('week')
 
-  // 筛选器状态
   const [showPromised, setShowPromised] = useState(true)
   const [showVisited, setShowVisited] = useState(true)
   const [showPayment, setShowPayment] = useState(true)
 
-  // 线索详情抽屉状态
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
 
-  // 计算当前月份的日期范围
   const monthRange = useMemo(() => {
     const start = startOfMonth(currentMonth)
     const end = endOfMonth(currentMonth)
-    return {
-      from: format(start, 'yyyy-MM-dd'),
-      to: format(end, 'yyyy-MM-dd'),
-    }
+    return { from: format(start, 'yyyy-MM-dd'), to: format(end, 'yyyy-MM-dd') }
   }, [currentMonth])
 
-  // 获取数据
   const { data: promisedData, isLoading: isLoadingPromised, error: promisedError } = useQuery({
     queryKey: ['calendar-promised', monthRange.from, monthRange.to, creatorCampusId],
     queryFn: async () => {
       const response = await getVisitSchedules({
-        page: 1,
-        size: 100,
-        status: 'scheduled',
-        visit_date_from: monthRange.from,
-        visit_date_to: monthRange.to,
+        page: 1, size: 100, status: 'scheduled',
+        visit_date_from: monthRange.from, visit_date_to: monthRange.to,
         creator_campus_id: creatorCampusId,
       }) as any
-      if (response && response.success === false) {
-        throw new Error(response.message || '获取诺到数据失败')
-      }
+      if (response && response.success === false) throw new Error(response.message || '获取诺到数据失败')
       return response?.items || []
     },
     enabled: showPromised,
@@ -158,16 +99,11 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
     queryKey: ['calendar-visited', monthRange.from, monthRange.to, creatorCampusId],
     queryFn: async () => {
       const response = await getVisitSchedules({
-        page: 1,
-        size: 100,
-        status: 'visited',
-        visit_date_from: monthRange.from,
-        visit_date_to: monthRange.to,
+        page: 1, size: 100, status: 'visited',
+        visit_date_from: monthRange.from, visit_date_to: monthRange.to,
         creator_campus_id: creatorCampusId,
       }) as any
-      if (response && response.success === false) {
-        throw new Error(response.message || '获取到访数据失败')
-      }
+      if (response && response.success === false) throw new Error(response.message || '获取到访数据失败')
       return response?.items || []
     },
     enabled: showVisited,
@@ -177,16 +113,10 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
     queryKey: ['calendar-payment', monthRange.from, monthRange.to, creatorCampusId],
     queryFn: async () => {
       const response = await getPayments({
-        page: 1,
-        size: 100,
-        date_from: monthRange.from,
-        date_to: monthRange.to,
-        status: 'confirmed',
-        creator_campus_id: creatorCampusId,
+        page: 1, size: 100, date_from: monthRange.from, date_to: monthRange.to,
+        status: 'confirmed', creator_campus_id: creatorCampusId,
       }) as any
-      if (response && response.success === false) {
-        throw new Error(response.message || '获取缴费数据失败')
-      }
+      if (response && response.success === false) throw new Error(response.message || '获取缴费数据失败')
       return response?.items || []
     },
     enabled: showPayment,
@@ -194,37 +124,25 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
 
   const isLoading = isLoadingPromised || isLoadingVisited || isLoadingPayment
 
-  // 错误处理
-  useEffect(() => {
-    if (promisedError) toast.error((promisedError as Error).message)
-  }, [promisedError])
-
-  useEffect(() => {
-    if (visitedError) toast.error((visitedError as Error).message)
-  }, [visitedError])
-
-  useEffect(() => {
-    if (paymentError) toast.error((paymentError as Error).message)
-  }, [paymentError])
+  useEffect(() => { if (promisedError) Toast.error((promisedError as Error).message) }, [promisedError])
+  useEffect(() => { if (visitedError) Toast.error((visitedError as Error).message) }, [visitedError])
+  useEffect(() => { if (paymentError) Toast.error((paymentError as Error).message) }, [paymentError])
 
   // 合并数据
   const itemsByDate = useMemo(() => {
     const map = new Map<string, CalendarItem[]>()
 
     if (showPromised && promisedData) {
-      promisedData.forEach((item) => {
+      promisedData.forEach((item: any) => {
         const dateKey = item.visit_date
         const calendarItem: CalendarItem = {
-          id: item.id,
-          type: 'promised',
-          date: dateKey,
+          id: item.id, type: 'promised', date: dateKey,
           time: item.visit_time?.slice(0, 5),
           name: item.student_name || item.child_name || '未知',
           courseName: item.course_names?.join(', '),
           advisorName: item.advisor_name,
           gradeDisplay: item.grade_display,
           sourceChannel: item.source_channel_name,
-          sourceExtra: item.source_extra,
           raw: item,
         }
         const existing = map.get(dateKey) || []
@@ -233,19 +151,15 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
     }
 
     if (showVisited && visitedData) {
-      visitedData.forEach((item) => {
+      visitedData.forEach((item: any) => {
         const dateKey = item.visit_date
         const calendarItem: CalendarItem = {
-          id: item.id,
-          type: 'visited',
-          date: dateKey,
+          id: item.id, type: 'visited', date: dateKey,
           time: item.visit_time?.slice(0, 5),
           name: item.student_name || item.child_name || '未知',
           courseName: item.course_names?.join(', '),
           advisorName: item.advisor_name,
           gradeDisplay: item.grade_display,
-          sourceChannel: item.source_channel_name,
-          sourceExtra: item.source_extra,
           raw: item,
         }
         const existing = map.get(dateKey) || []
@@ -254,23 +168,14 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
     }
 
     if (showPayment && paymentData) {
-      paymentData.forEach((item) => {
+      paymentData.forEach((item: any) => {
         const dateKey = item.payment_at.split('T')[0]
-        const timeStr = item.payment_at.includes('T')
-          ? item.payment_at.split('T')[1]?.slice(0, 5)
-          : undefined
+        const timeStr = item.payment_at.includes('T') ? item.payment_at.split('T')[1]?.slice(0, 5) : undefined
         const calendarItem: CalendarItem = {
-          id: item.id,
-          type: 'payment',
-          date: dateKey,
-          time: timeStr,
-          name: item.child_name || '未知',
-          amount: item.amount,
-          courseName: item.course_name,
+          id: item.id, type: 'payment', date: dateKey,
+          time: timeStr, name: item.child_name || '未知',
+          amount: item.amount, courseName: item.course_name,
           advisorName: item.advisor_name,
-          gradeDisplay: item.grade_display,
-          sourceChannel: item.source_channel_name,
-          sourceExtra: item.source_extra,
           raw: item,
         }
         const existing = map.get(dateKey) || []
@@ -287,12 +192,10 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
 
   const calendarDays = useMemo(() => {
     if (viewMode === 'week') {
-      // 周视图：只显示选中日期所在的那一周
       const weekStart = startOfWeek(selectedDate, { locale: zhCN })
       const weekEnd = endOfWeek(selectedDate, { locale: zhCN })
       return eachDayOfInterval({ start: weekStart, end: weekEnd })
     }
-    // 月视图
     const monthStart = startOfMonth(currentMonth)
     const monthEnd = endOfMonth(currentMonth)
     const startDate = startOfWeek(monthStart, { locale: zhCN })
@@ -320,18 +223,7 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const prevWeek = () => setSelectedDate(subWeeks(selectedDate, 1))
   const nextWeek = () => setSelectedDate(addWeeks(selectedDate, 1))
-  const goToToday = () => {
-    const today = new Date()
-    setCurrentMonth(today)
-    setSelectedDate(today)
-  }
-
-  // 获取当前周的日期范围显示
-  const weekRangeDisplay = useMemo(() => {
-    const weekStart = startOfWeek(selectedDate, { locale: zhCN })
-    const weekEnd = endOfWeek(selectedDate, { locale: zhCN })
-    return `${format(weekStart, 'MM/dd', { locale: zhCN })} - ${format(weekEnd, 'MM/dd', { locale: zhCN })}`
-  }, [selectedDate])
+  const goToToday = () => { const today = new Date(); setCurrentMonth(today); setSelectedDate(today) }
 
   const weekDays = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -342,33 +234,31 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
   ]
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      {/* 顶部筛选栏 - 简洁风格 */}
-      <div className="flex items-center justify-between flex-shrink-0">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+      {/* 顶部筛选栏 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         {/* 左侧筛选器 */}
-        <div className="flex items-center gap-1 border-b border-[#e8e6dc] dark:border-slate-800">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, borderBottom: '1px solid #e8e6dc' }}>
           {filters.map(({ key, show, setShow }) => {
             const config = typeConfig[key]
             return (
               <button
                 key={key}
                 onClick={() => setShow(!show)}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors',
-                  'border-b-2 -mb-[1px]',
-                  show ? [
-                    'border-[#141413] dark:border-slate-100',
-                    'text-[#141413] dark:text-slate-100',
-                  ] : [
-                    'border-transparent',
-                    'text-[#b0aea5] dark:text-slate-500',
-                    'hover:text-[#141413] dark:hover:text-slate-300',
-                  ]
-                )}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 12px', fontSize: 14, fontWeight: 500,
+                  transition: 'color 0.15s', cursor: 'pointer',
+                  borderBottom: `2px solid ${show ? 'var(--semi-color-text-0)' : 'transparent'}`,
+                  marginBottom: -1,
+                  color: show ? 'var(--semi-color-text-0)' : 'var(--semi-color-text-2)',
+                  background: 'none', border: 'none',
+                }}
               >
-                <span
-                  className={cn('w-2 h-2 rounded-full', show ? config.dot : 'bg-[#e8e6dc]')}
-                />
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  backgroundColor: show ? config.color : '#e8e6dc',
+                }} />
                 <span>{config.label}</span>
               </button>
             )
@@ -376,128 +266,83 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
         </div>
 
         {/* 右侧导航 */}
-        <div className="flex items-center gap-3">
-          {isLoading && (
-            <div className="flex items-center gap-2 text-[#b0aea5]">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">加载中</span>
-            </div>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {isLoading && <Spin size="small" />}
 
           {/* 视图切换 */}
-          <div className="flex items-center rounded-lg border border-[#e8e6dc] dark:border-slate-800 bg-[#faf9f5] dark:bg-slate-900 p-0.5">
+          <div style={{ display: 'flex', alignItems: 'center', borderRadius: 8, border: '1px solid #e8e6dc', background: '#faf9f5', padding: 2 }}>
             <button
               onClick={() => setViewMode('week')}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                viewMode === 'week'
-                  ? 'bg-[#d97757] text-white'
-                  : 'text-[#b0aea5] hover:text-[#141413]'
-              )}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+                background: viewMode === 'week' ? '#ff7d00' : 'transparent',
+                color: viewMode === 'week' ? '#fff' : '#86909c',
+                border: 'none', cursor: 'pointer',
+              }}
             >
-              <CalendarRange className="w-3.5 h-3.5" />
               周
             </button>
             <button
               onClick={() => setViewMode('month')}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                viewMode === 'month'
-                  ? 'bg-[#d97757] text-white'
-                  : 'text-[#b0aea5] hover:text-[#141413]'
-              )}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+                background: viewMode === 'month' ? '#ff7d00' : 'transparent',
+                color: viewMode === 'month' ? '#fff' : '#86909c',
+                border: 'none', cursor: 'pointer',
+              }}
             >
-              <CalendarDays className="w-3.5 h-3.5" />
               月
             </button>
           </div>
 
-          <button
-            onClick={goToToday}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              'bg-[#141413] text-white dark:bg-slate-100 dark:text-slate-900',
-              'hover:bg-[#141413]/90 dark:hover:bg-slate-200'
-            )}
-          >
-            今天
-          </button>
+          <Button theme="solid" size="small" onClick={goToToday} style={{ background: 'var(--semi-color-text-0)' }}>今天</Button>
 
-          <div className="flex items-center rounded-lg border border-[#e8e6dc] dark:border-slate-800 bg-[#faf9f5] dark:bg-slate-900">
+          <div style={{ display: 'flex', alignItems: 'center', borderRadius: 8, border: '1px solid #e8e6dc', background: '#faf9f5' }}>
             <button
               onClick={viewMode === 'week' ? prevWeek : prevMonth}
-              className="p-2 hover:bg-[#e8e6dc]/50 dark:hover:bg-slate-800 transition-colors rounded-l-lg"
+              style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px 0 0 8px' }}
             >
-              <ChevronLeft className="h-4 w-4 text-[#b0aea5]" />
+              <IconChevronLeft style={{ color: '#86909c' }} />
             </button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="px-3 py-1.5 w-[180px] border-x border-[#e8e6dc] dark:border-slate-800 hover:bg-[#e8e6dc]/30 dark:hover:bg-slate-800/30 transition-colors">
-                  {viewMode === 'week' ? (
-                    <div className="flex items-center justify-between text-sm font-medium text-[#141413] dark:text-slate-200">
-                      <span>{format(startOfWeek(selectedDate, { locale: zhCN }), 'yy-MM-dd')}</span>
-                      <span className="text-[#b0aea5] mx-1">~</span>
-                      <span>{format(endOfWeek(selectedDate, { locale: zhCN }), 'yy-MM-dd')}</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm font-medium text-[#141413] dark:text-slate-200">
-                      {format(currentMonth, 'yy-MM', { locale: zhCN })}
-                    </span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="center">
-                <div className="p-2 border-b border-[#e8e6dc] dark:border-slate-800">
-                  <button
-                    onClick={() => {
-                      const today = new Date()
-                      setSelectedDate(today)
-                      setCurrentMonth(today)
-                    }}
-                    className="w-full px-3 py-1.5 text-sm font-medium rounded-md bg-[#d97757] text-white hover:bg-[#d97757]/90 transition-colors"
-                  >
-                    今天
-                  </button>
-                </div>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date)
-                      setCurrentMonth(date)
-                    }
-                  }}
-                  locale={zhCN}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <span style={{
+              padding: '6px 12px', width: 180, textAlign: 'center',
+              borderLeft: '1px solid #e8e6dc', borderRight: '1px solid #e8e6dc',
+              fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-0)',
+            }}>
+              {viewMode === 'week'
+                ? `${format(startOfWeek(selectedDate, { locale: zhCN }), 'yy-MM-dd')} ~ ${format(endOfWeek(selectedDate, { locale: zhCN }), 'yy-MM-dd')}`
+                : format(currentMonth, 'yy-MM', { locale: zhCN })
+              }
+            </span>
             <button
               onClick={viewMode === 'week' ? nextWeek : nextMonth}
-              className="p-2 hover:bg-[#e8e6dc]/50 dark:hover:bg-slate-800 transition-colors rounded-r-lg"
+              style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', borderRadius: '0 8px 8px 0' }}
             >
-              <ChevronRight className="h-4 w-4 text-[#b0aea5]" />
+              <IconChevronRight style={{ color: '#86909c' }} />
             </button>
           </div>
         </div>
       </div>
 
       {/* 主体内容 */}
-      <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 16, flex: 1, minHeight: 0 }}>
         {/* 左侧日历区域 */}
-        <div className="col-span-3 flex flex-col rounded-xl border border-[#e8e6dc] dark:border-slate-800 bg-[#faf9f5] dark:bg-slate-900 h-full overflow-hidden">
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          borderRadius: 12, border: '1px solid #e8e6dc',
+          background: '#faf9f5', height: '100%', overflow: 'hidden',
+        }}>
           {/* 星期表头 */}
-          <div className="grid grid-cols-7 border-b border-[#e8e6dc] dark:border-slate-800 flex-shrink-0">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e8e6dc', flexShrink: 0 }}>
             {weekDays.map((day, index) => (
               <div
                 key={day}
-                className={cn(
-                  'py-3 text-center text-xs font-medium',
-                  index === 5 || index === 6
-                    ? 'text-[#d97757]/70'
-                    : 'text-[#b0aea5]'
-                )}
+                style={{
+                  padding: '12px 0', textAlign: 'center', fontSize: 12, fontWeight: 500,
+                  color: (index === 5 || index === 6) ? 'rgba(255, 125, 0, 0.7)' : '#86909c',
+                }}
               >
                 周{day}
               </div>
@@ -505,10 +350,11 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
           </div>
 
           {/* 日期格子 */}
-          <div className={cn(
-            'flex-1 grid grid-cols-7 overflow-auto',
-            viewMode === 'week' ? 'auto-rows-[1fr]' : 'auto-rows-fr'
-          )}>
+          <div style={{
+            flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+            gridAutoRows: viewMode === 'week' ? '1fr' : undefined,
+            overflow: 'auto',
+          }}>
             {calendarDays.map((day, index) => {
               const dateKey = format(day, 'yyyy-MM-dd')
               const dayItems = itemsByDate.get(dateKey) || []
@@ -520,56 +366,69 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
               const promisedCount = dayItems.filter((i) => i.type === 'promised').length
               const visitedCount = dayItems.filter((i) => i.type === 'visited').length
               const paymentCount = dayItems.filter((i) => i.type === 'payment').length
-              const hasData = dayItems.length > 0
 
-              // 周视图显示更多记录，月视图只显示2条
               const maxItems = viewMode === 'week' ? 10 : 2
 
               return (
                 <div
                   key={day.toISOString()}
                   onClick={() => setSelectedDate(day)}
-                  className={cn(
-                    'relative flex flex-col p-2 transition-colors cursor-pointer',
-                    'border-b border-r border-[#e8e6dc]/50 dark:border-slate-800/50',
-                    viewMode === 'month' && 'min-h-[90px]',
-                    viewMode === 'week' && !isCurrentMonth && 'bg-white dark:bg-slate-900',
-                    viewMode === 'month' && !isCurrentMonth && 'bg-[#e8e6dc]/20 dark:bg-slate-950/30',
-                    isCurrentMonth && 'bg-white dark:bg-slate-900',
-                    isWeekend && isCurrentMonth && 'bg-[#faf9f5] dark:bg-slate-900/50',
-                    isSelected && 'bg-[#141413]/5 dark:bg-slate-100/5 ring-1 ring-inset ring-[#141413]/20 dark:ring-slate-100/20',
-                    !isSelected && 'hover:bg-[#e8e6dc]/30 dark:hover:bg-slate-800/30',
-                    (index + 1) % 7 === 0 && 'border-r-0'
-                  )}
+                  style={{
+                    position: 'relative', display: 'flex', flexDirection: 'column',
+                    padding: 8, cursor: 'pointer', overflow: 'hidden',
+                    borderBottom: '1px solid rgba(134, 144, 156, 0.1)',
+                    borderRight: (index + 1) % 7 === 0 ? 'none' : '1px solid rgba(134, 144, 156, 0.1)',
+                    minHeight: viewMode === 'month' ? 90 : undefined,
+                    background: !isCurrentMonth ? 'rgba(134, 144, 156, 0.04)'
+                      : isSelected ? 'rgba(20, 20, 19, 0.05)'
+                        : isWeekend ? '#faf9f5'
+                          : '#fff',
+                    outline: isSelected ? '1px solid rgba(20, 20, 19, 0.2)' : 'none',
+                    outlineOffset: -1,
+                    zIndex: isSelected ? 1 : 0,
+                    transition: 'background 0.15s',
+                  }}
                 >
                   {/* 日期数字 + 统计胶囊 */}
-                  <div className="flex items-center justify-between mb-1 flex-shrink-0">
-                    <span className={cn(
-                      'w-6 h-6 flex items-center justify-center rounded text-sm font-medium shrink-0',
-                      isTodayDate && 'bg-[#d97757] text-white',
-                      !isTodayDate && isSelected && 'text-[#141413] dark:text-slate-100 font-semibold',
-                      !isTodayDate && !isSelected && isCurrentMonth && 'text-[#141413]/70 dark:text-slate-300',
-                      !isTodayDate && !isSelected && !isCurrentMonth && 'text-[#b0aea5]/50 dark:text-slate-600'
-                    )}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexShrink: 0 }}>
+                    <span style={{
+                      width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      borderRadius: 4, fontSize: 14, fontWeight: 500,
+                      ...(isTodayDate
+                        ? { background: '#ff7d00', color: '#fff' }
+                        : isSelected
+                          ? { color: 'var(--semi-color-text-0)', fontWeight: 600 }
+                          : { color: !isCurrentMonth ? 'rgba(134, 144, 156, 0.5)' : 'rgba(20, 20, 19, 0.7)' }
+                      ),
+                    }}>
                       {format(day, 'd')}
                     </span>
 
-                    {hasData && (
-                      <div className="flex items-center gap-1">
+                    {dayItems.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {promisedCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#d97757]/15 text-[#d97757] text-xs font-medium">
-                            {promisedCount}
-                          </span>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            minWidth: 20, height: 20, padding: '0 6px',
+                            borderRadius: 10, background: 'rgba(255, 125, 0, 0.15)',
+                            color: '#ff7d00', fontSize: 12, fontWeight: 500,
+                          }}>{promisedCount}</span>
                         )}
                         {visitedCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#6a9bcc]/15 text-[#6a9bcc] text-xs font-medium">
-                            {visitedCount}
-                          </span>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            minWidth: 20, height: 20, padding: '0 6px',
+                            borderRadius: 10, background: 'rgba(106, 155, 204, 0.15)',
+                            color: '#6a9bcc', fontSize: 12, fontWeight: 500,
+                          }}>{visitedCount}</span>
                         )}
                         {paymentCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#788c5d]/15 text-[#788c5d] text-xs font-medium">
-                            {paymentCount}
-                          </span>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            minWidth: 20, height: 20, padding: '0 6px',
+                            borderRadius: 10, background: 'rgba(0, 180, 42, 0.15)',
+                            color: '#00b42a', fontSize: 12, fontWeight: 500,
+                          }}>{paymentCount}</span>
                         )}
                       </div>
                     )}
@@ -577,25 +436,28 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
 
                   {/* 记录列表 */}
                   {dayItems.length > 0 && (
-                    <div className={cn(
-                      'flex flex-col gap-0.5 flex-1 min-h-0',
-                      viewMode === 'week' ? 'overflow-auto' : 'overflow-hidden'
-                    )}>
+                    <div style={{
+                      display: 'flex', flexDirection: 'column', gap: 2,
+                      flex: 1, minHeight: 0,
+                      overflow: viewMode === 'week' ? 'auto' : 'hidden',
+                    }}>
                       {dayItems.slice(0, maxItems).map((item) => {
                         const config = typeConfig[item.type]
                         return (
                           <div
                             key={`${item.type}-${item.id}`}
-                            className={cn(
-                              'flex items-center justify-between px-1.5 py-0.5 rounded text-[10px] shrink-0',
-                              config.bgSubtle
-                            )}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '2px 6px', borderRadius: 4,
+                              fontSize: 10, flexShrink: 0,
+                              background: `${config.color}08`,
+                            }}
                           >
-                            <span className={cn('truncate font-medium max-w-[50%]', config.text)}>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500, maxWidth: '50%', color: config.color }}>
                               {item.name}
                             </span>
                             {item.advisorName && (
-                              <span className="text-[#b0aea5] truncate text-right shrink-0 max-w-[45%]">
+                              <span style={{ color: 'var(--semi-color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right', flexShrink: 0, maxWidth: '45%' }}>
                                 {item.advisorName}
                               </span>
                             )}
@@ -603,7 +465,7 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
                         )
                       })}
                       {dayItems.length > maxItems && (
-                        <span className="text-[10px] text-[#b0aea5] pl-1 shrink-0">
+                        <span style={{ fontSize: 10, color: 'var(--semi-color-text-2)', paddingLeft: 4, flexShrink: 0 }}>
                           +{dayItems.length - maxItems}
                         </span>
                       )}
@@ -616,144 +478,140 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
         </div>
 
         {/* 右侧详情列表 */}
-        <div className="col-span-1 flex flex-col rounded-xl border border-[#e8e6dc] dark:border-slate-800 bg-[#faf9f5] dark:bg-slate-900 overflow-hidden h-full">
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          borderRadius: 12, border: '1px solid #e8e6dc',
+          background: '#faf9f5', overflow: 'hidden', height: '100%',
+        }}>
           {/* 头部 */}
-          <div className="p-4 border-b border-[#e8e6dc] dark:border-slate-800 flex-shrink-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-semibold text-[#141413] dark:text-slate-100">
+          <div style={{ padding: 16, borderBottom: '1px solid #e8e6dc', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: 24, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
                 {format(selectedDate, 'd')}
               </span>
-              <span className="text-sm text-[#b0aea5]">
+              <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>
                 {format(selectedDate, 'MM月', { locale: zhCN })}
               </span>
-              <span className="text-xs px-2 py-0.5 rounded bg-[#e8e6dc]/50 dark:bg-slate-800 text-[#b0aea5] font-medium">
+              <span style={{
+                fontSize: 12, padding: '2px 8px', borderRadius: 4,
+                background: 'rgba(134, 144, 156, 0.1)', color: 'var(--semi-color-text-2)', fontWeight: 500,
+              }}>
                 周{format(selectedDate, 'EEEE', { locale: zhCN }).replace('星期', '')}
               </span>
             </div>
 
-            {/* 统计 */}
-            <div className="flex items-center gap-2 mt-2">
-              {stats.promised > 0 && (
-                <span className="text-xs text-[#d97757]">诺到 {stats.promised}</span>
-              )}
-              {stats.visited > 0 && (
-                <span className="text-xs text-[#6a9bcc]">到访 {stats.visited}</span>
-              )}
-              {stats.payment > 0 && (
-                <span className="text-xs text-[#788c5d]">缴费 {stats.payment}</span>
-              )}
-              {stats.total === 0 && (
-                <span className="text-xs text-[#b0aea5]">暂无记录</span>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              {stats.promised > 0 && <span style={{ fontSize: 12, color: '#ff7d00' }}>诺到 {stats.promised}</span>}
+              {stats.visited > 0 && <span style={{ fontSize: 12, color: '#6a9bcc' }}>到访 {stats.visited}</span>}
+              {stats.payment > 0 && <span style={{ fontSize: 12, color: '#00b42a' }}>缴费 {stats.payment}</span>}
+              {stats.total === 0 && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>暂无记录</span>}
             </div>
           </div>
 
           {/* 卡片列表 */}
-          <ScrollArea className="flex-1">
-            <div className="p-3">
-              {selectedDateItems.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {selectedDateItems.map((item) => {
-                    const config = typeConfig[item.type]
-                    const Icon = config.icon
+          <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+            {selectedDateItems.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {selectedDateItems.map((item) => {
+                  const config = typeConfig[item.type]
+                  return (
+                    <div
+                      key={`${item.type}-${item.id}`}
+                      onClick={() => {
+                        setSelectedLeadId(item.raw.lead_id)
+                        setDetailSheetOpen(true)
+                      }}
+                      style={{
+                        display: 'flex', overflow: 'hidden', borderRadius: 8,
+                        cursor: 'pointer', background: '#fff',
+                        border: '1px solid #e8e6dc',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#86909c' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e8e6dc' }}
+                    >
+                      {/* 左侧色条 */}
+                      <div style={{ width: 4, flexShrink: 0, backgroundColor: config.color }} />
 
-                    return (
-                      <div
-                        key={`${item.type}-${item.id}`}
-                        onClick={() => {
-                          setSelectedLeadId(item.raw.lead_id)
-                          setDetailSheetOpen(true)
-                        }}
-                        className={cn(
-                          'group flex overflow-hidden rounded-lg cursor-pointer',
-                          'bg-white dark:bg-slate-900/80 border border-[#e8e6dc] dark:border-slate-800',
-                          'hover:border-[#b0aea5] dark:hover:border-slate-700 transition-colors'
-                        )}
-                      >
-                        {/* 左侧色条 */}
-                        <div
-                          className="w-1 shrink-0"
-                          style={{ backgroundColor: config.color }}
-                        />
-
-                        {/* 内容 */}
-                        <div className="flex-1 p-3 min-w-0">
-                          {/* 顶部 */}
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div
-                                className="shrink-0 w-6 h-6 rounded flex items-center justify-center"
-                                style={{ backgroundColor: `${config.color}15` }}
-                              >
-                                <Icon className="w-3.5 h-3.5" style={{ color: config.color }} />
-                              </div>
-                              <div className="min-w-0">
-                                <h4 className="font-medium text-sm text-[#141413] dark:text-slate-100 truncate">
-                                  {item.name}
-                                </h4>
-                                <span className="text-[10px] text-[#b0aea5]">
-                                  {config.label}
-                                </span>
-                              </div>
+                      {/* 内容 */}
+                      <div style={{ flex: 1, padding: 12, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <div style={{
+                              flexShrink: 0, width: 24, height: 24, borderRadius: 4,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              backgroundColor: `${config.color}15`,
+                            }}>
+                              <IconUser size="extra-small" style={{ color: config.color }} />
                             </div>
-                            {item.time && (
-                              <span className="shrink-0 text-xs font-mono text-[#b0aea5] bg-[#e8e6dc]/50 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                {item.time}
-                              </span>
-                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <h4 style={{ fontWeight: 500, fontSize: 14, color: 'var(--semi-color-text-0)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {item.name}
+                              </h4>
+                              <span style={{ fontSize: 10, color: 'var(--semi-color-text-2)' }}>{config.label}</span>
+                            </div>
                           </div>
-
-                          {/* 缴费金额 */}
-                          {item.type === 'payment' && item.amount !== undefined && (
-                            <div className="mb-1.5 text-sm font-semibold text-[#788c5d]">
-                              ¥{item.amount.toLocaleString()}
-                            </div>
+                          {item.time && (
+                            <span style={{
+                              flexShrink: 0, fontSize: 12, fontFamily: 'monospace',
+                              color: 'var(--semi-color-text-2)', background: 'rgba(134, 144, 156, 0.1)',
+                              padding: '2px 6px', borderRadius: 4,
+                            }}>
+                              {item.time}
+                            </span>
                           )}
-
-                          {/* 标签 */}
-                          <div className="flex flex-wrap items-center gap-1">
-                            {item.advisorName && (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-[#b0aea5] bg-[#e8e6dc]/30 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                <User className="w-2.5 h-2.5" />
-                                {item.advisorName}
-                              </span>
-                            )}
-                            {item.gradeDisplay && (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-[#b0aea5] bg-[#e8e6dc]/30 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                <GraduationCap className="w-2.5 h-2.5" />
-                                {item.gradeDisplay}
-                              </span>
-                            )}
-                            {item.sourceChannel && (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-[#b0aea5] bg-[#e8e6dc]/30 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate max-w-[100px]">
-                                <MapPin className="w-2.5 h-2.5 shrink-0" />
-                                {item.sourceChannel}
-                              </span>
-                            )}
-                          </div>
                         </div>
 
-                        {/* 箭头 */}
-                        <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ArrowRight className="w-4 h-4 text-[#b0aea5]" />
+                        {item.type === 'payment' && item.amount !== undefined && (
+                          <div style={{ marginBottom: 6, fontSize: 14, fontWeight: 600, color: '#00b42a' }}>
+                            ¥{item.amount.toLocaleString()}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
+                          {item.advisorName && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              fontSize: 10, color: 'var(--semi-color-text-2)', background: 'rgba(134, 144, 156, 0.08)',
+                              padding: '2px 6px', borderRadius: 4,
+                            }}>
+                              {item.advisorName}
+                            </span>
+                          )}
+                          {item.gradeDisplay && (
+                            <span style={{
+                              fontSize: 10, color: 'var(--semi-color-text-2)', background: 'rgba(134, 144, 156, 0.08)',
+                              padding: '2px 6px', borderRadius: 4,
+                            }}>
+                              {item.gradeDisplay}
+                            </span>
+                          )}
+                          {item.sourceChannel && (
+                            <span style={{
+                              fontSize: 10, color: 'var(--semi-color-text-2)', background: 'rgba(134, 144, 156, 0.08)',
+                              padding: '2px 6px', borderRadius: 4,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100,
+                            }}>
+                              {item.sourceChannel}
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <CalendarIcon className="w-10 h-10 text-[#e8e6dc] dark:text-slate-700 mb-3" />
-                  <p className="text-sm text-[#b0aea5]">当日暂无记录</p>
-                  <p className="text-xs text-[#b0aea5]/70 mt-1">选择其他日期查看</p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 48, textAlign: 'center' }}>
+                <IconCalendar size="extra-large" style={{ color: '#e8e6dc', marginBottom: 12 }} />
+                <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>当日暂无记录</p>
+                <p style={{ fontSize: 12, color: 'rgba(134, 144, 156, 0.7)', marginTop: 4 }}>选择其他日期查看</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 线索详情抽屉 */}
       <LeadDetailSheet
         leadId={selectedLeadId}
         open={detailSheetOpen}

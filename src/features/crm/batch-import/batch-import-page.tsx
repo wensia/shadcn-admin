@@ -1,67 +1,48 @@
 /**
  * 批量导入页面
- * 从 frontend-vue/src/views/crm/BatchImportView.vue 迁移
+ * Semi Design 重构
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
-  Upload,
-  Download,
-  Trash2,
-  RefreshCw,
-  Eye,
-  Edit,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react'
-import { toast } from 'sonner'
+  Table,
+  Button,
+  Input,
+  Tag,
+  Select,
+  Dropdown,
+  Checkbox,
+  Skeleton,
+  Tooltip,
+  Progress,
+  Toast,
+  Typography,
+} from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import {
+  IconUpload,
+  IconDownload,
+  IconDelete,
+  IconRefresh,
+  IconSearch,
+  IconEdit,
+  IconEyeOpened,
+  IconAlertCircle,
+  IconTickCircle,
+  IconCrossCircleStroked,
+  IconLoading,
+  IconSetting,
+  IconClose,
+  IconMore,
+} from '@douyinfe/semi-icons'
 import { format } from 'date-fns'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Cross2Icon, MixerHorizontalIcon } from '@radix-ui/react-icons'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { HeaderActions } from '@/components/layout/header-actions'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { StandaloneFacetedFilter } from '@/components/data-table/standalone-faceted-filter'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 import { batchImportApi } from './api'
 import type {
@@ -79,6 +60,8 @@ import { UploadDialog } from './components/upload-dialog'
 import { FailuresDialog } from './components/failures-dialog'
 import { ActivatedLeadsDialog } from './components/activated-leads-dialog'
 import { EditBatchDialog } from './components/edit-batch-dialog'
+
+const { Text } = Typography
 
 // 状态选项
 const statusOptions = [
@@ -127,30 +110,30 @@ function formatDuration(seconds?: number): string {
   return `${hours}小时${minutes}分`
 }
 
-// 状态徽章组件
-function StatusBadge({ status }: { status: BatchStatus }) {
-  const variants: Record<BatchStatus, 'default' | 'secondary' | 'destructive'> = {
-    processing: 'secondary',
-    completed: 'default',
-    failed: 'destructive',
+// 状态 Tag 组件
+function StatusTag({ status }: { status: BatchStatus }) {
+  const colorMap: Record<BatchStatus, string> = {
+    processing: 'blue',
+    completed: 'green',
+    failed: 'red',
   }
-  const icons: Record<BatchStatus, React.ReactNode> = {
-    processing: <Loader2 className="h-3 w-3 animate-spin" />,
-    completed: <CheckCircle className="h-3 w-3" />,
-    failed: <XCircle className="h-3 w-3" />,
+  const iconMap: Record<BatchStatus, React.ReactNode> = {
+    processing: <IconLoading spin style={{ marginRight: 4 }} />,
+    completed: <IconTickCircle style={{ marginRight: 4 }} />,
+    failed: <IconCrossCircleStroked style={{ marginRight: 4 }} />,
   }
   return (
-    <Badge variant={variants[status]} className="gap-1">
-      {icons[status]}
+    <Tag color={colorMap[status] as any} type="light">
+      {iconMap[status]}
       {batchStatusLabels[status]}
-    </Badge>
+    </Tag>
   )
 }
 
-// 导入方式徽章
-function MethodBadge({ method }: { method: ImportMethod }) {
+// 导入方式 Tag
+function MethodTag({ method }: { method: ImportMethod }) {
   return (
-    <Badge variant="outline">{importMethodLabels[method]}</Badge>
+    <Tag type="ghost">{importMethodLabels[method]}</Tag>
   )
 }
 
@@ -160,8 +143,8 @@ export function BatchImportPage() {
 
   // 搜索状态
   const [searchValue, setSearchValue] = useState('')
-  const [statusFilter, setStatusFilter] = useState<BatchStatus[]>([])
-  const [methodFilter, setMethodFilter] = useState<ImportMethod[]>([])
+  const [statusFilter, setStatusFilter] = useState<BatchStatus | undefined>(undefined)
+  const [methodFilter, setMethodFilter] = useState<ImportMethod | undefined>(undefined)
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 })
 
   // 列可见性状态
@@ -177,24 +160,40 @@ export function BatchImportPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedBatch, setSelectedBatch] = useState<BatchImportItem | null>(null)
 
+  // 表格全高
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(400)
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const measure = () => {
+      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+      const available = el.clientHeight - headerH
+      if (available > 100) setScrollY(available)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   // 构建查询参数
   const queryParams = useMemo<BatchImportQueryParams>(() => ({
     page: pagination.page,
     page_size: pagination.pageSize,
     search: searchValue || undefined,
-    status: statusFilter.length > 0 ? statusFilter[0] : undefined,
-    import_method: methodFilter.length > 0 ? methodFilter[0] : undefined,
+    status: statusFilter,
+    import_method: methodFilter,
   }), [pagination, searchValue, statusFilter, methodFilter])
 
   // 获取批量导入列表（有处理中的批次时自动轮询）
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['batch-imports', queryParams],
     queryFn: () => batchImportApi.getList(queryParams),
-    // 关键：有处理中批次时自动轮询
     refetchInterval: (query) => {
       const items = query.state.data?.data?.items || []
       const hasProcessing = items.some((item: BatchImportItem) => item.status === 'processing')
-      return hasProcessing ? 5000 : false  // 5秒轮询一次
+      return hasProcessing ? 5000 : false
     },
   })
 
@@ -213,41 +212,11 @@ export function BatchImportPage() {
     [batchList]
   )
 
-  // 选中的处理中批次数量
-  const selectedProcessingCount = useMemo(
-    () => processingBatches.filter((item) => selectedIds.has(item.id)).length,
-    [processingBatches, selectedIds]
-  )
-
-  // 全选/取消全选处理中的批次
-  const handleSelectAllProcessing = useCallback((checked: boolean) => {
-    if (checked) {
-      const newSelected = new Set(selectedIds)
-      processingBatches.forEach((item) => newSelected.add(item.id))
-      setSelectedIds(newSelected)
-    } else {
-      const newSelected = new Set(selectedIds)
-      processingBatches.forEach((item) => newSelected.delete(item.id))
-      setSelectedIds(newSelected)
-    }
-  }, [processingBatches, selectedIds])
-
-  // 切换单个选中状态
-  const handleToggleSelect = useCallback((id: string, checked: boolean) => {
-    const newSelected = new Set(selectedIds)
-    if (checked) {
-      newSelected.add(id)
-    } else {
-      newSelected.delete(id)
-    }
-    setSelectedIds(newSelected)
-  }, [selectedIds])
-
   // 删除批次
   const deleteMutation = useMutation({
     mutationFn: batchImportApi.deleteBatch,
     onSuccess: () => {
-      toast.success('删除成功')
+      Toast.success('删除成功')
       queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
     },
     onError: (error: Error) => {
@@ -265,7 +234,7 @@ export function BatchImportPage() {
       link.download = '线索导入模板.xlsx'
       link.click()
       window.URL.revokeObjectURL(url)
-      toast.success('模板下载成功')
+      Toast.success('模板下载成功')
     } catch (error: unknown) {
       showApiErrorToast(error, '下载失败')
     }
@@ -273,19 +242,18 @@ export function BatchImportPage() {
 
   // 删除选中的批次
   const handleDeleteSelectedBatches = useCallback(async () => {
-    // 如果有选中的项目，删除选中的；否则删除所有处理中的
     const idsToDelete = selectedIds.size > 0
       ? Array.from(selectedIds)
       : processingBatches.map((item) => item.id)
 
     if (idsToDelete.length === 0) {
-      toast.warning('请先选择要删除的批次')
+      Toast.warning('请先选择要删除的批次')
       return
     }
 
     try {
       await batchImportApi.deleteProcessingBatches(idsToDelete)
-      toast.success(`已删除 ${idsToDelete.length} 个批次`)
+      Toast.success(`已删除 ${idsToDelete.length} 个批次`)
       setSelectedIds(new Set())
       queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
     } catch (error: unknown) {
@@ -296,8 +264,8 @@ export function BatchImportPage() {
   // 重置筛选
   const handleReset = useCallback(() => {
     setSearchValue('')
-    setStatusFilter([])
-    setMethodFilter([])
+    setStatusFilter(undefined)
+    setMethodFilter(undefined)
     setPagination({ page: 1, pageSize: 20 })
   }, [])
 
@@ -326,376 +294,408 @@ export function BatchImportPage() {
   }, [queryClient])
 
   // 是否有筛选条件
-  const isFiltered = searchValue || statusFilter.length > 0 || methodFilter.length > 0
+  const isFiltered = searchValue || statusFilter || methodFilter
+
+  // 骨架屏数据
+  const SKELETON_ID_PREFIX = '__skeleton__'
+  const skeletonData = useMemo(() => {
+    return Array.from({ length: 10 }, (_, i) => ({
+      id: `${SKELETON_ID_PREFIX}${i}`,
+      batch_name: '',
+      import_method: 'excel' as ImportMethod,
+      import_source_file: '',
+      total_count: 0,
+      success_count: 0,
+      failed_count: 0,
+      activated_count: 0,
+      status: 'processing' as BatchStatus,
+      created_by_name: '',
+      started_at: '',
+    }))
+  }, [])
+
+  const isSkeletonRow = (id: string) => id.startsWith(SKELETON_ID_PREFIX)
+  const tableData = isLoading ? skeletonData : batchList
+
+  // 构建表格列
+  const columns = useMemo<ColumnProps<BatchImportItem>[]>(() => {
+    const cols: ColumnProps<BatchImportItem>[] = []
+
+    if (columnVisibility.batch_name) {
+      cols.push({
+        title: '批次名称',
+        dataIndex: 'batch_name',
+        width: 160,
+        render: (text: string, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+          return (
+            <Tooltip content={<>{text}{record.batch_description && <div style={{ color: 'var(--semi-color-text-2)' }}>{record.batch_description}</div>}</>}>
+              <span>
+                <Text ellipsis={{ showTooltip: false }} style={{ maxWidth: 150 }}>{text}</Text>
+              </span>
+            </Tooltip>
+          )
+        },
+      })
+    }
+
+    if (columnVisibility.import_method) {
+      cols.push({
+        title: '导入方式',
+        dataIndex: 'import_method',
+        width: 120,
+        render: (method: ImportMethod, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+          return <MethodTag method={method} />
+        },
+      })
+    }
+
+    if (columnVisibility.import_source_file) {
+      cols.push({
+        title: '文件名',
+        dataIndex: 'import_source_file',
+        width: 160,
+        render: (text: string, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 120 }} />
+          return (
+            <Tooltip content={text || '-'}>
+              <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                {text || '-'}
+              </span>
+            </Tooltip>
+          )
+        },
+      })
+    }
+
+    if (columnVisibility.total_count) {
+      cols.push({
+        title: '总数量',
+        dataIndex: 'total_count',
+        width: 80,
+        align: 'right' as const,
+        render: (val: number, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          return val
+        },
+      })
+    }
+
+    if (columnVisibility.success_count) {
+      cols.push({
+        title: '成功数',
+        dataIndex: 'success_count',
+        width: 80,
+        align: 'right' as const,
+        render: (val: number, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          return <span style={{ color: 'var(--semi-color-success)' }}>{val}</span>
+        },
+      })
+    }
+
+    if (columnVisibility.activated_count) {
+      cols.push({
+        title: '激活数',
+        dataIndex: 'activated_count',
+        width: 80,
+        align: 'right' as const,
+        render: (val: number, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          return <span style={{ color: 'var(--semi-color-warning)' }}>{val}</span>
+        },
+      })
+    }
+
+    if (columnVisibility.failed_count) {
+      cols.push({
+        title: '失败数',
+        dataIndex: 'failed_count',
+        width: 80,
+        align: 'right' as const,
+        render: (val: number, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          return <span style={{ color: 'var(--semi-color-danger)' }}>{val}</span>
+        },
+      })
+    }
+
+    if (columnVisibility.success_rate) {
+      cols.push({
+        title: '成功率',
+        dataIndex: 'success_rate',
+        width: 140,
+        render: (_: unknown, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+          const rate = record.total_count > 0
+            ? Math.round((record.success_count / record.total_count) * 100)
+            : 0
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Progress percent={rate} size="small" showInfo={false} style={{ width: 60 }} />
+              <span style={{ fontSize: 12 }}>{rate}%</span>
+            </div>
+          )
+        },
+      })
+    }
+
+    if (columnVisibility.status) {
+      cols.push({
+        title: '状态',
+        dataIndex: 'status',
+        width: 100,
+        render: (status: BatchStatus, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+          return <StatusTag status={status} />
+        },
+      })
+    }
+
+    if (columnVisibility.created_by_name) {
+      cols.push({
+        title: '创建人',
+        dataIndex: 'created_by_name',
+        width: 100,
+        render: (text: string, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+          return text
+        },
+      })
+    }
+
+    if (columnVisibility.started_at) {
+      cols.push({
+        title: '开始时间',
+        dataIndex: 'started_at',
+        width: 160,
+        render: (text: string, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+          return text ? format(new Date(text), 'yyyy-MM-dd HH:mm') : '-'
+        },
+      })
+    }
+
+    if (columnVisibility.processing_duration) {
+      cols.push({
+        title: '耗时',
+        dataIndex: 'processing_duration',
+        width: 100,
+        render: (val: number, record: BatchImportItem) => {
+          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+          return formatDuration(val)
+        },
+      })
+    }
+
+    // 操作列
+    cols.push({
+      title: '操作',
+      dataIndex: 'actions',
+      width: 60,
+      fixed: 'right' as const,
+      render: (_: unknown, record: BatchImportItem) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+        return (
+          <Dropdown
+            trigger="click"
+            clickToHide
+            position="bottomRight"
+            render={
+              <Dropdown.Menu>
+                <Dropdown.Item
+                  icon={<IconAlertCircle style={{ color: record.failed_count > 0 ? 'var(--semi-color-danger)' : undefined }} />}
+                  disabled={record.failed_count === 0}
+                  onClick={() => handleViewFailures(record)}
+                >
+                  查看失败记录{record.failed_count > 0 ? ` (${record.failed_count})` : ''}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  icon={<IconEyeOpened style={{ color: record.activated_count > 0 ? 'var(--semi-color-warning)' : undefined }} />}
+                  disabled={record.activated_count === 0}
+                  onClick={() => handleViewActivated(record)}
+                >
+                  查看激活线索{record.activated_count > 0 ? ` (${record.activated_count})` : ''}
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item
+                  icon={<IconEdit />}
+                  onClick={() => handleEditBatch(record)}
+                >
+                  编辑批次
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            }
+          >
+            <span>
+              <Button theme="borderless" icon={<IconMore />} size="small" />
+            </span>
+          </Dropdown>
+        )
+      },
+    })
+
+    return cols
+  }, [columnVisibility, handleViewFailures, handleViewActivated, handleEditBatch])
+
+  // 行选择配置
+  const rowSelection = useMemo(() => ({
+    selectedRowKeys: Array.from(selectedIds),
+    onChange: (selectedRowKeys: (string | number)[] | undefined) => {
+      setSelectedIds(new Set((selectedRowKeys || []).map(String)))
+    },
+    getCheckboxProps: (record: BatchImportItem) => ({
+      disabled: record.status !== 'processing' || isSkeletonRow(record.id),
+    }),
+  }), [selectedIds])
+
+  // 列设置 dropdown menu
+  const columnSettingsMenu = (
+    <Dropdown.Menu>
+      {columnDefs.map((col) => (
+        <Dropdown.Item key={col.id} onClick={() => setColumnVisibility(prev => ({ ...prev, [col.id]: !prev[col.id] }))}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Checkbox checked={columnVisibility[col.id]} onChange={() => {}} />
+            <span>{col.label}</span>
+          </div>
+        </Dropdown.Item>
+      ))}
+    </Dropdown.Menu>
+  )
 
   return (
     <>
       <Header fixed>
-        <h1 className="text-lg font-semibold">批量导入</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>批量导入</h1>
         <HeaderActions showSearch={false} />
       </Header>
 
-      <Main fixed className="flex flex-1 flex-col gap-4">
+      <Main fixed style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 16 }}>
         {/* 操作栏 */}
-        <div className="flex items-center justify-end space-x-2">
-          <Button size="sm" className="h-8" onClick={() => setUploadDialogOpen(true)}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+          <Button icon={<IconUpload />} theme="solid" onClick={() => setUploadDialogOpen(true)}>
             上传文件
-            <Upload className="ml-1 h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" className="h-8" onClick={handleDownloadTemplate}>
+          <Button icon={<IconDownload />} onClick={handleDownloadTemplate}>
             下载模板
-            <Download className="ml-1 h-4 w-4" />
           </Button>
           <Button
-            variant="destructive"
-            size="sm"
-            className="h-8"
+            type="danger"
+            icon={<IconDelete />}
             onClick={handleDeleteSelectedBatches}
             disabled={selectedIds.size === 0 && !hasProcessingBatches}
           >
             {selectedIds.size > 0 ? `删除选中 (${selectedIds.size})` : '删除处理中批次'}
-            <Trash2 className="ml-1 h-4 w-4" />
           </Button>
         </div>
 
         {/* 处理中提示条 */}
         {hasProcessingBatches && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-            <span className="text-sm text-blue-700">
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 16px',
+            background: 'var(--semi-color-primary-light-default)',
+            border: '1px solid var(--semi-color-primary-light-active)',
+            borderRadius: 8,
+          }}>
+            <IconLoading spin style={{ color: 'var(--semi-color-primary)' }} />
+            <span style={{ fontSize: 14, color: 'var(--semi-color-primary)' }}>
               有 {processingBatches.length} 个批次正在处理中，页面将每5秒自动刷新...
             </span>
           </div>
         )}
 
         {/* 筛选栏 */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Input
+              prefix={<IconSearch />}
               placeholder="搜索批次名称或文件名"
               value={searchValue}
-              onChange={(e) => {
-                setSearchValue(e.target.value)
+              onChange={(val) => {
+                setSearchValue(val)
                 setPagination((prev) => ({ ...prev, page: 1 }))
               }}
-              className="h-8 w-[150px] lg:w-[250px]"
+              showClear
+              style={{ width: 250 }}
             />
-            <div className="flex gap-x-2">
-              <StandaloneFacetedFilter
-                title="状态"
-                options={statusOptions}
-                selectedValues={new Set(statusFilter)}
-                onSelectedChange={(values) => {
-                  setStatusFilter(Array.from(values) as BatchStatus[])
-                  setPagination((prev) => ({ ...prev, page: 1 }))
-                }}
-              />
-              <StandaloneFacetedFilter
-                title="导入方式"
-                options={methodOptions}
-                selectedValues={new Set(methodFilter)}
-                onSelectedChange={(values) => {
-                  setMethodFilter(Array.from(values) as ImportMethod[])
-                  setPagination((prev) => ({ ...prev, page: 1 }))
-                }}
-              />
-            </div>
+            <Select
+              placeholder="状态"
+              value={statusFilter}
+              onChange={(val) => {
+                setStatusFilter(val as BatchStatus | undefined)
+                setPagination((prev) => ({ ...prev, page: 1 }))
+              }}
+              optionList={statusOptions}
+              showClear
+              style={{ width: 120 }}
+            />
+            <Select
+              placeholder="导入方式"
+              value={methodFilter}
+              onChange={(val) => {
+                setMethodFilter(val as ImportMethod | undefined)
+                setPagination((prev) => ({ ...prev, page: 1 }))
+              }}
+              optionList={methodOptions}
+              showClear
+              style={{ width: 120 }}
+            />
             {isFiltered && (
-              <Button
-                variant="ghost"
-                onClick={handleReset}
-                className="h-8 px-2 lg:px-3"
-              >
+              <Button theme="borderless" icon={<IconClose />} onClick={handleReset}>
                 重置
-                <Cross2Icon className="ms-2 h-4 w-4" />
               </Button>
             )}
           </div>
-          <div className="flex items-center space-x-2">
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <MixerHorizontalIcon className="mr-1.5 h-3.5 w-3.5" />
-                  列
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[150px]">
-                <DropdownMenuLabel>显示列</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {columnDefs.map((col) => (
-                  <DropdownMenuCheckboxItem
-                    key={col.id}
-                    checked={columnVisibility[col.id]}
-                    onCheckedChange={(checked) =>
-                      setColumnVisibility((prev) => ({ ...prev, [col.id]: checked }))
-                    }
-                  >
-                    {col.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline" size="icon" onClick={() => refetch()} title="刷新">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Dropdown trigger="click" render={columnSettingsMenu}>
+              <span>
+                <Button icon={<IconSetting />}>列</Button>
+              </span>
+            </Dropdown>
+            <Button icon={<IconRefresh />} onClick={() => refetch()} />
           </div>
         </div>
 
         {/* 数据表格 */}
-        <div className="flex-1 flex flex-col overflow-hidden rounded-md border">
-          <div className="flex-1 overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-background z-10">
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={processingBatches.length > 0 && selectedProcessingCount === processingBatches.length}
-                      onCheckedChange={handleSelectAllProcessing}
-                      aria-label="全选处理中的批次"
-                      disabled={processingBatches.length === 0}
-                    />
-                  </TableHead>
-                  {columnVisibility.batch_name && <TableHead className="w-[160px]">批次名称</TableHead>}
-                  {columnVisibility.import_method && <TableHead className="w-[120px]">导入方式</TableHead>}
-                  {columnVisibility.import_source_file && <TableHead className="w-[160px]">文件名</TableHead>}
-                  {columnVisibility.total_count && <TableHead className="w-[80px] text-right">总数量</TableHead>}
-                  {columnVisibility.success_count && <TableHead className="w-[80px] text-right">成功数</TableHead>}
-                  {columnVisibility.activated_count && <TableHead className="w-[80px] text-right">激活数</TableHead>}
-                  {columnVisibility.failed_count && <TableHead className="w-[80px] text-right">失败数</TableHead>}
-                  {columnVisibility.success_rate && <TableHead className="w-[120px]">成功率</TableHead>}
-                  {columnVisibility.status && <TableHead className="w-[100px]">状态</TableHead>}
-                  {columnVisibility.created_by_name && <TableHead className="w-[100px]">创建人</TableHead>}
-                  {columnVisibility.started_at && <TableHead className="w-[160px]">开始时间</TableHead>}
-                  {columnVisibility.processing_duration && <TableHead className="w-[100px]">耗时</TableHead>}
-                  <TableHead className="w-[140px] sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 10 }).map((_, i) => (
-                    <TableRow key={`skeleton-${i}`}>
-                      <TableCell><Skeleton className="h-4 w-4" /></TableCell>
-                      {columnVisibility.batch_name && <TableCell><Skeleton className="h-4 w-28" /></TableCell>}
-                      {columnVisibility.import_method && <TableCell><Skeleton className="h-5 w-14 rounded-full" /></TableCell>}
-                      {columnVisibility.import_source_file && <TableCell><Skeleton className="h-4 w-32" /></TableCell>}
-                      {columnVisibility.total_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
-                      {columnVisibility.success_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
-                      {columnVisibility.activated_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
-                      {columnVisibility.failed_count && <TableCell className="text-right"><Skeleton className="h-4 w-10 ml-auto" /></TableCell>}
-                      {columnVisibility.success_rate && <TableCell><div className="flex items-center gap-2"><Skeleton className="h-2 w-16" /><Skeleton className="h-4 w-8" /></div></TableCell>}
-                      {columnVisibility.status && <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>}
-                      {columnVisibility.created_by_name && <TableCell><Skeleton className="h-4 w-16" /></TableCell>}
-                      {columnVisibility.started_at && <TableCell><Skeleton className="h-4 w-28" /></TableCell>}
-                      {columnVisibility.processing_duration && <TableCell><Skeleton className="h-4 w-14" /></TableCell>}
-                      <TableCell className="sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
-                        <div className="flex items-center gap-1">
-                          <Skeleton className="h-8 w-8 rounded" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : batchList.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 2} className="h-24 text-center text-muted-foreground">
-                      暂无数据
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  batchList.map((batch) => {
-                    const successRate = batch.total_count > 0
-                      ? Math.round((batch.success_count / batch.total_count) * 100)
-                      : 0
-                    const isProcessing = batch.status === 'processing'
-                    return (
-                      <TableRow key={batch.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(batch.id)}
-                            onCheckedChange={(checked) => handleToggleSelect(batch.id, !!checked)}
-                            aria-label={`选择批次 ${batch.batch_name}`}
-                            disabled={!isProcessing}
-                          />
-                        </TableCell>
-                        {columnVisibility.batch_name && (
-                          <TableCell>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="truncate block max-w-[150px]">
-                                    {batch.batch_name}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{batch.batch_name}</p>
-                                  {batch.batch_description && (
-                                    <p className="text-muted-foreground">{batch.batch_description}</p>
-                                  )}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </TableCell>
-                        )}
-                        {columnVisibility.import_method && (
-                          <TableCell>
-                            <MethodBadge method={batch.import_method} />
-                          </TableCell>
-                        )}
-                        {columnVisibility.import_source_file && (
-                          <TableCell>
-                            <span className="truncate block max-w-[150px]">
-                              {batch.import_source_file || '-'}
-                            </span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.total_count && (
-                          <TableCell className="text-right">{batch.total_count}</TableCell>
-                        )}
-                        {columnVisibility.success_count && (
-                          <TableCell className="text-right text-green-600">
-                            {batch.success_count}
-                          </TableCell>
-                        )}
-                        {columnVisibility.activated_count && (
-                          <TableCell className="text-right text-yellow-600">
-                            {batch.activated_count}
-                          </TableCell>
-                        )}
-                        {columnVisibility.failed_count && (
-                          <TableCell className="text-right text-red-600">
-                            {batch.failed_count}
-                          </TableCell>
-                        )}
-                        {columnVisibility.success_rate && (
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Progress
-                                value={successRate}
-                                className="h-2 w-16"
-                              />
-                              <span className="text-xs">{successRate}%</span>
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.status && (
-                          <TableCell>
-                            <StatusBadge status={batch.status} />
-                          </TableCell>
-                        )}
-                        {columnVisibility.created_by_name && (
-                          <TableCell>{batch.created_by_name}</TableCell>
-                        )}
-                        {columnVisibility.started_at && (
-                          <TableCell>
-                            {batch.started_at
-                              ? format(new Date(batch.started_at), 'yyyy-MM-dd HH:mm')
-                              : '-'}
-                          </TableCell>
-                        )}
-                        {columnVisibility.processing_duration && (
-                          <TableCell>{formatDuration(batch.processing_duration)}</TableCell>
-                        )}
-                        <TableCell className="sticky right-0 bg-background shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
-                          <div className="flex items-center gap-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    disabled={batch.failed_count === 0}
-                                    onClick={() => handleViewFailures(batch)}
-                                  >
-                                    <AlertCircle className={`h-4 w-4 ${batch.failed_count > 0 ? 'text-red-500' : 'text-muted-foreground/40'}`} />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {batch.failed_count > 0 ? '查看失败记录' : '无失败记录'}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    disabled={batch.activated_count === 0}
-                                    onClick={() => handleViewActivated(batch)}
-                                  >
-                                    <Eye className={`h-4 w-4 ${batch.activated_count > 0 ? 'text-yellow-500' : 'text-muted-foreground/40'}`} />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {batch.activated_count > 0 ? '查看激活线索' : '无激活线索'}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => handleEditBatch(batch)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>编辑批次</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey="id"
+            rowSelection={rowSelection as any}
+            pagination={false}
+            scroll={{ y: scrollY }}
+            empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+          />
         </div>
 
         {/* 分页 */}
-        <div className="flex items-center justify-between mt-auto">
-          <span className="text-sm text-muted-foreground">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>
             共 {totalCount} 条记录
           </span>
-          <div className="flex items-center space-x-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Select
-              value={String(pagination.pageSize)}
-              onValueChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[10, 20, 50, 100].map((size) => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex items-center space-x-1">
+              value={pagination.pageSize}
+              onChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
+              optionList={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
+              style={{ width: 80 }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
                 disabled={pagination.page <= 1}
                 onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
               >
                 上一页
               </Button>
-              <span className="px-2 text-sm">
+              <span style={{ padding: '0 8px', fontSize: 14 }}>
                 {pagination.page} / {Math.ceil(totalCount / pagination.pageSize) || 1}
               </span>
               <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
                 disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
                 onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
               >

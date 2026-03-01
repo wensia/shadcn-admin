@@ -2,24 +2,12 @@
  * 云客账号管理 - Tab 内容组件
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-  type RowSelectionState,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import {
   User,
   Phone,
   Building2,
-  Search,
-  RefreshCw,
   Key,
   Link,
   Unlink,
@@ -32,69 +20,20 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Table, Button, Input, Modal, Form, Select, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { yunkeAdminApi } from '../../api'
 import type { YunkeSubAccount, YunkePasswordResetResponse } from '../../types'
 import { formatTime } from '@/lib/utils/time'
 
-// 登录表单验证
-const loginFormSchema = z.object({
-  phone: z.string().min(1, '请输入手机号').regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
-  password: z.string().min(6, '密码至少6位'),
-})
-
-type LoginFormData = z.infer<typeof loginFormSchema>
+const { Text } = Typography
 
 // 骨架屏数据
 const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
+
 function createSkeletonData(count: number): YunkeSubAccount[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `${SKELETON_PREFIX}${i}`,
@@ -115,13 +54,13 @@ const STATUS_OPTIONS = [
 
 export function YunkeAccountsContent() {
   const queryClient = useQueryClient()
+  const loginFormRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [loginDialogOpen, setLoginDialogOpen] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [bindDialogOpen, setBindDialogOpen] = useState(false)
@@ -133,15 +72,6 @@ export function YunkeAccountsContent() {
   const [selectedAccount, setSelectedAccount] = useState<YunkeSubAccount | null>(null)
   const [passwordResult, setPasswordResult] = useState<YunkePasswordResetResponse | null>(null)
   const [loginStatusMap, setLoginStatusMap] = useState<Map<string, { is_logged_in: boolean; message: string }>>(new Map())
-
-  // 登录表单
-  const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginFormSchema),
-    defaultValues: {
-      phone: '',
-      password: '',
-    },
-  })
 
   // 查询云客子账号列表
   const { data, isLoading, refetch } = useQuery({
@@ -169,11 +99,10 @@ export function YunkeAccountsContent() {
 
   // 管理员登录
   const loginMutation = useMutation({
-    mutationFn: (data: LoginFormData) => yunkeAdminApi.login({ phone: data.phone, password: data.password }),
+    mutationFn: (data: { phone: string; password: string }) => yunkeAdminApi.login(data),
     onSuccess: () => {
       toast.success('云客管理员登录成功')
       setLoginDialogOpen(false)
-      loginForm.reset()
       refetch()
     },
     onError: (error: Error) => {
@@ -282,56 +211,33 @@ export function YunkeAccountsContent() {
 
   // 状态图标映射
   const getStatusInfo = (status: string) => {
-    const statusMap: Record<string, { icon: typeof CheckCircle; variant: 'default' | 'secondary' | 'destructive'; label: string }> = {
-      active: { icon: CheckCircle, variant: 'default', label: '正常' },
-      paused: { icon: PauseCircle, variant: 'secondary', label: '暂停' },
-      inactive: { icon: XCircle, variant: 'destructive', label: '停用' },
+    const statusMap: Record<string, { icon: typeof CheckCircle; color: string; label: string }> = {
+      active: { icon: CheckCircle, color: 'green', label: '正常' },
+      paused: { icon: PauseCircle, color: 'grey', label: '暂停' },
+      inactive: { icon: XCircle, color: 'red', label: '停用' },
     }
     return statusMap[status] || statusMap.active
   }
 
   // 列定义
-  const columns: ColumnDef<YunkeSubAccount>[] = useMemo(
+  const columns: ColumnProps<YunkeSubAccount>[] = useMemo(
     () => [
       {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="全选"
-          />
-        ),
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-4 w-4" />
-          }
-          return (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="选择行"
-            />
-          )
-        },
-        size: 40,
-      },
-      {
-        accessorKey: 'username',
-        header: '账号信息',
-        size: 200,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-10 w-40" />
+        title: '账号信息',
+        dataIndex: 'username',
+        width: 200,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={2} style={{ width: 160 }} />
           }
           return (
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-green-500" />
               <div>
-                <div className="font-medium">{row.original.real_name || row.original.username}</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="font-medium">{record.real_name || record.username}</div>
+                <div className="flex items-center gap-1 text-xs text-gray-400">
                   <Phone className="h-3 w-3" />
-                  <span>{row.original.phone || row.original.username}</span>
+                  <span>{record.phone || record.username}</span>
                 </div>
               </div>
             </div>
@@ -339,147 +245,146 @@ export function YunkeAccountsContent() {
         },
       },
       {
-        accessorKey: 'department_name',
-        header: '部门',
-        size: 150,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-20" />
+        title: '部门',
+        dataIndex: 'department_name',
+        width: 150,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           }
           return (
             <div className="flex items-center gap-1">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span>{row.original.department_name || '未分配'}</span>
+              <Building2 className="h-4 w-4 text-gray-400" />
+              <span>{record.department_name || '未分配'}</span>
             </div>
           )
         },
       },
       {
-        accessorKey: 'position',
-        header: '职位',
-        size: 120,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
+        title: '职位',
+        dataIndex: 'position',
+        width: 120,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
-          return (
-            <Badge variant="outline">{row.original.position || '未设置'}</Badge>
-          )
+          return <Tag>{record.position || '未设置'}</Tag>
         },
       },
       {
-        id: 'login_status',
-        header: '云客登录状态',
-        size: 120,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-16" />
+        title: '云客登录状态',
+        dataIndex: 'login_status',
+        width: 120,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
-          const boundEmployee = row.original.bound_employee
+          const boundEmployee = record.bound_employee
           if (!boundEmployee) {
-            return <Badge variant="outline">未绑定</Badge>
+            return <Tag>未绑定</Tag>
           }
 
           const status = loginStatusMap.get(boundEmployee.id)
           if (checkLoginStatusMutation.isPending) {
-            return <span className="text-xs text-muted-foreground">检查中...</span>
+            return <Text type="tertiary" size="small">检查中...</Text>
           }
           if (!status) {
-            return <Badge variant="outline">未检查</Badge>
+            return <Tag>未检查</Tag>
           }
 
           return (
-            <Badge variant={status.is_logged_in ? 'default' : 'destructive'} className="gap-1">
-              {status.is_logged_in ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+            <Tag color={status.is_logged_in ? 'green' : 'red'} size="small">
+              {status.is_logged_in ? <CheckCircle className="h-3 w-3 mr-1 inline" /> : <XCircle className="h-3 w-3 mr-1 inline" />}
               {status.is_logged_in ? '已登录' : '未登录'}
-            </Badge>
+            </Tag>
           )
         },
       },
       {
-        accessorKey: 'bound_employee',
-        header: '绑定用户',
-        size: 180,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-32" />
+        title: '绑定用户',
+        dataIndex: 'bound_employee',
+        width: 180,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
-          const bound = row.original.bound_employee
+          const bound = record.bound_employee
           if (bound) {
             return (
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  <Link className="h-3 w-3 mr-1" />
+                <Tag color="blue" size="small">
+                  <Link className="h-3 w-3 mr-1 inline" />
                   {bound.name}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleUnbindClick(row.original)}
-                >
-                  <Unlink className="h-3 w-3" />
-                </Button>
+                </Tag>
+                <Tooltip content="解绑">
+                  <Button
+                    theme="borderless"
+                    type="tertiary"
+                    icon={<Unlink className="h-3 w-3" />}
+                    size="small"
+                    style={{ width: 24, height: 24, padding: 0 }}
+                    onClick={() => handleUnbindClick(record)}
+                  />
+                </Tooltip>
               </div>
             )
           }
           return (
             <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => handleBindClick(row.original)}
+              theme="outline"
+              size="small"
+              icon={<Link className="h-3 w-3" />}
+              onClick={() => handleBindClick(record)}
             >
-              <Link className="h-3 w-3 mr-1" />
               绑定员工
             </Button>
           )
         },
       },
       {
-        accessorKey: 'status',
-        header: '状态',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-14" />
+        title: '状态',
+        dataIndex: 'status',
+        width: 100,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
           }
-          const statusInfo = getStatusInfo(row.original.status)
+          const statusInfo = getStatusInfo(record.status)
           const Icon = statusInfo.icon
           return (
-            <Badge variant={statusInfo.variant} className="gap-1">
-              <Icon className="h-3 w-3" />
+            <Tag color={statusInfo.color} size="small">
+              <Icon className="h-3 w-3 mr-1 inline" />
               {statusInfo.label}
-            </Badge>
+            </Tag>
           )
         },
       },
       {
-        accessorKey: 'last_login_time',
-        header: '最后登录',
-        size: 160,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-5 w-28" />
+        title: '最后登录',
+        dataIndex: 'last_login_time',
+        width: 160,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
-          return row.original.last_login_time ? formatTime(row.original.last_login_time) : '从未登录'
+          return record.last_login_time ? formatTime(record.last_login_time) : '从未登录'
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        size: 100,
-        cell: ({ row }) => {
-          if (row.original.id.startsWith(SKELETON_PREFIX)) {
-            return <Skeleton className="h-8 w-20" />
+        title: '操作',
+        dataIndex: 'actions',
+        width: 100,
+        render: (_: unknown, record: YunkeSubAccount) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           }
           return (
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleResetPasswordClick(row.original)}
+              theme="outline"
+              size="small"
+              icon={<Key className="h-4 w-4" />}
+              onClick={() => handleResetPasswordClick(record)}
             >
-              <Key className="h-4 w-4 mr-1" />
               重置密码
             </Button>
           )
@@ -492,19 +397,18 @@ export function YunkeAccountsContent() {
   // 表格数据
   const tableData = isLoading ? createSkeletonData(5) : accounts
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      rowSelection,
-    },
-    getRowId: (row) => row.id,
-  })
-
-  const selectedCount = Object.keys(rowSelection).length
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total,
+    onPageChange: setPage,
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
+      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, total])
 
   // 处理函数
   const handleSearch = () => {
@@ -521,8 +425,8 @@ export function YunkeAccountsContent() {
     setLoginDialogOpen(true)
   }
 
-  const handleLoginSubmit = (data: LoginFormData) => {
-    loginMutation.mutate(data)
+  const handleLoginSubmit = (values: { phone: string; password: string }) => {
+    loginMutation.mutate(values)
   }
 
   const handleResetPasswordClick = (account: YunkeSubAccount) => {
@@ -646,319 +550,255 @@ export function YunkeAccountsContent() {
         {/* 工具栏 */}
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="输入姓名搜索..."
-                className="pl-8"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="状态筛选" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
-              搜索
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleRefresh} title="刷新">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            {selectedCount > 0 && (
-              <Badge variant="secondary">
-                已选择 {selectedCount} 个账号
-              </Badge>
-            )}
+            <Input
+              prefix={<IconSearch />}
+              placeholder="输入姓名搜索..."
+              style={{ width: 256 }}
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+            />
+            <Select
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as string)}
+              style={{ width: 120 }}
+              optionList={STATUS_OPTIONS}
+            />
+            <Button theme="outline" onClick={handleSearch}>搜索</Button>
+            <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={handleRefresh} />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={handleLoginClick}>
-              <LogIn className="mr-2 h-4 w-4" />
+            <Button theme="outline" size="small" icon={<LogIn className="h-4 w-4" />} onClick={handleLoginClick}>
               管理员登录
             </Button>
-            <Button variant="outline" size="sm" onClick={handleAutoSync} disabled={autoSyncMutation.isPending}>
-              <Zap className="mr-2 h-4 w-4" />
+            <Button theme="outline" size="small" icon={<Zap className="h-4 w-4" />} onClick={handleAutoSync} disabled={autoSyncMutation.isPending}>
               一键同步
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              theme="outline"
+              size="small"
+              icon={<CheckCircle className="h-4 w-4" />}
               onClick={() => checkLoginStatusMutation.mutate()}
               disabled={checkLoginStatusMutation.isPending}
             >
-              <CheckCircle className="mr-2 h-4 w-4" />
               检查状态
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              theme="outline"
+              size="small"
+              icon={<IconRefresh />}
               onClick={handleBatchLogin}
               disabled={batchLoginMutation.isPending}
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
               更新登录
             </Button>
           </div>
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {total > 0 && (
-          <SimplePagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size)
-              setPage(1)
-            }}
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey="id"
+            pagination={total > 0 ? pagination : false}
+            loading={false}
+            empty="暂无数据"
           />
-        )}
+        </div>
       </div>
 
       {/* 云客管理员登录对话框 */}
-      <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>云客管理员登录</DialogTitle>
-            <DialogDescription>
-              请输入云客管理员的手机号和密码
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...loginForm}>
-            <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-              <FormField
-                control={loginForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>手机号</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入云客管理员手机号" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={loginForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>密码</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="请输入密码" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setLoginDialogOpen(false)}>
-                  取消
-                </Button>
-                <Button type="submit" disabled={loginMutation.isPending}>
-                  {loginMutation.isPending ? '登录中...' : '登录'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title="云客管理员登录"
+        visible={loginDialogOpen}
+        onCancel={() => setLoginDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setLoginDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => loginFormRef.current?.submitForm()} loading={loginMutation.isPending}>
+              登录
+            </Button>
+          </div>
+        }
+        width={400}
+      >
+        <div className="text-sm text-gray-500 mb-4">请输入云客管理员的手机号和密码</div>
+        <Form
+          getFormApi={(api) => { loginFormRef.current = api }}
+          onSubmit={handleLoginSubmit}
+          labelPosition="top"
+        >
+          <Form.Input
+            field="phone"
+            label="手机号"
+            placeholder="请输入云客管理员手机号"
+            rules={[
+              { required: true, message: '请输入手机号' },
+              { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
+            ]}
+          />
+          <Form.Input
+            field="password"
+            label="密码"
+            mode="password"
+            placeholder="请输入密码"
+            rules={[
+              { required: true, message: '请输入密码' },
+              { min: 6, message: '密码至少6位' },
+            ]}
+          />
+        </Form>
+      </Modal>
 
       {/* 绑定员工对话框 */}
-      <Dialog open={bindDialogOpen} onOpenChange={setBindDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>绑定员工</DialogTitle>
-            <DialogDescription>
-              为云客账号 {selectedAccount?.real_name}（{selectedAccount?.phone}）选择要绑定的员工
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[400px] overflow-y-auto space-y-2">
-            {employees.map((emp) => (
-              <div
-                key={emp.id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted cursor-pointer"
-                onClick={() => handleBindEmployee(emp.id)}
-              >
-                <div>
-                  <div className="font-medium">{emp.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {emp.username} · {emp.campus_name || '未分配校区'}
+      <Modal
+        title="绑定员工"
+        visible={bindDialogOpen}
+        onCancel={() => setBindDialogOpen(false)}
+        footer={
+          <Button onClick={() => setBindDialogOpen(false)}>取消</Button>
+        }
+        width={500}
+      >
+        <div className="text-sm text-gray-500 mb-4">
+          为云客账号 {selectedAccount?.real_name}（{selectedAccount?.phone}）选择要绑定的员工
+        </div>
+        <div className="max-h-[400px] overflow-y-auto space-y-2">
+          {employees.map((emp) => (
+            <div
+              key={emp.id}
+              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+              onClick={() => handleBindEmployee(emp.id)}
+            >
+              <div>
+                <div className="font-medium">{emp.name}</div>
+                <Text type="tertiary" size="small">
+                  {emp.username} · {emp.campus_name || '未分配校区'}
+                </Text>
+                {emp.bound_yunke && (
+                  <div className="text-xs text-orange-500">
+                    已绑定: {emp.bound_yunke.phone}
                   </div>
-                  {emp.bound_yunke && (
-                    <div className="text-xs text-orange-500">
-                      已绑定: {emp.bound_yunke.phone}
-                    </div>
-                  )}
-                </div>
-                <Button variant="ghost" size="sm" disabled={bindMutation.isPending}>
-                  选择
-                </Button>
+                )}
               </div>
-            ))}
-            {employees.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                暂无可绑定的员工
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBindDialogOpen(false)}>
-              取消
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <Button theme="borderless" type="tertiary" size="small" disabled={bindMutation.isPending}>
+                选择
+              </Button>
+            </div>
+          ))}
+          {employees.length === 0 && (
+            <div className="text-center py-8 text-gray-400">
+              暂无可绑定的员工
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* 密码重置结果对话框 */}
-      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle>密码重置成功</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
-              <span className="text-sm font-medium">姓名：</span>
-              <div className="flex items-center gap-2">
-                <span>{selectedAccount?.real_name}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleCopyToClipboard(selectedAccount?.real_name || '', '姓名')}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-              </div>
+      <Modal
+        title="密码重置成功"
+        visible={passwordDialogOpen}
+        onCancel={() => setPasswordDialogOpen(false)}
+        footer={
+          <Button theme="solid" type="primary" onClick={() => setPasswordDialogOpen(false)}>
+            我已记录
+          </Button>
+        }
+        width={450}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+            <span className="text-sm font-medium">姓名：</span>
+            <div className="flex items-center gap-2">
+              <span>{selectedAccount?.real_name}</span>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<Copy className="h-3 w-3" />}
+                size="small"
+                style={{ width: 24, height: 24, padding: 0 }}
+                onClick={() => handleCopyToClipboard(selectedAccount?.real_name || '', '姓名')}
+              />
             </div>
-            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
-              <span className="text-sm font-medium">账号：</span>
-              <div className="flex items-center gap-2">
-                <code className="bg-muted px-2 py-1 rounded">{selectedAccount?.username}</code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleCopyToClipboard(selectedAccount?.username || '', '账号')}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
-              <span className="text-sm font-medium">新密码：</span>
-              <div className="flex items-center gap-2">
-                <code className="bg-muted px-2 py-1 rounded font-bold">{passwordResult?.new_password}</code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleCopyToClipboard(passwordResult?.new_password || '', '密码')}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-
-            <Button variant="outline" className="w-full" onClick={copyAllInfo}>
-              <Copy className="mr-2 h-4 w-4" />
-              一键复制（姓名/账号/密码）
-            </Button>
-
-            {passwordResult?.bound_employee ? (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertTitle>密码已同步</AlertTitle>
-                <AlertDescription>
-                  密码已同步到员工：{passwordResult.bound_employee.name}（{passwordResult.bound_employee.username}）
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <Alert variant="default">
-                <AlertDescription>
-                  该云客账号未绑定员工，密码未同步到系统用户
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <Alert variant="destructive">
-              <AlertDescription>
-                请立即将新密码告知用户，并提醒其首次登录后修改密码。
-              </AlertDescription>
-            </Alert>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setPasswordDialogOpen(false)}>
-              我已记录
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+            <span className="text-sm font-medium">账号：</span>
+            <div className="flex items-center gap-2">
+              <code className="bg-gray-100 px-2 py-1 rounded">{selectedAccount?.username}</code>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<Copy className="h-3 w-3" />}
+                size="small"
+                style={{ width: 24, height: 24, padding: 0 }}
+                onClick={() => handleCopyToClipboard(selectedAccount?.username || '', '账号')}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+            <span className="text-sm font-medium">新密码：</span>
+            <div className="flex items-center gap-2">
+              <code className="bg-gray-100 px-2 py-1 rounded font-bold">{passwordResult?.new_password}</code>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<Copy className="h-3 w-3" />}
+                size="small"
+                style={{ width: 24, height: 24, padding: 0 }}
+                onClick={() => handleCopyToClipboard(passwordResult?.new_password || '', '密码')}
+              />
+            </div>
+          </div>
+
+          <Button theme="outline" block icon={<Copy className="h-4 w-4" />} onClick={copyAllInfo}>
+            一键复制（姓名/账号/密码）
+          </Button>
+
+          {passwordResult?.bound_employee ? (
+            <div className="rounded-md border border-green-200 bg-green-50 p-3">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
+                <div>
+                  <div className="font-medium text-green-800">密码已同步</div>
+                  <div className="text-sm text-green-700">
+                    密码已同步到员工：{passwordResult.bound_employee.name}（{passwordResult.bound_employee.username}）
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+              <div className="text-sm text-gray-600">
+                该云客账号未绑定员工，密码未同步到系统用户
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-md border border-red-200 bg-red-50 p-3">
+            <div className="text-sm text-red-700">
+              请立即将新密码告知用户，并提醒其首次登录后修改密码。
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* 确认对话框 */}
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{confirmMessage.title}</AlertDialogTitle>
-            <AlertDialogDescription>{confirmMessage.description}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmAction}>
+      <Modal
+        title={confirmMessage.title}
+        visible={confirmDialogOpen}
+        onCancel={() => setConfirmDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setConfirmDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={handleConfirmAction}>
               确认
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </div>
+        }
+      >
+        {confirmMessage.description}
+      </Modal>
     </>
   )
 }

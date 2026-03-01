@@ -1,82 +1,62 @@
-import { useState } from 'react'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useState, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Form, Button } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { sleep, cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-
-const formSchema = z.object({
-  email: z.email({
-    error: (iss) => (iss.input === '' ? 'Please enter your email' : undefined),
-  }),
-})
 
 export function ForgotPasswordForm({
   className,
   ...props
-}: React.HTMLAttributes<HTMLFormElement>) {
+}: React.HTMLAttributes<HTMLDivElement>) {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
+  const formRef = useRef<FormApi>()
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: { email: '' },
-  })
-
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  function handleSubmit(values: Record<string, any>) {
     setIsLoading(true)
     // eslint-disable-next-line no-console
-    console.log(data)
+    console.log(values)
 
     toast.promise(sleep(2000), {
       loading: 'Sending email...',
       success: () => {
         setIsLoading(false)
-        form.reset()
+        formRef.current?.setValues({ email: '' })
         navigate({ to: '/otp' })
-        return `Email sent to ${data.email}`
+        return `Email sent to ${values.email}`
       },
       error: 'Error',
     })
   }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-2', className)}
-        {...props}
+    <div className={cn('', className)} {...props}>
+      <Form
+        getFormApi={(api) => { formRef.current = api }}
+        onSubmit={handleSubmit}
+        className='grid gap-2'
       >
-        <FormField
-          control={form.control}
-          name='email'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder='name@example.com' {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+        <Form.Input
+          field='email'
+          label='Email'
+          placeholder='name@example.com'
+          rules={[{ required: true, message: 'Please enter your email' }]}
         />
-        <Button className='mt-2' disabled={isLoading}>
+
+        <Button
+          htmlType='submit'
+          theme='solid'
+          block
+          loading={isLoading}
+          style={{ marginTop: 8 }}
+          icon={isLoading ? <Loader2 className='animate-spin' size={16} /> : <ArrowRight size={16} />}
+          iconPosition='right'
+        >
           Continue
-          {isLoading ? <Loader2 className='animate-spin' /> : <ArrowRight />}
         </Button>
-      </form>
-    </Form>
+      </Form>
+    </div>
   )
 }

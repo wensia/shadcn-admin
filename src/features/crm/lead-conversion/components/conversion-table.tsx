@@ -1,38 +1,18 @@
 /**
- * 转化记录表格组件
+ * 转化记录表格组件 (Semi Design)
  * 显示诺到、到访、缴费记录
  */
 
-import { useMemo } from 'react'
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef
-} from '@tanstack/react-table'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
-import { cn } from '@/lib/utils'
+import { useMemo, useRef, useState, useEffect } from 'react'
+import { Table, Tag, Dropdown, Button, Typography, Skeleton } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconMore } from '@douyinfe/semi-icons'
+import { Eye, Edit, Trash2 } from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
-import { MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import type { ConversionType, Payment, VisitSchedule } from '../types'
-import { paymentMethodLabels, paymentTypeLabels, paymentStatusLabels, visitStatusLabels, PaymentStatus, VisitStatus } from '../types'
+import { PaymentStatus, VisitStatus } from '../types'
+
+const { Text } = Typography
 
 // 统一的记录类型
 interface ConversionRecord {
@@ -71,66 +51,35 @@ interface ConversionTableProps {
 const typeLabels: Record<ConversionType, string> = {
   scheduled: '诺到',
   visited: '到访',
-  payment: '缴费'
+  payment: '缴费',
 }
 
 // 类型标签颜色
-const typeVariants: Record<ConversionType, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  scheduled: 'outline',
-  visited: 'secondary',
-  payment: 'default'
+const typeTagColors: Record<ConversionType, string> = {
+  scheduled: 'blue',
+  visited: 'green',
+  payment: 'purple',
 }
 
 // 状态标签颜色
-function getStatusVariant(type: ConversionType, status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
+function getStatusTagColor(type: ConversionType, status: string): string {
   if (type === 'payment') {
     switch (status) {
-      case PaymentStatus.CONFIRMED:
-        return 'default'
-      case PaymentStatus.PENDING:
-        return 'outline'
+      case PaymentStatus.CONFIRMED: return 'green'
+      case PaymentStatus.PENDING: return 'orange'
       case PaymentStatus.REFUNDED:
-      case PaymentStatus.CANCELLED:
-        return 'secondary'
-      default:
-        return 'outline'
+      case PaymentStatus.CANCELLED: return 'grey'
+      default: return 'blue'
     }
   } else {
     switch (status) {
-      case VisitStatus.VISITED:
-        return 'default'
-      case VisitStatus.SCHEDULED:
-        return 'outline'
-      case VisitStatus.NOSHOW:
-        return 'destructive'
-      case VisitStatus.CANCELLED:
-        return 'secondary'
-      default:
-        return 'outline'
+      case VisitStatus.VISITED: return 'green'
+      case VisitStatus.SCHEDULED: return 'blue'
+      case VisitStatus.NOSHOW: return 'red'
+      case VisitStatus.CANCELLED: return 'grey'
+      default: return 'blue'
     }
   }
-}
-
-// 骨架屏占位数据
-const SKELETON_ID_PREFIX = '__skeleton__'
-
-function createSkeletonData(count: number): ConversionRecord[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_ID_PREFIX}${i}`,
-    type: 'payment' as ConversionType,
-    lead_id: '',
-    child_name: '',
-    parent_phone: '',
-    record_time: '',
-    status: '',
-    status_display: '',
-    created_at: '',
-    original: {} as Payment
-  }))
-}
-
-function isSkeletonRow(id: string): boolean {
-  return id.startsWith(SKELETON_ID_PREFIX)
 }
 
 export function ConversionTable({
@@ -143,248 +92,161 @@ export function ConversionTable({
   onPageSizeChange,
   onView,
   onEdit,
-  onDelete
+  onDelete,
 }: ConversionTableProps) {
-  // 决定显示的数据
-  const displayData = useMemo(() => {
-    return isLoading ? createSkeletonData(pageSize) : data
-  }, [isLoading, data, pageSize])
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState<number>(400)
 
-  // 定义表格列
-  const columns = useMemo<ColumnDef<ConversionRecord>[]>(
-    () => [
-      // 类型
-      {
-        accessorKey: 'type',
-        header: '类型',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-5 w-12" />
-          }
-          return (
-            <Badge variant={typeVariants[row.original.type]}>
-              {typeLabels[row.original.type]}
-            </Badge>
-          )
-        },
-        size: 80
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const measure = () => {
+      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
+      const available = el.clientHeight - headerH
+      if (available > 100) setScrollY(available)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const columns = useMemo<ColumnProps<ConversionRecord>[]>(() => [
+    {
+      title: '类型',
+      dataIndex: 'type',
+      width: 80,
+      render: (_: any, record: ConversionRecord) => (
+        <Tag color={typeTagColors[record.type]} type="light">
+          {typeLabels[record.type]}
+        </Tag>
+      ),
+    },
+    {
+      title: '学生姓名',
+      dataIndex: 'child_name',
+      width: 100,
+      render: (_: any, record: ConversionRecord) => (
+        <Text strong>{record.child_name || '-'}</Text>
+      ),
+    },
+    {
+      title: '联系电话',
+      dataIndex: 'parent_phone',
+      width: 120,
+      render: (_: any, record: ConversionRecord) => record.parent_phone || '-',
+    },
+    {
+      title: '时间',
+      dataIndex: 'record_time',
+      width: 150,
+      render: (_: any, record: ConversionRecord) => formatTime(record.record_time, 'YYYY-MM-DD HH:mm'),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (_: any, record: ConversionRecord) => (
+        <Tag color={getStatusTagColor(record.type, record.status)} type="light">
+          {record.status_display}
+        </Tag>
+      ),
+    },
+    {
+      title: '金额',
+      dataIndex: 'amount',
+      width: 120,
+      render: (_: any, record: ConversionRecord) => {
+        if (record.type !== 'payment' || record.amount === undefined) return '-'
+        return (
+          <Text style={{ fontWeight: 500, color: '#16a34a' }}>
+            ¥{record.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+          </Text>
+        )
       },
-      // 学生姓名
-      {
-        accessorKey: 'child_name',
-        header: '学生姓名',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          return (
-            <span className="font-medium">{row.original.child_name || '-'}</span>
-          )
-        },
-        size: 100
-      },
-      // 手机号
-      {
-        accessorKey: 'parent_phone',
-        header: '联系电话',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-24" />
-          }
-          return row.original.parent_phone || '-'
-        },
-        size: 120
-      },
-      // 时间
-      {
-        accessorKey: 'record_time',
-        header: '时间',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-32" />
-          }
-          return formatTime(row.original.record_time, 'YYYY-MM-DD HH:mm')
-        },
-        size: 150
-      },
-      // 状态
-      {
-        accessorKey: 'status',
-        header: '状态',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-5 w-16" />
-          }
-          return (
-            <Badge variant={getStatusVariant(row.original.type, row.original.status)}>
-              {row.original.status_display}
-            </Badge>
-          )
-        },
-        size: 100
-      },
-      // 金额（仅缴费显示）
-      {
-        accessorKey: 'amount',
-        header: '金额',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          if (row.original.type !== 'payment' || row.original.amount === undefined) {
-            return '-'
-          }
-          return (
-            <span className="font-medium text-green-600">
-              ¥{row.original.amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
-            </span>
-          )
-        },
-        size: 120
-      },
-      // 支付方式
-      {
-        accessorKey: 'payment_method_display',
-        header: '支付方式',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          return row.original.payment_method_display || '-'
-        },
-        size: 100
-      },
-      // 校区
-      {
-        accessorKey: 'campus_name',
-        header: '校区',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-20" />
-          }
-          return row.original.campus_name || '-'
-        },
-        size: 100
-      },
-      // 创建人
-      {
-        accessorKey: 'created_by_name',
-        header: '创建人',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-4 w-16" />
-          }
-          return row.original.created_by_name || '-'
-        },
-        size: 80
-      },
-      // 操作
-      {
-        id: 'actions',
-        header: '操作',
-        cell: ({ row }) => {
-          if (isSkeletonRow(row.original.id)) {
-            return <Skeleton className="h-8 w-8" />
-          }
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onView?.(row.original)}>
-                  <Eye className="mr-2 h-4 w-4" />
+    },
+    {
+      title: '支付方式',
+      dataIndex: 'payment_method_display',
+      width: 100,
+      render: (_: any, record: ConversionRecord) => record.payment_method_display || '-',
+    },
+    {
+      title: '校区',
+      dataIndex: 'campus_name',
+      width: 100,
+      render: (_: any, record: ConversionRecord) => record.campus_name || '-',
+    },
+    {
+      title: '创建人',
+      dataIndex: 'created_by_name',
+      width: 80,
+      render: (_: any, record: ConversionRecord) => record.created_by_name || '-',
+    },
+    {
+      title: '操作',
+      dataIndex: 'actions',
+      width: 60,
+      fixed: 'right' as const,
+      render: (_: any, record: ConversionRecord) => (
+        <Dropdown
+          trigger="click"
+          clickToHide
+          position="bottomRight"
+          render={
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => onView?.(record)}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Eye style={{ width: 16, height: 16 }} />
                   查看
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit?.(row.original)}>
-                  <Edit className="mr-2 h-4 w-4" />
+                </span>
+              </Dropdown.Item>
+              <Dropdown.Item onClick={() => onEdit?.(record)}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Edit style={{ width: 16, height: 16 }} />
                   编辑
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => onDelete?.(row.original)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                </span>
+              </Dropdown.Item>
+              <Dropdown.Item type="danger" onClick={() => onDelete?.(record)}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Trash2 style={{ width: 16, height: 16 }} />
                   删除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
-        },
-        size: 60
-      }
-    ],
-    [onView, onEdit, onDelete]
-  )
-
-  const table = useReactTable({
-    data: displayData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    pageCount: Math.ceil(total / pageSize)
-  })
+                </span>
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          }
+        >
+          <Button icon={<IconMore />} theme="borderless" type="tertiary" style={{ padding: 4 }} />
+        </Dropdown>
+      ),
+    },
+  ], [onView, onEdit, onDelete])
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* 表格 */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    className="text-xs"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={cn(
-                    'text-xs',
-                    !isSkeletonRow(row.original.id) && 'cursor-pointer hover:bg-muted/50'
-                  )}
-                  onClick={() => !isSkeletonRow(row.original.id) && onView?.(row.original)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* 分页 */}
-      <SimplePagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
+    <div ref={wrapperRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={isLoading}
+        scroll={{ y: scrollY }}
+        size="middle"
+        pagination={{
+          currentPage: page,
+          pageSize: pageSize,
+          total: total,
+          onPageChange: onPageChange,
+          onPageSizeChange: onPageSizeChange,
+          showSizeChanger: true,
+          pageSizeOpts: [10, 20, 50],
+          showTotal: true,
+          formatShowTotal: (t: number) => `共 ${t} 条`,
+        }}
+        onRow={(record) => ({
+          style: { cursor: 'pointer', fontSize: 12 },
+          onClick: () => onView?.(record as ConversionRecord),
+        })}
+        empty={<div style={{ padding: 24, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
       />
     </div>
   )

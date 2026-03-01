@@ -1,20 +1,20 @@
 /**
  * 日控表品牌主题配置
- * 基于 Anthropic 品牌色彩系统 - 简洁克制风格
+ * 基于 Semi Design 官方配色系统
  */
 
-// Anthropic 品牌主色
+// Semi Design 品牌主色
 export const brandColors = {
   // 基础色
   dark: '#141413',      // 主文本、深色背景
   light: '#faf9f5',     // 浅色背景（温暖米色）
-  midGray: '#b0aea5',   // 次要元素
+  midGray: '#86909c',   // 次要元素 (Semi grey)
   lightGray: '#e8e6dc', // 微妙背景
 
   // 强调色 - 仅用于小面积点缀
-  orange: '#d97757',    // 主强调色 - 诺到
+  orange: '#ff7d00',    // 主强调色 - 诺到 (Semi warning orange)
   blue: '#6a9bcc',      // 次强调色 - 到访
-  green: '#788c5d',     // 三级强调色 - 缴费
+  green: '#00b42a',     // 三级强调色 - 缴费 (Semi success green)
 }
 
 // Tab 类型对应的颜色配置 - 简洁版本
@@ -22,14 +22,14 @@ export const tabThemes = {
   promised: {
     name: '诺到',
     color: brandColors.orange,
-    // 使用品牌橙色，但更加克制
-    dot: 'bg-[#d97757]',
-    text: 'text-[#d97757]',
-    textMuted: 'text-[#d97757]/70',
-    bgSubtle: 'bg-[#d97757]/5',
-    bgLight: 'bg-[#d97757]/10',
-    border: 'border-[#d97757]/20',
-    ring: 'ring-[#d97757]/20',
+    // Semi warning orange
+    dot: 'bg-[#ff7d00]',
+    text: 'text-[#ff7d00]',
+    textMuted: 'text-[#ff7d00]/70',
+    bgSubtle: 'bg-[#ff7d00]/5',
+    bgLight: 'bg-[#ff7d00]/10',
+    border: 'border-[#ff7d00]/20',
+    ring: 'ring-[#ff7d00]/20',
   },
   visited: {
     name: '到访',
@@ -46,26 +46,26 @@ export const tabThemes = {
   payment: {
     name: '缴费',
     color: brandColors.green,
-    // 使用品牌绿色
-    dot: 'bg-[#788c5d]',
-    text: 'text-[#788c5d]',
-    textMuted: 'text-[#788c5d]/70',
-    bgSubtle: 'bg-[#788c5d]/5',
-    bgLight: 'bg-[#788c5d]/10',
-    border: 'border-[#788c5d]/20',
-    ring: 'ring-[#788c5d]/20',
+    // Semi success green
+    dot: 'bg-[#00b42a]',
+    text: 'text-[#00b42a]',
+    textMuted: 'text-[#00b42a]/70',
+    bgSubtle: 'bg-[#00b42a]/5',
+    bgLight: 'bg-[#00b42a]/10',
+    border: 'border-[#00b42a]/20',
+    ring: 'ring-[#00b42a]/20',
   },
   calendar: {
     name: '日历',
     color: brandColors.midGray,
-    // 使用中性灰色
-    dot: 'bg-[#b0aea5]',
+    // Semi grey
+    dot: 'bg-[#86909c]',
     text: 'text-[#141413]',
-    textMuted: 'text-[#b0aea5]',
+    textMuted: 'text-[#86909c]',
     bgSubtle: 'bg-[#e8e6dc]/30',
     bgLight: 'bg-[#e8e6dc]/50',
     border: 'border-[#e8e6dc]',
-    ring: 'ring-[#b0aea5]/20',
+    ring: 'ring-[#86909c]/20',
   },
   report: {
     name: '报表',

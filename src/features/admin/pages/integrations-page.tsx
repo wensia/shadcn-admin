@@ -8,7 +8,7 @@ import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Mic, Bot, Webhook, CloudCog, KeyRound, Settings2 } from 'lucide-react'
 
 import { Main } from '@/components/layout/main'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
 
 // Tab 内容组件（将逐步创建）
 import { ASRConfigContent } from '../components/integrations/asr-config-content'
@@ -48,10 +48,10 @@ export function IntegrationsPage() {
       <div className="flex h-full flex-col gap-4">
         {/* 标题栏 */}
         <div className="flex items-center gap-3">
-          <Settings2 className="h-6 w-6 text-muted-foreground" />
+          <Settings2 className="h-6 w-6" style={{ color: 'var(--semi-color-text-2)' }} />
           <div>
             <h1 className="text-2xl font-bold">集成配置</h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm" style={{ color: 'var(--semi-color-text-2)' }}>
               管理外部服务、API 密钥和系统集成
             </p>
           </div>
@@ -59,37 +59,25 @@ export function IntegrationsPage() {
 
         {/* Tabs */}
         <Tabs
-          value={currentTab}
-          onValueChange={handleTabChange}
+          activeKey={currentTab}
+          onChange={handleTabChange}
           className="flex flex-1 flex-col overflow-hidden"
         >
-          <TabsList>
-            {TABS.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id} className="gap-2">
-                <tab.icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {/* Tab 内容区域 */}
-          <div className="flex-1 overflow-hidden pt-4">
-            <TabsContent value="asr" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <ASRConfigContent />
-            </TabsContent>
-            <TabsContent value="dingtalk" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <DingtalkRobotsContent />
-            </TabsContent>
-            <TabsContent value="webhook" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <WebhookHooksContent />
-            </TabsContent>
-            <TabsContent value="yunke" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <YunkeAccountsContent />
-            </TabsContent>
-            <TabsContent value="apikeys" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-              <ApiKeysContent />
-            </TabsContent>
-          </div>
+          {TABS.map((tab) => (
+            <TabPane
+              key={tab.id}
+              tab={<span style={{display:'inline-flex',alignItems:'center',gap:8}}><tab.icon size={16}/>{tab.label}</span>}
+              itemKey={tab.id}
+            >
+              <div className="h-full flex flex-col pt-4">
+                {tab.id === 'asr' && <ASRConfigContent />}
+                {tab.id === 'dingtalk' && <DingtalkRobotsContent />}
+                {tab.id === 'webhook' && <WebhookHooksContent />}
+                {tab.id === 'yunke' && <YunkeAccountsContent />}
+                {tab.id === 'apikeys' && <ApiKeysContent />}
+              </div>
+            </TabPane>
+          ))}
         </Tabs>
       </div>
     </Main>

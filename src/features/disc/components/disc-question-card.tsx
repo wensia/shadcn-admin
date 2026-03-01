@@ -41,7 +41,7 @@ export function DiscQuestionCard({ question, answer, onAnswer }: Props) {
             {question.id} / 24
           </span>
           {question.category && (
-            <span className="inline-flex items-center rounded-full bg-[#d97757]/10 px-2.5 py-1 text-[11px] font-semibold text-[#d97757]">
+            <span className="inline-flex items-center rounded-full bg-[#0064FA]/10 px-2.5 py-1 text-[11px] font-semibold text-[#0064FA]">
               {question.category}
             </span>
           )}

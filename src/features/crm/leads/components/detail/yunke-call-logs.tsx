@@ -1,37 +1,12 @@
 /**
- * 云客通话记录列表组件
- * 用于在线索详情中展示该线索的通话记录
+ * 云客通话记录列表组件 - Semi Design 版本
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { Slider } from '@/components/ui/slider'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Table, Modal, Tag, Button, Select, Slider, Skeleton } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconChevronDown } from '@douyinfe/semi-icons'
 import {
   Phone,
   PhoneIncoming,
@@ -44,43 +19,27 @@ import {
   VolumeX,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Download,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
 import { callRecordsApi } from '@/features/yunke/api'
 import type { YunkeCallLogItem } from '@/features/yunke/types'
 
 interface YunkeCallLogsProps {
-  /** 电话号码 */
   phone: string
-  /** 自定义类名 */
   className?: string
-  /** 是否显示标题栏（用于跟进记录Tab的50%布局） */
   showHeader?: boolean
-  /** 是否可折叠（仅在 showHeader 模式下有效） */
   collapsible?: boolean
-  /** 默认是否折叠（仅在 collapsible 为 true 时有效） */
   defaultCollapsed?: boolean
 }
 
-/**
- * 格式化通话时长
- */
 function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return '-'
   const minutes = Math.floor(seconds / 60)
   const secs = seconds % 60
-  if (minutes > 0) {
-    return `${minutes}分${secs}秒`
-  }
+  if (minutes > 0) return `${minutes}分${secs}秒`
   return `${secs}秒`
 }
 
-/**
- * 格式化音频时间 (mm:ss)
- */
 function formatAudioTime(seconds: number): string {
   if (!seconds || !isFinite(seconds)) return '00:00'
   const mins = Math.floor(seconds / 60)
@@ -88,82 +47,36 @@ function formatAudioTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-/**
- * 格式化时间
- */
 function formatTime(timeStr: string): string {
   if (!timeStr) return '-'
   try {
     const date = new Date(timeStr)
-    return date.toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return timeStr
-  }
+    return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  } catch { return timeStr }
 }
 
-/**
- * 获取通话类型图标和标签
- * @param incomingCall 0=外呼, 1=呼入
- */
 function getCallTypeInfo(incomingCall: number) {
-  if (incomingCall === 0) {
-    return { icon: PhoneOutgoing, label: '外呼', color: 'text-blue-500' }
-  }
-  if (incomingCall === 1) {
-    return { icon: PhoneIncoming, label: '呼入', color: 'text-green-500' }
-  }
-  return { icon: Phone, label: '-', color: 'text-muted-foreground' }
+  if (incomingCall === 0) return { icon: PhoneOutgoing, label: '外呼', color: '#0077fa' }
+  if (incomingCall === 1) return { icon: PhoneIncoming, label: '呼入', color: '#00b42a' }
+  return { icon: Phone, label: '-', color: 'var(--semi-color-text-2)' }
 }
 
-/**
- * 获取通话结果样式
- * @param callStatus 0=未接通, 2=已接通
- * @param callSeconds 通话时长（秒）
- */
-function getCallResultStyle(callStatus: number, callSeconds: number) {
-  if (callStatus === 2 || callSeconds > 0) {
-    return { label: '已接通', variant: 'default' as const, className: 'bg-green-500 hover:bg-green-500/80' }
-  }
-  return { label: '未接通', variant: 'secondary' as const, className: '' }
+function getCallResultInfo(callStatus: number, callSeconds: number) {
+  if (callStatus === 2 || callSeconds > 0) return { label: '已接通', color: 'green' as const }
+  return { label: '未接通', color: undefined }
 }
 
-/**
- * 获取录音播放 URL
- */
 function getAudioUrl(recordFile: string): string {
-  // 检查是否是直接的音频文件 URL
   const isDirectAudioUrl = /\.(mp3|wav|m4a|ogg|aac)(\?|$)/i.test(recordFile)
-
-  if (isDirectAudioUrl) {
-    return recordFile
-  }
-
-  // 尝试从 URL 中提取 voiceId 参数
+  if (isDirectAudioUrl) return recordFile
   const voiceIdMatch = recordFile.match(/voiceId=([^&]+)/)
   const voiceId = voiceIdMatch ? voiceIdMatch[1] : null
-
-  if (voiceId) {
-    return callRecordsApi.getRecordStreamUrl(voiceId)
-  }
-
+  if (voiceId) return callRecordsApi.getRecordStreamUrl(voiceId)
   return recordFile
 }
 
-/**
- * 音频播放弹窗组件
- */
-interface AudioPlayerDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  item: YunkeCallLogItem | null
-}
-
-function AudioPlayerDialog({ open, onOpenChange, item }: AudioPlayerDialogProps) {
+/** 音频播放弹窗 */
+function AudioPlayerDialog({ open, onClose, item }: { open: boolean; onClose: () => void; item: YunkeCallLogItem | null }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -173,136 +86,56 @@ function AudioPlayerDialog({ open, onOpenChange, item }: AudioPlayerDialogProps)
   const [error, setError] = useState<string | null>(null)
   const [isDownloading, setIsDownloading] = useState(false)
 
-  // 重置状态
   const resetState = useCallback(() => {
-    setIsPlaying(false)
-    setIsLoading(true)
-    setCurrentTime(0)
-    setDuration(0)
-    setError(null)
+    setIsPlaying(false); setIsLoading(true); setCurrentTime(0); setDuration(0); setError(null)
   }, [])
 
-  // 当弹窗打开时初始化音频
   useEffect(() => {
     if (!open || !item?.recordFile) {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
       resetState()
       return
     }
-
     const audioUrl = getAudioUrl(item.recordFile)
     const audio = new Audio(audioUrl)
     audioRef.current = audio
-
-    // 事件监听
-    audio.onloadedmetadata = () => {
-      setDuration(audio.duration)
-      setIsLoading(false)
-    }
-
-    audio.oncanplay = () => {
-      setIsLoading(false)
-    }
-
-    audio.ontimeupdate = () => {
-      setCurrentTime(audio.currentTime)
-    }
-
-    audio.onended = () => {
-      setIsPlaying(false)
-      setCurrentTime(0)
-    }
-
-    audio.onerror = () => {
-      setIsLoading(false)
-      setError('播放失败，请稍后重试')
-    }
-
+    audio.onloadedmetadata = () => { setDuration(audio.duration); setIsLoading(false) }
+    audio.oncanplay = () => setIsLoading(false)
+    audio.ontimeupdate = () => setCurrentTime(audio.currentTime)
+    audio.onended = () => { setIsPlaying(false); setCurrentTime(0) }
+    audio.onerror = () => { setIsLoading(false); setError('播放失败，请稍后重试') }
     audio.onplay = () => setIsPlaying(true)
     audio.onpause = () => setIsPlaying(false)
-
-    // 清理
-    return () => {
-      audio.pause()
-      audio.src = ''
-      audioRef.current = null
-    }
+    return () => { audio.pause(); audio.src = ''; audioRef.current = null }
   }, [open, item, resetState])
 
-  // 播放/暂停
   const togglePlay = async () => {
     if (!audioRef.current) return
-
     try {
-      if (isPlaying) {
-        audioRef.current.pause()
-      } else {
-        await audioRef.current.play()
-      }
-    } catch (err) {
-      console.error('播放失败:', err)
-      setError('播放失败')
-    }
+      if (isPlaying) audioRef.current.pause()
+      else await audioRef.current.play()
+    } catch { setError('播放失败') }
   }
 
-  // 进度条拖动
-  const handleSeek = (value: number[]) => {
-    if (!audioRef.current) return
-    const newTime = value[0]
-    audioRef.current.currentTime = newTime
-    setCurrentTime(newTime)
-  }
-
-  // 静音切换
-  const toggleMute = () => {
-    if (!audioRef.current) return
-    audioRef.current.muted = !isMuted
-    setIsMuted(!isMuted)
-  }
-
-  // 下载音频
   const handleDownload = async () => {
     if (!item?.recordFile) return
-
     setIsDownloading(true)
     try {
       const audioUrl = getAudioUrl(item.recordFile)
       const response = await fetch(audioUrl)
       const blob = await response.blob()
-
-      // 生成文件名: 手机号_通话时长_通话开始时间.mp3
       const phone = item.callNumber || 'unknown'
       const durationStr = `${item.callSeconds}秒`
       const timeStr = item.startCallTime
-        ? new Date(item.startCallTime).toLocaleString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          }).replace(/[/:]/g, '-').replace(/\s/g, '_')
+        ? new Date(item.startCallTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/[/:]/g, '-').replace(/\s/g, '_')
         : 'unknown'
       const fileName = `${phone}_${durationStr}_${timeStr}.mp3`
-
-      // 创建下载链接
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      a.href = url; a.download = fileName
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
       URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error('下载失败:', err)
-      setError('下载失败，请稍后重试')
-    } finally {
-      setIsDownloading(false)
-    }
+    } catch { setError('下载失败，请稍后重试') } finally { setIsDownloading(false) }
   }
 
   if (!item) return null
@@ -311,120 +144,62 @@ function AudioPlayerDialog({ open, onOpenChange, item }: AudioPlayerDialogProps)
   const TypeIcon = typeInfo.icon
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Phone className="h-4 w-4" />
-            通话录音
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* 通话信息 */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground border-b pb-3">
-            <div className="flex items-center gap-2">
-              <TypeIcon className={cn('h-4 w-4', typeInfo.color)} />
-              <span>{typeInfo.label}</span>
-              <span>·</span>
-              <span>{item.userIdName || '未知员工'}</span>
-            </div>
-            <span>{formatTime(item.startCallTime)}</span>
+    <Modal title={<span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}><Phone style={{ width: 16, height: 16 }} />通话录音</span>} visible={open} onCancel={onClose} footer={null} width={440}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, color: 'var(--semi-color-text-2)', borderBottom: '1px solid var(--semi-color-border)', paddingBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <TypeIcon style={{ width: 16, height: 16, color: typeInfo.color }} />
+            <span>{typeInfo.label}</span>
+            <span>·</span>
+            <span>{item.userIdName || '未知员工'}</span>
           </div>
-
-          {/* 播放器 */}
-          <div className="space-y-3">
-            {error ? (
-              <div className="text-center py-4 text-sm text-destructive">{error}</div>
-            ) : (
-              <>
-                {/* 进度条 */}
-                <div className="space-y-2">
-                  <Slider
-                    value={[currentTime]}
-                    max={duration || 100}
-                    step={0.1}
-                    onValueChange={handleSeek}
-                    disabled={isLoading}
-                    className="cursor-pointer"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{formatAudioTime(currentTime)}</span>
-                    <span>{formatAudioTime(duration)}</span>
-                  </div>
-                </div>
-
-                {/* 控制按钮 */}
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={toggleMute}
-                    disabled={isLoading}
-                  >
-                    {isMuted ? (
-                      <VolumeX className="h-4 w-4" />
-                    ) : (
-                      <Volume2 className="h-4 w-4" />
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="default"
-                    size="icon"
-                    className="h-12 w-12 rounded-full"
-                    onClick={togglePlay}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : isPlaying ? (
-                      <Pause className="h-5 w-5" />
-                    ) : (
-                      <Play className="h-5 w-5 ml-0.5" />
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={handleDownload}
-                    disabled={isLoading || isDownloading}
-                    title="下载录音"
-                  >
-                    {isDownloading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* 通话时长信息 */}
-          <div className="text-center text-xs text-muted-foreground">
-            通话时长: {formatDuration(item.callSeconds)}
-          </div>
+          <span>{formatTime(item.startCallTime)}</span>
         </div>
-      </DialogContent>
-    </Dialog>
+        {error ? (
+          <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 13, color: '#ef4444' }}>{error}</div>
+        ) : (
+          <>
+            <div>
+              <Slider
+                value={currentTime}
+                max={duration || 100}
+                step={0.1}
+                onChange={(val) => { if (audioRef.current) audioRef.current.currentTime = val as number; setCurrentTime(val as number) }}
+                disabled={isLoading}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--semi-color-text-2)', marginTop: 4 }}>
+                <span>{formatAudioTime(currentTime)}</span>
+                <span>{formatAudioTime(duration)}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+              <Button theme="borderless" icon={isMuted ? <VolumeX style={{ width: 16, height: 16 }} /> : <Volume2 style={{ width: 16, height: 16 }} />} onClick={() => { if (audioRef.current) audioRef.current.muted = !isMuted; setIsMuted(!isMuted) }} disabled={isLoading} />
+              <Button
+                theme="solid"
+                style={{ borderRadius: '50%', width: 48, height: 48 }}
+                icon={isLoading ? <Loader2 style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} /> : isPlaying ? <Pause style={{ width: 20, height: 20 }} /> : <Play style={{ width: 20, height: 20, marginLeft: 2 }} />}
+                onClick={togglePlay}
+                disabled={isLoading}
+              />
+              <Button theme="borderless" icon={isDownloading ? <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> : <Download style={{ width: 16, height: 16 }} />} onClick={handleDownload} disabled={isLoading || isDownloading} />
+            </div>
+          </>
+        )}
+        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+          通话时长: {formatDuration(item.callSeconds)}
+        </div>
+      </div>
+    </Modal>
   )
 }
 
 export function YunkeCallLogs({ phone, className, showHeader = false, collapsible = false, defaultCollapsed = false }: YunkeCallLogsProps) {
-  const s = useStyleClasses()
   const [selectedItem, setSelectedItem] = useState<YunkeCallLogItem | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-
-  // 分页状态
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
+  const [isOpen, setIsOpen] = useState(!defaultCollapsed)
 
-  // 查询通话记录
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['yunke-call-logs', phone],
     queryFn: () => callRecordsApi.searchByPhone({ phone, size: 100 }),
@@ -432,7 +207,6 @@ export function YunkeCallLogs({ phone, className, showHeader = false, collapsibl
     staleTime: 30 * 1000,
   })
 
-  // 分页计算
   const paginated = useMemo(() => {
     const allItems = data?.items || []
     const total = allItems.length
@@ -442,323 +216,191 @@ export function YunkeCallLogs({ phone, className, showHeader = false, collapsibl
     return { items, total, totalPages }
   }, [data?.items, page, pageSize])
 
-  // 通话统计汇总
   const callStats = useMemo(() => {
     const allItems = data?.items || []
     const connected = allItems.filter(item => item.callSeconds > 0 || item.callStatus === 2).length
     const notConnected = allItems.length - connected
     const totalCalls = allItems.length
     const totalDuration = allItems.reduce((sum, item) => sum + (item.callSeconds || 0), 0)
-    const avgDuration = totalCalls > 0 ? Math.round(totalDuration / connected) : 0
-
-    // 格式化总通时
-    const formatTotalDuration = (seconds: number): string => {
-      if (seconds <= 0) return '0秒'
-      const hours = Math.floor(seconds / 3600)
-      const minutes = Math.floor((seconds % 3600) / 60)
-      const secs = seconds % 60
-      if (hours > 0) {
-        return `${hours}时${minutes}分${secs}秒`
-      }
-      if (minutes > 0) {
-        return `${minutes}分${secs}秒`
-      }
-      return `${secs}秒`
+    const avgDuration = connected > 0 ? Math.round(totalDuration / connected) : 0
+    const fmt = (s: number): string => {
+      if (s <= 0) return '0秒'
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+      if (h > 0) return `${h}时${m}分${sec}秒`
+      if (m > 0) return `${m}分${sec}秒`
+      return `${sec}秒`
     }
-
-    return {
-      connected,
-      notConnected,
-      totalCalls,
-      totalDuration: formatTotalDuration(totalDuration),
-      avgDuration: connected > 0 ? formatTotalDuration(avgDuration) : '-'
-    }
+    return { connected, notConnected, totalCalls, totalDuration: fmt(totalDuration), avgDuration: connected > 0 ? fmt(avgDuration) : '-' }
   }, [data?.items])
 
-  // 打开播放弹窗
   const handleOpenPlayer = (item: YunkeCallLogItem) => {
     if (!item.recordFile) return
     setSelectedItem(item)
     setDialogOpen(true)
   }
 
-  // showHeader 模式下的完整布局
+  const columns: ColumnProps<YunkeCallLogItem>[] = [
+    {
+      title: '通话时间', dataIndex: 'startCallTime', width: 100,
+      render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{formatTime(text as string)}</span>,
+    },
+    {
+      title: '类型', dataIndex: 'incomingCall', width: 60,
+      render: (val) => {
+        const info = getCallTypeInfo(val as number)
+        const Icon = info.icon
+        return <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon style={{ width: 12, height: 12, color: info.color }} /><span style={{ fontSize: 13 }}>{info.label}</span></div>
+      },
+    },
+    {
+      title: '结果', dataIndex: 'callStatus', width: 70,
+      render: (_val, record) => {
+        if (!record) return null
+        const info = getCallResultInfo(record.callStatus, record.callSeconds)
+        return <Tag size="small" color={info.color}>{info.label}</Tag>
+      },
+    },
+    {
+      title: '时长', dataIndex: 'callSeconds', width: 70,
+      render: (val, record) => {
+        if (!record) return null
+        const hasAnswer = record.callSeconds > 0
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+            {hasAnswer ? <Phone style={{ width: 12, height: 12, color: '#00b42a' }} /> : <PhoneOff style={{ width: 12, height: 12, color: 'var(--semi-color-text-2)' }} />}
+            <span style={{ color: hasAnswer ? '#16a34a' : 'var(--semi-color-text-2)' }}>{formatDuration(val as number)}</span>
+          </div>
+        )
+      },
+    },
+    {
+      title: '录音', dataIndex: 'recordFile', width: 50,
+      render: (val, record) => {
+        if (!record) return null
+        return val ? (
+          <Button theme="borderless" size="small" icon={<Play style={{ width: 14, height: 14 }} />} onClick={() => handleOpenPlayer(record)} />
+        ) : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
+      },
+    },
+    {
+      title: '员工', dataIndex: 'userIdName', width: 80,
+      render: (text) => <span style={{ fontSize: 13 }}>{(text as string) || '-'}</span>,
+    },
+    {
+      title: '部门', dataIndex: 'departmentList',
+      render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{text !== '该部门不存在' ? text : '-'}</span>,
+    },
+  ]
+
+  // showHeader 模式
   if (showHeader) {
-    // 标题栏
     const headerContent = (
-      <div className={cn(
-        "flex items-center justify-between px-4 py-2 bg-muted/30",
-        collapsible ? "cursor-pointer hover:bg-muted/50 transition-colors group" : "border-b"
-      )}>
-        <div className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-muted-foreground" />
-          <h4 className={cn(s.text.sm, 'font-medium')}>云客通话记录</h4>
-          {callStats.totalCalls > 0 && (
-            <span className={cn(s.text.xs, 'text-muted-foreground ml-2')}>
-              ({callStats.totalCalls} 条)
-            </span>
-          )}
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 16px', background: 'var(--semi-color-fill-0)',
+          cursor: collapsible ? 'pointer' : undefined,
+          borderBottom: collapsible ? undefined : '1px solid var(--semi-color-border)',
+        }}
+        onClick={collapsible ? () => setIsOpen(!isOpen) : undefined}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Phone style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+          <span style={{ fontSize: 14, fontWeight: 500 }}>云客通话记录</span>
+          {callStats.totalCalls > 0 && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', marginLeft: 8 }}>({callStats.totalCalls} 条)</span>}
         </div>
-        <div className="flex items-center gap-3">
-          {/* 统计信息 - 非折叠模式或展开时显示完整统计 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {!collapsible && callStats.totalCalls > 0 && (
-            <div className={cn(s.text.xs, 'text-muted-foreground flex items-center gap-3')}>
-              <span>
-                接通 <span className="text-green-600 font-medium">{callStats.connected}</span>
-              </span>
-              <span>
-                未接通 <span className="text-red-500 font-medium">{callStats.notConnected}</span>
-              </span>
-              <span>
-                总通时 <span className="font-medium">{callStats.totalDuration}</span>
-              </span>
+            <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)', display: 'flex', gap: 12 }}>
+              <span>接通 <span style={{ color: '#16a34a', fontWeight: 500 }}>{callStats.connected}</span></span>
+              <span>未接通 <span style={{ color: '#ef4444', fontWeight: 500 }}>{callStats.notConnected}</span></span>
+              <span>总通时 <span style={{ fontWeight: 500 }}>{callStats.totalDuration}</span></span>
             </div>
           )}
           {collapsible && (
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <span className={cn(s.text.xs, 'group-data-[state=open]:hidden')}>点击展开</span>
-              <span className={cn(s.text.xs, 'hidden group-data-[state=open]:inline')}>点击收起</span>
-              <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-            </div>
+            <IconChevronDown style={{ fontSize: 16, color: 'var(--semi-color-text-2)', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
           )}
         </div>
       </div>
     )
 
-    // 内容区域
     const mainContent = (
       <>
-        {/* 展开后显示完整统计信息 */}
         {collapsible && callStats.totalCalls > 0 && (
-          <div className={cn(s.text.xs, 'text-muted-foreground flex items-center gap-3 px-4 py-2 bg-muted/20 border-b')}>
-            <span>
-              接通 <span className="text-green-600 font-medium">{callStats.connected}</span>
-            </span>
-            <span>
-              未接通 <span className="text-red-500 font-medium">{callStats.notConnected}</span>
-            </span>
-            <span>
-              总通话 <span className="font-medium">{callStats.totalCalls}</span>
-            </span>
-            <span>
-              总通时 <span className="font-medium">{callStats.totalDuration}</span>
-            </span>
-            <span>
-              平均通时 <span className="font-medium">{callStats.avgDuration}</span>
-            </span>
+          <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)', display: 'flex', gap: 12, padding: '8px 16px', background: 'var(--semi-color-fill-0)', borderBottom: '1px solid var(--semi-color-border)' }}>
+            <span>接通 <span style={{ color: '#16a34a', fontWeight: 500 }}>{callStats.connected}</span></span>
+            <span>未接通 <span style={{ color: '#ef4444', fontWeight: 500 }}>{callStats.notConnected}</span></span>
+            <span>总通话 <span style={{ fontWeight: 500 }}>{callStats.totalCalls}</span></span>
+            <span>总通时 <span style={{ fontWeight: 500 }}>{callStats.totalDuration}</span></span>
+            <span>平均通时 <span style={{ fontWeight: 500 }}>{callStats.avgDuration}</span></span>
           </div>
         )}
-        <ScrollArea className="flex-1 max-h-[300px]">
-          <div className="p-4">
-            {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 py-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-24 flex-1" />
-                  </div>
-                ))}
-              </div>
-            ) : isError ? (
-              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
-                查询失败: {(error as Error)?.message || '未知错误'}
-              </div>
-            ) : !paginated.items.length ? (
-              <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4')}>
-                暂无通话记录
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={cn(s.text.xs, 'w-[100px]')}>通话时间</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[60px]')}>类型</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[70px]')}>结果</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[70px]')}>时长</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[50px]')}>录音</TableHead>
-                    <TableHead className={cn(s.text.xs, 'w-[80px]')}>员工</TableHead>
-                    <TableHead className={cn(s.text.xs)}>部门</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginated.items.map((item: YunkeCallLogItem) => {
-                    const typeInfo = getCallTypeInfo(item.incomingCall)
-                    const resultStyle = getCallResultStyle(item.callStatus, item.callSeconds)
-                    const TypeIcon = typeInfo.icon
-                    const hasAnswer = item.callSeconds > 0
-
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                          {formatTime(item.startCallTime)}
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          <div className="flex items-center gap-1">
-                            <TypeIcon className={cn('h-3 w-3', typeInfo.color)} />
-                            <span>{typeInfo.label}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          <Badge
-                            variant={resultStyle.variant}
-                            className={cn(s.text.xs, s.roundedBadge, s.height.badge, resultStyle.className)}
-                          >
-                            {resultStyle.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          <div className="flex items-center gap-1">
-                            {hasAnswer ? (
-                              <Phone className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <PhoneOff className="h-3 w-3 text-muted-foreground" />
-                            )}
-                            <span className={hasAnswer ? 'text-green-600' : 'text-muted-foreground'}>
-                              {formatDuration(item.callSeconds)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          {item.recordFile ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleOpenPlayer(item)}
-                            >
-                              <Play className="h-3.5 w-3.5" />
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className={s.text.xs}>
-                          {item.userIdName || '-'}
-                        </TableCell>
-                        <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                          {item.departmentList !== '该部门不存在' ? item.departmentList : '-'}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </ScrollArea>
-        {/* 分页器 */}
-        {paginated.total > 0 && (
-          <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20">
-            <div className={cn('flex items-center gap-2', s.text.xs)}>
-              <span className="text-muted-foreground">每页</span>
-              <Select
-                value={`${pageSize}`}
-                onValueChange={(value) => {
-                  setPageSize(Number(value))
-                  setPage(1)
-                }}
-              >
-                <SelectTrigger className="h-7 w-[60px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[5, 10, 20].map((size) => (
-                    <SelectItem key={size} value={`${size}`} className="text-xs">
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-muted-foreground">条</span>
+        <div style={{ maxHeight: 300, overflow: 'auto', padding: 16 }}>
+          {isLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[...Array(3)].map((_, i) => (
+                <Skeleton.Paragraph key={i} rows={1} style={{ width: '100%' }} />
+              ))}
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 w-7 p-0"
-                onClick={() => setPage(page - 1)}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className={cn(s.text.xs, 'px-2')}>
-                {page} / {paginated.totalPages || 1}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 w-7 p-0"
-                onClick={() => setPage(page + 1)}
-                disabled={page >= paginated.totalPages}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+          ) : isError ? (
+            <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>
+              查询失败: {(error as Error)?.message || '未知错误'}
+            </div>
+          ) : !paginated.items.length ? (
+            <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>
+              暂无通话记录
+            </div>
+          ) : (
+            <Table columns={columns} dataSource={paginated.items} rowKey="id" pagination={false} size="small" />
+          )}
+        </div>
+        {paginated.total > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <span style={{ color: 'var(--semi-color-text-2)' }}>每页</span>
+              <Select value={pageSize} onChange={(val) => { setPageSize(val as number); setPage(1) }} optionList={[5, 10, 20].map(s => ({ label: String(s), value: s }))} style={{ width: 70 }} size="small" />
+              <span style={{ color: 'var(--semi-color-text-2)' }}>条</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Button size="small" theme="light" disabled={page <= 1} onClick={() => setPage(page - 1)} icon={<ChevronLeft style={{ width: 16, height: 16 }} />} />
+              <span style={{ fontSize: 12, padding: '0 8px' }}>{page} / {paginated.totalPages || 1}</span>
+              <Button size="small" theme="light" disabled={page >= paginated.totalPages} onClick={() => setPage(page + 1)} icon={<ChevronRight style={{ width: 16, height: 16 }} />} />
             </div>
           </div>
         )}
       </>
     )
 
-    // 可折叠模式
-    if (collapsible) {
-      return (
-        <>
-          <Collapsible defaultOpen={!defaultCollapsed}>
-            <CollapsibleTrigger asChild>
-              {headerContent}
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              {mainContent}
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* 音频播放弹窗 */}
-          <AudioPlayerDialog
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
-            item={selectedItem}
-          />
-        </>
-      )
-    }
-
-    // 非折叠模式
     return (
       <>
-        {headerContent}
-        {mainContent}
-
-        {/* 音频播放弹窗 */}
-        <AudioPlayerDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          item={selectedItem}
-        />
+        {collapsible ? (
+          <>
+            {headerContent}
+            {isOpen && mainContent}
+          </>
+        ) : (
+          <>
+            {headerContent}
+            {mainContent}
+          </>
+        )}
+        <AudioPlayerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} item={selectedItem} />
       </>
     )
   }
 
-  // 原有的非 showHeader 模式
+  // 非 showHeader 模式
   if (isLoading) {
     return (
-      <div className={cn('space-y-2', className)}>
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center gap-4 py-2">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-24 flex-1" />
-          </div>
-        ))}
+      <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {[...Array(3)].map((_, i) => <Skeleton.Paragraph key={i} rows={1} style={{ width: '100%' }} />)}
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4', className)}>
+      <div className={className} style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>
         查询失败: {(error as Error)?.message || '未知错误'}
       </div>
     )
@@ -766,7 +408,7 @@ export function YunkeCallLogs({ phone, className, showHeader = false, collapsibl
 
   if (!data?.items?.length) {
     return (
-      <div className={cn(s.text.xs, 'text-muted-foreground text-center py-4', className)}>
+      <div className={className} style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>
         暂无通话记录
       </div>
     )
@@ -774,93 +416,13 @@ export function YunkeCallLogs({ phone, className, showHeader = false, collapsibl
 
   return (
     <div className={className}>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className={cn(s.text.xs, 'w-[100px]')}>通话时间</TableHead>
-            <TableHead className={cn(s.text.xs, 'w-[60px]')}>类型</TableHead>
-            <TableHead className={cn(s.text.xs, 'w-[70px]')}>结果</TableHead>
-            <TableHead className={cn(s.text.xs, 'w-[70px]')}>时长</TableHead>
-            <TableHead className={cn(s.text.xs, 'w-[50px]')}>录音</TableHead>
-            <TableHead className={cn(s.text.xs, 'w-[80px]')}>员工</TableHead>
-            <TableHead className={cn(s.text.xs)}>部门</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.items.map((item: YunkeCallLogItem) => {
-            const typeInfo = getCallTypeInfo(item.incomingCall)
-            const resultStyle = getCallResultStyle(item.callStatus, item.callSeconds)
-            const TypeIcon = typeInfo.icon
-            const hasAnswer = item.callSeconds > 0
-
-            return (
-              <TableRow key={item.id}>
-                <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                  {formatTime(item.startCallTime)}
-                </TableCell>
-                <TableCell className={s.text.xs}>
-                  <div className="flex items-center gap-1">
-                    <TypeIcon className={cn('h-3 w-3', typeInfo.color)} />
-                    <span>{typeInfo.label}</span>
-                  </div>
-                </TableCell>
-                <TableCell className={s.text.xs}>
-                  <Badge
-                    variant={resultStyle.variant}
-                    className={cn(s.text.xs, s.roundedBadge, s.height.badge, resultStyle.className)}
-                  >
-                    {resultStyle.label}
-                  </Badge>
-                </TableCell>
-                <TableCell className={s.text.xs}>
-                  <div className="flex items-center gap-1">
-                    {hasAnswer ? (
-                      <Phone className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <PhoneOff className="h-3 w-3 text-muted-foreground" />
-                    )}
-                    <span className={hasAnswer ? 'text-green-600' : 'text-muted-foreground'}>
-                      {formatDuration(item.callSeconds)}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className={s.text.xs}>
-                  {item.recordFile ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => handleOpenPlayer(item)}
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                    </Button>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell className={s.text.xs}>
-                  {item.userIdName || '-'}
-                </TableCell>
-                <TableCell className={cn(s.text.xs, 'text-muted-foreground')}>
-                  {item.departmentList !== '该部门不存在' ? item.departmentList : '-'}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+      <Table columns={columns} dataSource={data.items} rowKey="id" pagination={false} size="small" />
       {data.total > 20 && (
-        <div className={cn(s.text.xs, 'text-muted-foreground text-center py-2 border-t')}>
+        <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '8px 0', borderTop: '1px solid var(--semi-color-border)' }}>
           共 {data.total} 条记录，仅显示最近 20 条
         </div>
       )}
-
-      {/* 音频播放弹窗 */}
-      <AudioPlayerDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        item={selectedItem}
-      />
+      <AudioPlayerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} item={selectedItem} />
     </div>
   )
 }

@@ -1,25 +1,16 @@
 /**
- * 可复制单元格组件 - 支持悬浮展示完整内容和复制
+ * 可复制单元格组件 - Semi Design 版
+ * 支持悬浮展示完整内容和复制
  */
 
 import { useState } from 'react'
-import { Copy, Check } from 'lucide-react'
-import { toast } from 'sonner'
-
-import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { cn, copyToClipboard } from '@/lib/utils'
+import { Tooltip, Button, Toast } from '@douyinfe/semi-ui-19'
+import { IconCopy, IconTick } from '@douyinfe/semi-icons'
+import { copyToClipboard } from '@/lib/utils'
 
 interface CopyableCellProps {
-  /** 显示的内容 */
   content: string
-  /** 最大宽度 class，如 max-w-[150px] */
   maxWidthClass?: string
-  /** 额外的 class */
   className?: string
 }
 
@@ -31,47 +22,43 @@ export function CopyableCell({ content, maxWidthClass = 'max-w-[150px]', classNa
     const success = await copyToClipboard(content)
     if (success) {
       setCopied(true)
-      toast.success('已复制到剪贴板')
+      Toast.success('已复制到剪贴板')
       setTimeout(() => setCopied(false), 2000)
     } else {
-      toast.error('复制失败')
+      Toast.error('复制失败')
     }
   }
 
+  // 从 Tailwind class 提取 max-width 值
+  const maxWidthMatch = maxWidthClass.match(/max-w-\[(\d+)px\]/)
+  const maxWidth = maxWidthMatch ? parseInt(maxWidthMatch[1]) : 150
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className={cn('truncate block cursor-pointer', maxWidthClass, className)}>
-          {content}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        align="start"
-        className="max-w-[320px] bg-popover text-popover-foreground border shadow-md"
-      >
-        <div className="space-y-2">
-          <p className="text-xs whitespace-pre-wrap break-words">{content}</p>
+    <Tooltip
+      content={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320 }}>
+          <p style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0 }}>{content}</p>
           <Button
-            variant="outline"
-            size="sm"
-            className="h-6 text-xs w-full gap-1"
+            size="small"
+            icon={copied ? <IconTick /> : <IconCopy />}
             onClick={handleCopy}
+            block
           >
-            {copied ? (
-              <>
-                <Check className="h-3 w-3" />
-                已复制
-              </>
-            ) : (
-              <>
-                <Copy className="h-3 w-3" />
-                复制内容
-              </>
-            )}
+            {copied ? '已复制' : '复制内容'}
           </Button>
         </div>
-      </TooltipContent>
+      }
+      position="top"
+    >
+      <span
+        style={{
+          display: 'block', overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap', cursor: 'pointer', maxWidth,
+        }}
+        className={className}
+      >
+        {content}
+      </span>
     </Tooltip>
   )
 }

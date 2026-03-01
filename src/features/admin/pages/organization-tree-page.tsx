@@ -6,16 +6,15 @@
 import { useState } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, User, Users, RefreshCw, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, User, Users, Search } from 'lucide-react'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button, Input, Tag, Skeleton, Typography, Card } from '@douyinfe/semi-ui-19'
+import { IconRefresh } from '@douyinfe/semi-icons'
 import { cn } from '@/lib/utils'
 import { adminApi } from '../api'
 import type { EmployeeHierarchyNode } from '../types'
+
+const { Text } = Typography
 
 /**
  * 单个员工节点组件
@@ -53,9 +52,9 @@ function EmployeeNode({
         <span className="w-4 h-4 flex items-center justify-center">
           {hasChildren ? (
             isExpanded ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
             ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <ChevronRight className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
             )
           ) : (
             <span className="w-4" />
@@ -79,15 +78,13 @@ function EmployeeNode({
           <div className="flex items-center gap-2">
             <span className="font-medium truncate">{node.name}</span>
             {node.is_superuser && (
-              <Badge variant="default" className="text-xs">超管</Badge>
+              <Tag color="blue" size="small">超管</Tag>
             )}
             {hasChildren && (
-              <Badge variant="secondary" className="text-xs">
-                {node.children.length} 人
-              </Badge>
+              <Tag size="small">{node.children.length} 人</Tag>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--semi-color-text-2)' }}>
             {node.position && <span>{node.position}</span>}
             {node.position && node.department && <span>·</span>}
             {node.department && <span>{node.department}</span>}
@@ -97,7 +94,7 @@ function EmployeeNode({
         </div>
 
         {/* 联系方式 */}
-        <div className="hidden md:flex flex-col items-end text-xs text-muted-foreground">
+        <div className="hidden md:flex flex-col items-end text-xs" style={{ color: 'var(--semi-color-text-2)' }}>
           {node.phone && <span>{node.phone}</span>}
           {node.email && <span className="truncate max-w-[200px]">{node.email}</span>}
         </div>
@@ -129,22 +126,22 @@ function TreeSkeleton() {
       {[1, 2, 3].map((i) => (
         <div key={i} className="space-y-2">
           <div className="flex items-center gap-2 py-1.5 px-2">
-            <Skeleton className="w-4 h-4" />
-            <Skeleton className="w-8 h-8 rounded-full" />
+            <Skeleton.Paragraph rows={1} style={{ width: 16, height: 16 }} />
+            <Skeleton.Avatar size="small" />
             <div className="flex-1 space-y-1">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-48" />
+              <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
+              <Skeleton.Paragraph rows={1} style={{ width: 192 }} />
             </div>
           </div>
           {i === 1 && (
             <div className="ml-12 space-y-2 border-l border-muted pl-2">
               {[1, 2].map((j) => (
                 <div key={j} className="flex items-center gap-2 py-1.5 px-2">
-                  <Skeleton className="w-4 h-4" />
-                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <Skeleton.Paragraph rows={1} style={{ width: 16, height: 16 }} />
+                  <Skeleton.Avatar size="small" />
                   <div className="flex-1 space-y-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-36" />
+                    <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+                    <Skeleton.Paragraph rows={1} style={{ width: 144 }} />
                   </div>
                 </div>
               ))}
@@ -160,40 +157,22 @@ function TreeSkeleton() {
  * 统计卡片
  */
 function StatsCards({ nodes, totalEmployees }: { nodes: EmployeeHierarchyNode[]; totalEmployees: number }) {
-  // 计算统计数据
-  const countSubordinates = (node: EmployeeHierarchyNode): number => {
-    let count = 1
-    if (node.children) {
-      node.children.forEach(child => {
-        count += countSubordinates(child)
-      })
-    }
-    return count
-  }
-
   const topManagers = nodes.filter(n => n.children && n.children.length > 0)
-  const totalWithSubordinates = nodes.reduce((acc, node) => acc + countSubordinates(node), 0)
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>员工总数</CardDescription>
-          <CardTitle className="text-2xl">{totalEmployees}</CardTitle>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>顶层管理者</CardDescription>
-          <CardTitle className="text-2xl">{nodes.length}</CardTitle>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>有下属的管理者</CardDescription>
-          <CardTitle className="text-2xl">{topManagers.length}</CardTitle>
-        </CardHeader>
-      </Card>
+      <div className="rounded-lg border bg-card p-4">
+        <Text type="tertiary" size="small">员工总数</Text>
+        <p className="text-2xl font-bold">{totalEmployees}</p>
+      </div>
+      <div className="rounded-lg border bg-card p-4">
+        <Text type="tertiary" size="small">顶层管理者</Text>
+        <p className="text-2xl font-bold">{nodes.length}</p>
+      </div>
+      <div className="rounded-lg border bg-card p-4">
+        <Text type="tertiary" size="small">有下属的管理者</Text>
+        <p className="text-2xl font-bold">{topManagers.length}</p>
+      </div>
     </div>
   )
 }
@@ -250,19 +229,16 @@ export function OrganizationTreePage() {
       <div className="mb-2 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">组织架构树</h2>
-          <p className="text-muted-foreground">
+          <Text type="tertiary">
             查看员工的上下级层级关系（基于汇报关系）
-          </p>
+          </Text>
         </div>
         <Button
-          variant="outline"
-          size="icon"
+          theme="outline"
+          icon={<IconRefresh spin={isRefetching} />}
           onClick={() => refetch()}
           disabled={isRefetching}
-          title="刷新"
-        >
-          <RefreshCw className={cn('h-4 w-4', isRefetching && 'animate-spin')} />
-        </Button>
+        />
       </div>
 
       {/* 统计卡片 */}
@@ -275,19 +251,18 @@ export function OrganizationTreePage() {
 
       {/* 搜索框 */}
       <div className="mt-4 flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="搜索员工姓名、手机号、邮箱..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
+        <Input
+          prefix={<Search className="h-4 w-4" />}
+          placeholder="搜索员工姓名、手机号、邮箱..."
+          value={searchTerm}
+          onChange={(v) => setSearchTerm(v)}
+          style={{ maxWidth: 384 }}
+        />
         {searchTerm && (
           <Button
-            variant="ghost"
-            size="sm"
+            theme="borderless"
+            type="tertiary"
+            size="small"
             onClick={() => setSearchTerm('')}
           >
             清除
@@ -296,32 +271,26 @@ export function OrganizationTreePage() {
       </div>
 
       {/* 树形结构 */}
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle>员工层级</CardTitle>
-          <CardDescription>
-            点击有下属的员工可以展开/收起其下属列表
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <TreeSkeleton />
-          ) : filteredNodes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? '没有找到匹配的员工' : '暂无员工数据'}
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {filteredNodes.map((node) => (
-                <EmployeeNode
-                  key={node.id}
-                  node={node}
-                  searchTerm={searchTerm}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
+      <Card className="mt-4" title="员工层级" headerExtraContent={
+        <Text type="tertiary" size="small">点击有下属的员工可以展开/收起其下属列表</Text>
+      }>
+        {isLoading ? (
+          <TreeSkeleton />
+        ) : filteredNodes.length === 0 ? (
+          <div className="text-center py-8" style={{ color: 'var(--semi-color-text-2)' }}>
+            {searchTerm ? '没有找到匹配的员工' : '暂无员工数据'}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {filteredNodes.map((node) => (
+              <EmployeeNode
+                key={node.id}
+                node={node}
+                searchTerm={searchTerm}
+              />
+            ))}
+          </div>
+        )}
       </Card>
     </Main>
   )

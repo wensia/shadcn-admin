@@ -1,17 +1,9 @@
 /**
- * InfoCard 信息分组卡片组件
- * 用于在概览 Tab 中展示分组信息
+ * InfoCard 信息分组卡片组件 - Semi Design 版本
  */
 
 import * as React from 'react'
-import { ChevronDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { IconChevronDown } from '@douyinfe/semi-icons'
 
 interface InfoCardProps {
   title?: string
@@ -34,67 +26,54 @@ export function InfoCard({
   hideTitle = false,
   className,
 }: InfoCardProps) {
-  const s = useStyleClasses()
   const [isOpen, setIsOpen] = React.useState(defaultExpanded)
 
   const showHeader = !hideTitle && title
 
-  const headerContent = showHeader ? (
-    <div className={cn('flex items-center gap-2', collapsible && 'cursor-pointer')}>
-      {icon && (
-        <span className={cn('text-muted-foreground', s.size.icon)}>
-          {icon}
-        </span>
-      )}
-      <h3 className={cn(s.text.sm, 'font-semibold')}>{title}</h3>
-      {collapsible && (
-        <ChevronDown
-          className={cn(
-            'ml-auto h-4 w-4 text-muted-foreground transition-transform duration-200',
-            isOpen && 'rotate-180'
-          )}
-        />
-      )}
-    </div>
-  ) : null
-
-  const content = (
-    <div className={cn(showHeader && (compact ? 'mt-2' : 'mt-3'))}>
-      {children}
-    </div>
-  )
-
-  if (collapsible && showHeader) {
-    return (
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div
-          className={cn(
-            'border bg-card p-4',
-            s.rounded,
-            className
-          )}
-        >
-          <CollapsibleTrigger asChild>
-            {headerContent}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            {content}
-          </CollapsibleContent>
-        </div>
-      </Collapsible>
-    )
-  }
-
   return (
     <div
-      className={cn(
-        'border bg-card p-4',
-        s.rounded,
-        className
-      )}
+      className={className}
+      style={{
+        border: '1px solid var(--semi-color-border)',
+        background: 'var(--semi-color-bg-0)',
+        padding: 16,
+        borderRadius: 6,
+      }}
     >
-      {headerContent}
-      {content}
+      {showHeader && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            cursor: collapsible ? 'pointer' : undefined,
+          }}
+          onClick={collapsible ? () => setIsOpen(!isOpen) : undefined}
+        >
+          {icon && (
+            <span style={{ color: 'var(--semi-color-text-2)', fontSize: 14 }}>
+              {icon}
+            </span>
+          )}
+          <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{title}</h3>
+          {collapsible && (
+            <IconChevronDown
+              style={{
+                marginLeft: 'auto',
+                fontSize: 16,
+                color: 'var(--semi-color-text-2)',
+                transition: 'transform 0.2s',
+                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+            />
+          )}
+        </div>
+      )}
+      {(!collapsible || isOpen) && (
+        <div style={{ marginTop: showHeader ? (compact ? 8 : 12) : 0 }}>
+          {children}
+        </div>
+      )}
     </div>
   )
 }

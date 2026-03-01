@@ -1,5 +1,5 @@
 /**
- * 云客管理仪表盘页面
+ * 云客管理仪表盘页面 - Semi Design
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -21,11 +21,10 @@ import { toast } from 'sonner'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button, Card, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import { yunkeApi } from '../api'
+
+const { Text, Title } = Typography
 
 export function YunkeDashboardPage() {
   const queryClient = useQueryClient()
@@ -91,211 +90,173 @@ export function YunkeDashboardPage() {
 
   return (
     <Main fixed>
-      <div className="flex flex-col gap-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* 标题栏 */}
-        <div className="flex items-center justify-between">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="text-2xl font-bold">云客管理中心</h1>
-            <p className="text-sm text-muted-foreground">
-              云客外呼系统集成管理
-            </p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>云客管理中心</h1>
+            <Text type="tertiary" size="small">云客外呼系统集成管理</Text>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge
-              variant={adminStatus?.logged_in ? 'default' : 'destructive'}
-              className="gap-1"
-            >
-              {adminStatus?.logged_in ? (
-                <><CheckCircle className="h-3 w-3" /> 管理员已登录</>
-              ) : (
-                <><XCircle className="h-3 w-3" /> 管理员未登录</>
-              )}
-            </Badge>
-          </div>
+          <Tag
+            color={adminStatus?.logged_in ? 'green' : 'red'}
+            type="light"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+          >
+            {adminStatus?.logged_in ? (
+              <><CheckCircle style={{ width: 12, height: 12 }} /> 管理员已登录</>
+            ) : (
+              <><XCircle style={{ width: 12, height: 12 }} /> 管理员未登录</>
+            )}
+          </Tag>
         </div>
 
         {/* 统计卡片 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">子账号总数</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{accountsData?.total || 0}</div>
-              )}
-              <p className="text-xs text-muted-foreground">云客系统子账号</p>
-            </CardContent>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text type="secondary" size="small" style={{ fontWeight: 500 }}>子账号总数</Text>
+              <Users style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+            </div>
+            {isLoading ? (
+              <Skeleton.Paragraph rows={1} style={{ width: 64, height: 32 }} />
+            ) : (
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{accountsData?.total || 0}</div>
+            )}
+            <Text type="tertiary" size="small">云客系统子账号</Text>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">管理员状态</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statusLoading ? (
-                <Skeleton className="h-8 w-24" />
-              ) : (
-                <div className="text-2xl font-bold">
-                  {adminStatus?.logged_in ? '已登录' : '未登录'}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {adminStatus?.cookies_count ? `${adminStatus.cookies_count} 个 cookies` : '需要登录'}
-              </p>
-            </CardContent>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text type="secondary" size="small" style={{ fontWeight: 500 }}>管理员状态</Text>
+              <Activity style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+            </div>
+            {statusLoading ? (
+              <Skeleton.Paragraph rows={1} style={{ width: 96, height: 32 }} />
+            ) : (
+              <div style={{ fontSize: 24, fontWeight: 700 }}>
+                {adminStatus?.logged_in ? '已登录' : '未登录'}
+              </div>
+            )}
+            <Text type="tertiary" size="small">
+              {adminStatus?.cookies_count ? `${adminStatus.cookies_count} 个 cookies` : '需要登录'}
+            </Text>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">今日外呼</CardTitle>
-              <PhoneCall className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">--</div>
-              <p className="text-xs text-muted-foreground">功能开发中</p>
-            </CardContent>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text type="secondary" size="small" style={{ fontWeight: 500 }}>今日外呼</Text>
+              <PhoneCall style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>--</div>
+            <Text type="tertiary" size="small">功能开发中</Text>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">通话时长</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">--</div>
-              <p className="text-xs text-muted-foreground">功能开发中</p>
-            </CardContent>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text type="secondary" size="small" style={{ fontWeight: 500 }}>通话时长</Text>
+              <Clock style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>--</div>
+            <Text type="tertiary" size="small">功能开发中</Text>
           </Card>
         </div>
 
         {/* 快捷操作 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-500" />
-                子账号管理
-              </CardTitle>
-              <CardDescription>管理云客子账号、绑定员工、重置密码</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link to="/yunke/accounts">
-                  进入管理 <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          <Card bodyStyle={{ padding: 20 }} style={{ cursor: 'default' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Users style={{ width: 20, height: 20, color: 'var(--semi-color-primary)' }} />
+              <Text strong style={{ fontSize: 15 }}>子账号管理</Text>
+            </div>
+            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>管理云客子账号、绑定员工、重置密码</Text>
+            <Link to="/yunke/accounts">
+              <Button block>
+                进入管理 <ArrowRight style={{ width: 16, height: 16, marginLeft: 8 }} />
               </Button>
-            </CardContent>
+            </Link>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-green-500" />
-                登录状态检查
-              </CardTitle>
-              <CardDescription>检查所有员工的云客登录状态</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => checkStatusMutation.mutate()}
-                disabled={checkStatusMutation.isPending}
-              >
-                {checkStatusMutation.isPending ? (
-                  <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> 检查中...</>
-                ) : (
-                  <><CheckCircle className="mr-2 h-4 w-4" /> 开始检查</>
-                )}
-              </Button>
-            </CardContent>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <UserCheck style={{ width: 20, height: 20, color: 'var(--semi-color-success)' }} />
+              <Text strong style={{ fontSize: 15 }}>登录状态检查</Text>
+            </div>
+            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>检查所有员工的云客登录状态</Text>
+            <Button
+              theme="outline"
+              block
+              onClick={() => checkStatusMutation.mutate()}
+              disabled={checkStatusMutation.isPending}
+              loading={checkStatusMutation.isPending}
+            >
+              {checkStatusMutation.isPending ? '检查中...' : (
+                <><CheckCircle style={{ width: 16, height: 16, marginRight: 8 }} /> 开始检查</>
+              )}
+            </Button>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <RefreshCw className="h-5 w-5 text-orange-500" />
-                批量更新登录
-              </CardTitle>
-              <CardDescription>为所有已绑定员工更新云客登录状态</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => batchLoginMutation.mutate()}
-                disabled={batchLoginMutation.isPending}
-              >
-                {batchLoginMutation.isPending ? (
-                  <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> 更新中...</>
-                ) : (
-                  <><LogIn className="mr-2 h-4 w-4" /> 一键更新</>
-                )}
-              </Button>
-            </CardContent>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <RefreshCw style={{ width: 20, height: 20, color: 'orange' }} />
+              <Text strong style={{ fontSize: 15 }}>批量更新登录</Text>
+            </div>
+            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>为所有已绑定员工更新云客登录状态</Text>
+            <Button
+              theme="outline"
+              block
+              onClick={() => batchLoginMutation.mutate()}
+              disabled={batchLoginMutation.isPending}
+              loading={batchLoginMutation.isPending}
+            >
+              {batchLoginMutation.isPending ? '更新中...' : (
+                <><LogIn style={{ width: 16, height: 16, marginRight: 8 }} /> 一键更新</>
+              )}
+            </Button>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-purple-500" />
-                自动同步绑定
-              </CardTitle>
-              <CardDescription>根据姓名自动匹配云客账号与员工</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => autoSyncMutation.mutate()}
-                disabled={autoSyncMutation.isPending}
-              >
-                {autoSyncMutation.isPending ? (
-                  <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> 同步中...</>
-                ) : (
-                  <><Zap className="mr-2 h-4 w-4" /> 一键同步</>
-                )}
-              </Button>
-            </CardContent>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Zap style={{ width: 20, height: 20, color: 'purple' }} />
+              <Text strong style={{ fontSize: 15 }}>自动同步绑定</Text>
+            </div>
+            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>根据姓名自动匹配云客账号与员工</Text>
+            <Button
+              theme="outline"
+              block
+              onClick={() => autoSyncMutation.mutate()}
+              disabled={autoSyncMutation.isPending}
+              loading={autoSyncMutation.isPending}
+            >
+              {autoSyncMutation.isPending ? '同步中...' : (
+                <><Zap style={{ width: 16, height: 16, marginRight: 8 }} /> 一键同步</>
+              )}
+            </Button>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PhoneCall className="h-5 w-5 text-cyan-500" />
-                通话记录
-              </CardTitle>
-              <CardDescription>查看云客通话记录和录音</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/yunke/call-records">
-                  查看记录 <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <PhoneCall style={{ width: 20, height: 20, color: 'cyan' }} />
+              <Text strong style={{ fontSize: 15 }}>通话记录</Text>
+            </div>
+            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>查看云客通话记录和录音</Text>
+            <Link to="/yunke/call-records">
+              <Button theme="outline" block>
+                查看记录 <ArrowRight style={{ width: 16, height: 16, marginLeft: 8 }} />
               </Button>
-            </CardContent>
+            </Link>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LogIn className="h-5 w-5 text-red-500" />
-                管理员登录
-              </CardTitle>
-              <CardDescription>登录云客管理员账号以启用功能</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/yunke/admin-login">
-                  去登录 <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+          <Card bodyStyle={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <LogIn style={{ width: 20, height: 20, color: 'red' }} />
+              <Text strong style={{ fontSize: 15 }}>管理员登录</Text>
+            </div>
+            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>登录云客管理员账号以启用功能</Text>
+            <Link to="/yunke/admin-login">
+              <Button theme="outline" block>
+                去登录 <ArrowRight style={{ width: 16, height: 16, marginLeft: 8 }} />
               </Button>
-            </CardContent>
+            </Link>
           </Card>
         </div>
       </div>

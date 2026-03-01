@@ -2,95 +2,37 @@
  * 校区管理页面
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Search, Building2, Filter, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2 } from 'lucide-react'
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
-import { SimplePagination } from '@/components/data-table/simple-pagination'
+import { Button, Form, Input, Modal, Select, Switch, Table, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { adminApi } from '../api'
 import type { CampusItem, CampusCreate, CampusUpdate } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-// 表单验证 schema
-const formSchema = z.object({
-  area_id: z.string().min(1, '请选择所属区域'),
-  name: z.string().min(1, '请输入校区名称').max(50, '校区名称不能超过50个字符'),
-  address: z.string().max(200, '地址不能超过200个字符').optional(),
-  contact_phone: z.string().max(20, '联系电话不能超过20个字符').optional(),
-  description: z.string().max(500, '描述不能超过500个字符').optional(),
-  sort_order: z.number().min(0, '排序值不能小于0').default(0),
-  is_active: z.boolean().default(true),
-  is_area_office: z.boolean().default(false),
-})
+const { Text } = Typography
+const { TextArea } = Input
 
-type FormData = z.infer<typeof formSchema>
+const SKELETON_PREFIX = '__skeleton__'
+const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 
-const pageSize = 20
+const PAGE_SIZE = 20
 
 export function CampusesPage() {
   useDocumentTitle('校区管理')
   const queryClient = useQueryClient()
+  const formRef = useRef<FormApi>()
 
   // 状态管理
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [areaFilter, setAreaFilter] = useState<string>('all')
@@ -98,21 +40,6 @@ export function CampusesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<CampusItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<CampusItem | null>(null)
-
-  // 表单
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      area_id: '',
-      name: '',
-      address: '',
-      contact_phone: '',
-      description: '',
-      sort_order: 0,
-      is_active: true,
-      is_area_office: false,
-    },
-  })
 
   // 获取校区列表
   const { data, isLoading, refetch } = useQuery({
@@ -153,7 +80,6 @@ export function CampusesPage() {
     onSuccess: () => {
       toast.success('创建成功')
       setDialogOpen(false)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-campuses'] })
     },
     onError: (error: Error) => {
@@ -169,7 +95,6 @@ export function CampusesPage() {
       toast.success('更新成功')
       setDialogOpen(false)
       setEditingItem(null)
-      form.reset()
       queryClient.invalidateQueries({ queryKey: ['admin-campuses'] })
     },
     onError: (error: Error) => {
@@ -192,133 +117,132 @@ export function CampusesPage() {
   })
 
   // 表格列定义
-  const columns: ColumnDef<CampusItem>[] = useMemo(
+  const columns: ColumnProps<CampusItem>[] = useMemo(
     () => [
       {
-        accessorKey: 'name',
-        header: '校区名称',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-24" />
+        title: '校区名称',
+        dataIndex: 'name',
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
           }
           return (
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Building2 className="h-4 w-4 text-teal-500" />
-              <span className="font-medium">{row.original.name}</span>
+              <Text strong>{record.name}</Text>
             </div>
           )
         },
       },
       {
-        accessorKey: 'area_name',
-        header: '所属区域',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-20" />
+        title: '所属区域',
+        dataIndex: 'area_name',
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 80, height: 16 }} loading />
           }
-          return row.original.area?.name || '-'
+          return record.area?.name || '-'
         },
       },
       {
-        accessorKey: 'is_area_office',
-        header: '类型',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-5 w-14" />
+        title: '类型',
+        dataIndex: 'is_area_office',
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
           }
-          return row.original.is_area_office ? (
+          return record.is_area_office ? (
             <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
               区域办
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground">普通校区</span>
+            <Text type="tertiary" size="small">普通校区</Text>
           )
         },
       },
       {
-        accessorKey: 'address',
-        header: '地址',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-40" />
+        title: '地址',
+        dataIndex: 'address',
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 160, height: 16 }} loading />
           }
-          const address = row.original.address
+          const address = record.address
           if (!address) return '-'
           return (
-            <span className="max-w-[200px] truncate" title={address}>
+            <span style={{ maxWidth: 200, display: 'inline-block' }} className="truncate" title={address}>
               {address}
             </span>
           )
         },
       },
       {
-        accessorKey: 'contact_phone',
-        header: '联系电话',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-24" />
+        title: '联系电话',
+        dataIndex: 'contact_phone',
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
           }
-          return row.original.contact_phone || '-'
+          return record.contact_phone || '-'
         },
       },
       {
-        accessorKey: 'sort_order',
-        header: '排序',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-8" />
+        title: '排序',
+        dataIndex: 'sort_order',
+        width: 80,
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 32, height: 16 }} loading />
           }
-          return row.original.sort_order
+          return record.sort_order
         },
       },
       {
-        accessorKey: 'is_active',
-        header: '状态',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-5 w-14" />
+        title: '状态',
+        dataIndex: 'is_active',
+        width: 100,
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 56, height: 20 }} loading />
           }
-          return <StatusBadge isActive={row.original.is_active} />
+          return <StatusBadge isActive={record.is_active} />
         },
       },
       {
-        accessorKey: 'created_at',
-        header: '创建时间',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return <Skeleton className="h-4 w-28" />
+        title: '创建时间',
+        dataIndex: 'created_at',
+        width: 180,
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 112, height: 16 }} loading />
           }
-          return new Date(row.original.created_at).toLocaleString('zh-CN')
+          return new Date(record.created_at).toLocaleString('zh-CN')
         },
       },
       {
-        id: 'actions',
-        header: '操作',
-        cell: ({ row }) => {
-          if (row.original.id.startsWith('__skeleton__')) {
-            return (
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
-              </div>
-            )
+        title: '操作',
+        dataIndex: 'id',
+        width: 120,
+        render: (_: unknown, record: CampusItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
           }
           return (
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: 4 }}>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(row.original)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+                theme="borderless"
+                type="tertiary"
+                icon={<Pencil className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleEdit(record)}
+              />
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeleteClick(row.original)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+                theme="borderless"
+                type="danger"
+                icon={<Trash2 className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleDeleteClick(record)}
+              />
             </div>
           )
         },
@@ -327,11 +251,11 @@ export function CampusesPage() {
     []
   )
 
-  // 生成骨架屏数据
+  // 骨架屏数据
   const skeletonData: CampusItem[] = useMemo(
     () =>
       Array.from({ length: 5 }).map((_, i) => ({
-        id: `__skeleton__${i}`,
+        id: `${SKELETON_PREFIX}${i}`,
         area_id: '',
         name: '',
         address: '',
@@ -346,44 +270,47 @@ export function CampusesPage() {
     []
   )
 
-  const tableData = isLoading ? skeletonData : (data?.items || [])
+  const displayData = isLoading ? skeletonData : (data?.items || [])
 
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+  // 分页配置
+  const pagination = useMemo(() => ({
+    currentPage: page,
+    pageSize,
+    total: data?.total || 0,
+    onPageChange: (p: number) => setPage(p),
+    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
+    showSizeChanger: true,
+    pageSizeOpts: [10, 20, 50, 100],
+    showTotal: true,
+    formatPageText: (info: any) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+  }), [page, pageSize, data?.total])
 
   // 处理创建
   const handleCreate = () => {
     setEditingItem(null)
-    form.reset({
-      area_id: '',
-      name: '',
-      address: '',
-      contact_phone: '',
-      description: '',
-      sort_order: 0,
-      is_active: true,
-      is_area_office: false,
-    })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.reset()
+      formRef.current?.setValues({ sort_order: 0, is_active: true, is_area_office: false })
+    }, 0)
   }
 
   // 处理编辑
   const handleEdit = (item: CampusItem) => {
     setEditingItem(item)
-    form.reset({
-      area_id: item.area_id,
-      name: item.name,
-      address: item.address || '',
-      contact_phone: item.contact_phone || '',
-      description: item.description || '',
-      sort_order: item.sort_order,
-      is_active: item.is_active,
-      is_area_office: item.is_area_office || false,
-    })
     setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        area_id: item.area_id,
+        name: item.name,
+        address: item.address || '',
+        contact_phone: item.contact_phone || '',
+        description: item.description || '',
+        sort_order: item.sort_order,
+        is_active: item.is_active,
+        is_area_office: item.is_area_office || false,
+      })
+    }, 0)
   }
 
   // 处理删除点击
@@ -400,14 +327,14 @@ export function CampusesPage() {
   }
 
   // 处理表单提交
-  const handleSubmit = (data: FormData) => {
+  const handleSubmit = (values: Record<string, unknown>) => {
     if (editingItem) {
       updateMutation.mutate({
         id: editingItem.id,
-        data: data as CampusUpdate,
+        data: values as CampusUpdate,
       })
     } else {
-      createMutation.mutate(data as CampusCreate)
+      createMutation.mutate(values as CampusCreate)
     }
   }
 
@@ -417,7 +344,29 @@ export function CampusesPage() {
     refetch()
   }
 
-  const totalPages = data ? Math.ceil(data.total / pageSize) : 0
+  // 区域筛选选项
+  const areaOptions = useMemo(() => [
+    { value: 'all', label: '全部区域' },
+    ...areas.map((area) => ({ value: area.id, label: area.name })),
+  ], [areas])
+
+  // 状态筛选选项
+  const statusOptions = [
+    { value: 'all', label: '全部状态' },
+    { value: 'active', label: '已启用' },
+    { value: 'inactive', label: '已停用' },
+  ]
+
+  // 区域下拉选项（表单用）
+  const areaFormOptions = useMemo(() =>
+    areas.map((area) => ({
+      value: area.id,
+      label: area.name + (area.district ? ` (${area.district.name})` : ''),
+    })),
+    [areas]
+  )
+
+  const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
     <Main fixed>
@@ -426,323 +375,153 @@ export function CampusesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">校区管理</h1>
-            <p className="text-sm text-muted-foreground">
+            <Text type="tertiary" size="small">
               管理系统中的校区信息，校区是业务开展的基本单元
-            </p>
+            </Text>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button theme="solid" type="primary" onClick={handleCreate} icon={<Plus className="h-4 w-4" />}>
             新建校区
           </Button>
         </div>
 
         {/* 工具栏 */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative min-w-[200px] max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索校区名称..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-8"
-              />
-            </div>
-            <Select value={areaFilter} onValueChange={(value) => { setAreaFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[160px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="筛选区域" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部区域</SelectItem>
-                {areas.map((area) => (
-                  <SelectItem key={area.id} value={area.id}>
-                    {area.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="筛选状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="active">已启用</SelectItem>
-                <SelectItem value="inactive">已停用</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleSearch}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索校区名称..."
+              value={searchValue}
+              onChange={(v) => setSearchValue(v)}
+              onEnterPress={handleSearch}
+              showClear
+              style={{ width: 250 }}
+            />
+            <Select
+              value={areaFilter}
+              onChange={(v) => { setAreaFilter(v as string); setPage(1) }}
+              optionList={areaOptions}
+              style={{ width: 160 }}
+            />
+            <Select
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
+              optionList={statusOptions}
+              style={{ width: 130 }}
+            />
+            <Button theme="outline" onClick={handleSearch}>
               搜索
             </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => refetch()} title="刷新">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} />
         </div>
 
         {/* 表格 */}
-        <div className="flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    暂无数据
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* 分页 */}
-        {totalPages > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
+        <div className="flex-1 overflow-hidden">
+          <Table
+            columns={columns}
+            dataSource={displayData}
+            rowKey="id"
+            pagination={pagination}
+            loading={false}
+            style={isLoading ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
           />
-        )}
+        </div>
       </div>
 
       {/* 创建/编辑对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle>
-              {editingItem ? '编辑校区' : '新建校区'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingItem
-                ? '修改校区信息'
-                : '创建一个新的校区，校区需要隶属于某个区域'}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto px-6 space-y-4">
-              <FormField
-                control={form.control}
-                name="area_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>所属区域</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择所属区域" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {areas.map((area) => (
-                          <SelectItem key={area.id} value={area.id}>
-                            {area.name}
-                            {area.district && ` (${area.district.name})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>校区名称</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入校区名称" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>地址</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入校区地址（可选）" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contact_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>联系电话</FormLabel>
-                    <FormControl>
-                      <Input placeholder="请输入联系电话（可选）" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>描述</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="请输入校区描述（可选）"
-                        className="resize-none"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sort_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>排序值</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="请输入排序值"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="is_area_office"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>区域办</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        设为区域办后，该校区下的员工可查看同区域所有校区的数据
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>启用状态</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        设置该校区是否启用
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              </div>
-              <DialogFooter className="px-6 pb-6 pt-4 shrink-0 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? '保存中...'
-                    : '保存'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        title={editingItem ? '编辑校区' : '新建校区'}
+        visible={dialogOpen}
+        onCancel={() => setDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="primary" onClick={() => formRef.current?.submitForm()} loading={isPending}>
+              保存
+            </Button>
+          </div>
+        }
+        style={{ maxWidth: 520 }}
+      >
+        <Form
+          getFormApi={(api) => { formRef.current = api }}
+          onSubmit={handleSubmit}
+          labelPosition="top"
+        >
+          <Form.Select
+            field="area_id"
+            label="所属区域"
+            placeholder="请选择所属区域"
+            optionList={areaFormOptions}
+            rules={[{ required: true, message: '请选择所属区域' }]}
+            style={{ width: '100%' }}
+          />
+          <Form.Input
+            field="name"
+            label="校区名称"
+            placeholder="请输入校区名称"
+            rules={[
+              { required: true, message: '请输入校区名称' },
+              { max: 50, message: '校区名称不能超过50个字符' },
+            ]}
+          />
+          <Form.Input
+            field="address"
+            label="地址"
+            placeholder="请输入校区地址（可选）"
+            rules={[{ max: 200, message: '地址不能超过200个字符' }]}
+          />
+          <Form.Input
+            field="contact_phone"
+            label="联系电话"
+            placeholder="请输入联系电话（可选）"
+            rules={[{ max: 20, message: '联系电话不能超过20个字符' }]}
+          />
+          <Form.TextArea
+            field="description"
+            label="描述"
+            placeholder="请输入校区描述（可选）"
+            autosize={{ minRows: 3, maxRows: 5 }}
+            rules={[{ max: 500, message: '描述不能超过500个字符' }]}
+          />
+          <Form.InputNumber
+            field="sort_order"
+            label="排序值"
+            placeholder="请输入排序值"
+            min={0}
+          />
+          <Form.Switch
+            field="is_area_office"
+            label="区域办"
+            checkedText="是"
+            uncheckedText="否"
+          />
+          <Form.Switch
+            field="is_active"
+            label="启用状态"
+            checkedText="启用"
+            uncheckedText="停用"
+          />
+        </Form>
+      </Modal>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除校区「{deletingItem?.name}」吗？此操作不可撤销。
-              如果该校区下存在员工或部门配置，则无法删除。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? '删除中...' : '删除'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        title="确认删除"
+        visible={deleteDialogOpen}
+        onCancel={() => setDeleteDialogOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button theme="solid" type="danger" onClick={handleDeleteConfirm} loading={deleteMutation.isPending}>
+              删除
+            </Button>
+          </div>
+        }
+      >
+        确定要删除校区"{deletingItem?.name}"吗？此操作不可撤销。
+        如果该校区下存在员工或部门配置，则无法删除。
+      </Modal>
     </Main>
   )
 }

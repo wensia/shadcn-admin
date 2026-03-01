@@ -1,14 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Plus, MoreHorizontal, Pencil, Trash2, MessageSquare } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Button, Input, Dropdown, Typography } from '@douyinfe/semi-ui-19'
 import type { ChatSession } from './use-chat-sessions'
+
+const { Text } = Typography
 
 interface ChatSessionSidebarProps {
   sessions: ChatSession[]
@@ -77,11 +72,11 @@ function SessionItem({
 
   if (isEditing) {
     return (
-      <div className="px-1 py-0.5">
+      <div style={{ padding: '2px 4px' }}>
         <Input
           ref={inputRef}
           value={editTitle}
-          onChange={e => setEditTitle(e.target.value)}
+          onChange={v => setEditTitle(v)}
           onBlur={handleSave}
           onKeyDown={e => {
             if (e.key === 'Enter') handleSave()
@@ -90,7 +85,8 @@ function SessionItem({
               setIsEditing(false)
             }
           }}
-          className="h-8 text-sm"
+          size="small"
+          style={{ height: 32, fontSize: 13 }}
         />
       </div>
     )
@@ -98,47 +94,76 @@ function SessionItem({
 
   return (
     <div
-      className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors ${
-        isActive
-          ? 'bg-accent text-accent-foreground'
-          : 'hover:bg-accent/50 text-foreground/80'
-      }`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 8px',
+        borderRadius: 6,
+        cursor: 'pointer',
+        fontSize: 13,
+        transition: 'background 0.15s',
+        background: isActive ? 'var(--semi-color-fill-0)' : undefined,
+        color: isActive ? 'var(--semi-color-text-0)' : 'var(--semi-color-text-1)',
+      }}
+      className="group"
       onClick={onSelect}
+      onMouseEnter={e => {
+        if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--semi-color-fill-0)'
+      }}
+      onMouseLeave={e => {
+        if (!isActive) (e.currentTarget as HTMLElement).style.background = ''
+      }}
     >
-      <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      <span className="flex-1 truncate">{session.title}</span>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 rounded hover:bg-accent"
-            onClick={e => e.stopPropagation()}
-          >
-            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem
-            onClick={e => {
-              e.stopPropagation()
-              setEditTitle(session.title)
-              setIsEditing(true)
-            }}
-          >
-            <Pencil className="h-3.5 w-3.5 mr-2" />
-            重命名
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={e => {
-              e.stopPropagation()
-              onDelete()
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-2" />
-            删除
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <MessageSquare style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--semi-color-text-2)' }} />
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</span>
+      <Dropdown
+        trigger="click"
+        position="bottomRight"
+        clickToHide
+        render={
+          <Dropdown.Menu>
+            <Dropdown.Item
+              onClick={(e) => {
+                e?.domEvent?.stopPropagation()
+                setEditTitle(session.title)
+                setIsEditing(true)
+              }}
+            >
+              <Pencil style={{ width: 14, height: 14, marginRight: 8 }} />
+              重命名
+            </Dropdown.Item>
+            <Dropdown.Item
+              type="danger"
+              onClick={(e) => {
+                e?.domEvent?.stopPropagation()
+                onDelete()
+              }}
+            >
+              <Trash2 style={{ width: 14, height: 14, marginRight: 8 }} />
+              删除
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        }
+      >
+        <button
+          style={{
+            opacity: 0,
+            flexShrink: 0,
+            padding: 2,
+            borderRadius: 4,
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+          }}
+          className="group-hover:!opacity-100"
+          onClick={e => e.stopPropagation()}
+        >
+          <MoreHorizontal style={{ width: 14, height: 14, color: 'var(--semi-color-text-2)' }} />
+        </button>
+      </Dropdown>
     </div>
   )
 }
@@ -166,33 +191,47 @@ export function ChatSessionSidebar({
   }, [sessions])
 
   return (
-    <div className="w-full md:w-[260px] md:border-r flex flex-col h-full bg-muted/30">
-      <div className="p-3">
+    <div
+      style={{
+        width: 260,
+        borderRight: '1px solid var(--semi-color-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: 'var(--semi-color-bg-0)',
+      }}
+    >
+      <div style={{ padding: 12 }}>
         <Button
-          variant="outline"
-          className="w-full justify-start gap-2"
+          theme="outline"
+          block
+          icon={<Plus style={{ width: 16, height: 16 }} />}
           onClick={onNewChat}
+          style={{ justifyContent: 'flex-start', gap: 8 }}
         >
-          <Plus className="h-4 w-4" />
           新对话
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 8px' }}>
         {isLoading && sessions.length === 0 ? (
-          <div className="text-xs text-muted-foreground text-center py-4">
+          <Text type="tertiary" size="small" style={{ display: 'block', textAlign: 'center', padding: '16px 0' }}>
             加载中...
-          </div>
+          </Text>
         ) : sessions.length === 0 ? (
-          <div className="text-xs text-muted-foreground text-center py-4">
+          <Text type="tertiary" size="small" style={{ display: 'block', textAlign: 'center', padding: '16px 0' }}>
             暂无对话
-          </div>
+          </Text>
         ) : (
           groups.map(group => (
-            <div key={group.label} className="mb-2">
-              <div className="text-xs text-muted-foreground px-2 py-1.5 font-medium">
+            <div key={group.label} style={{ marginBottom: 8 }}>
+              <Text
+                type="tertiary"
+                size="small"
+                style={{ display: 'block', padding: '6px 8px', fontWeight: 500 }}
+              >
                 {group.label}
-              </div>
+              </Text>
               {group.sessions.map(session => (
                 <SessionItem
                   key={session.id}

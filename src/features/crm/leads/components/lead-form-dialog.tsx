@@ -1,48 +1,25 @@
 /**
- * 创建/编辑线索Dialog组件
- * Mira风格: 紧凑表单布局、小字号
+ * 创建/编辑线索Dialog组件 - 分步表单版本
+ * 3步：联系信息 → 学生信息 → 补充信息
+ *
+ * 重要：使用 display:none 隐藏非当前步骤，而非条件渲染，
+ * 确保所有 Semi Form 字段始终挂载，提交时能获取全部字段值。
  */
 
-import { useEffect, useState, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { FormDatePicker } from '@/components/date-picker'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { toast } from 'sonner'
+import { Modal, Form, Button, Input, Select, DatePicker, Toast, Steps, Table, Tag, Card } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { IconInfoCircle } from '@douyinfe/semi-icons'
 import { leadsApi } from '../api'
 import { apiClient } from '@/lib/api/client'
 import type { Lead, LeadCreate, LeadUpdate, Gender, SourceChannelExtraField } from '../types'
-import { gradeLabels } from '../types'
+import { gradeLabels, LeadStatus } from '../types'
+import { leadStatusStyles } from '@/lib/status-styles'
 import type { SourceChannel } from '@/features/admin/types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+
+const { TextArea } = Input
 
 interface LeadFormDialogProps {
   lead?: Lead | null
@@ -51,83 +28,91 @@ interface LeadFormDialogProps {
   onSuccess?: () => void
 }
 
-// 儿童姓名最大长度
 const CHILD_NAME_MAX_LENGTH = 10
+const TOTAL_STEPS = 3
 
-// Zod表单验证Schema - Mira风格关注核心必填项
-const formSchema = z.object({
-  // 儿童信息
-  child_name: z.string().max(CHILD_NAME_MAX_LENGTH, `姓名最多${CHILD_NAME_MAX_LENGTH}个字`).optional(),
-  child_gender: z.string().optional().nullable(),
-  child_birthday: z.string().optional(),
-  age: z.number().min(0).max(30).optional(),
-  grade: z.string().optional(),
-  school_name: z.string().max(100).optional(),
-  course_interests: z.string().optional(),
+const genderOptions = [
+  { value: 'male', label: '男' },
+  { value: 'female', label: '女' },
+]
 
-  // 家长信息
-  parent_name: z.string().max(50).optional(),
-  parent_phone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的11位大陆手机号'),
-  parent_wechat: z.string().max(50).optional(),
-  parent_email: z.string().email('请输入正确的邮箱').optional().or(z.literal('')),
-  parent_relation: z.string().max(20).optional(),
+const relationOptions = [
+  { value: 'father', label: '父亲' },
+  { value: 'mother', label: '母亲' },
+  { value: 'grandfather', label: '爷爷' },
+  { value: 'grandmother', label: '奶奶' },
+  { value: 'other', label: '其他' },
+]
 
-  // 备用联系人
-  backup_contact_name: z.string().max(50).optional(),
-  backup_contact_phone: z.string().max(11).optional(),
-  backup_contact_relation: z.string().max(20).optional(),
+const intentionOptions = [
+  { value: 'high', label: '高意向' },
+  { value: 'medium', label: '中等' },
+  { value: 'low', label: '低意向' },
+]
 
-  // 地址信息
-  province: z.string().optional(),
-  city: z.string().optional(),
-  district: z.string().optional(),
-  address_detail: z.string().max(200).optional(),
+// 每步需要验证的 Semi Form 字段
+const STEP_FIELDS: string[][] = [
+  // Step 0: 联系信息
+  ['parent_phone', 'parent_name', 'parent_wechat', 'parent_relation', 'source_channel_id', 'owner_campus_id', 'intention_level'],
+  // Step 1: 学生信息
+  ['child_name', 'child_gender', 'child_birthday', 'grade', 'school_name', 'course_interests'],
+  // Step 2: 补充信息
+  ['parent_email', 'backup_contact_name', 'backup_contact_phone', 'backup_contact_relation', 'province', 'city', 'district', 'address_detail', 'notes'],
+]
 
-  // 线索属性
-  source_channel_id: z.string().min(1, '请选择来源渠道'),
-  source_detail: z.string().max(100).optional(),
-  intention_level: z.string().optional(),
-  notes: z.string().max(500).optional(),
-  owner_campus_id: z.string().min(1, '请选择归属校区')
-})
+const STEP_TITLES = ['联系信息', '学生信息', '补充信息']
 
-type FormData = z.infer<typeof formSchema>
+// 重复线索信息
+interface DuplicateLeadInfo {
+  id: string
+  child_name: string
+  parent_phone: string
+  owner_campus_name: string
+  status: string
+  advisor_name?: string | null
+  created_at?: string | null
+  activated_at?: string | null
+}
+
+// 将 Date 或 string 转为 yyyy-MM-dd 字符串
+function toDateString(val: unknown): string | undefined {
+  if (!val) return undefined
+  if (val instanceof Date) {
+    const y = val.getFullYear()
+    const m = String(val.getMonth() + 1).padStart(2, '0')
+    const d = String(val.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  if (typeof val === 'string') return val || undefined
+  return undefined
+}
+
+// 后端 LeadCreate 接受的字段白名单（防止发送多余字段导致 422）
+const LEAD_CREATE_FIELDS = [
+  'child_name', 'child_gender', 'child_birthday', 'school_name', 'grade', 'course_interests',
+  'parent_name', 'parent_phone', 'parent_wechat', 'parent_email', 'parent_relation',
+  'province', 'city', 'district', 'address_detail',
+  'backup_contact_name', 'backup_contact_phone', 'backup_contact_relation',
+  'notes', 'tag',
+  'source_channel_id', 'source_extra_info', 'advisor_id', 'owner_campus_id',
+] as const
 
 export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadFormDialogProps) {
   const queryClient = useQueryClient()
-  const [phoneCheckResult, setPhoneCheckResult] = useState<string>('')
+  const formApiRef = useRef<any>(null)
+  const [watchedChannelId, setWatchedChannelId] = useState('')
+  const [extraFieldValues, setExtraFieldValues] = useState<Record<string, string>>({})
+  const [currentStep, setCurrentStep] = useState(0)
+  const [duplicateLeadInfo, setDuplicateLeadInfo] = useState<DuplicateLeadInfo | null>(null)
   const isEdit = !!lead
 
-  // 表单初始化
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      child_name: '',
-      child_gender: undefined,
-      child_birthday: '',
-      age: undefined,
-      grade: '',
-      school_name: '',
-      course_interests: '',
-      parent_name: '',
-      parent_phone: '',
-      parent_wechat: '',
-      parent_email: '',
-      parent_relation: '',
-      backup_contact_name: '',
-      backup_contact_phone: '',
-      backup_contact_relation: '',
-      province: '',
-      city: '',
-      district: '',
-      address_detail: '',
-      source_channel_id: '',
-      source_detail: '',
-      intention_level: '',
-      notes: '',
-      owner_campus_id: ''
+  // 打开/关闭时重置步骤
+  useEffect(() => {
+    if (open) {
+      setCurrentStep(0)
+      setDuplicateLeadInfo(null)
     }
-  })
+  }, [open])
 
   // 获取筛选选项(校区等)
   const { data: filterOptions } = useQuery({
@@ -139,16 +124,12 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     enabled: open
   })
 
-  // 获取来源渠道列表（包含完整信息，用于渲染额外字段）
-  // 编辑模式下获取所有渠道（包括禁用的），新建模式下只获取启用的
+  // 获取来源渠道列表
   const { data: sourceChannels } = useQuery({
     queryKey: ['source-channels-full', isEdit],
     queryFn: async () => {
       const params: Record<string, unknown> = { page: 1, size: 100 }
-      // 新建模式只显示启用的渠道
-      if (!isEdit) {
-        params.is_active = true
-      }
+      if (!isEdit) params.is_active = true
       const response = await apiClient.get<{ code: number; data: { items: SourceChannel[] } }>(
         '/source-channels',
         { params }
@@ -158,18 +139,13 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     enabled: open
   })
 
-  // 当前选中的渠道ID
-  const watchedChannelId = form.watch('source_channel_id')
-
-  // 获取当前选中渠道的额外字段配置
-  // 编辑模式下也可以使用 lead.source_channel_id 作为备选
+  // 当前选中渠道的额外字段配置
   const effectiveChannelId = watchedChannelId || (isEdit && lead?.source_channel_id) || ''
 
   const selectedChannelExtraFields = useMemo<SourceChannelExtraField[]>(() => {
     if (!effectiveChannelId || !sourceChannels) return []
     const channel = sourceChannels.find(c => c.id === effectiveChannelId)
     if (!channel) return []
-    // 兼容多种格式
     const fields = channel.extra_fields || channel.channel_config?.fields || []
     return fields.map(f => ({
       field_name: f.field_name,
@@ -181,40 +157,43 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     }))
   }, [effectiveChannelId, sourceChannels])
 
-  // 额外字段值状态
-  const [extraFieldValues, setExtraFieldValues] = useState<Record<string, string>>({})
-
-  // 更新额外字段值
   const handleExtraFieldChange = (fieldName: string, value: string) => {
     setExtraFieldValues(prev => ({ ...prev, [fieldName]: value }))
   }
 
-  // 创建线索Mutation
+  // 创建线索
   const createMutation = useMutation({
     mutationFn: async (data: LeadCreate) => {
       const response = await leadsApi.createLead(data)
       return response.data
     },
     onSuccess: () => {
-      toast.success('创建线索成功')
+      Toast.success('创建线索成功')
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       onSuccess?.()
       onOpenChange(false)
-      form.reset()
+      formApiRef.current?.reset()
     },
     onError: (error: any) => {
+      // 检查是否包含重复线索信息
+      const responseData = error?.response?.data
+      const duplicateLead = responseData?.data?.duplicate_lead
+      if (duplicateLead) {
+        setDuplicateLeadInfo(duplicateLead)
+        return
+      }
       showApiErrorToast(error, '创建失败')
     }
   })
 
-  // 更新线索Mutation
+  // 更新线索
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<LeadUpdate> }) => {
       const response = await leadsApi.updateLead(id, data)
       return response.data
     },
     onSuccess: () => {
-      toast.success('更新线索成功')
+      Toast.success('更新线索成功')
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       queryClient.invalidateQueries({ queryKey: ['lead', lead?.id] })
       onSuccess?.()
@@ -225,727 +204,611 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     }
   })
 
-  // 当lead变化时更新表单数据
+  // 当lead变化时更新表单
   useEffect(() => {
-    if (lead && open) {
-      form.reset({
-        child_name: lead.child_name || '',
-        child_gender: lead.child_gender as Gender | undefined,
-        child_birthday: lead.child_birthday || '',
-        age: lead.age || undefined,
-        grade: lead.grade || '',
-        school_name: lead.school_name || '',
-        course_interests: lead.course_interests?.join(',') || '',
-        parent_name: lead.parent_name || '',
-        parent_phone: lead.parent_phone || '',
-        parent_wechat: lead.parent_wechat || '',
-        parent_email: lead.parent_email || '',
-        parent_relation: lead.parent_relation || '',
-        backup_contact_name: lead.backup_contact_name || '',
-        backup_contact_phone: lead.backup_contact_phone || '',
-        backup_contact_relation: lead.backup_contact_relation || '',
-        province: lead.province || '',
-        city: lead.city || '',
-        district: lead.district || '',
-        address_detail: lead.address_detail || '',
-        source_channel_id: lead.source_channel_id || '',
-        source_detail: lead.source_detail || '',
-        intention_level: lead.intention_level || '',
-        notes: lead.notes || '',
-        owner_campus_id: lead.owner_campus_id || ''
-      })
-      // 加载现有的额外字段值
-      // 处理两种可能的格式:
-      // 1. 简单格式: { channel: "小红书" }
-      // 2. 嵌套格式: { channel: { label: "渠道", value: "小红书" } }
-      const extraInfo = lead.source_extra_info || {}
-      const stringifiedExtraInfo: Record<string, string> = {}
-      for (const [key, value] of Object.entries(extraInfo)) {
-        if (value && typeof value === 'object' && 'value' in value) {
-          // 嵌套格式，提取 value 字段
-          stringifiedExtraInfo[key] = String((value as { value: unknown }).value || '')
-        } else {
-          // 简单格式，直接转换
-          stringifiedExtraInfo[key] = value != null ? String(value) : ''
+    if (!open) return
+    requestAnimationFrame(() => {
+      if (!formApiRef.current) return
+      if (lead) {
+        formApiRef.current.setValues({
+          child_name: lead.child_name || '',
+          child_gender: lead.child_gender as Gender | undefined,
+          child_birthday: lead.child_birthday || '',
+          grade: lead.grade || '',
+          school_name: lead.school_name || '',
+          course_interests: lead.course_interests?.join(',') || '',
+          parent_name: lead.parent_name || '',
+          parent_phone: lead.parent_phone || '',
+          parent_wechat: lead.parent_wechat || '',
+          parent_email: lead.parent_email || '',
+          parent_relation: lead.parent_relation || '',
+          backup_contact_name: lead.backup_contact_name || '',
+          backup_contact_phone: lead.backup_contact_phone || '',
+          backup_contact_relation: lead.backup_contact_relation || '',
+          province: lead.province || '',
+          city: lead.city || '',
+          district: lead.district || '',
+          address_detail: lead.address_detail || '',
+          source_channel_id: lead.source_channel_id || '',
+          intention_level: lead.intention_level || '',
+          notes: lead.notes || '',
+          owner_campus_id: lead.owner_campus_id || ''
+        })
+        setWatchedChannelId(lead.source_channel_id || '')
+        // 加载额外字段值
+        const extraInfo = lead.source_extra_info || {}
+        const stringified: Record<string, string> = {}
+        for (const [key, value] of Object.entries(extraInfo)) {
+          if (value && typeof value === 'object' && 'value' in value) {
+            stringified[key] = String((value as { value: unknown }).value || '')
+          } else {
+            stringified[key] = value != null ? String(value) : ''
+          }
         }
+        setExtraFieldValues(stringified)
+      } else {
+        formApiRef.current.reset()
+        setExtraFieldValues({})
+        setWatchedChannelId('')
       }
-      setExtraFieldValues(stringifiedExtraInfo)
-    } else if (!lead && open) {
-      form.reset()
-      setExtraFieldValues({})
-    }
-  }, [lead, open, form])
+    })
+  }, [lead, open])
 
-  // 当渠道变化时，清空额外字段值（仅新建模式）
+  // 渠道变化时清空额外字段（新建模式）
   useEffect(() => {
     if (!isEdit && watchedChannelId) {
       setExtraFieldValues({})
     }
   }, [watchedChannelId, isEdit])
 
-  // 手机号变化时检查重复(防抖)
-  const handlePhoneChange = async (phone: string) => {
-    if (phone.length === 11) {
-      try {
-        const response = await leadsApi.checkPhoneDuplicate(phone, lead?.id)
-        if (response.data.is_duplicate) {
-          setPhoneCheckResult(
-            `发现${response.data.duplicate_count}个重复线索`
-          )
-        } else {
-          setPhoneCheckResult('')
-        }
-      } catch (error) {
-        // 静默处理错误
-      }
-    } else {
-      setPhoneCheckResult('')
+
+  // 验证当前步骤字段
+  const validateCurrentStep = useCallback(async (): Promise<boolean> => {
+    if (!formApiRef.current) return false
+    const fields = STEP_FIELDS[currentStep]
+    try {
+      await formApiRef.current.validate(fields)
+    } catch {
+      return false
     }
-  }
+    // Step 0 还需验证渠道额外字段
+    if (currentStep === 0) {
+      for (const field of selectedChannelExtraFields) {
+        if (field.required && !extraFieldValues[field.field_name]?.trim()) {
+          Toast.error(`请填写${field.field_label}`)
+          return false
+        }
+      }
+    }
+    return true
+  }, [currentStep, selectedChannelExtraFields, extraFieldValues])
+
+  // 下一步
+  const handleNext = useCallback(async () => {
+    const valid = await validateCurrentStep()
+    if (valid) setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1))
+  }, [validateCurrentStep])
+
+  // 上一步
+  const handlePrev = useCallback(() => {
+    setCurrentStep(prev => Math.max(prev - 1, 0))
+  }, [])
+
+  // 点击步骤指示器跳转
+  const handleStepClick = useCallback(async (targetStep: number) => {
+    if (targetStep === currentStep) return
+    if (targetStep > currentStep) {
+      const valid = await validateCurrentStep()
+      if (!valid) return
+    }
+    setCurrentStep(targetStep)
+  }, [currentStep, validateCurrentStep])
 
   // 提交表单
-  const onSubmit = (data: FormData) => {
-    // 验证额外字段必填项
+  const handleSubmit = (values: Record<string, any>) => {
+    // 验证额外字段
     for (const field of selectedChannelExtraFields) {
       if (field.required && !extraFieldValues[field.field_name]?.trim()) {
-        toast.error(`请填写${field.field_label}`)
+        Toast.error(`请填写${field.field_label}`)
+        setCurrentStep(0)
         return
       }
     }
 
-    // 构建额外字段数据（仅包含有值的字段）
     const sourceExtraInfo: Record<string, any> = {}
     for (const [key, value] of Object.entries(extraFieldValues)) {
-      if (value?.trim()) {
-        sourceExtraInfo[key] = value.trim()
-      }
+      if (value?.trim()) sourceExtraInfo[key] = value.trim()
     }
 
-    const formattedData: any = {
-      ...data,
-      // 将空字符串转换为 undefined，避免后端枚举验证失败
-      child_name: data.child_name || undefined,
-      child_gender: data.child_gender || undefined,
-      child_birthday: data.child_birthday || undefined,
-      age: data.age || undefined,
-      grade: data.grade || undefined,
-      school_name: data.school_name || undefined,
-      course_interests: data.course_interests
-        ? data.course_interests.split(',').map((s) => s.trim()).filter(Boolean)
+    // 编辑模式下补充未注册的字段
+    if (isEdit && lead) {
+      if (!values.source_channel_id) values.source_channel_id = lead.source_channel_id
+      if (!values.owner_campus_id) values.owner_campus_id = lead.owner_campus_id
+      if (!values.parent_phone) values.parent_phone = lead.parent_phone
+    }
+
+    // 构建提交数据 — 只包含后端 schema 接受的字段
+    const formattedData: Record<string, any> = {
+      parent_phone: values.parent_phone,
+      source_channel_id: values.source_channel_id,
+      child_name: values.child_name || undefined,
+      child_gender: values.child_gender || undefined,
+      child_birthday: toDateString(values.child_birthday),
+      grade: values.grade || undefined,
+      school_name: values.school_name || undefined,
+      course_interests: values.course_interests
+        ? values.course_interests.split(',').map((s: string) => s.trim()).filter(Boolean)
         : [],
-      parent_name: data.parent_name || undefined,
-      parent_wechat: data.parent_wechat || undefined,
-      parent_email: data.parent_email || undefined,
-      parent_relation: data.parent_relation || undefined,
-      backup_contact_name: data.backup_contact_name || undefined,
-      backup_contact_phone: data.backup_contact_phone || undefined,
-      backup_contact_relation: data.backup_contact_relation || undefined,
-      province: data.province || undefined,
-      city: data.city || undefined,
-      district: data.district || undefined,
-      address_detail: data.address_detail || undefined,
-      source_detail: data.source_detail || undefined,
-      intention_level: data.intention_level || undefined,
-      notes: data.notes || undefined,
-      // 添加额外字段数据
-      source_extra_info: Object.keys(sourceExtraInfo).length > 0 ? sourceExtraInfo : undefined
+      parent_name: values.parent_name || undefined,
+      parent_wechat: values.parent_wechat || undefined,
+      parent_email: values.parent_email || undefined,
+      parent_relation: values.parent_relation || undefined,
+      backup_contact_name: values.backup_contact_name || undefined,
+      backup_contact_phone: values.backup_contact_phone || undefined,
+      backup_contact_relation: values.backup_contact_relation || undefined,
+      province: values.province || undefined,
+      city: values.city || undefined,
+      district: values.district || undefined,
+      address_detail: values.address_detail || undefined,
+      notes: values.notes || undefined,
+      owner_campus_id: values.owner_campus_id || undefined,
+      source_extra_info: Object.keys(sourceExtraInfo).length > 0 ? sourceExtraInfo : undefined,
+    }
+
+    // 清理 undefined 值，避免发送空字段
+    for (const key of Object.keys(formattedData)) {
+      if (formattedData[key] === undefined) delete formattedData[key]
     }
 
     if (isEdit && lead) {
+      // 编辑模式：额外包含 intention_level（LeadUpdate 接受此字段）
+      if (values.intention_level) formattedData.intention_level = values.intention_level
       updateMutation.mutate({ id: lead.id, data: formattedData })
     } else {
       createMutation.mutate(formattedData as LeadCreate)
     }
   }
 
+  // 跳过直接提交（从 Step 1/2 快速提交）
+  const handleSkipSubmit = useCallback(async () => {
+    const fields = STEP_FIELDS[0]
+    try {
+      await formApiRef.current?.validate(fields)
+    } catch {
+      setCurrentStep(0)
+      Toast.warning('请先完成联系信息的必填项')
+      return
+    }
+    for (const field of selectedChannelExtraFields) {
+      if (field.required && !extraFieldValues[field.field_name]?.trim()) {
+        setCurrentStep(0)
+        Toast.error(`请填写${field.field_label}`)
+        return
+      }
+    }
+    formApiRef.current?.submitForm()
+  }, [selectedChannelExtraFields, extraFieldValues])
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+
+  const gradeOptionList = useMemo(
+    () => Object.entries(gradeLabels).map(([value, label]) => ({ value, label })),
+    []
+  )
+
+  const channelOptionList = useMemo(
+    () => (sourceChannels || []).map(c => ({ value: c.id, label: c.name })),
+    [sourceChannels]
+  )
+
+  const campusOptionList = useMemo(
+    () => (filterOptions?.campuses || []).map((c: any) => ({ value: c.id, label: c.name })),
+    [filterOptions]
+  )
+
+  // 2列网格
+  const grid2: React.CSSProperties = {
+    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px',
+  }
+
+  // 步骤面板样式：用 display:none 隐藏而非卸载，保留 Semi Form 字段注册
+  const stepStyle = (step: number): React.CSSProperties =>
+    currentStep === step ? {} : { display: 'none' }
+
+  const isLastStep = currentStep === TOTAL_STEPS - 1
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0" showCloseButton={false}>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            {/* Mira风格: 紧凑的Dialog Header */}
-            <DialogHeader className="px-4 py-3 border-b">
-              <DialogTitle className="text-base">{isEdit ? '编辑线索' : '新建线索'}</DialogTitle>
-              <DialogDescription className="text-xs">
-                {isEdit ? '修改线索信息' : '填写完整信息创建新线索'}
-              </DialogDescription>
-            </DialogHeader>
+    <>
+    <Modal
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      title={isEdit ? '编辑线索' : '新建线索'}
+      footer={null}
+      width={672}
+      bodyStyle={{ padding: 0 }}
+      maskClosable={false}
+    >
+      {/* 步骤指示器 - 紧凑导航样式 */}
+      <div style={{ padding: '12px 16px 0' }}>
+        <Steps
+          current={currentStep}
+          size="small"
+          type="nav"
+          onChange={handleStepClick}
+          style={{ cursor: 'pointer' }}
+        >
+          {STEP_TITLES.map((title, i) => (
+            <Steps.Step key={i} title={title} />
+          ))}
+        </Steps>
+      </div>
 
-            {/* 可滚动表单区域 - 使用固定最大高度 */}
-            <ScrollArea className="max-h-[calc(85vh-140px)]">
-              <div className="space-y-4 py-4 px-4">
-                {/* 儿童信息 */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold">儿童信息</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="child_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">儿童姓名</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" maxLength={CHILD_NAME_MAX_LENGTH} />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
+      <Form
+        getFormApi={(api: any) => { formApiRef.current = api }}
+        onSubmit={handleSubmit}
+        onValueChange={(_values: any, changedValues: any) => {
+          if (changedValues && 'source_channel_id' in changedValues) {
+            setWatchedChannelId(changedValues.source_channel_id || '')
+          }
+        }}
+        layout="vertical"
+        labelPosition="top"
+        style={{ margin: 0 }}
+      >
+        {/* 内容区域 */}
+        <div style={{ minHeight: 280, maxHeight: 'calc(85vh - 240px)', overflowY: 'auto', padding: '16px 16px 0' }}>
 
-                    <FormField
-                      control={form.control}
-                      name="child_gender"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">性别</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs w-full">
-                                <SelectValue placeholder="选择性别" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="male" className="text-xs">男</SelectItem>
-                              <SelectItem value="female" className="text-xs">女</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
+          {/* Step 0: 联系信息 */}
+          <div style={stepStyle(0)}>
+            <div style={grid2}>
+              {!isEdit && (
+                <div>
+                  <Form.Input
+                    field="parent_phone"
+                    label="手机号"
+                    placeholder="请输入11位手机号"
+                    rules={[
+                      { required: true, message: '请输入手机号' },
+                      { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位大陆手机号' }
+                    ]}
+                  />
+                </div>
+              )}
+              <Form.Input
+                field="parent_name"
+                label="家长姓名"
+                placeholder="请输入"
+                rules={[{ max: 20, message: '最多20个字符' }]}
+              />
+              <Form.Input
+                field="parent_wechat"
+                label="微信号"
+                placeholder="请输入"
+                rules={[{ max: 30, message: '最多30个字符' }]}
+              />
+              <Form.Select
+                field="parent_relation"
+                label="与儿童关系"
+                placeholder="选择关系"
+                optionList={relationOptions}
+                style={{ width: '100%' }}
+              />
 
-                    <FormField
-                      control={form.control}
-                      name="age"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">年龄</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              className="h-8 text-xs"
-                              placeholder="请输入"
-                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="child_birthday"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">生日</FormLabel>
-                          <FormControl>
-                            <FormDatePicker
-                              value={field.value}
-                              onChange={field.onChange}
-                              placeholder="选择生日"
-                              maxDate={new Date()}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="grade"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">年级</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs w-full">
-                                <SelectValue placeholder="选择年级" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.entries(gradeLabels).map(([value, label]) => (
-                                <SelectItem key={value} value={value} className="text-xs">
-                                  {label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="school_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">学校</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="course_interests"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel className="text-xs">课程兴趣</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              className="h-8 text-xs"
-                              placeholder="多个课程用逗号分隔"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
+              {/* 来源渠道 */}
+              {isEdit ? (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 14, marginBottom: 4, fontWeight: 500, color: 'var(--semi-color-text-0)' }}>来源渠道</div>
+                  <div style={{ height: 32, display: 'flex', alignItems: 'center', color: 'var(--semi-color-text-2)', fontSize: 14 }}>
+                    {lead?.source_channel_name || '-'}
                   </div>
                 </div>
+              ) : (
+                <Form.Select
+                  field="source_channel_id"
+                  label="来源渠道"
+                  placeholder="选择渠道"
+                  optionList={channelOptionList}
+                  rules={[{ required: true, message: '请选择来源渠道' }]}
+                  style={{ width: '100%' }}
+                />
+              )}
 
-                {/* 家长信息 */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold">家长信息</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="parent_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">家长姓名</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
+              {/* 渠道额外字段 */}
+              {selectedChannelExtraFields.length > 0 && (
+                <Card
+                  title={<span style={{ fontSize: 13, fontWeight: 500 }}>渠道附加信息</span>}
+                  headerStyle={{ padding: '8px 12px', minHeight: 0 }}
+                  bodyStyle={{ padding: '12px 12px 0' }}
+                  style={{ marginBottom: 24, background: 'var(--semi-color-fill-0)' }}
+                >
+                  {selectedChannelExtraFields.map((field) => (
+                    <div key={field.field_name}>
+                      <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4, color: 'var(--semi-color-text-0)' }}>
+                        {field.field_label}
+                        {field.required && <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>}
+                      </div>
+                      {field.field_type === 'select' && field.options?.length ? (
+                        <Select
+                          value={extraFieldValues[field.field_name] || undefined}
+                          onChange={(val) => handleExtraFieldChange(field.field_name, val as string)}
+                          placeholder={field.placeholder || `选择${field.field_label}`}
+                          optionList={field.options.map(opt => ({ value: opt.value, label: opt.label }))}
+                          style={{ width: '100%', marginBottom: 12 }}
+                        />
+                      ) : field.field_type === 'textarea' ? (
+                        <TextArea
+                          value={extraFieldValues[field.field_name] || ''}
+                          onChange={(val) => handleExtraFieldChange(field.field_name, val)}
+                          placeholder={field.placeholder || `请输入${field.field_label}`}
+                          autosize={{ minRows: 2 }}
+                          style={{ marginBottom: 12 }}
+                        />
+                      ) : field.field_type === 'number' ? (
+                        <Input
+                          type="number"
+                          value={extraFieldValues[field.field_name] || ''}
+                          onChange={(val) => handleExtraFieldChange(field.field_name, val)}
+                          placeholder={field.placeholder || `请输入${field.field_label}`}
+                          style={{ marginBottom: 12 }}
+                        />
+                      ) : field.field_type === 'date' ? (
+                        <DatePicker
+                          value={extraFieldValues[field.field_name] || undefined}
+                          onChange={(_date: any, dateStr: any) => handleExtraFieldChange(field.field_name, dateStr as string || '')}
+                          placeholder={field.placeholder || `选择${field.field_label}`}
+                          type="date"
+                          style={{ width: '100%', marginBottom: 12 }}
+                        />
+                      ) : (
+                        <Input
+                          value={extraFieldValues[field.field_name] || ''}
+                          onChange={(val) => handleExtraFieldChange(field.field_name, val)}
+                          placeholder={field.placeholder || `请输入${field.field_label}`}
+                          style={{ marginBottom: 12 }}
+                        />
                       )}
-                    />
+                    </div>
+                  ))}
+                </Card>
+              )}
 
-                    {!isEdit && (
-                      <FormField
-                        control={form.control}
-                        name="parent_phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">
-                              手机号 <span className="text-destructive">*</span>
-                            </FormLabel>
-                            <FormControl>
-                              <div className="space-y-1">
-                                <Input
-                                  {...field}
-                                  className="h-8 text-xs"
-                                  placeholder="请输入11位手机号"
-                                  onChange={(e) => {
-                                    field.onChange(e)
-                                    handlePhoneChange(e.target.value)
-                                  }}
-                                />
-                                {phoneCheckResult && (
-                                  <p className="text-xs text-orange-500">{phoneCheckResult}</p>
-                                )}
-                              </div>
-                            </FormControl>
-                            <FormMessage className="text-xs" />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
-                    <FormField
-                      control={form.control}
-                      name="parent_wechat"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">微信号</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="parent_email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">邮箱</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="email" className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="parent_relation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">与儿童关系</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs w-full">
-                                <SelectValue placeholder="选择关系" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="father" className="text-xs">父亲</SelectItem>
-                              <SelectItem value="mother" className="text-xs">母亲</SelectItem>
-                              <SelectItem value="grandfather" className="text-xs">爷爷</SelectItem>
-                              <SelectItem value="grandmother" className="text-xs">奶奶</SelectItem>
-                              <SelectItem value="other" className="text-xs">其他</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
+              {/* 归属校区 */}
+              {isEdit ? (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 14, marginBottom: 4, fontWeight: 500, color: 'var(--semi-color-text-0)' }}>归属校区</div>
+                  <div style={{ height: 32, display: 'flex', alignItems: 'center', color: 'var(--semi-color-text-2)', fontSize: 14 }}>
+                    {lead?.owner_campus_name || '-'}
                   </div>
                 </div>
+              ) : (
+                <Form.Select
+                  field="owner_campus_id"
+                  label="归属校区"
+                  placeholder="选择校区"
+                  optionList={campusOptionList}
+                  rules={[{ required: true, message: '请选择归属校区' }]}
+                  style={{ width: '100%' }}
+                />
+              )}
 
-                {/* 备用联系人 */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold">备用联系人(可选)</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="backup_contact_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">姓名</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
+              <Form.Select
+                field="intention_level"
+                label="意向等级"
+                placeholder="选择意向"
+                optionList={intentionOptions}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
 
-                    <FormField
-                      control={form.control}
-                      name="backup_contact_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">电话</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="backup_contact_relation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">关系</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="如:母亲" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* 地址信息 */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold">地址信息(可选)</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="province"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">省份</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">城市</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="district"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">区县</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="address_detail"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel className="text-xs">详细地址</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* 线索属性 */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold">线索属性</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="source_channel_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            来源渠道 {!isEdit && <span className="text-destructive">*</span>}
-                          </FormLabel>
-                          {isEdit ? (
-                            <p className="text-xs h-8 flex items-center text-muted-foreground">
-                              {lead?.source_channel_name || '-'}
-                            </p>
-                          ) : (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-xs w-full">
-                                  <SelectValue placeholder="选择渠道" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {sourceChannels?.map((channel) => (
-                                  <SelectItem
-                                    key={channel.id}
-                                    value={channel.id}
-                                    className="text-xs"
-                                  >
-                                    {channel.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="source_detail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">来源详情</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="h-8 text-xs" placeholder="请输入" />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* 渠道额外字段动态渲染 */}
-                    {selectedChannelExtraFields.length > 0 && (
-                      <>
-                        {selectedChannelExtraFields.map((field) => (
-                          <div key={field.field_name} className="space-y-1">
-                            <label className="text-xs font-medium">
-                              {field.field_label}
-                              {field.required && <span className="text-destructive ml-0.5">*</span>}
-                            </label>
-                            {field.field_type === 'select' && field.options?.length ? (
-                              <Select
-                                value={extraFieldValues[field.field_name] || ''}
-                                onValueChange={(value) => handleExtraFieldChange(field.field_name, value)}
-                              >
-                                <SelectTrigger className="h-8 text-xs w-full">
-                                  <SelectValue placeholder={field.placeholder || `选择${field.field_label}`} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {field.options.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                      {opt.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : field.field_type === 'textarea' ? (
-                              <Textarea
-                                value={extraFieldValues[field.field_name] || ''}
-                                onChange={(e) => handleExtraFieldChange(field.field_name, e.target.value)}
-                                placeholder={field.placeholder || `请输入${field.field_label}`}
-                                className="min-h-[60px] text-xs resize-none"
-                              />
-                            ) : field.field_type === 'number' ? (
-                              <Input
-                                type="number"
-                                value={extraFieldValues[field.field_name] || ''}
-                                onChange={(e) => handleExtraFieldChange(field.field_name, e.target.value)}
-                                placeholder={field.placeholder || `请输入${field.field_label}`}
-                                className="h-8 text-xs"
-                              />
-                            ) : field.field_type === 'date' ? (
-                              <FormDatePicker
-                                value={extraFieldValues[field.field_name] || ''}
-                                onChange={(value) => handleExtraFieldChange(field.field_name, value || '')}
-                                placeholder={field.placeholder || `选择${field.field_label}`}
-                              />
-                            ) : (
-                              <Input
-                                type="text"
-                                value={extraFieldValues[field.field_name] || ''}
-                                onChange={(e) => handleExtraFieldChange(field.field_name, e.target.value)}
-                                placeholder={field.placeholder || `请输入${field.field_label}`}
-                                className="h-8 text-xs"
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    <FormField
-                      control={form.control}
-                      name="owner_campus_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            归属校区 {!isEdit && <span className="text-destructive">*</span>}
-                          </FormLabel>
-                          {isEdit ? (
-                            <p className="text-xs h-8 flex items-center text-muted-foreground">
-                              {lead?.owner_campus_name || '-'}
-                            </p>
-                          ) : (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-xs w-full">
-                                  <SelectValue placeholder="选择校区" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {filterOptions?.campuses?.map((campus) => (
-                                  <SelectItem
-                                    key={campus.id}
-                                    value={campus.id}
-                                    className="text-xs"
-                                  >
-                                    {campus.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="intention_level"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">意向等级</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs w-full">
-                                <SelectValue placeholder="选择意向" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="high" className="text-xs">高意向</SelectItem>
-                              <SelectItem value="medium" className="text-xs">中等</SelectItem>
-                              <SelectItem value="low" className="text-xs">低意向</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel className="text-xs">备注</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              className="min-h-[60px] text-xs resize-none"
-                              placeholder="请输入备注信息"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+          {/* Step 1: 学生信息 */}
+          <div style={stepStyle(1)}>
+            <div style={grid2}>
+              <Form.Input
+                field="child_name"
+                label="儿童姓名"
+                placeholder="请输入"
+                maxLength={CHILD_NAME_MAX_LENGTH}
+                rules={[{ max: CHILD_NAME_MAX_LENGTH, message: `姓名最多${CHILD_NAME_MAX_LENGTH}个字` }]}
+              />
+              <Form.Select
+                field="child_gender"
+                label="性别"
+                placeholder="选择性别"
+                optionList={genderOptions}
+                style={{ width: '100%' }}
+              />
+              <Form.DatePicker
+                field="child_birthday"
+                label="生日"
+                placeholder="选择生日"
+                type="date"
+                disabledDate={(date?: Date) => !!date && date > new Date()}
+                style={{ width: '100%' }}
+              />
+              <Form.Select
+                field="grade"
+                label="年级"
+                placeholder="选择年级"
+                optionList={gradeOptionList}
+                style={{ width: '100%' }}
+              />
+              <Form.Input
+                field="school_name"
+                label="学校"
+                placeholder="请输入"
+                rules={[{ max: 50, message: '最多50个字符' }]}
+              />
+              <div /> {/* 占位 */}
+              <div style={{ gridColumn: 'span 2' }}>
+                <Form.Input
+                  field="course_interests"
+                  label="课程兴趣"
+                  placeholder="多个课程用逗号分隔"
+                />
               </div>
-            </ScrollArea>
+            </div>
+          </div>
 
-            {/* Mira风格: 紧凑的Dialog Footer */}
-            <DialogFooter className="px-4 py-3 border-t gap-2">
+          {/* Step 2: 补充信息 */}
+          <div style={stepStyle(2)}>
+            <div style={grid2}>
+              <Form.Input
+                field="parent_email"
+                label="邮箱"
+                placeholder="请输入"
+                rules={[{
+                  validator: (_rule: any, value: string) => {
+                    if (!value) return true
+                    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+                  },
+                  message: '请输入正确的邮箱'
+                }]}
+              />
+              <div /> {/* 占位 */}
+
+              {/* 备用联系人 */}
+              <div style={{ gridColumn: 'span 2', fontSize: 14, fontWeight: 600, color: 'var(--semi-color-text-0)', marginBottom: 4 }}>
+                备用联系人
+              </div>
+              <Form.Input field="backup_contact_name" label="姓名" placeholder="请输入" rules={[{ max: 20, message: '最多20个字符' }]} />
+              <Form.Input field="backup_contact_phone" label="电话" placeholder="请输入" rules={[{ max: 15, message: '最多15位' }]} />
+              <Form.Input field="backup_contact_relation" label="关系" placeholder="如:母亲" rules={[{ max: 10, message: '最多10个字符' }]} />
+              <div /> {/* 占位 */}
+
+              {/* 地址信息 */}
+              <div style={{ gridColumn: 'span 2', fontSize: 14, fontWeight: 600, color: 'var(--semi-color-text-0)', marginBottom: 4 }}>
+                地址信息
+              </div>
+              <Form.Input field="province" label="省份" placeholder="请输入" rules={[{ max: 20, message: '最多20个字符' }]} />
+              <Form.Input field="city" label="城市" placeholder="请输入" rules={[{ max: 20, message: '最多20个字符' }]} />
+              <Form.Input field="district" label="区县" placeholder="请输入" rules={[{ max: 20, message: '最多20个字符' }]} />
+              <div style={{ gridColumn: 'span 2' }}>
+                <Form.Input field="address_detail" label="详细地址" placeholder="请输入" rules={[{ max: 100, message: '最多100个字符' }]} />
+              </div>
+
+              {/* 备注 */}
+              <div style={{ gridColumn: 'span 2' }}>
+                <Form.TextArea
+                  field="notes"
+                  label="备注"
+                  placeholder="请输入备注信息"
+                  rules={[{ max: 500, message: '最多500个字符' }]}
+                  autosize={{ minRows: 2, maxRows: 4 }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 底部按钮 */}
+        <div style={{
+          padding: '12px 16px',
+          borderTop: '1px solid var(--semi-color-border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div>
+            {currentStep > 0 && !isLastStep && (
               <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                size="sm"
-                className="h-8 text-xs"
+                type="tertiary"
+                onClick={handleSkipSubmit}
+                loading={isPending}
+                style={{ fontSize: 13 }}
               >
-                取消
+                跳过，直接提交
               </Button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button onClick={() => onOpenChange(false)}>取消</Button>
+            {currentStep > 0 && (
+              <Button onClick={handlePrev}>上一步</Button>
+            )}
+            {isLastStep ? (
+              <Button theme="solid" htmlType="submit" loading={isPending}>
+                {isPending ? '提交中...' : '提交'}
+              </Button>
+            ) : (
+              <Button theme="solid" onClick={handleNext}>
+                下一步
+              </Button>
+            )}
+            {currentStep > 0 && isLastStep && (
               <Button
-                type="submit"
-                size="sm"
-                className="h-8 text-xs"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                type="tertiary"
+                onClick={handleSkipSubmit}
+                loading={isPending}
+                style={{ fontSize: 13 }}
               >
-                {createMutation.isPending || updateMutation.isPending ? '提交中...' : '确定'}
+                跳过，直接提交
               </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            )}
+          </div>
+        </div>
+      </Form>
+    </Modal>
+
+    {/* 重复线索信息对话框 */}
+    <Modal
+      visible={!!duplicateLeadInfo}
+      onCancel={() => setDuplicateLeadInfo(null)}
+      title={null}
+      footer={
+        <Button theme="solid" onClick={() => setDuplicateLeadInfo(null)}>
+          我知道了
+        </Button>
+      }
+      width={480}
+      bodyStyle={{ padding: '20px 24px' }}
+    >
+      {duplicateLeadInfo && (() => {
+        const statusConfig = leadStatusStyles[duplicateLeadInfo.status as LeadStatus]
+        const statusLabel = statusConfig?.label || duplicateLeadInfo.status
+        const statusColor = statusConfig?.color as 'orange' | 'green' | 'red' | 'grey' | undefined
+        const formatDate = (iso: string | null | undefined) => {
+          if (!iso) return '-'
+          return iso.slice(0, 10)
+        }
+        type InfoRow = { key: string; label: string; value: React.ReactNode }
+        const infoRows: InfoRow[] = [
+          { key: 'child_name', label: '学生姓名', value: duplicateLeadInfo.child_name },
+          { key: 'parent_phone', label: '手机号', value: duplicateLeadInfo.parent_phone },
+          { key: 'owner_campus_name', label: '归属校区', value: duplicateLeadInfo.owner_campus_name },
+          { key: 'status', label: '线索状态', value: <Tag size="small" color={statusColor}>{statusLabel}</Tag> },
+          { key: 'advisor_name', label: '跟进顾问', value: duplicateLeadInfo.advisor_name || '未分配' },
+          { key: 'created_at', label: '创建时间', value: formatDate(duplicateLeadInfo.created_at) },
+          { key: 'activated_at', label: '上次激活', value: formatDate(duplicateLeadInfo.activated_at) },
+        ]
+        const infoColumns: ColumnProps<InfoRow>[] = [
+          { title: '字段', dataIndex: 'label', width: 100 },
+          { title: '信息', dataIndex: 'value', render: (_text, record) => record?.value ?? '-' },
+        ]
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <IconInfoCircle style={{ color: '#ff7d00', fontSize: 20, flexShrink: 0 }} />
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
+                该手机号已存在线索记录
+              </span>
+            </div>
+            <Table<InfoRow>
+              columns={infoColumns}
+              dataSource={infoRows}
+              rowKey="key"
+              pagination={false}
+              size="small"
+              showHeader={false}
+              style={{ fontSize: 13 }}
+            />
+            <div style={{ marginTop: 12, fontSize: 13, color: 'var(--semi-color-text-2)' }}>
+              该线索当前不符合激活条件，无法重复创建。
+            </div>
+          </div>
+        )
+      })()}
+    </Modal>
+    </>
   )
 }

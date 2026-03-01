@@ -1,13 +1,11 @@
 /**
- * 通话记录表格列定义
+ * 通话记录表格列定义 - Semi Design
  */
 
-import { type ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Play, FileText, Phone, PhoneOff, UserRound } from 'lucide-react'
-import { isSkeletonRow } from '@/components/ui/table-skeleton'
+import { Skeleton, Tag, Button, Tooltip } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { Play, FileText, UserRound } from 'lucide-react'
+import { isSkeletonRow } from '@/lib/table-utils'
 import { formatTime } from '@/lib/utils/time'
 import type { CallRecord } from '../../types'
 
@@ -29,16 +27,16 @@ function formatDuration(seconds: number | null): string {
 /**
  * 获取通话类型标签
  */
-function getCallTypeLabel(type: string | null): { label: string; variant: 'default' | 'secondary' } {
+function getCallTypeLabel(type: string | null): { label: string; color: string } {
   switch (type) {
     case 's':
     case 'outbound':
-      return { label: '外呼', variant: 'default' }
+      return { label: '外呼', color: 'blue' }
     case 'i':
     case 'inbound':
-      return { label: '呼入', variant: 'secondary' }
+      return { label: '呼入', color: 'cyan' }
     default:
-      return { label: type || '-', variant: 'secondary' }
+      return { label: type || '-', color: 'grey' }
   }
 }
 
@@ -47,135 +45,122 @@ function getCallTypeLabel(type: string | null): { label: string; variant: 'defau
  */
 function getCallResultStyle(result: string | null, duration: number | null): {
   label: string
-  variant: 'default' | 'success' | 'secondary' | 'destructive'
+  color: string
 } {
   // 如果有通话时长，说明接通了
   if (duration && duration > 0) {
-    return { label: '已接通', variant: 'success' }
+    return { label: '已接通', color: 'green' }
   }
 
   // 根据结果判断
   switch (result?.toLowerCase()) {
     case 'answered':
     case '接通':
-      return { label: '已接通', variant: 'success' }
+      return { label: '已接通', color: 'green' }
     case 'noanswer':
     case '未接听':
-    case '0':  // 云客返回的未接通状态
+    case '0':
     case '':
     case null:
     case undefined:
-      return { label: '未接通', variant: 'secondary' }
+      return { label: '未接通', color: 'grey' }
     case 'busy':
     case '占线':
-      return { label: '占线', variant: 'secondary' }
+      return { label: '占线', color: 'orange' }
     case 'rejected':
     case '拒接':
-      return { label: '拒接', variant: 'destructive' }
+      return { label: '拒接', color: 'red' }
     default:
-      // 其他未知状态也显示为未接通
-      return { label: '未接通', variant: 'secondary' }
+      return { label: '未接通', color: 'grey' }
   }
 }
 
 interface CreateColumnsOptions {
   onPlayRecord?: (record: CallRecord) => void
-  onViewTranscript?: (record: CallRecord) => void
   onViewLead?: (leadId: string) => void
 }
 
-export function createCallRecordsColumns(options: CreateColumnsOptions = {}): ColumnDef<CallRecord>[] {
-  const { onPlayRecord, onViewTranscript, onViewLead } = options
+export function createCallRecordsColumns(options: CreateColumnsOptions = {}): ColumnProps<CallRecord>[] {
+  const { onPlayRecord, onViewLead } = options
 
   return [
     {
-      accessorKey: 'callee',
-      header: '客户号码',
-      size: 130,
-      meta: { sticky: 'left' },
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-24" />
-        }
+      title: '客户号码',
+      dataIndex: 'callee',
+      width: 130,
+      fixed: 'left' as const,
+      render: (_text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
         return (
-          <span className="font-mono text-sm">
-            {row.original.callee || row.original.caller || '-'}
+          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>
+            {record.callee || record.caller || '-'}
           </span>
         )
       },
     },
     {
-      accessorKey: 'call_time',
-      header: '通话时间',
-      size: 150,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-28" />
-        }
+      title: '通话时间',
+      dataIndex: 'call_time',
+      width: 150,
+      render: (_text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 120 }} />
         return (
-          <span className="text-sm whitespace-nowrap">
-            {formatTime(row.original.call_time)}
+          <span style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+            {formatTime(record.call_time)}
           </span>
         )
       },
     },
     {
-      accessorKey: 'staff_name',
-      header: '员工',
-      size: 100,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-16" />
-        }
+      title: '员工',
+      dataIndex: 'staff_name',
+      width: 100,
+      render: (text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
         return (
-          <span className="font-medium">
-            {row.original.staff_name || '-'}
+          <span style={{ fontWeight: 500 }}>
+            {text || '-'}
           </span>
         )
       },
     },
     {
-      accessorKey: 'customer_name',
-      header: '客户名称',
-      size: 100,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-20" />
-        }
-        return row.original.customer_name || '-'
+      title: '客户名称',
+      dataIndex: 'customer_name',
+      width: 100,
+      render: (text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+        return text || '-'
       },
     },
     {
-      accessorKey: 'call_type',
-      header: '类型',
-      size: 80,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-5 w-12 rounded-full" />
-        }
-        const { label, variant } = getCallTypeLabel(row.original.call_type)
-        return <Badge variant={variant}>{label}</Badge>
+      title: '类型',
+      dataIndex: 'call_type',
+      width: 80,
+      render: (text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+        const { label, color } = getCallTypeLabel(text)
+        return <Tag color={color as any} type="light">{label}</Tag>
       },
     },
     {
-      accessorKey: 'duration',
-      header: '时长',
-      size: 90,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-16" />
-        }
-        const duration = row.original.duration
+      title: '时长',
+      dataIndex: 'duration',
+      width: 90,
+      render: (duration: number | null, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
         const hasAnswer = duration && duration > 0
 
         return (
-          <div className="flex items-center gap-1.5">
-            {hasAnswer ? (
-              <Phone className="h-3.5 w-3.5 text-green-500" />
-            ) : (
-              <PhoneOff className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-            <span className={hasAnswer ? 'text-green-600' : 'text-muted-foreground'}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              backgroundColor: hasAnswer ? 'var(--semi-color-success)' : 'var(--semi-color-text-3)',
+              flexShrink: 0,
+            }} />
+            <span style={{ color: hasAnswer ? 'var(--semi-color-success)' : 'var(--semi-color-text-2)' }}>
               {formatDuration(duration)}
             </span>
           </div>
@@ -183,140 +168,129 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
       },
     },
     {
-      accessorKey: 'call_result',
-      header: '结果',
-      size: 90,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-5 w-14 rounded-full" />
-        }
-        const { label, variant } = getCallResultStyle(row.original.call_result, row.original.duration)
-        return <Badge variant={variant}>{label}</Badge>
+      title: '结果',
+      dataIndex: 'call_result',
+      width: 90,
+      render: (_text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
+        const { label, color } = getCallResultStyle(record.call_result, record.duration)
+        return <Tag color={color as any} type="light">{label}</Tag>
       },
     },
     {
-      accessorKey: 'department',
-      header: '部门',
-      size: 100,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-20" />
-        }
+      title: '部门',
+      dataIndex: 'department',
+      width: 100,
+      render: (text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
         return (
-          <span className="text-sm text-muted-foreground">
-            {row.original.department || '-'}
+          <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>
+            {text || '-'}
           </span>
         )
       },
     },
     {
-      id: 'ai_score',
-      header: 'AI 评分',
-      size: 90,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-14" />
-        }
-        const score = row.original.ai_quality_score
+      title: 'AI 评分',
+      dataIndex: 'ai_quality_score',
+      width: 90,
+      render: (_score: number | null, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
+        const score = record.ai_quality_score
         if (score == null) {
-          return <span className="text-xs text-muted-foreground">-</span>
+          return <span style={{ fontSize: 12, color: 'var(--semi-color-text-3)' }}>-</span>
         }
         const color =
-          score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : score >= 40 ? 'text-orange-600' : 'text-red-600'
-        const intentMap: Record<string, { label: string; cls: string }> = {
-          high: { label: '高', cls: 'bg-green-100 text-green-700' },
-          medium: { label: '中', cls: 'bg-yellow-100 text-yellow-700' },
-          low: { label: '低', cls: 'bg-orange-100 text-orange-700' },
-          none: { label: '无', cls: 'bg-gray-100 text-gray-500' },
+          score >= 80 ? 'var(--semi-color-success)' : score >= 60 ? 'var(--semi-color-warning)' : score >= 40 ? 'orange' : 'var(--semi-color-danger)'
+        const intentMap: Record<string, { label: string; tagColor: string }> = {
+          high: { label: '高', tagColor: 'green' },
+          medium: { label: '中', tagColor: 'yellow' },
+          low: { label: '低', tagColor: 'orange' },
+          none: { label: '无', tagColor: 'grey' },
         }
-        const intent = intentMap[row.original.ai_customer_intent || 'none'] || intentMap.none
+        const intent = intentMap[record.ai_customer_intent || 'none'] || intentMap.none
         return (
-          <div className="flex items-center gap-1.5">
-            <span className={`text-sm font-semibold tabular-nums ${color}`}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color }}>
               {Math.round(score)}
             </span>
-            <span className={`text-[10px] px-1 py-0.5 rounded ${intent.cls}`}>
-              {intent.label}
-            </span>
+            <Tag size="small" color={intent.tagColor as any} type="light">{intent.label}</Tag>
           </div>
         )
       },
     },
     {
-      id: 'lead',
-      header: '关联线索',
-      size: 110,
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-4 w-16" />
-        }
-        const record = row.original as CallRecord & {
+      title: '关联线索',
+      dataIndex: 'lead_child_name',
+      width: 110,
+      render: (_text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
+        const leadRecord = record as CallRecord & {
           lead_id?: string | null
           lead_child_name?: string | null
           lead_status?: string | null
         }
-        if (record.lead_child_name) {
+        if (leadRecord.lead_child_name) {
           return (
-            <button
-              type="button"
-              className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
-              onClick={(e) => {
-                e.stopPropagation()
-                if (onViewLead && record.lead_id) {
-                  onViewLead(record.lead_id)
-                }
-              }}
-            >
-              <UserRound className="h-3.5 w-3.5" />
-              {record.lead_child_name}
-            </button>
+            <Tooltip content={`查看线索: ${leadRecord.lead_child_name}`}>
+              <span>
+                <button
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: 13,
+                    color: 'var(--semi-color-primary)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (onViewLead && leadRecord.lead_id) {
+                      onViewLead(leadRecord.lead_id)
+                    }
+                  }}
+                >
+                  <UserRound style={{ width: 14, height: 14 }} />
+                  {leadRecord.lead_child_name}
+                </button>
+              </span>
+            </Tooltip>
           )
         }
-        return <span className="text-xs text-muted-foreground">-</span>
+        return <span style={{ fontSize: 12, color: 'var(--semi-color-text-3)' }}>-</span>
       },
     },
     {
-      id: 'actions',
-      header: '操作',
-      size: 100,
-      meta: { sticky: 'right' },
-      cell: ({ row }) => {
-        if (isSkeletonRow(row.original.id)) {
-          return <Skeleton className="h-8 w-16" />
+      title: '操作',
+      dataIndex: 'actions',
+      width: 60,
+      fixed: 'right' as const,
+      render: (_: unknown, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+
+        if (!record.has_recording || !onPlayRecord) {
+          return <span style={{ fontSize: 12, color: 'var(--semi-color-text-3)' }}>-</span>
         }
 
-        const record = row.original
-        const hasRecording = record.has_recording
         const hasTranscript = record.has_transcript
-
         return (
-          <div className="flex items-center gap-1">
-            {hasRecording && onPlayRecord && (
+          <Tooltip content={hasTranscript ? '录音与转写' : '播放录音'}>
+            <span>
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+                theme="borderless"
+                icon={hasTranscript
+                  ? <FileText style={{ width: 16, height: 16 }} />
+                  : <Play style={{ width: 16, height: 16 }} />
+                }
+                size="small"
                 onClick={() => onPlayRecord(record)}
-                title="播放录音"
-              >
-                <Play className="h-4 w-4" />
-              </Button>
-            )}
-            {hasTranscript && onViewTranscript && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => onViewTranscript(record)}
-                title="查看转写"
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-            )}
-            {!hasRecording && !hasTranscript && (
-              <span className="text-xs text-muted-foreground">-</span>
-            )}
-          </div>
+              />
+            </span>
+          </Tooltip>
         )
       },
     },

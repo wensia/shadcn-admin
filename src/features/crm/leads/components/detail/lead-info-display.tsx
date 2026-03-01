@@ -1,45 +1,25 @@
 /**
- * 线索详情信息展示组件
- * 可复用于 LeadDetailSheet 和 ContinuousCallPage
- * 支持快捷编辑功能
+ * 线索详情信息展示组件 - Semi Design 版本
  */
 
-import { useState } from 'react'
-import { Pencil, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import React, { useState } from 'react'
+import { Popover, Button, Toast, Spin, Tag } from '@douyinfe/semi-ui-19'
+import { Input } from '@douyinfe/semi-ui-19'
+import { IconEdit, IconLoading, IconTick, IconChevronDown } from '@douyinfe/semi-icons'
 import type { Lead } from '../../types'
 import { gradeLabels, LeadStatus, IntentionLevel } from '../../types'
 import { formatTime } from '@/lib/utils/time'
-import { InfoCard } from './info-card'
-import { InfoGrid } from './info-grid'
 import { InfoItem } from './info-item'
 import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
 import { leadStatusStyles, intentionLevelStyles } from '@/lib/status-styles'
-import { ChevronDown, Check } from 'lucide-react'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-/**
- * 家长关系映射
- */
+const { TextArea } = Input
+
+/** 家长关系映射 */
 const parentRelationLabels: Record<string, string> = {
-  father: '父亲',
-  mother: '母亲',
-  grandfather: '爷爷',
-  grandmother: '奶奶',
-  grandpa_maternal: '外公',
-  grandma_maternal: '外婆',
-  uncle: '叔叔',
-  aunt: '阿姨',
-  other: '其他',
+  father: '父亲', mother: '母亲', grandfather: '爷爷', grandmother: '奶奶',
+  grandpa_maternal: '外公', grandma_maternal: '外婆', uncle: '叔叔', aunt: '阿姨', other: '其他',
 }
 
 function formatParentRelation(relation?: string): string | undefined {
@@ -47,107 +27,42 @@ function formatParentRelation(relation?: string): string | undefined {
   return parentRelationLabels[relation] || relation
 }
 
-/**
- * 选项数据
- */
-const genderOptions = [
-  { label: '男', value: 'male' },
-  { label: '女', value: 'female' },
-]
+const genderOptions = [{ label: '男', value: 'male' }, { label: '女', value: 'female' }]
 
-const gradeOptions = Object.entries(gradeLabels).map(([value, label]) => ({
-  label,
-  value,
-}))
+const gradeOptions = Object.entries(gradeLabels).map(([value, label]) => ({ label, value }))
 
-const relationOptions = Object.entries(parentRelationLabels).map(([value, label]) => ({
-  label,
-  value,
-}))
+const relationOptions = Object.entries(parentRelationLabels).map(([value, label]) => ({ label, value }))
 
-/**
- * 解析来源渠道额外信息
- * 支持表单字段格式：{ field_name: { label: "显示名", value: "值" } }
- */
-function parseSourceExtraInfo(
-  obj: Record<string, unknown>
-): Array<{ label: string; value: string }> {
+/** 解析来源渠道额外信息 */
+function parseSourceExtraInfo(obj: Record<string, unknown>): Array<{ label: string; value: string }> {
   const result: Array<{ label: string; value: string }> = []
-
   for (const [_key, fieldData] of Object.entries(obj)) {
-    if (
-      fieldData &&
-      typeof fieldData === 'object' &&
-      !Array.isArray(fieldData) &&
-      'label' in fieldData &&
-      'value' in fieldData
-    ) {
+    if (fieldData && typeof fieldData === 'object' && !Array.isArray(fieldData) && 'label' in fieldData && 'value' in fieldData) {
       const field = fieldData as { label: string; value: unknown }
-      result.push({
-        label: String(field.label || _key),
-        value: formatFieldValue(field.value),
-      })
+      result.push({ label: String(field.label || _key), value: formatFieldValue(field.value) })
     } else {
-      result.push({
-        label: _key,
-        value: formatFieldValue(fieldData),
-      })
+      result.push({ label: _key, value: formatFieldValue(fieldData) })
     }
   }
-
   return result
 }
 
 function formatFieldValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') {
-    return '-'
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  if (typeof value === 'number') {
-    return value.toString()
-  }
-  if (typeof value === 'boolean') {
-    return value ? '是' : '否'
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '-'
-    return value.map((item) => formatFieldValue(item)).join('、')
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value)
-  }
+  if (value === null || value === undefined || value === '') return '-'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number') return value.toString()
+  if (typeof value === 'boolean') return value ? '是' : '否'
+  if (Array.isArray(value)) { if (value.length === 0) return '-'; return value.map(formatFieldValue).join('、') }
+  if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
 
-/**
- * 线索状态选项
- */
-const leadStatusOptions = Object.entries(leadStatusStyles).map(([value, config]) => ({
-  value: value as LeadStatus,
-  label: config.label,
-  color: config.color,
-}))
+/** 线索状态选项 */
+const leadStatusOptions = Object.entries(leadStatusStyles).map(([value, config]) => ({ value: value as LeadStatus, label: config.label, color: config.color }))
+const statusColorMap: Record<string, string> = { green: '#00b42a', orange: '#ff7d00', red: '#f53f3f', gray: '#86909c' }
 
-const statusColorMap: Record<string, string> = {
-  green: '#788c5d',
-  orange: '#d97757',
-  red: '#dc2626',
-  gray: '#6b7280',
-}
-
-/**
- * 可编辑的线索状态选择器
- */
-interface EditableLeadStatusProps {
-  status: LeadStatus
-  editable?: boolean
-  onSave?: (value: string) => Promise<void>
-}
-
-function EditableLeadStatus({ status, editable, onSave }: EditableLeadStatusProps) {
-  const s = useStyleClasses()
+/** 可编辑的线索状态选择器 */
+function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; editable?: boolean; onSave?: (value: string) => Promise<void> }) {
   const [open, setOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -155,136 +70,76 @@ function EditableLeadStatus({ status, editable, onSave }: EditableLeadStatusProp
   const selectedColor = selectedOption ? statusColorMap[selectedOption.color] || statusColorMap.gray : statusColorMap.gray
 
   const handleSelect = async (newStatus: LeadStatus) => {
-    if (!onSave || newStatus === status) {
-      setOpen(false)
-      return
-    }
+    if (!onSave || newStatus === status) { setOpen(false); return }
     setIsSaving(true)
     try {
       await onSave(newStatus)
       setOpen(false)
-      toast.success('线索状态已更新')
+      Toast.success('线索状态已更新')
     } catch (error: any) {
       showApiErrorToast(error, '更新失败')
-    } finally {
-      setIsSaving(false)
-    }
+    } finally { setIsSaving(false) }
   }
 
-  if (!editable) {
-    return <LeadStatusBadge status={status} />
-  }
+  if (!editable) return <LeadStatusBadge status={status} />
 
   return (
-    <Popover open={open} onOpenChange={(newOpen) => {
-      // 保存过程中阻止关闭
-      if (isSaving && !newOpen) return
-      setOpen(newOpen)
-    }}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            s.text.xs,
-            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border cursor-pointer',
-            'hover:opacity-80 transition-opacity'
-          )}
-          style={{
-            color: selectedColor,
-            borderColor: selectedColor,
-            backgroundColor: selectedColor + '15',
-          }}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <>
-              {selectedOption?.label || status}
-              <ChevronDown className="h-3 w-3" />
-            </>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-auto p-2 relative"
-        align="start"
-        onPointerDownOutside={(e) => {
-          if (isSaving) e.preventDefault()
-        }}
-        onEscapeKeyDown={(e) => {
-          if (isSaving) e.preventDefault()
-        }}
-        onInteractOutside={(e) => {
-          if (isSaving) e.preventDefault()
-        }}
-      >
-        {/* 保存中的遮罩层 */}
-        {isSaving && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-md">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-xs">保存中...</span>
+    <Popover
+      visible={open}
+      onVisibleChange={(visible) => { if (isSaving && !visible) return; setOpen(visible) }}
+      trigger="click"
+      position="bottomLeft"
+      content={
+        <div style={{ padding: 8, position: 'relative' }}>
+          {isSaving && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
+              <Spin size="small" />
             </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+            {leadStatusOptions.map(option => {
+              const isSelected = status === option.value
+              const color = statusColorMap[option.color] || statusColorMap.gray
+              return (
+                <Button
+                  key={option.value}
+                  theme="borderless"
+                  size="small"
+                  style={{ justifyContent: 'flex-start', color, backgroundColor: isSelected ? color + '20' : 'transparent', fontWeight: isSelected ? 500 : 400 }}
+                  onClick={() => handleSelect(option.value)}
+                  disabled={isSaving}
+                >
+                  {isSelected && <IconTick style={{ marginRight: 4, fontSize: 12 }} />}
+                  {option.label}
+                </Button>
+              )
+            })}
           </div>
-        )}
-        <div className="grid grid-cols-2 gap-1">
-          {leadStatusOptions.map(option => {
-            const isSelected = status === option.value
-            const color = statusColorMap[option.color] || statusColorMap.gray
-            return (
-              <Button
-                key={option.value}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-7 justify-start text-xs px-2',
-                  isSelected && 'font-medium'
-                )}
-                style={{
-                  color: color,
-                  backgroundColor: isSelected ? color + '20' : 'transparent',
-                }}
-                onClick={() => handleSelect(option.value)}
-                disabled={isSaving}
-              >
-                {isSelected && <Check className="mr-1 h-3 w-3" />}
-                {option.label}
-              </Button>
-            )
-          })}
         </div>
-      </PopoverContent>
+      }
+    >
+      <button
+        type="button"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+          borderRadius: 12, border: `1px solid ${selectedColor}`, cursor: 'pointer',
+          background: selectedColor + '15', color: selectedColor, fontSize: 12,
+          transition: 'opacity 0.2s',
+        }}
+        disabled={isSaving}
+      >
+        {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || status}<IconChevronDown style={{ fontSize: 12 }} /></>}
+      </button>
     </Popover>
   )
 }
 
-/**
- * 意向等级选项
- */
-const intentionLevelOptions = Object.entries(intentionLevelStyles).map(([value, config]) => ({
-  value: value as IntentionLevel,
-  label: config.label,
-  color: config.color,
-}))
+/** 意向等级选项 */
+const intentionLevelOptions = Object.entries(intentionLevelStyles).map(([value, config]) => ({ value: value as IntentionLevel, label: config.label, color: config.color }))
+const intentionColorMap: Record<string, string> = { green: '#00b42a', orange: '#ff7d00', gray: '#86909c' }
 
-const intentionColorMap: Record<string, string> = {
-  green: '#22c55e',
-  orange: '#f59e0b',
-  gray: '#6b7280',
-}
-
-/**
- * 可编辑的意向等级选择器
- */
-interface EditableIntentionLevelProps {
-  level: IntentionLevel
-  editable?: boolean
-  onSave?: (value: string) => Promise<void>
-}
-
-function EditableIntentionLevel({ level, editable, onSave }: EditableIntentionLevelProps) {
-  const s = useStyleClasses()
+/** 可编辑的意向等级选择器 */
+function EditableIntentionLevel({ level, editable, onSave }: { level: IntentionLevel; editable?: boolean; onSave?: (value: string) => Promise<void> }) {
   const [open, setOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -292,121 +147,71 @@ function EditableIntentionLevel({ level, editable, onSave }: EditableIntentionLe
   const selectedColor = selectedOption ? intentionColorMap[selectedOption.color] || intentionColorMap.gray : intentionColorMap.gray
 
   const handleSelect = async (newLevel: IntentionLevel) => {
-    if (!onSave || newLevel === level) {
-      setOpen(false)
-      return
-    }
+    if (!onSave || newLevel === level) { setOpen(false); return }
     setIsSaving(true)
     try {
       await onSave(newLevel)
       setOpen(false)
-      toast.success('意向等级已更新')
+      Toast.success('意向等级已更新')
     } catch (error: any) {
       showApiErrorToast(error, '更新失败')
-    } finally {
-      setIsSaving(false)
-    }
+    } finally { setIsSaving(false) }
   }
 
-  if (!editable) {
-    return <IntentionLevelBadge level={level} />
-  }
+  if (!editable) return <IntentionLevelBadge level={level} />
 
   return (
-    <Popover open={open} onOpenChange={(newOpen) => {
-      // 保存过程中阻止关闭
-      if (isSaving && !newOpen) return
-      setOpen(newOpen)
-    }}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            s.text.xs,
-            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border cursor-pointer',
-            'hover:opacity-80 transition-opacity'
-          )}
-          style={{
-            color: selectedColor,
-            borderColor: selectedColor,
-            backgroundColor: selectedColor + '15',
-          }}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <>
-              {selectedOption?.label || level}
-              <ChevronDown className="h-3 w-3" />
-            </>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-auto p-2 relative"
-        align="start"
-        onPointerDownOutside={(e) => {
-          if (isSaving) e.preventDefault()
-        }}
-        onEscapeKeyDown={(e) => {
-          if (isSaving) e.preventDefault()
-        }}
-        onInteractOutside={(e) => {
-          if (isSaving) e.preventDefault()
-        }}
-      >
-        {/* 保存中的遮罩层 */}
-        {isSaving && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-md">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-xs">保存中...</span>
+    <Popover
+      visible={open}
+      onVisibleChange={(visible) => { if (isSaving && !visible) return; setOpen(visible) }}
+      trigger="click"
+      position="bottomLeft"
+      content={
+        <div style={{ padding: 8, position: 'relative' }}>
+          {isSaving && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
+              <Spin size="small" />
             </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {intentionLevelOptions.map(option => {
+              const isSelected = level === option.value
+              const color = intentionColorMap[option.color] || intentionColorMap.gray
+              return (
+                <Button
+                  key={option.value}
+                  theme="borderless"
+                  size="small"
+                  style={{ justifyContent: 'flex-start', color, backgroundColor: isSelected ? color + '20' : 'transparent', fontWeight: isSelected ? 500 : 400 }}
+                  onClick={() => handleSelect(option.value)}
+                  disabled={isSaving}
+                >
+                  {isSelected && <IconTick style={{ marginRight: 4, fontSize: 12 }} />}
+                  {option.label}
+                </Button>
+              )
+            })}
           </div>
-        )}
-        <div className="flex flex-col gap-1">
-          {intentionLevelOptions.map(option => {
-            const isSelected = level === option.value
-            const color = intentionColorMap[option.color] || intentionColorMap.gray
-            return (
-              <Button
-                key={option.value}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-7 justify-start text-xs px-2',
-                  isSelected && 'font-medium'
-                )}
-                style={{
-                  color: color,
-                  backgroundColor: isSelected ? color + '20' : 'transparent',
-                }}
-                onClick={() => handleSelect(option.value)}
-                disabled={isSaving}
-              >
-                {isSelected && <Check className="mr-1 h-3 w-3" />}
-                {option.label}
-              </Button>
-            )
-          })}
         </div>
-      </PopoverContent>
+      }
+    >
+      <button
+        type="button"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+          borderRadius: 12, border: `1px solid ${selectedColor}`, cursor: 'pointer',
+          background: selectedColor + '15', color: selectedColor, fontSize: 12,
+        }}
+        disabled={isSaving}
+      >
+        {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || level}<IconChevronDown style={{ fontSize: 12 }} /></>}
+      </button>
     </Popover>
   )
 }
 
-/**
- * 备注卡片组件
- */
-interface NotesCardProps {
-  notes?: string
-  editable?: boolean
-  onSave?: (value: string) => Promise<void>
-}
-
-function NotesCard({ notes, editable, onSave }: NotesCardProps) {
-  const s = useStyleClasses()
+/** 内联备注组件 - 用于表格行内展示 */
+function NotesInline({ notes, editable, onSave }: { notes?: string; editable?: boolean; onSave?: (value: string) => Promise<void> }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(notes || '')
   const [isSaving, setIsSaving] = useState(false)
@@ -417,343 +222,199 @@ function NotesCard({ notes, editable, onSave }: NotesCardProps) {
     try {
       await onSave(editValue)
       setIsEditing(false)
-      toast.success('备注已更新')
+      Toast.success('备注已更新')
     } catch (error: any) {
       showApiErrorToast(error, '保存失败')
-    } finally {
-      setIsSaving(false)
-    }
+    } finally { setIsSaving(false) }
   }
 
   return (
-    <div className={cn('border bg-card p-4 lg:col-span-2', s.rounded)}>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className={cn(s.text.sm, 'font-semibold')}>备注</h3>
-        {editable && onSave && (
-          <Popover open={isEditing} onOpenChange={(open) => {
-            setIsEditing(open)
-            if (open) setEditValue(notes || '')
-          }}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-muted"
-                title="编辑备注"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-80 p-3"
-              align="end"
-              onFocusOutside={(e) => e.preventDefault()}
-            >
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">编辑备注</div>
-                <Textarea
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  placeholder="请输入备注信息"
-                  className="min-h-[80px] text-xs resize-none"
-                  autoFocus
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsEditing(false)}
-                    className="h-7 text-xs"
-                    disabled={isSaving}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    className="h-7 text-xs"
-                    disabled={isSaving}
-                  >
-                    {isSaving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                    保存
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
-      <p className={cn(s.text.xs, 'text-muted-foreground whitespace-pre-wrap')}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+      <p style={{ fontSize: 13, color: notes ? 'var(--semi-color-text-1)' : 'var(--semi-color-text-2)', whiteSpace: 'pre-wrap', margin: 0, flex: 1, lineHeight: 1.6 }}>
         {notes || '暂无备注'}
       </p>
+      {editable && onSave && (
+        <Popover
+          visible={isEditing}
+          onVisibleChange={(visible) => { setIsEditing(visible); if (visible) setEditValue(notes || '') }}
+          trigger="click"
+          position="bottomRight"
+          content={
+            <div style={{ padding: 12, width: 300, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--semi-color-text-2)' }}>编辑备注</div>
+              <TextArea value={editValue} onChange={(val) => setEditValue(val)} placeholder="请输入备注信息" autosize={{ minRows: 3 }} autoFocus />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <Button size="small" theme="light" onClick={() => setIsEditing(false)} disabled={isSaving}>取消</Button>
+                <Button size="small" theme="solid" onClick={handleSave} disabled={isSaving}>
+                  {isSaving && <IconLoading spin style={{ marginRight: 4 }} />}保存
+                </Button>
+              </div>
+            </div>
+          }
+        >
+          <button
+            type="button"
+            style={{ color: 'var(--semi-color-text-2)', padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+            title="编辑备注"
+          >
+            <IconEdit style={{ fontSize: 14 }} />
+          </button>
+        </Popover>
+      )}
     </div>
   )
 }
 
+/** 区域标题行样式 */
+const sectionHeaderStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'var(--semi-color-text-0)',
+  background: 'var(--semi-color-fill-0)',
+  borderBottom: '1px solid var(--semi-color-border)',
+}
+
+/** 数据行背景（配合单元格边框，不需要交替色） */
+const getRowBg = (_index: number): string => 'transparent'
+
 interface LeadInfoDisplayProps {
   lead: Lead
-  /** 是否逾期（用于高亮下次跟进时间） */
   isOverdue?: boolean
-  /** 是否显示备用联系人 */
   showBackupContact?: boolean
-  /** 是否精简模式（隐藏邮箱、微信号、课程兴趣等不常用字段） */
   compact?: boolean
-  /** 自定义类名 */
   className?: string
-  /** 字段更新回调 */
   onFieldUpdate?: (field: string, value: string) => Promise<void>
 }
 
-/**
- * 线索详情信息展示组件
- * 统一展示线索的客户信息、来源信息、跟进信息等
- */
-export function LeadInfoDisplay({
-  lead,
-  isOverdue = false,
-  showBackupContact = true,
-  compact = false,
-  className,
-  onFieldUpdate,
-}: LeadInfoDisplayProps) {
-  // 创建字段保存函数
+export function LeadInfoDisplay({ lead, isOverdue = false, showBackupContact = true, compact = false, className, onFieldUpdate }: LeadInfoDisplayProps) {
   const createSaveHandler = (field: string) => {
     if (!onFieldUpdate) return undefined
-    return async (value: string) => {
-      await onFieldUpdate(field, value)
-    }
+    return async (value: string) => { await onFieldUpdate(field, value) }
   }
 
   const editable = !!onFieldUpdate
 
+  // 来源额外字段
+  const sourceExtraItems = lead.source_extra_info ? parseSourceExtraInfo(lead.source_extra_info) : []
+
   return (
     <div className={className}>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* 客户信息（儿童+家长） */}
-        <InfoCard hideTitle className="lg:col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 儿童信息 */}
-            <InfoGrid cols={1}>
-              <InfoItem
-                label="儿童姓名"
-                value={lead.child_name}
-                rawValue={lead.child_name || ''}
-                editable={editable}
-                fieldType="text"
-                maxLength={10}
-                onSave={createSaveHandler('child_name')}
-              />
-              <InfoItem
-                label="性别"
-                value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined}
-                rawValue={lead.child_gender || ''}
-                editable={editable}
-                fieldType="select"
-                options={genderOptions}
-                onSave={createSaveHandler('child_gender')}
-              />
-              <InfoItem
-                label="年龄"
-                value={lead.age?.toString()}
-                rawValue={lead.age?.toString() || ''}
-                editable={editable}
-                fieldType="number"
-                onSave={createSaveHandler('age')}
-              />
-              <InfoItem
-                label="生日"
-                value={lead.child_birthday}
-                rawValue={lead.child_birthday || ''}
-                editable={editable}
-                fieldType="date"
-                onSave={createSaveHandler('child_birthday')}
-              />
-              <InfoItem
-                label="年级"
-                value={lead.grade ? gradeLabels[lead.grade] : undefined}
-                rawValue={lead.grade || ''}
-                editable={editable}
-                fieldType="select"
-                options={gradeOptions}
-                onSave={createSaveHandler('grade')}
-              />
-              <InfoItem
-                label="学校"
-                value={lead.school_name}
-                rawValue={lead.school_name || ''}
-                editable={editable}
-                fieldType="async-select"
-                asyncSelectConfig={{
-                  apiEndpoint: '/admin/schools',
-                  searchParam: 'search',
-                  labelKey: 'name',
-                  valueKey: 'name',
-                  creatable: true,
-                  createFieldName: 'name',
-                }}
-                onSave={createSaveHandler('school_name')}
-              />
-              {!compact && (
-                <InfoItem
-                  label="课程兴趣"
-                  value={lead.course_interests?.join('、')}
-                  rawValue={lead.course_interests?.join('、') || ''}
-                  editable={editable}
-                  fieldType="text"
-                  onSave={createSaveHandler('course_interests')}
-                />
-              )}
-            </InfoGrid>
-            {/* 家长信息 */}
-            <InfoGrid cols={1}>
-              <InfoItem
-                label="家长姓名"
-                value={lead.parent_name}
-                rawValue={lead.parent_name || ''}
-                editable={editable}
-                fieldType="text"
-                onSave={createSaveHandler('parent_name')}
-              />
-              <InfoItem
-                label="关系"
-                value={formatParentRelation(lead.parent_relation)}
-                rawValue={lead.parent_relation || ''}
-                editable={editable}
-                fieldType="select"
-                options={relationOptions}
-                onSave={createSaveHandler('parent_relation')}
-              />
-              <InfoItem
-                label="手机号"
-                value={lead.parent_phone}
-                copyable
-              />
-              {!compact && (
-                <InfoItem
-                  label="微信号"
-                  value={lead.parent_wechat}
-                  rawValue={lead.parent_wechat || ''}
-                  copyable
-                  editable={editable}
-                  fieldType="text"
-                  onSave={createSaveHandler('parent_wechat')}
-                />
-              )}
-              {!compact && (
-                <InfoItem
-                  label="邮箱"
-                  value={lead.parent_email}
-                  rawValue={lead.parent_email || ''}
-                  editable={editable}
-                  fieldType="text"
-                  onSave={createSaveHandler('parent_email')}
-                />
-              )}
-            </InfoGrid>
-          </div>
-        </InfoCard>
+      <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', border: '1px solid var(--semi-color-border)', borderRadius: 6, overflow: 'hidden' }}>
+        <tbody>
+          {/* ===== 客户信息 ===== */}
+          <tr><td colSpan={8} style={sectionHeaderStyle}>客户信息</td></tr>
+          <tr style={{ backgroundColor: getRowBg(0) }}>
+            <InfoItem label="儿童姓名" value={lead.child_name} rawValue={lead.child_name || ''} editable={editable} fieldType="text" maxLength={10} onSave={createSaveHandler('child_name')} />
+            <InfoItem label="性别" value={lead.child_gender === 'male' ? '男' : lead.child_gender === 'female' ? '女' : undefined} rawValue={lead.child_gender || ''} editable={editable} fieldType="select" options={genderOptions} onSave={createSaveHandler('child_gender')} />
+            <InfoItem label="年龄" value={lead.age?.toString()} rawValue={lead.age?.toString() || ''} editable={editable} fieldType="number" onSave={createSaveHandler('age')} />
+            <InfoItem label="生日" value={lead.child_birthday} rawValue={lead.child_birthday || ''} editable={editable} fieldType="date" onSave={createSaveHandler('child_birthday')} />
+          </tr>
+          <tr style={{ backgroundColor: getRowBg(1) }}>
+            <InfoItem label="年级" value={lead.grade ? gradeLabels[lead.grade] : undefined} rawValue={lead.grade || ''} editable={editable} fieldType="select" options={gradeOptions} onSave={createSaveHandler('grade')} />
+            <InfoItem label="学校" value={lead.school_name} rawValue={lead.school_name || ''} editable={editable} fieldType="async-select" asyncSelectConfig={{ apiEndpoint: '/admin/schools', searchParam: 'search', labelKey: 'name', valueKey: 'name', creatable: true, createFieldName: 'name' }} onSave={createSaveHandler('school_name')} />
+            {!compact && <InfoItem label="课程兴趣" value={lead.course_interests?.join('、')} rawValue={lead.course_interests?.join('、') || ''} editable={editable} fieldType="text" onSave={createSaveHandler('course_interests')} />}
+            {compact && <><td /><td /></>}
+            <td /><td />
+          </tr>
+          <tr style={{ backgroundColor: getRowBg(2) }}>
+            <InfoItem label="家长姓名" value={lead.parent_name} rawValue={lead.parent_name || ''} editable={editable} fieldType="text" onSave={createSaveHandler('parent_name')} />
+            <InfoItem label="关系" value={formatParentRelation(lead.parent_relation)} rawValue={lead.parent_relation || ''} editable={editable} fieldType="select" options={relationOptions} onSave={createSaveHandler('parent_relation')} />
+            <InfoItem label="手机号" value={lead.parent_phone} copyable />
+            {!compact
+              ? <InfoItem label="微信号" value={lead.parent_wechat} rawValue={lead.parent_wechat || ''} copyable editable={editable} fieldType="text" onSave={createSaveHandler('parent_wechat')} />
+              : <><td /><td /></>
+            }
+          </tr>
+          {!compact && (
+            <tr style={{ backgroundColor: getRowBg(3) }}>
+              <InfoItem label="邮箱" value={lead.parent_email} rawValue={lead.parent_email || ''} editable={editable} fieldType="text" onSave={createSaveHandler('parent_email')} />
+              <td /><td /><td /><td /><td /><td />
+            </tr>
+          )}
 
-        {/* 来源信息 */}
-        <InfoCard hideTitle className="lg:col-span-2">
-          <InfoGrid cols={4}>
+          {/* ===== 来源信息 ===== */}
+          <tr><td colSpan={8} style={sectionHeaderStyle}>来源信息</td></tr>
+          <tr style={{ backgroundColor: getRowBg(0) }}>
             <InfoItem label="来源渠道" value={lead.source_channel_name} />
             <InfoItem label="来源详情" value={lead.source_detail} />
             <InfoItem label="创建人" value={lead.created_by_name} />
             <InfoItem label="创建时间" value={formatTime(lead.created_at)} />
+          </tr>
+          <tr style={{ backgroundColor: getRowBg(1) }}>
             <InfoItem label="激活人" value={lead.activated_by_name} />
             <InfoItem label="激活时间" value={lead.activated_at ? formatTime(lead.activated_at) : undefined} />
-            {/* 渠道额外字段 */}
-            {lead.source_extra_info && parseSourceExtraInfo(lead.source_extra_info).map((item, index) => (
-              <InfoItem
-                key={index}
-                label={item.label}
-                value={item.value}
-              />
-            ))}
-          </InfoGrid>
-        </InfoCard>
+            {sourceExtraItems.length >= 1
+              ? <InfoItem label={sourceExtraItems[0].label} value={sourceExtraItems[0].value} />
+              : <><td /><td /></>
+            }
+            {sourceExtraItems.length >= 2
+              ? <InfoItem label={sourceExtraItems[1].label} value={sourceExtraItems[1].value} />
+              : <><td /><td /></>
+            }
+          </tr>
+          {/* 额外来源字段（每行4个，从第3个开始） */}
+          {sourceExtraItems.length > 2 && (() => {
+            const remaining = sourceExtraItems.slice(2)
+            const rows: Array<typeof remaining> = []
+            for (let i = 0; i < remaining.length; i += 4) rows.push(remaining.slice(i, i + 4))
+            return rows.map((row, ri) => (
+              <tr key={`extra-${ri}`} style={{ backgroundColor: getRowBg(ri + 2) }}>
+                {row.map((item, ci) => <InfoItem key={ci} label={item.label} value={item.value} />)}
+                {row.length < 4 && Array.from({ length: 4 - row.length }).map((_, i) => <React.Fragment key={`pad-${i}`}><td /><td /></React.Fragment>)}
+              </tr>
+            ))
+          })()}
 
-        {/* 跟进信息 */}
-        <InfoCard hideTitle className="lg:col-span-2">
-          <InfoGrid cols={4}>
-            <InfoItem
-              label="线索状态"
-              value={lead.status ? (
-                <EditableLeadStatus
-                  status={lead.status}
-                  editable={editable}
-                  onSave={createSaveHandler('status')}
-                />
-              ) : undefined}
-            />
-            <InfoItem
-              label="意向等级"
-              value={lead.intention_level ? (
-                <EditableIntentionLevel
-                  level={lead.intention_level}
-                  editable={editable}
-                  onSave={createSaveHandler('intention_level')}
-                />
-              ) : undefined}
-            />
+          {/* ===== 跟进信息 ===== */}
+          <tr><td colSpan={8} style={sectionHeaderStyle}>跟进信息</td></tr>
+          <tr style={{ backgroundColor: getRowBg(0) }}>
+            <InfoItem label="线索状态" value={lead.status ? <EditableLeadStatus status={lead.status} editable={editable} onSave={createSaveHandler('status')} /> : undefined} />
+            <InfoItem label="意向等级" value={lead.intention_level ? <EditableIntentionLevel level={lead.intention_level} editable={editable} onSave={createSaveHandler('intention_level')} /> : undefined} />
             <InfoItem
               label="负责顾问"
               value={lead.advisor_name ? lead.advisor_name : lead.is_in_pool ? (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                  公海
-                </span>
+                <Tag size="small" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>公海</Tag>
               ) : (
-                <span className="text-muted-foreground">待分配</span>
+                <span style={{ color: 'var(--semi-color-text-2)' }}>待分配</span>
               )}
             />
             <InfoItem
               label="归属校区"
               value={lead.is_in_pool && lead.owner_campus_name ? (
-                <span className="inline-flex items-center gap-1">
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                    {lead.owner_campus_name} 公海
-                  </span>
-                </span>
+                <Tag size="small" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>{lead.owner_campus_name} 公海</Tag>
               ) : lead.owner_campus_name}
             />
-            <InfoItem
-              label="下次跟进"
-              value={lead.next_followup_at ? formatTime(lead.next_followup_at) : undefined}
-              rawValue={lead.next_followup_at || ''}
-              highlight={isOverdue}
-              editable={editable}
-              fieldType="datetime"
-              onSave={createSaveHandler('next_followup_at')}
-            />
-            <InfoItem
-              label="最后跟进"
-              value={lead.last_followup_at ? formatTime(lead.last_followup_at) : undefined}
-            />
-            <InfoItem
-              label="省市区"
-              value={[lead.province, lead.city, lead.district].filter(Boolean).join(' ') || undefined}
-            />
+          </tr>
+          <tr style={{ backgroundColor: getRowBg(1) }}>
+            <InfoItem label="下次跟进" value={lead.next_followup_at ? formatTime(lead.next_followup_at) : undefined} rawValue={lead.next_followup_at || ''} highlight={isOverdue} editable={editable} fieldType="datetime" onSave={createSaveHandler('next_followup_at')} />
+            <InfoItem label="最后跟进" value={lead.last_followup_at ? formatTime(lead.last_followup_at) : undefined} />
+            <InfoItem label="省市区" value={[lead.province, lead.city, lead.district].filter(Boolean).join(' ') || undefined} />
             <InfoItem label="详细地址" value={lead.address_detail} />
-          </InfoGrid>
-        </InfoCard>
+          </tr>
 
-        {/* 备注 */}
-        <NotesCard
-          notes={lead.notes}
-          editable={editable}
-          onSave={createSaveHandler('notes')}
-        />
+          {/* ===== 备注 ===== */}
+          <tr><td colSpan={8} style={sectionHeaderStyle}>备注</td></tr>
+          <tr>
+            <td colSpan={8} style={{ padding: '8px 12px' }}>
+              <NotesInline notes={lead.notes} editable={editable} onSave={createSaveHandler('notes')} />
+            </td>
+          </tr>
 
-        {/* 备用联系人 */}
-        {showBackupContact && (lead.backup_contact_name || lead.backup_contact_phone) && (
-          <InfoCard hideTitle compact className="lg:col-span-2">
-            <InfoGrid cols={3}>
-              <InfoItem label="备用联系人" value={lead.backup_contact_name} />
-              <InfoItem label="电话" value={lead.backup_contact_phone} copyable />
-              <InfoItem label="关系" value={lead.backup_contact_relation} />
-            </InfoGrid>
-          </InfoCard>
-        )}
-      </div>
+          {/* ===== 备用联系人 ===== */}
+          {showBackupContact && (lead.backup_contact_name || lead.backup_contact_phone) && (
+            <>
+              <tr><td colSpan={8} style={sectionHeaderStyle}>备用联系人</td></tr>
+              <tr style={{ backgroundColor: getRowBg(0) }}>
+                <InfoItem label="姓名" value={lead.backup_contact_name} />
+                <InfoItem label="电话" value={lead.backup_contact_phone} copyable />
+                <InfoItem label="关系" value={lead.backup_contact_relation} />
+                <td /><td />
+              </tr>
+            </>
+          )}
+        </tbody>
+      </table>
     </div>
   )
 }

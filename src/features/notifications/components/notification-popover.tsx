@@ -3,9 +3,7 @@
  */
 
 import { useNavigate } from '@tanstack/react-router'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
+import { Button, Divider } from '@douyinfe/semi-ui-19'
 import { CheckCheck, Loader2 } from 'lucide-react'
 import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks'
 import { NotificationItem } from './notification-item'
@@ -76,32 +74,32 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
         </div>
         {unreadCount > 0 && (
           <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
+            theme="borderless"
+            type="tertiary"
+            size="small"
             onClick={handleMarkAllAsRead}
             disabled={markAllAsRead.isPending}
-          >
-            {markAllAsRead.isPending ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            icon={markAllAsRead.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              <CheckCheck className="h-3 w-3 mr-1" />
+              <CheckCheck className="h-3 w-3" />
             )}
+          >
             全部已读
           </Button>
         )}
       </div>
 
-      <Separator />
+      <Divider style={{ margin: 0 }} />
 
       {/* 通知列表 */}
-      <ScrollArea className="h-[400px]">
+      <div className="h-[400px] overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--semi-color-text-2)' }} />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center h-32" style={{ color: 'var(--semi-color-text-2)' }}>
             <p className="text-sm">暂无通知</p>
           </div>
         ) : (
@@ -115,16 +113,17 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* 底部操作 */}
       {notifications.length > 0 && (
         <>
-          <Separator />
+          <Divider style={{ margin: 0 }} />
           <div className="p-2">
             <Button
-              variant="ghost"
-              className="w-full h-9 text-sm"
+              theme="borderless"
+              type="tertiary"
+              block
               onClick={handleViewAll}
             >
               查看全部通知

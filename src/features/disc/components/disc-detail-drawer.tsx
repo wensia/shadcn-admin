@@ -5,23 +5,13 @@
 
 import { useRef, useState, useCallback } from 'react'
 import { toBlob, toPng } from 'html-to-image'
-import { Briefcase, ChevronRight, Copy, Download, Loader2, Sparkles, User, Zap } from 'lucide-react'
+import { Briefcase, ChevronRight, Copy, Download, Image, Loader2, Sparkles, User, Zap } from 'lucide-react'
 import { toast } from 'sonner'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { SideSheet, Dropdown, Skeleton } from '@douyinfe/semi-ui-19'
+import { Tag } from '@douyinfe/semi-ui-19'
+import { Button as SemiButton } from '@douyinfe/semi-ui-19'
+import { Progress as SemiProgress } from '@douyinfe/semi-ui-19'
+import { Collapsible } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
 import {
   DISC_TYPE_CONFIG,
@@ -294,19 +284,19 @@ function AITag() {
   )
 }
 
-/** DISC 类型标签 */
+/** DISC 类型标签 - 使用 Semi Tag */
 function DiscTypeBadge({ type, size = 'sm' }: { type?: string; size?: 'sm' | 'lg' }) {
   if (!type) return <span className="text-muted-foreground">—</span>
   const dim = type as DISCDimension
   const config = DISC_TYPE_CONFIG[dim]
-  if (!config) return <Badge variant="outline">{type}</Badge>
+  if (!config) return <Tag type="ghost">{type}</Tag>
   return (
-    <Badge
-      className={cn(size === 'lg' && 'text-sm px-3 py-1')}
+    <Tag
+      size={size === 'lg' ? 'large' : 'small'}
       style={{ backgroundColor: config.bgColor, color: config.color, borderColor: config.color }}
     >
       {dim} — {config.label}
-    </Badge>
+    </Tag>
   )
 }
 
@@ -382,6 +372,7 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
   const [exporting, setExporting] = useState(false)
   const [copying, setCopying] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [detailDataOpen, setDetailDataOpen] = useState(false)
 
   // AI 分析结果：优先从 detail.result.aiAnalysis 读取（缓存）
   const cachedAI = detail?.result?.aiAnalysis
@@ -478,383 +469,479 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-[780px] p-0 [&>button:last-child]:hidden overflow-hidden flex flex-col">
-        {/* ─── Header ─── */}
-        <SheetHeader className="px-6 py-3 border-b shrink-0">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-sm font-semibold tracking-tight">
-              DISC 测评报告
-            </SheetTitle>
-            <div className="flex items-center gap-1">
-              {/* AI 分析按钮 */}
-              {result && (
-                hasAI ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAIAnalyze}
-                    disabled={analyzing}
-                    className="text-xs h-7 gap-1"
+    <SideSheet
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      placement="right"
+      width={780}
+      title={
+        <div className="flex items-center justify-between w-full">
+          <span className="text-sm font-semibold tracking-tight">
+            DISC 测评报告
+          </span>
+          <div className="flex items-center gap-1">
+            {/* AI 分析按钮 */}
+            {result && (
+              hasAI ? (
+                <SemiButton
+                  theme="light"
+                  size="small"
+                  onClick={handleAIAnalyze}
+                  disabled={analyzing}
+                  loading={analyzing}
+                  icon={!analyzing ? <Sparkles className="h-3.5 w-3.5 text-primary" /> : undefined}
+                  style={{ fontSize: 12, height: 28, gap: 4 }}
+                >
+                  {analyzing ? '分析中...' : '重新分析'}
+                </SemiButton>
+              ) : aiAnalysis?.status === 'processing' || aiAnalysis?.status === 'pending' ? (
+                <Tag type="ghost" style={{ fontSize: 12, height: 28, gap: 4 }} className="animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  AI 分析中...
+                </Tag>
+              ) : aiAnalysis?.status === 'failed' ? (
+                <SemiButton
+                  theme="light"
+                  size="small"
+                  onClick={handleAIAnalyze}
+                  disabled={analyzing}
+                  loading={analyzing}
+                  icon={!analyzing ? <Sparkles className="h-3.5 w-3.5" /> : undefined}
+                  style={{ fontSize: 12, height: 28, gap: 4 }}
+                >
+                  {analyzing ? '分析中...' : '重新分析'}
+                </SemiButton>
+              ) : (
+                <SemiButton
+                  theme="light"
+                  size="small"
+                  onClick={handleAIAnalyze}
+                  disabled={analyzing}
+                  loading={analyzing}
+                  icon={!analyzing ? <Sparkles className="h-3.5 w-3.5 text-primary" /> : undefined}
+                  style={{ fontSize: 12, height: 28, gap: 4 }}
+                >
+                  {analyzing ? '分析中...' : 'AI 分析'}
+                </SemiButton>
+              )
+            )}
+            <Dropdown
+              trigger="click"
+              position="bottomRight"
+              clickToHide
+              render={
+                <Dropdown.Menu>
+                  <Dropdown.Item
+                    icon={<Copy className="h-3.5 w-3.5" />}
+                    onClick={handleCopy}
+                    disabled={copying || !result}
                   >
-                    {analyzing ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    )}
-                    {analyzing ? '分析中...' : '重新分析'}
-                  </Button>
-                ) : aiAnalysis?.status === 'processing' || aiAnalysis?.status === 'pending' ? (
-                  <Badge variant="outline" className="text-xs gap-1 h-7 px-2 animate-pulse">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    AI 分析中...
-                  </Badge>
-                ) : aiAnalysis?.status === 'failed' ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAIAnalyze}
-                    disabled={analyzing}
-                    className="text-xs h-7 gap-1"
+                    复制到剪贴板
+                  </Dropdown.Item>
+                  <Dropdown.Item
+                    icon={<Download className="h-3.5 w-3.5" />}
+                    onClick={handleDownload}
+                    disabled={exporting || !result}
                   >
-                    {analyzing ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5" />
-                    )}
-                    {analyzing ? '分析中...' : '重新分析'}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAIAnalyze}
-                    disabled={analyzing}
-                    className="text-xs h-7 gap-1"
-                  >
-                    {analyzing ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    )}
-                    {analyzing ? '分析中...' : 'AI 分析'}
-                  </Button>
-                )
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                disabled={copying || !result}
-                className="text-xs text-muted-foreground hover:text-foreground h-7 gap-1"
-              >
-                {copying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
-                复制为图片
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDownload}
-                disabled={exporting || !result}
-                className="text-xs text-muted-foreground hover:text-foreground h-7 gap-1"
-              >
-                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                下载为图片
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenChange(false)}
-                className="text-xs text-muted-foreground hover:text-foreground h-7"
-              >
-                关闭
-              </Button>
+                    下载为图片
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              }
+            >
+              <span style={{ display: 'inline-flex' }}>
+                <SemiButton
+                  theme="borderless"
+                  size="small"
+                  disabled={(copying || exporting) || !result}
+                  loading={copying || exporting}
+                  icon={!(copying || exporting) ? <Image className="h-3.5 w-3.5" /> : undefined}
+                  style={{ fontSize: 12, height: 28, gap: 4, color: 'var(--semi-color-text-2)' }}
+                >
+                  {copying ? '复制中...' : exporting ? '导出中...' : '导出图片'}
+                </SemiButton>
+              </span>
+            </Dropdown>
+          </div>
+        </div>
+      }
+      headerStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
+      bodyStyle={{ padding: 0, overflow: 'hidden' }}
+      closable={true}
+    >
+      {/* ─── Body ─── */}
+      <div ref={bodyRef} className="flex-1 overflow-y-auto" style={{ height: 'calc(100vh - 60px)' }}>
+        {loading ? (
+          <div className="px-8 pb-12">
+            {/* 骨架屏：候选人档案头 */}
+            <div className="pt-4 pb-4 border-b">
+              <div className="flex items-baseline gap-3 mb-1.5">
+                <Skeleton.Title style={{ width: 80, height: 24 }} loading />
+                <Skeleton.Paragraph rows={1} style={{ width: 200, height: 14 }} loading />
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <Skeleton.Paragraph rows={1} style={{ width: 100, height: 28 }} loading />
+                <Skeleton.Paragraph rows={1} style={{ width: 80, height: 28 }} loading />
+              </div>
+            </div>
+
+            {/* 骨架屏：四维分数 */}
+            <div className="pt-6 pb-4">
+              <Skeleton.Title style={{ width: 120, height: 18, marginBottom: 16 }} loading />
+              <div className="grid grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="rounded-lg border p-3 space-y-2">
+                    <Skeleton.Paragraph rows={1} style={{ width: '40%', height: 14 }} loading />
+                    <Skeleton.Title style={{ width: '60%', height: 24 }} loading />
+                    <Skeleton.Paragraph rows={1} style={{ width: '100%', height: 8 }} loading />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 骨架屏：性格解读 */}
+            <div className="pt-4 pb-4 border-t">
+              <Skeleton.Title style={{ width: 140, height: 18, marginBottom: 12 }} loading />
+              <Skeleton.Paragraph rows={3} style={{ width: '100%' }} loading />
+            </div>
+
+            {/* 骨架屏：优势 & 沟通建议 */}
+            <div className="pt-4 pb-4 border-t">
+              <Skeleton.Title style={{ width: 100, height: 18, marginBottom: 12 }} loading />
+              <div className="space-y-2">
+                <Skeleton.Paragraph rows={1} style={{ width: '90%', height: 14 }} loading />
+                <Skeleton.Paragraph rows={1} style={{ width: '75%', height: 14 }} loading />
+                <Skeleton.Paragraph rows={1} style={{ width: '85%', height: 14 }} loading />
+              </div>
+            </div>
+
+            {/* 骨架屏：AI 分析区 */}
+            <div className="pt-4 pb-4 border-t">
+              <Skeleton.Title style={{ width: 120, height: 18, marginBottom: 12 }} loading />
+              <Skeleton.Paragraph rows={4} style={{ width: '100%' }} loading />
             </div>
           </div>
-        </SheetHeader>
+        ) : detail && result ? (
+          <div className="px-8 pb-12">
 
-        {/* ─── Body ─── */}
-        <div ref={bodyRef} className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-              加载中...
-            </div>
-          ) : detail && result ? (
-            <div className="px-8 pb-12">
-
-              {/* ═══ 候选人档案头 ═══ */}
-              <div className="pt-4 pb-4 border-b">
-                <div className="flex items-baseline gap-3 mb-1.5">
-                  <h2 className="text-xl font-bold tracking-tight">{detail.name}</h2>
-                  <span className="text-xs text-muted-foreground">
-                    {detail.phone || '未填写手机号'}
-                    <span className="mx-1.5 text-muted-foreground/30">·</span>
-                    {formatTime(detail.submitted_at)}
-                    {resolvedConfidence && (
-                      <>
-                        <span className="mx-1.5 text-muted-foreground/30">·</span>
-                        <span className={cn(
-                          resolvedConfidence.level === 'high' && 'text-foreground font-medium',
-                          resolvedConfidence.level === 'medium' && 'text-muted-foreground',
-                          resolvedConfidence.level === 'low' && 'text-muted-foreground/70',
-                        )}>
-                          {CONFIDENCE_LABEL[resolvedConfidence.level] || resolvedConfidence.level}
-                          {' '}{resolvedConfidence.score}分
-                        </span>
-                      </>
-                    )}
-                  </span>
-                </div>
-
-                {/* 类型标签 + 一句话总结 */}
-                <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <DiscTypeBadge type={primaryCode} size="lg" />
-                  {secondaryCode && (
+            {/* ═══ 候选人档案头 ═══ */}
+            <div className="pt-4 pb-4 border-b">
+              <div className="flex items-baseline gap-3 mb-1.5">
+                <h2 className="text-xl font-bold tracking-tight">{detail.name}</h2>
+                <span className="text-xs text-muted-foreground">
+                  {detail.phone || '未填写手机号'}
+                  <span className="mx-1.5 text-muted-foreground/30">·</span>
+                  {formatTime(detail.submitted_at)}
+                  {resolvedConfidence && (
                     <>
-                      <span className="text-muted-foreground/40 text-sm">/</span>
-                      <DiscTypeBadge type={secondaryCode} />
+                      <span className="mx-1.5 text-muted-foreground/30">·</span>
+                      <span className={cn(
+                        resolvedConfidence.level === 'high' && 'text-foreground font-medium',
+                        resolvedConfidence.level === 'medium' && 'text-muted-foreground',
+                        resolvedConfidence.level === 'low' && 'text-muted-foreground/70',
+                      )}>
+                        {CONFIDENCE_LABEL[resolvedConfidence.level] || resolvedConfidence.level}
+                        {' '}{resolvedConfidence.score}分
+                      </span>
                     </>
                   )}
-                  {resolvedMixedType && (
-                    <Badge variant="outline" className="ml-1 text-xs">
-                      {resolvedMixedType.code} · {resolvedMixedType.tendencyLabel}
-                    </Badge>
-                  )}
-                </div>
-                {/* 性格画像：AI 版本 or 模板版本 */}
-                {hasAI ? (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {renderMarkedText(aiAnalysis.personalityProfile)}
-                    <AITag />
-                  </p>
-                ) : primaryGuide ? (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {renderMarkedText(primaryGuide.summary)}
-                  </p>
-                ) : null}
+                </span>
               </div>
 
-              {/* ═══ 01 四维分析 ═══ */}
-              <SectionHeading number={nextSection()} title="四维分析" aiEnhanced={hasAI} />
-
-              {/* 特征标签 */}
-              {result.characteristics && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {(result.characteristics.primary || []).map((item, i) => (
-                    <Badge key={i} variant="secondary" className="font-normal">{item}</Badge>
-                  ))}
-                  {(result.characteristics.secondary || []).map((item, i) => (
-                    <Badge key={`s-${i}`} variant="outline" className="font-normal">{item}</Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* 四维分数 + 解读 */}
-              <div className="space-y-4">
-                {scoreRanking.map((item, idx) => {
-                  const aiText = hasAI ? aiAnalysis.dimensionInsights?.[item.dim] : undefined
-                  const interpretText = aiText || result.interpretation?.[item.dim]
-                  return (
-                    <div key={item.dim}>
-                      <ScoreBar dim={item.dim} score={item.score} isTop={idx === 0} />
-                      {interpretText && (
-                        <p className="text-xs leading-relaxed text-muted-foreground mt-1.5 ml-[5.75rem]">
-                          {renderMarkedText(interpretText)}
-                          {aiText && <>{' '}<AITag /></>}
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-
-              <Separator className="mt-6" />
-
-              {/* ═══ 02 行为模式分析 ═══ */}
-              {graphInsight && result.graphs && (() => {
-                const consistency = analyzeConsistency(
-                  graphInsight.externalTop,
-                  graphInsight.internalTop,
-                  graphInsight.selfImageTop,
-                  result.graphs!,
-                )
-                const shifts = extractSignificantShifts(result.graphs!)
-
-                return (
+              {/* 类型标签 + 一句话总结 */}
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <DiscTypeBadge type={primaryCode} size="lg" />
+                {secondaryCode && (
                   <>
-                    <SectionHeading number={nextSection()} title="行为模式分析" />
+                    <span className="text-muted-foreground/40 text-sm">/</span>
+                    <DiscTypeBadge type={secondaryCode} />
+                  </>
+                )}
+                {resolvedMixedType && (
+                  <Tag type="ghost" className="ml-1" style={{ fontSize: 12 }}>
+                    {resolvedMixedType.code} · {resolvedMixedType.tendencyLabel}
+                  </Tag>
+                )}
+              </div>
+              {/* 性格画像：AI 版本 or 模板版本 */}
+              {hasAI ? (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {renderMarkedText(aiAnalysis.personalityProfile)}
+                  <AITag />
+                </p>
+              ) : primaryGuide ? (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {renderMarkedText(primaryGuide.summary)}
+                </p>
+              ) : null}
+            </div>
 
-                    {/* ── 三场景卡片 ── */}
-                    <div className="grid grid-cols-3 gap-3 mb-5">
-                      {GRAPH_SCENARIOS.map((s) => {
-                        const g = result.graphs![s.key]
-                        const top = getTopDimension({ D: g.D, I: g.I, S: g.S, C: g.C })
-                        const cfg = DISC_TYPE_CONFIG[top]
+            {/* ═══ 01 四维分析 ═══ */}
+            <SectionHeading number={nextSection()} title="四维分析" aiEnhanced={hasAI} />
+
+            {/* 特征标签 */}
+            {result.characteristics && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(result.characteristics.primary || []).map((item, i) => (
+                  <Tag key={i} color="blue" type="light">{item}</Tag>
+                ))}
+                {(result.characteristics.secondary || []).map((item, i) => (
+                  <Tag key={`s-${i}`} type="ghost">{item}</Tag>
+                ))}
+              </div>
+            )}
+
+            {/* 四维分数 + 解读 */}
+            <div className="space-y-4">
+              {scoreRanking.map((item, idx) => {
+                const aiText = hasAI ? aiAnalysis.dimensionInsights?.[item.dim] : undefined
+                const interpretText = aiText || result.interpretation?.[item.dim]
+                return (
+                  <div key={item.dim}>
+                    <ScoreBar dim={item.dim} score={item.score} isTop={idx === 0} />
+                    {interpretText && (
+                      <p className="text-xs leading-relaxed text-muted-foreground mt-1.5 ml-[5.75rem]">
+                        {renderMarkedText(interpretText)}
+                        {aiText && <>{' '}<AITag /></>}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="border-b mt-6" />
+
+            {/* ═══ 02 行为模式分析 ═══ */}
+            {graphInsight && result.graphs && (() => {
+              const consistency = analyzeConsistency(
+                graphInsight.externalTop,
+                graphInsight.internalTop,
+                graphInsight.selfImageTop,
+                result.graphs!,
+              )
+              const shifts = extractSignificantShifts(result.graphs!)
+
+              return (
+                <>
+                  <SectionHeading number={nextSection()} title="行为模式分析" />
+
+                  {/* ── 三场景卡片 ── */}
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    {GRAPH_SCENARIOS.map((s) => {
+                      const g = result.graphs![s.key]
+                      const top = getTopDimension({ D: g.D, I: g.I, S: g.S, C: g.C })
+                      const cfg = DISC_TYPE_CONFIG[top]
+                      return (
+                        <div key={s.key} className="rounded-lg border bg-card p-3.5">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <s.Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
+                            <span className="text-sm font-semibold">{top} — {cfg.label}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {DIMENSION_NARRATIVE[top]}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* ── 行为一致性分析 ── */}
+                  <div className="rounded-lg border bg-secondary/40 p-4 mb-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-medium text-muted-foreground">行为一致性</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border bg-card">
+                        {consistency.label}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-foreground/80">{consistency.description}</p>
+                  </div>
+
+                  {/* ── 关键发现 ── */}
+                  {shifts.length > 0 && (
+                    <div className="mb-5">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">关键发现</p>
+                      <div className="space-y-2">
+                        {shifts.map((s) => (
+                          <div key={s.dim} className="flex items-start gap-2.5 text-sm leading-relaxed">
+                            <div
+                              className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                              style={{ backgroundColor: DISC_TYPE_CONFIG[s.dim].color }}
+                            />
+                            <span>{s.narrative}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── 适应压力指数 ── */}
+                  <div className="flex items-center gap-3 text-xs mb-5 px-1">
+                    <span className="text-muted-foreground">环境适应压力：</span>
+                    <span className={cn(getPressureColor(graphInsight.pressureIndex))}>
+                      {getPressureLabel(graphInsight.pressureIndex)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      — 分数越高，说明不同情境下行为调整幅度越大
+                    </span>
+                  </div>
+
+                  {/* ── 详细对比数据（可折叠） ── */}
+                  <Collapsible isOpen={detailDataOpen}>
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
+                        <span>维度</span>
+                        <span className="text-center">日常工作</span>
+                        <span className="text-center">压力情境</span>
+                        <span className="text-center">自我认知</span>
+                        <span className="text-right">偏移</span>
+                      </div>
+                      {DIMENSIONS.map((dim) => {
+                        const config = DISC_TYPE_CONFIG[dim]
+                        const ext = Math.round(result.graphs!.external[dim])
+                        const int_ = Math.round(result.graphs!.internal[dim])
+                        const self = Math.round(result.graphs!.selfImage[dim])
+                        const delta = ext - int_
                         return (
-                          <div key={s.key} className="rounded-lg border bg-card p-3.5">
-                            <div className="flex items-center gap-1.5 mb-2">
-                              <s.Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+                          <div key={dim} className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] items-center border-t px-4 py-2.5">
+                            <span className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
+                              <span className="text-sm font-medium">{dim}</span>
+                            </span>
+                            <div className="flex items-center gap-2 px-2">
+                              <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div className="h-full rounded-full opacity-40" style={{ width: `${ext}%`, backgroundColor: config.color }} />
+                              </div>
+                              <span className="text-xs tabular-nums w-8 text-right">{ext}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
-                              <span className="text-sm font-semibold">{top} — {cfg.label}</span>
+                            <div className="flex items-center gap-2 px-2">
+                              <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div className="h-full rounded-full opacity-40" style={{ width: `${int_}%`, backgroundColor: config.color }} />
+                              </div>
+                              <span className="text-xs tabular-nums w-8 text-right">{int_}</span>
                             </div>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              {DIMENSION_NARRATIVE[top]}
-                            </p>
+                            <div className="flex items-center gap-2 px-2">
+                              <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div className="h-full rounded-full opacity-40" style={{ width: `${self}%`, backgroundColor: config.color }} />
+                              </div>
+                              <span className="text-xs tabular-nums w-8 text-right">{self}</span>
+                            </div>
+                            <span className={cn(
+                              'text-xs tabular-nums text-right font-medium',
+                              Math.abs(delta) >= 20 ? 'text-foreground font-bold' : 'text-muted-foreground',
+                            )}>
+                              {delta > 0 ? '+' : ''}{delta}
+                            </span>
                           </div>
                         )
                       })}
                     </div>
+                  </Collapsible>
+                  <button
+                    onClick={() => setDetailDataOpen(!detailDataOpen)}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group mb-2 mt-2"
+                  >
+                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", detailDataOpen && "rotate-90")} />
+                    <span>{detailDataOpen ? '收起详细对比数据' : '查看详细对比数据'}</span>
+                  </button>
 
-                    {/* ── 行为一致性分析 ── */}
-                    <div className="rounded-lg border bg-secondary/40 p-4 mb-5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-muted-foreground">行为一致性</span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border bg-card">
-                          {consistency.label}
-                        </span>
-                      </div>
-                      <p className="text-sm leading-relaxed text-foreground/80">{consistency.description}</p>
-                    </div>
+                  <div className="border-b mt-6" />
+                </>
+              )
+            })()}
 
-                    {/* ── 关键发现 ── */}
-                    {shifts.length > 0 && (
-                      <div className="mb-5">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">关键发现</p>
-                        <div className="space-y-2">
-                          {shifts.map((s) => (
-                            <div key={s.dim} className="flex items-start gap-2.5 text-sm leading-relaxed">
-                              <div
-                                className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                                style={{ backgroundColor: DISC_TYPE_CONFIG[s.dim].color }}
-                              />
-                              <span>{s.narrative}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+            {/* ═══ 03 行为风格特征 ═══ */}
+            {primaryCode && primaryGuide && (
+              <>
+                <SectionHeading number={nextSection()} title="行为风格特征" aiEnhanced={hasAI} />
+
+                {/* 核心优势 */}
+                <div className="mb-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">核心优势</p>
+                  <div className="flex flex-wrap gap-2">
+                    {primaryGuide.strengths.map((item, idx) => (
+                      <Tag key={idx} color="blue" type="light">{item}</Tag>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border px-5 py-1">
+                  <GuideRow label="工作方式">{renderMarkedText(primaryGuide.workStyle)}</GuideRow>
+                  <GuideRow label="沟通风格">
+                    {renderMarkedText(primaryGuide.communication)}
+                    {secondaryCode && (
+                      <span className="text-muted-foreground block mt-1 text-xs">
+                        {renderMarkedText(DISC_SECONDARY_BLEND_HINT[secondaryCode])}
+                      </span>
                     )}
+                  </GuideRow>
+                </div>
 
-                    {/* ── 适应压力指数 ── */}
-                    <div className="flex items-center gap-3 text-xs mb-5 px-1">
-                      <span className="text-muted-foreground">环境适应压力：</span>
-                      <span className={cn(getPressureColor(graphInsight.pressureIndex))}>
-                        {getPressureLabel(graphInsight.pressureIndex)}
-                      </span>
-                      <span className="text-muted-foreground">
-                        — 分数越高，说明不同情境下行为调整幅度越大
-                      </span>
+                {/* 沟通要点：AI 版本 or 模板版本 */}
+                {(() => {
+                  const aiComm = hasAI ? aiAnalysis.communicationStrategy : undefined
+                  const templateComm = result.communicationAdvice
+                  const items = aiComm || templateComm
+                  if (!items || items.length === 0) return null
+                  return (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        沟通要点
+                        {aiComm && <>{' '}<AITag /></>}
+                      </p>
+                      <ul className="space-y-1.5">
+                        {items.map((item, i) => (
+                          <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['—'] before:absolute before:left-0 before:text-muted-foreground/40">
+                            {renderMarkedText(item)}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
+                  )
+                })()}
 
-                    {/* ── 详细对比数据（可折叠） ── */}
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group mb-2">
-                          <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-90" />
-                          <span>查看详细对比数据</span>
-                        </button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
-                            <span>维度</span>
-                            <span className="text-center">日常工作</span>
-                            <span className="text-center">压力情境</span>
-                            <span className="text-center">自我认知</span>
-                            <span className="text-right">偏移</span>
-                          </div>
-                          {DIMENSIONS.map((dim) => {
-                            const config = DISC_TYPE_CONFIG[dim]
-                            const ext = Math.round(result.graphs!.external[dim])
-                            const int_ = Math.round(result.graphs!.internal[dim])
-                            const self = Math.round(result.graphs!.selfImage[dim])
-                            const delta = ext - int_
-                            return (
-                              <div key={dim} className="grid grid-cols-[3.5rem_1fr_1fr_1fr_3.5rem] items-center border-t px-4 py-2.5">
-                                <span className="flex items-center gap-1.5">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
-                                  <span className="text-sm font-medium">{dim}</span>
-                                </span>
-                                <div className="flex items-center gap-2 px-2">
-                                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                                    <div className="h-full rounded-full opacity-40" style={{ width: `${ext}%`, backgroundColor: config.color }} />
-                                  </div>
-                                  <span className="text-xs tabular-nums w-8 text-right">{ext}</span>
-                                </div>
-                                <div className="flex items-center gap-2 px-2">
-                                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                                    <div className="h-full rounded-full opacity-40" style={{ width: `${int_}%`, backgroundColor: config.color }} />
-                                  </div>
-                                  <span className="text-xs tabular-nums w-8 text-right">{int_}</span>
-                                </div>
-                                <div className="flex items-center gap-2 px-2">
-                                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                                    <div className="h-full rounded-full opacity-40" style={{ width: `${self}%`, backgroundColor: config.color }} />
-                                  </div>
-                                  <span className="text-xs tabular-nums w-8 text-right">{self}</span>
-                                </div>
-                                <span className={cn(
-                                  'text-xs tabular-nums text-right font-medium',
-                                  Math.abs(delta) >= 20 ? 'text-foreground font-bold' : 'text-muted-foreground',
-                                )}>
-                                  {delta > 0 ? '+' : ''}{delta}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
+                <div className="border-b mt-6" />
+              </>
+            )}
 
-                    <Separator className="mt-6" />
-                  </>
-                )
-              })()}
-
-              {/* ═══ 03 行为风格特征 ═══ */}
-              {primaryCode && primaryGuide && (
+            {/* ═══ 04 风险与挑战 ═══ */}
+            {(() => {
+              const aiRisks = hasAI ? aiAnalysis.riskAnalysis : undefined
+              const hasRiskSignals = primaryGuide?.riskSignals && primaryGuide.riskSignals.length > 0
+              const hasChallenges = aiRisks || (result.potentialChallenges && result.potentialChallenges.length > 0)
+              if (!hasRiskSignals && !hasChallenges) return null
+              return (
                 <>
-                  <SectionHeading number={nextSection()} title="行为风格特征" aiEnhanced={hasAI} />
+                  <SectionHeading number={nextSection()} title="风险与挑战" aiEnhanced={!!aiRisks} />
 
-                  {/* 核心优势 */}
-                  <div className="mb-4">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">核心优势</p>
-                    <div className="flex flex-wrap gap-2">
-                      {primaryGuide.strengths.map((item, idx) => (
-                        <Badge key={idx} variant="secondary" className="font-normal">{item}</Badge>
-                      ))}
+                  {primaryGuide && primaryGuide.riskSignals.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">需要注意的行为倾向</p>
+                      <ul className="space-y-2">
+                        {primaryGuide.riskSignals.map((item, i) => (
+                          <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-muted-foreground before:font-bold">
+                            {renderMarkedText(item)}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="rounded-lg border px-5 py-1">
-                    <GuideRow label="工作方式">{renderMarkedText(primaryGuide.workStyle)}</GuideRow>
-                    <GuideRow label="沟通风格">
-                      {renderMarkedText(primaryGuide.communication)}
-                      {secondaryCode && (
-                        <span className="text-muted-foreground block mt-1 text-xs">
-                          {renderMarkedText(DISC_SECONDARY_BLEND_HINT[secondaryCode])}
-                        </span>
-                      )}
-                    </GuideRow>
-                  </div>
-
-                  {/* 沟通要点：AI 版本 or 模板版本 */}
                   {(() => {
-                    const aiComm = hasAI ? aiAnalysis.communicationStrategy : undefined
-                    const templateComm = result.communicationAdvice
-                    const items = aiComm || templateComm
-                    if (!items || items.length === 0) return null
+                    const challenges = aiRisks || result.potentialChallenges
+                    if (!challenges || challenges.length === 0) return null
                     return (
-                      <div className="mt-4 space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">
-                          沟通要点
-                          {aiComm && <>{' '}<AITag /></>}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                          {aiRisks ? '深度风险分析' : '潜在挑战'}
+                          {aiRisks && <>{' '}<AITag /></>}
                         </p>
-                        <ul className="space-y-1.5">
-                          {items.map((item, i) => (
-                            <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['—'] before:absolute before:left-0 before:text-muted-foreground/40">
+                        <ul className="space-y-2">
+                          {challenges.map((item, i) => (
+                            <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-muted-foreground/60 before:font-bold">
                               {renderMarkedText(item)}
                             </li>
                           ))}
@@ -863,227 +950,187 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
                     )
                   })()}
 
-                  <Separator className="mt-6" />
+                  <div className="border-b mt-6" />
                 </>
-              )}
+              )
+            })()}
 
-              {/* ═══ 04 风险与挑战 ═══ */}
-              {(() => {
-                const aiRisks = hasAI ? aiAnalysis.riskAnalysis : undefined
-                const hasRiskSignals = primaryGuide?.riskSignals && primaryGuide.riskSignals.length > 0
-                const hasChallenges = aiRisks || (result.potentialChallenges && result.potentialChallenges.length > 0)
-                if (!hasRiskSignals && !hasChallenges) return null
-                return (
-                  <>
-                    <SectionHeading number={nextSection()} title="风险与挑战" aiEnhanced={!!aiRisks} />
-
-                    {primaryGuide && primaryGuide.riskSignals.length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">需要注意的行为倾向</p>
-                        <ul className="space-y-2">
-                          {primaryGuide.riskSignals.map((item, i) => (
-                            <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-muted-foreground before:font-bold">
-                              {renderMarkedText(item)}
-                            </li>
-                          ))}
-                        </ul>
+            {/* ═══ 个人发展建议 ═══ */}
+            {(() => {
+              const aiDev = hasAI ? aiAnalysis.developmentPlan : undefined
+              const templateDev = primaryGuide?.developmentAdvice
+              const items = aiDev || templateDev
+              if (!items || items.length === 0) return null
+              return (
+                <>
+                  <SectionHeading number={nextSection()} title="个人发展建议" aiEnhanced={!!aiDev} />
+                  <div className="space-y-3">
+                    {items.map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-3">
+                        <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm leading-relaxed pt-0.5">{renderMarkedText(item)}</p>
                       </div>
-                    )}
+                    ))}
+                  </div>
 
-                    {(() => {
-                      const challenges = aiRisks || result.potentialChallenges
-                      if (!challenges || challenges.length === 0) return null
-                      return (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-2">
-                            {aiRisks ? '深度风险分析' : '潜在挑战'}
-                            {aiRisks && <>{' '}<AITag /></>}
-                          </p>
-                          <ul className="space-y-2">
-                            {challenges.map((item, i) => (
-                              <li key={i} className="text-sm leading-relaxed pl-4 relative before:content-['·'] before:absolute before:left-1 before:text-muted-foreground/60 before:font-bold">
-                                {renderMarkedText(item)}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )
-                    })()}
+                  <div className="border-b mt-6" />
+                </>
+              )
+            })()}
 
-                    <Separator className="mt-6" />
-                  </>
-                )
-              })()}
+            {/* ═══ 岗位适配度（AI 生成） ═══ */}
+            <>
+              <SectionHeading number={nextSection()} title="岗位适配度" aiEnhanced={hasAI} />
+              <DiscJobFitCard
+                aiJobFitAnalysis={hasAI ? aiAnalysis?.jobFitAnalysis : undefined}
+                hasAI={hasAI}
+                jobFit={result.jobFit}
+              />
+              <div className="border-b mt-6" />
+            </>
 
-              {/* ═══ 个人发展建议 ═══ */}
-              {(() => {
-                const aiDev = hasAI ? aiAnalysis.developmentPlan : undefined
-                const templateDev = primaryGuide?.developmentAdvice
-                const items = aiDev || templateDev
-                if (!items || items.length === 0) return null
-                return (
-                  <>
-                    <SectionHeading number={nextSection()} title="个人发展建议" aiEnhanced={!!aiDev} />
-                    <div className="space-y-3">
-                      {items.map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-3">
-                          <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground mt-0.5">
-                            {idx + 1}
-                          </span>
-                          <p className="text-sm leading-relaxed pt-0.5">{renderMarkedText(item)}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <Separator className="mt-6" />
-                  </>
-                )
-              })()}
-
-              {/* ═══ 岗位适配度（AI 生成） ═══ */}
+            {/* ═══ 团队协作建议（仅 AI） ═══ */}
+            {hasAI && aiAnalysis.teamCollaboration && aiAnalysis.teamCollaboration !== '暂不可用' && (
               <>
-                <SectionHeading number={nextSection()} title="岗位适配度" aiEnhanced={hasAI} />
-                <DiscJobFitCard
-                  aiJobFitAnalysis={hasAI ? aiAnalysis?.jobFitAnalysis : undefined}
-                  hasAI={hasAI}
-                  jobFit={result.jobFit}
-                />
-                <Separator className="mt-6" />
+                <SectionHeading number={nextSection()} title="团队协作建议" aiEnhanced />
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm leading-relaxed text-foreground">
+                    {renderMarkedText(aiAnalysis.teamCollaboration)}
+                  </p>
+                </div>
+                <div className="border-b mt-6" />
               </>
+            )}
 
-              {/* ═══ 团队协作建议（仅 AI） ═══ */}
-              {hasAI && aiAnalysis.teamCollaboration && aiAnalysis.teamCollaboration !== '暂不可用' && (
-                <>
-                  <SectionHeading number={nextSection()} title="团队协作建议" aiEnhanced />
-                  <div className="rounded-lg border p-4">
-                    <p className="text-sm leading-relaxed text-foreground">
-                      {renderMarkedText(aiAnalysis.teamCollaboration)}
-                    </p>
-                  </div>
-                  <Separator className="mt-6" />
-                </>
-              )}
-
-              {/* ═══ K12 行业适配分析（仅 AI） ═══ */}
-              {hasAI && aiAnalysis.industryInsights && aiAnalysis.industryInsights !== '暂不可用' && (
-                <>
-                  <SectionHeading number={nextSection()} title="K12 行业适配分析" aiEnhanced />
-                  <div className="rounded-lg border p-4">
-                    <p className="text-sm leading-relaxed text-foreground">
-                      {renderMarkedText(aiAnalysis.industryInsights)}
-                    </p>
-                  </div>
-                  <Separator className="mt-6" />
-                </>
-              )}
-
-              {/* ═══ 数据附录 ═══ */}
-              <SectionHeading number={nextSection()} title="数据附录" />
-
-              {/* 原始计分 */}
-              {result.rawData && (
-                <div className="mb-5">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">原始计分明细</p>
-                  <div className="rounded-lg border overflow-hidden text-sm">
-                    <div className="grid grid-cols-5 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
-                      <span>维度</span>
-                      <span className="text-center">Most</span>
-                      <span className="text-center">Least</span>
-                      <span className="text-center">Raw</span>
-                      <span className="text-center">Percentile</span>
-                    </div>
-                    {DIMENSIONS.map((dim) => {
-                      const config = DISC_TYPE_CONFIG[dim]
-                      return (
-                        <div key={dim} className="grid grid-cols-5 border-t px-4 py-2">
-                          <span className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
-                            <span className="font-medium">{dim}</span>
-                            <span className="text-xs text-muted-foreground">{config.label}</span>
-                          </span>
-                          <span className="text-center tabular-nums">{result.rawData?.mostCounts?.[dim] ?? '—'}</span>
-                          <span className="text-center tabular-nums">{result.rawData?.leastCounts?.[dim] ?? '—'}</span>
-                          <span className="text-center tabular-nums">{result.rawData?.rawScores?.[dim] ?? '—'}</span>
-                          <span className="text-center tabular-nums font-medium">{result.scores?.[dim] ?? '—'}%</span>
-                        </div>
-                      )
-                    })}
-                  </div>
+            {/* ═══ K12 行业适配分析（仅 AI） ═══ */}
+            {hasAI && aiAnalysis.industryInsights && aiAnalysis.industryInsights !== '暂不可用' && (
+              <>
+                <SectionHeading number={nextSection()} title="K12 行业适配分析" aiEnhanced />
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm leading-relaxed text-foreground">
+                    {renderMarkedText(aiAnalysis.industryInsights)}
+                  </p>
                 </div>
-              )}
+                <div className="border-b mt-6" />
+              </>
+            )}
 
-              {/* 置信度详情 */}
-              {resolvedConfidence && (
-                <div className="mb-5">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">判定置信度</p>
-                  <div className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center gap-3 text-sm">
-                      <Badge variant={
-                        resolvedConfidence.level === 'high' ? 'default'
-                          : resolvedConfidence.level === 'medium' ? 'secondary'
-                            : 'outline'
-                      }>
-                        {CONFIDENCE_LABEL[resolvedConfidence.level] || resolvedConfidence.level}
-                      </Badge>
-                      <span className="tabular-nums">
-                        置信分 {resolvedConfidence.score}/100
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        主次分差 {resolvedConfidence.gap}
-                      </span>
-                    </div>
-                    <Progress value={resolvedConfidence.score} className="h-1.5" />
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {renderMarkedText(resolvedConfidence.reason)}
-                    </p>
-                  </div>
-                </div>
-              )}
+            {/* ═══ 数据附录 ═══ */}
+            <SectionHeading number={nextSection()} title="数据附录" />
 
-              {/* 复合倾向 */}
-              {resolvedMixedType && (
-                <div className="mb-5">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">复合倾向分析</p>
-                  <div className="rounded-lg border p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Badge variant="outline">{resolvedMixedType.code}</Badge>
-                      <Badge variant="secondary">{resolvedMixedType.tendencyLabel}</Badge>
-                      <span className="text-xs text-muted-foreground">分差 {resolvedMixedType.gap}</span>
-                    </div>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{renderMarkedText(resolvedMixedType.description)}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* 测试元数据 */}
+            {/* 原始计分 */}
+            {result.rawData && (
               <div className="mb-5">
-                <p className="text-xs font-medium text-muted-foreground mb-2">测试信息</p>
-                <div className="grid grid-cols-[7rem_1fr] gap-y-2 gap-x-4 text-sm rounded-lg border p-4">
-                  <span className="text-muted-foreground">测试记录ID</span>
-                  <span className="font-mono text-xs break-all">{detail.test_record_id}</span>
-                  <span className="text-muted-foreground">计算方法</span>
-                  <span className="font-mono text-xs">{result.calculationMethod || '—'}</span>
-                  <span className="text-muted-foreground">提交时间</span>
-                  <span>{formatTime(detail.submitted_at)}</span>
-                  <span className="text-muted-foreground">测评生成时间</span>
-                  <span>{result.testDate ? formatTime(result.testDate) : '—'}</span>
-                  {hasAI && aiAnalysis.analyzedAt && (
-                    <>
-                      <span className="text-muted-foreground">AI 分析时间</span>
-                      <span>{formatTime(aiAnalysis.analyzedAt)}</span>
-                    </>
-                  )}
+                <p className="text-xs font-medium text-muted-foreground mb-2">原始计分明细</p>
+                <div className="rounded-lg border overflow-hidden text-sm">
+                  <div className="grid grid-cols-5 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
+                    <span>维度</span>
+                    <span className="text-center">Most</span>
+                    <span className="text-center">Least</span>
+                    <span className="text-center">Raw</span>
+                    <span className="text-center">Percentile</span>
+                  </div>
+                  {DIMENSIONS.map((dim) => {
+                    const config = DISC_TYPE_CONFIG[dim]
+                    return (
+                      <div key={dim} className="grid grid-cols-5 border-t px-4 py-2">
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
+                          <span className="font-medium">{dim}</span>
+                          <span className="text-xs text-muted-foreground">{config.label}</span>
+                        </span>
+                        <span className="text-center tabular-nums">{result.rawData?.mostCounts?.[dim] ?? '—'}</span>
+                        <span className="text-center tabular-nums">{result.rawData?.leastCounts?.[dim] ?? '—'}</span>
+                        <span className="text-center tabular-nums">{result.rawData?.rawScores?.[dim] ?? '—'}</span>
+                        <span className="text-center tabular-nums font-medium">{result.scores?.[dim] ?? '—'}%</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
+            )}
 
+            {/* 置信度详情 */}
+            {resolvedConfidence && (
+              <div className="mb-5">
+                <p className="text-xs font-medium text-muted-foreground mb-2">判定置信度</p>
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Tag
+                      color={
+                        resolvedConfidence.level === 'high' ? 'green'
+                          : resolvedConfidence.level === 'medium' ? 'blue'
+                            : 'grey'
+                      }
+                      type={resolvedConfidence.level === 'low' ? 'ghost' : 'light'}
+                    >
+                      {CONFIDENCE_LABEL[resolvedConfidence.level] || resolvedConfidence.level}
+                    </Tag>
+                    <span className="tabular-nums">
+                      置信分 {resolvedConfidence.score}/100
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      主次分差 {resolvedConfidence.gap}
+                    </span>
+                  </div>
+                  <SemiProgress
+                    percent={resolvedConfidence.score}
+                    showInfo={false}
+                    style={{ height: 6 }}
+                    aria-label="置信度"
+                  />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {renderMarkedText(resolvedConfidence.reason)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 复合倾向 */}
+            {resolvedMixedType && (
+              <div className="mb-5">
+                <p className="text-xs font-medium text-muted-foreground mb-2">复合倾向分析</p>
+                <div className="rounded-lg border p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Tag type="ghost">{resolvedMixedType.code}</Tag>
+                    <Tag color="blue" type="light">{resolvedMixedType.tendencyLabel}</Tag>
+                    <span className="text-xs text-muted-foreground">分差 {resolvedMixedType.gap}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{renderMarkedText(resolvedMixedType.description)}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 测试元数据 */}
+            <div className="mb-5">
+              <p className="text-xs font-medium text-muted-foreground mb-2">测试信息</p>
+              <div className="grid grid-cols-[7rem_1fr] gap-y-2 gap-x-4 text-sm rounded-lg border p-4">
+                <span className="text-muted-foreground">测试记录ID</span>
+                <span className="font-mono text-xs break-all">{detail.test_record_id}</span>
+                <span className="text-muted-foreground">计算方法</span>
+                <span className="font-mono text-xs">{result.calculationMethod || '—'}</span>
+                <span className="text-muted-foreground">提交时间</span>
+                <span>{formatTime(detail.submitted_at)}</span>
+                <span className="text-muted-foreground">测评生成时间</span>
+                <span>{result.testDate ? formatTime(result.testDate) : '—'}</span>
+                {hasAI && aiAnalysis.analyzedAt && (
+                  <>
+                    <span className="text-muted-foreground">AI 分析时间</span>
+                    <span>{formatTime(aiAnalysis.analyzedAt)}</span>
+                  </>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-              无数据
-            </div>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
+            无数据
+          </div>
+        )}
+      </div>
+    </SideSheet>
   )
 }

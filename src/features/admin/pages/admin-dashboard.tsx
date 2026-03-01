@@ -1,60 +1,50 @@
 /**
  * Admin Dashboard 页面
- * 管理后台首页 - "Warm Editorial" 设计
- * 温暖编辑风格：品牌暖米色主题 + Anthropic 色系 + Bento Grid 布局
+ * 管理后台首页 - Semi Design 风格
  */
 
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import {
-  MapPin,
-  Building2,
-  Network,
-  Briefcase,
-  Users,
-  Plus,
-  GitBranch,
-  ArrowUpRight,
-  TrendingUp,
-  LayoutDashboard,
-} from 'lucide-react'
+  IconUser,
+  IconMapPin,
+  IconHome,
+  IconTreeTriangleDown,
+  IconBriefcase,
+  IconPlus,
+  IconBranch,
+  IconArrowUp,
+  IconExternalOpen,
+  IconApps,
+} from '@douyinfe/semi-icons'
 
 import { Main } from '@/components/layout/main'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { Button, Card, Progress, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import { useAuthStore } from '@/stores/auth-store'
 import { adminApi } from '../api'
 import type { AdminStats } from '../types'
 
-// 品牌色常量
-const BRAND = {
-  terracotta: '#d97757',
-  green: '#788c5d',
-  blue: '#6a9bcc',
-  warmGray: '#e6e4dc',
-  midGray: '#b0aea5',
-} as const
+const { Title, Text } = Typography
 
 // 组织架构统计配置
 const orgStatConfigs = [
-  { key: 'regions', label: '大区', icon: MapPin, color: BRAND.terracotta, path: '/admin/regions' },
-  { key: 'districts', label: '地区', icon: MapPin, color: BRAND.green, path: '/admin/districts' },
-  { key: 'areas', label: '区域', icon: MapPin, color: BRAND.blue, path: '/admin/areas' },
-  { key: 'campuses', label: '校区', icon: Building2, color: BRAND.terracotta, path: '/admin/campuses' },
-  { key: 'departments', label: '部门', icon: Network, color: BRAND.green, path: '/admin/departments' },
-  { key: 'positions', label: '职位', icon: Briefcase, color: BRAND.blue, path: '/admin/positions' },
+  { key: 'regions', label: '大区', icon: IconMapPin, color: 'var(--semi-color-primary)', path: '/admin/regions' },
+  { key: 'districts', label: '地区', icon: IconMapPin, color: 'var(--semi-color-success)', path: '/admin/districts' },
+  { key: 'areas', label: '区域', icon: IconMapPin, color: 'var(--semi-color-tertiary)', path: '/admin/areas' },
+  { key: 'campuses', label: '校区', icon: IconHome, color: 'var(--semi-color-primary)', path: '/admin/campuses' },
+  { key: 'departments', label: '部门', icon: IconTreeTriangleDown, color: 'var(--semi-color-success)', path: '/admin/departments' },
+  { key: 'positions', label: '职位', icon: IconBriefcase, color: 'var(--semi-color-tertiary)', path: '/admin/positions' },
 ] as const
 
 // 快捷操作配置
 const quickActions = [
-  { key: 'create-region', title: '创建大区', desc: '新增管理大区', icon: MapPin, path: '/admin/regions', primary: false },
-  { key: 'create-campus', title: '创建校区', desc: '新增教学校区', icon: Building2, path: '/admin/campuses', primary: false },
-  { key: 'create-employee', title: '创建员工', desc: '添加新员工', icon: Plus, path: '/admin/employees', primary: true },
-  { key: 'view-tree', title: '组织架构', desc: '查看架构全景', icon: GitBranch, path: '/admin/organization-tree', primary: true },
-  { key: 'manage-departments', title: '部门管理', desc: '管理部门设置', icon: Network, path: '/admin/departments', primary: false },
-  { key: 'manage-positions', title: '职位管理', desc: '配置职位体系', icon: Briefcase, path: '/admin/positions', primary: false },
+  { key: 'create-region', title: '创建大区', desc: '新增管理大区', icon: IconMapPin, path: '/admin/regions', primary: false },
+  { key: 'create-campus', title: '创建校区', desc: '新增教学校区', icon: IconHome, path: '/admin/campuses', primary: false },
+  { key: 'create-employee', title: '创建员工', desc: '添加新员工', icon: IconPlus, path: '/admin/employees', primary: true },
+  { key: 'view-tree', title: '组织架构', desc: '查看架构全景', icon: IconBranch, path: '/admin/organization-tree', primary: true },
+  { key: 'manage-departments', title: '部门管理', desc: '管理部门设置', icon: IconTreeTriangleDown, path: '/admin/departments', primary: false },
+  { key: 'manage-positions', title: '职位管理', desc: '配置职位体系', icon: IconBriefcase, path: '/admin/positions', primary: false },
 ]
 
 // 动画计数 Hook
@@ -89,49 +79,95 @@ function EmployeeHeroCard({
   const animatedTotal = useAnimatedNumber(total, 400)
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-7 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-600">
+    <Card
+      bordered={false}
+      shadows="hover"
+      style={{ height: '100%', position: 'relative', overflow: 'hidden', borderRadius: 16 }}
+      bodyStyle={{ padding: 28, display: 'flex', flexDirection: 'column', height: '100%' }}
+    >
       {/* 右上装饰弧 */}
       <div
-        className="absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-[0.07]"
-        style={{ background: BRAND.terracotta }}
+        style={{
+          position: 'absolute',
+          right: -48,
+          top: -48,
+          width: 160,
+          height: 160,
+          borderRadius: '50%',
+          opacity: 0.07,
+          background: 'var(--semi-color-primary)',
+        }}
       />
       <div
-        className="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-[0.05]"
-        style={{ background: BRAND.terracotta }}
+        style={{
+          position: 'absolute',
+          right: -16,
+          top: -16,
+          width: 96,
+          height: 96,
+          borderRadius: '50%',
+          opacity: 0.05,
+          background: 'var(--semi-color-primary)',
+        }}
       />
 
-      <div className="relative flex flex-1 flex-col">
-        <div className="mb-6 flex items-center gap-2.5">
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
           <div
-            className="flex h-9 w-9 items-center justify-center rounded-lg"
-            style={{ backgroundColor: `${BRAND.terracotta}14` }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              background: 'var(--semi-color-primary-light-default)',
+            }}
           >
-            <Users className="h-4.5 w-4.5" style={{ color: BRAND.terracotta }} />
+            <IconUser style={{ color: 'var(--semi-color-primary)', fontSize: 18 }} />
           </div>
-          <span className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground">
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: 500,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase' as const,
+            }}
+            type="tertiary"
+          >
             员工总数
-          </span>
+          </Text>
         </div>
 
         {isLoading ? (
-          <Skeleton className="mb-4 h-24 w-36" />
+          <Skeleton.Paragraph rows={1} style={{ width: 144, height: 96, marginBottom: 16 }} />
         ) : (
-          <div className="mb-4 font-poppins text-7xl font-semibold tracking-tight text-foreground lg:text-8xl">
+          <div
+            style={{
+              fontSize: 72,
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+              color: 'var(--semi-color-text-0)',
+              marginBottom: 16,
+              fontFamily: 'Poppins, sans-serif',
+              lineHeight: 1,
+            }}
+          >
             {animatedTotal}
           </div>
         )}
 
-        <div className="mt-auto">
-          <div className="h-px w-16 bg-border" />
-          <div className="mt-4 flex items-center gap-2">
-            <TrendingUp className="h-3.5 w-3.5" style={{ color: BRAND.green }} />
-            <span className="text-sm" style={{ color: BRAND.green }}>
+        <div style={{ marginTop: 'auto' }}>
+          <div style={{ height: 1, width: 64, background: 'var(--semi-color-border)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+            <IconArrowUp style={{ color: 'var(--semi-color-success)', fontSize: 14 }} />
+            <Text style={{ fontSize: 14, color: 'var(--semi-color-success)' }}>
               组织规模持续增长
-            </span>
+            </Text>
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -149,92 +185,99 @@ function EmployeeStatusCard({
   activeRate: number
   isLoading: boolean
 }) {
-  const [barWidth, setBarWidth] = useState(0)
   const animatedRate = useAnimatedNumber(activeRate, 500)
 
-  useEffect(() => {
-    const timer = setTimeout(() => setBarWidth(activeRate), 500)
-    return () => clearTimeout(timer)
-  }, [activeRate])
+  const statusItems = [
+    { label: '在职', value: active, color: 'var(--semi-color-success)' },
+    { label: '离职', value: inactive, color: 'var(--semi-color-primary)' },
+    { label: '管理员', value: superusers, color: 'var(--semi-color-tertiary)' },
+  ]
 
   return (
-    <div
-      className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-7 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-600"
-      style={{ animationDelay: '100ms' }}
+    <Card
+      bordered={false}
+      shadows="hover"
+      style={{ height: '100%', borderRadius: 16 }}
+      bodyStyle={{ padding: 28, display: 'flex', flexDirection: 'column', height: '100%' }}
     >
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-medium text-foreground">人员状态</h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">实时追踪员工在职情况</p>
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <Title heading={6} style={{ margin: 0 }}>人员状态</Title>
+        <Text type="tertiary" size="small">实时追踪员工在职情况</Text>
       </div>
 
       {/* 在职率进度条 */}
-      <div className="mb-7">
-        <div className="mb-2 flex items-baseline gap-1.5">
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
           {isLoading ? (
-            <Skeleton className="h-10 w-20" />
+            <Skeleton.Paragraph rows={1} style={{ width: 80, height: 40 }} />
           ) : (
             <>
-              <span className="font-poppins text-4xl font-semibold tracking-tight text-foreground">
+              <span
+                style={{
+                  fontSize: 36,
+                  fontWeight: 600,
+                  letterSpacing: '-0.02em',
+                  color: 'var(--semi-color-text-0)',
+                  fontFamily: 'Poppins, sans-serif',
+                }}
+              >
                 {animatedRate}
               </span>
-              <span className="font-poppins text-lg font-medium text-muted-foreground">%</span>
+              <Text type="tertiary" style={{ fontSize: 18, fontFamily: 'Poppins, sans-serif' }}>%</Text>
             </>
           )}
-          <span className="ml-2 text-sm text-muted-foreground">在职率</span>
+          <Text type="tertiary" size="small" style={{ marginLeft: 8 }}>在职率</Text>
         </div>
 
-        <div className="h-3 overflow-hidden rounded-full" style={{ backgroundColor: BRAND.warmGray }}>
-          <div
-            className="h-full rounded-full transition-all duration-[1.2s] ease-[cubic-bezier(0.4,0,0.2,1)]"
-            style={{
-              width: `${barWidth}%`,
-              backgroundColor: BRAND.green,
-            }}
-          />
-        </div>
+        <Progress
+          percent={activeRate}
+          stroke="var(--semi-color-success)"
+          size="large"
+          showInfo={false}
+        />
       </div>
 
       {/* 三格数据 */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-border bg-secondary/40 p-3.5">
-          <div className="mb-1.5 flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND.green }} />
-            <span className="text-xs text-muted-foreground">在职</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {statusItems.map((item) => (
+          <div
+            key={item.label}
+            style={{
+              borderRadius: 12,
+              border: '1px solid var(--semi-color-border)',
+              background: 'var(--semi-color-fill-0)',
+              padding: 14,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: item.color,
+                }}
+              />
+              <Text type="tertiary" size="small">{item.label}</Text>
+            </div>
+            {isLoading ? (
+              <Skeleton.Paragraph rows={1} style={{ width: 40, height: 32 }} />
+            ) : (
+              <span
+                style={{
+                  fontSize: 24,
+                  fontWeight: 600,
+                  color: 'var(--semi-color-text-0)',
+                  fontFamily: 'Poppins, sans-serif',
+                }}
+              >
+                {item.value}
+              </span>
+            )}
           </div>
-          {isLoading ? (
-            <Skeleton className="h-8 w-10" />
-          ) : (
-            <span className="font-poppins text-2xl font-semibold text-foreground">{active}</span>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-border bg-secondary/40 p-3.5">
-          <div className="mb-1.5 flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND.terracotta }} />
-            <span className="text-xs text-muted-foreground">离职</span>
-          </div>
-          {isLoading ? (
-            <Skeleton className="h-8 w-10" />
-          ) : (
-            <span className="font-poppins text-2xl font-semibold text-foreground">{inactive}</span>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-border bg-secondary/40 p-3.5">
-          <div className="mb-1.5 flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND.blue }} />
-            <span className="text-xs text-muted-foreground">管理员</span>
-          </div>
-          {isLoading ? (
-            <Skeleton className="h-8 w-10" />
-          ) : (
-            <span className="font-poppins text-2xl font-semibold text-foreground">{superusers}</span>
-          )}
-        </div>
+        ))}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -244,7 +287,6 @@ function OrgStatCard({
   value,
   icon: Icon,
   color,
-  index,
   isLoading,
   onClick,
 }: {
@@ -252,40 +294,54 @@ function OrgStatCard({
   value: number
   icon: React.ElementType
   color: string
-  index: number
   isLoading: boolean
   onClick: () => void
 }) {
   return (
-    <div
-      onClick={onClick}
-      className="group relative cursor-pointer rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500"
+    <Card
+      shadows="hover"
       style={{
-        animationDelay: `${200 + index * 60}ms`,
-        animationFillMode: 'backwards',
-        borderTopColor: `${color}60`,
-        borderTopWidth: '2px',
+        borderRadius: 12,
+        cursor: 'pointer',
+        borderTop: `2px solid ${color}`,
       }}
+      bodyStyle={{ padding: 20 }}
+      onClick={onClick}
     >
-      <div className="mb-3.5 flex items-center justify-between">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div
-          className="flex h-9 w-9 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${color}14` }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: 'var(--semi-color-fill-0)',
+          }}
         >
-          <Icon className="h-4 w-4" style={{ color }} />
+          <Icon style={{ color, fontSize: 16 }} />
         </div>
-        <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/40 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
+        <IconExternalOpen style={{ fontSize: 14, color: 'var(--semi-color-text-3)' }} />
       </div>
 
       {isLoading ? (
-        <Skeleton className="mb-1 h-10 w-14" />
+        <Skeleton.Paragraph rows={1} style={{ width: 56, height: 40, marginBottom: 4 }} />
       ) : (
-        <div className="font-poppins text-4xl font-semibold tracking-tight text-foreground">
+        <div
+          style={{
+            fontSize: 36,
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
+            color: 'var(--semi-color-text-0)',
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
           {value}
         </div>
       )}
-      <div className="mt-1 text-sm text-muted-foreground">{label}</div>
-    </div>
+      <Text type="tertiary" size="small" style={{ marginTop: 4 }}>{label}</Text>
+    </Card>
   )
 }
 
@@ -296,37 +352,49 @@ function QuickActionCard({
   icon: Icon,
   primary,
   onClick,
-  index,
 }: {
   title: string
   desc: string
   icon: React.ElementType
   primary: boolean
   onClick: () => void
-  index: number
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'group flex w-full items-center gap-4 rounded-xl border bg-card p-4 text-left shadow-sm transition-all duration-200 hover:bg-secondary/60 hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-400',
-        primary ? 'border-l-2' : 'border-border',
-      )}
+    <Card
+      shadows="hover"
       style={{
-        animationDelay: `${400 + index * 50}ms`,
-        animationFillMode: 'backwards',
-        ...(primary ? { borderLeftColor: index === 2 ? BRAND.terracotta : BRAND.green } : {}),
+        borderRadius: 12,
+        cursor: 'pointer',
+        ...(primary ? { borderLeft: '2px solid var(--semi-color-primary)' } : {}),
       }}
+      bodyStyle={{
+        padding: 16,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+      }}
+      onClick={onClick}
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
-        <Icon className="h-4 w-4 text-foreground/60 transition-colors group-hover:text-foreground" />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          background: 'var(--semi-color-fill-0)',
+          flexShrink: 0,
+        }}
+      >
+        <Icon style={{ fontSize: 16, color: 'var(--semi-color-text-2)' }} />
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-foreground">{title}</div>
-        <div className="text-xs text-muted-foreground">{desc}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Text strong style={{ fontSize: 14 }}>{title}</Text>
+        <Text type="tertiary" size="small" style={{ display: 'block' }}>{desc}</Text>
       </div>
-      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
-    </button>
+      <IconExternalOpen style={{ fontSize: 16, color: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+    </Card>
   )
 }
 
@@ -362,64 +430,68 @@ export function AdminDashboardPage() {
 
   return (
     <Main>
-      <div className="space-y-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
         {/* Header */}
-        <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between animate-in fade-in duration-500">
+        <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
           <div>
-            <div className="mb-2 flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4 text-primary/60" />
-              <span className="text-xs font-medium tracking-[0.15em] uppercase text-primary">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <IconApps style={{ fontSize: 16, color: 'var(--semi-color-primary)', opacity: 0.6 }} />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase' as const,
+                  color: 'var(--semi-color-primary)',
+                }}
+              >
                 系统概览
-              </span>
+              </Text>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground lg:text-4xl">
+            <Title heading={2} style={{ margin: 0 }}>
               {getGreeting()}，
-              <span className="text-primary">{user?.name || '管理员'}</span>
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
+              <span style={{ color: 'var(--semi-color-primary)' }}>{user?.name || '管理员'}</span>
+            </Title>
+            <Text type="tertiary" size="small" style={{ marginTop: 6, display: 'block' }}>
               组织架构与人员管理一览
-            </p>
+            </Text>
           </div>
 
-          <div className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: '200ms' }}>
-            <Button
-              onClick={() => navigate({ to: '/admin/employees' })}
-              className="rounded-full px-6"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              创建员工
-            </Button>
-          </div>
+          <Button
+            theme="solid"
+            type="primary"
+            icon={<IconPlus />}
+            onClick={() => navigate({ to: '/admin/employees' })}
+            style={{ borderRadius: 999, paddingLeft: 24, paddingRight: 24 }}
+          >
+            创建员工
+          </Button>
         </header>
 
-        {/* Row A: 员工核心数据 - Bento Grid */}
-        <section className="grid gap-5 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <EmployeeHeroCard
-              total={employeeStats?.total || 0}
-              isLoading={isLoading}
-            />
-          </div>
-          <div className="lg:col-span-7">
-            <EmployeeStatusCard
-              active={employeeStats?.active || 0}
-              inactive={employeeStats?.inactive || 0}
-              superusers={employeeStats?.superusers || 0}
-              activeRate={employeeStats?.activeRate || 0}
-              isLoading={isLoading}
-            />
-          </div>
+        {/* Row A: 员工核心数据 */}
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
+          <EmployeeHeroCard
+            total={employeeStats?.total || 0}
+            isLoading={isLoading}
+          />
+          <EmployeeStatusCard
+            active={employeeStats?.active || 0}
+            inactive={employeeStats?.inactive || 0}
+            superusers={employeeStats?.superusers || 0}
+            activeRate={employeeStats?.activeRate || 0}
+            isLoading={isLoading}
+          />
         </section>
 
         {/* Row B: 组织架构统计 */}
         <section>
-          <div className="mb-5 flex items-center gap-3">
-            <h2 className="text-lg font-medium text-foreground">组织架构</h2>
-            <div className="h-px flex-1 bg-border" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <Title heading={5} style={{ margin: 0 }}>组织架构</Title>
+            <div style={{ height: 1, flex: 1, background: 'var(--semi-color-border)' }} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {orgStatConfigs.map((config, index) => {
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
+            {orgStatConfigs.map((config) => {
               const value = stats ? (stats as Record<string, number>)[config.key] : 0
               return (
                 <OrgStatCard
@@ -428,7 +500,6 @@ export function AdminDashboardPage() {
                   value={value}
                   icon={config.icon}
                   color={config.color}
-                  index={index}
                   isLoading={isLoading}
                   onClick={() => navigate({ to: config.path })}
                 />
@@ -439,13 +510,13 @@ export function AdminDashboardPage() {
 
         {/* Row C: 快捷操作 */}
         <section>
-          <div className="mb-5 flex items-center gap-3">
-            <h2 className="text-lg font-medium text-foreground">快捷操作</h2>
-            <div className="h-px flex-1 bg-border" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <Title heading={5} style={{ margin: 0 }}>快捷操作</Title>
+            <div style={{ height: 1, flex: 1, background: 'var(--semi-color-border)' }} />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {quickActions.map((action, index) => (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+            {quickActions.map((action) => (
               <QuickActionCard
                 key={action.key}
                 title={action.title}
@@ -453,7 +524,6 @@ export function AdminDashboardPage() {
                 icon={action.icon}
                 primary={action.primary}
                 onClick={() => navigate({ to: action.path })}
-                index={index}
               />
             ))}
           </div>

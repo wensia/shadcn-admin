@@ -1,22 +1,15 @@
 /**
  * DateTimePicker 日期时间选择器组件
+ * 基于 Semi DatePicker type="dateTime" 实现
  * 支持日期和时间选择，以及快捷时间按钮
  */
 
 import * as React from 'react'
 import { format, addDays, nextMonday, setHours, setMinutes } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Calendar as CalendarIcon, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { TimePickerWheel } from '@/components/ui/time-picker-wheel'
+import { X } from 'lucide-react'
+import { DatePicker as SemiDatePicker, Button } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
 
 interface DateTimePickerProps {
   /** 选中的日期时间（ISO 格式字符串） */
@@ -44,9 +37,6 @@ export function DateTimePicker({
   className,
   showQuickButtons = true,
 }: DateTimePickerProps) {
-  const s = useStyleClasses()
-  const [open, setOpen] = React.useState(false)
-
   // 解析 ISO 字符串为 Date 对象
   const parseValue = (val: string | undefined): Date | undefined => {
     if (!val) return undefined
@@ -55,37 +45,6 @@ export function DateTimePicker({
   }
 
   const selectedDate = parseValue(value)
-  const selectedHour = selectedDate?.getHours() ?? 10
-  const selectedMinute = selectedDate?.getMinutes() ?? 0
-
-  // 处理日期选择
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) {
-      onChange(undefined)
-      return
-    }
-    // 保持当前时间，只更新日期
-    const newDate = setMinutes(setHours(date, selectedHour), selectedMinute)
-    onChange(newDate.toISOString())
-  }
-
-  // 处理时间选择（使用滚轮选择器）
-  const handleTimeChange = (timeStr: string) => {
-    const [hours, minutes] = timeStr.split(':').map(Number)
-    if (isNaN(hours) || isNaN(minutes)) return
-
-    if (!selectedDate) {
-      // 如果没有选择日期，默认使用今天
-      const today = setMinutes(setHours(new Date(), hours), minutes)
-      onChange(today.toISOString())
-    } else {
-      const newDate = setMinutes(setHours(selectedDate, hours), minutes)
-      onChange(newDate.toISOString())
-    }
-  }
-
-  // 格式化时间为 HH:mm 格式
-  const timeValue = `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`
 
   // 快捷选项
   const quickOptions = [
@@ -111,7 +70,6 @@ export function DateTimePicker({
   const handleQuickSelect = (getValue: () => Date) => {
     const date = getValue()
     onChange(date.toISOString())
-    setOpen(false)
   }
 
   // 清除选择
@@ -125,89 +83,52 @@ export function DateTimePicker({
     ? format(selectedDate, 'MM/dd HH:mm', { locale: zhCN })
     : null
 
+  // 禁用日期
+  const disabledDate = React.useCallback(
+    (date?: Date) => {
+      if (!date) return false
+      if (minDate) return date < minDate
+      return date < new Date(new Date().setHours(0, 0, 0, 0))
+    },
+    [minDate]
+  )
+
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            disabled={disabled}
-            data-empty={!selectedDate}
-            className={cn(
-              'justify-start text-start font-normal data-[empty=true]:text-muted-foreground',
-              s.height.control,
-              s.text.xs,
-              s.rounded,
-              'min-w-[120px]'
-            )}
-          >
-            {displayValue ?? <span>{placeholder}</span>}
-            {selectedDate ? (
-              <X
-                className="ms-auto h-4 w-4 opacity-50 hover:opacity-100"
-                onClick={handleClear}
-              />
-            ) : (
-              <CalendarIcon className="ms-auto h-4 w-4 opacity-50" />
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className={cn('w-auto p-0', s.rounded)} align="start" modal={true}>
-          <div className="flex">
-            {/* 日历 */}
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              disabled={(date) => minDate ? date < minDate : date < new Date(new Date().setHours(0, 0, 0, 0))}
-              locale={zhCN}
+      <SemiDatePicker
+        type='dateTime'
+        value={selectedDate}
+        onChange={(date) => {
+          if (date instanceof Date) {
+            onChange(date.toISOString())
+          } else {
+            onChange(undefined)
+          }
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
+        disabledDate={disabledDate}
+        format='MM/dd HH:mm'
+        className='min-w-[120px]'
+        suffix={
+          selectedDate ? (
+            <X
+              className='h-4 w-4 opacity-50 hover:opacity-100 cursor-pointer'
+              onClick={handleClear}
             />
-            {/* 时间选择 - 与日历等高 */}
-            <div className="flex flex-col border-l">
-              <div className="text-xs text-muted-foreground py-2 px-4 text-center border-b font-medium">
-                时间
-              </div>
-              <div className="flex-1 flex items-center justify-center px-2">
-                <TimePickerWheel
-                  value={timeValue}
-                  onChange={handleTimeChange}
-                  height={252}
-                />
-              </div>
-            </div>
-          </div>
-          {/* 底部按钮 */}
-          <div className="flex justify-end gap-2 border-t p-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                onChange(undefined)
-                setOpen(false)
-              }}
-            >
-              清除
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setOpen(false)}
-            >
-              确定
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+          ) : undefined
+        }
+      />
 
       {/* 快捷按钮 */}
       {showQuickButtons && (
-        <div className="flex gap-1">
+        <div className='flex gap-1'>
           {quickOptions.map((option) => (
             <Button
               key={option.label}
-              variant="outline"
-              size="sm"
+              theme='borderless'
+              size='small'
               disabled={disabled}
-              className={cn(s.height.control, 'px-2', s.text.xs)}
               onClick={() => handleQuickSelect(option.getValue)}
             >
               {option.label}

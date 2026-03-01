@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
 import { ClerkFullLogo } from '@/assets/clerk-full-logo'
-import { Logo } from '@/assets/logo'
+import { AnthropicLogo } from '@/assets/anthropic-logo'
 import { LearnMore } from '@/components/learn-more'
 
 export const Route = createFileRoute('/clerk/(auth)')({
@@ -17,8 +17,8 @@ function ClerkAuthLayout() {
           to='/'
           className='relative z-20 flex items-center text-lg font-medium'
         >
-          <Logo className='me-2' />
-          Shadcn Admin
+          <AnthropicLogo className='size-6' />
+          RMF CRM
         </Link>
 
         <ClerkFullLogo className='relative m-auto size-96' />

@@ -1,38 +1,21 @@
 /**
  * 编辑批次弹窗
- * 从 frontend-vue/src/views/crm/BatchImportView.vue 迁移
+ * Semi Design 重构
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import {
+  Modal,
+  Button,
+  Form,
+  Toast,
+} from '@douyinfe/semi-ui-19'
+import {
+  IconLoading,
+} from '@douyinfe/semi-icons'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-
-import { cn } from '@/lib/utils'
-import { useStyleClasses } from '@/lib/style-utils'
 import { batchImportApi } from '../api'
 import type { BatchImportItem } from '../types'
 
@@ -43,33 +26,23 @@ interface EditBatchDialogProps {
   onSuccess?: () => void
 }
 
-// 表单验证 schema
-const formSchema = z.object({
-  batch_name: z.string().min(1, '批次名称不能为空').max(100, '批次名称不能超过100个字符'),
-  batch_description: z.string().max(500, '批次备注不能超过500个字符').optional(),
-})
-
-type FormValues = z.infer<typeof formSchema>
+interface FormValues {
+  batch_name: string
+  batch_description: string
+}
 
 export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBatchDialogProps) {
-  const s = useStyleClasses()
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      batch_name: '',
-      batch_description: '',
-    },
-  })
+  const formRef = useRef<any>(null)
 
   // 当 batch 变化时重置表单
   useEffect(() => {
-    if (batch && open) {
-      form.reset({
+    if (batch && open && formRef.current) {
+      formRef.current.setValues({
         batch_name: batch.batch_name,
         batch_description: batch.batch_description || '',
       })
     }
-  }, [batch, open, form])
+  }, [batch, open])
 
   // 更新 mutation
   const updateMutation = useMutation({
@@ -78,7 +51,7 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
       return batchImportApi.updateBatch(batch.id, values)
     },
     onSuccess: () => {
-      toast.success('更新成功')
+      Toast.success('更新成功')
       onSuccess?.()
     },
     onError: (error: Error) => {
@@ -88,83 +61,70 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
 
   // 关闭弹窗
   const handleClose = () => {
-    form.reset()
     onOpenChange(false)
   }
 
   // 提交表单
-  const onSubmit = (values: FormValues) => {
-    updateMutation.mutate(values)
+  const handleSubmit = () => {
+    formRef.current?.validate().then((values: FormValues) => {
+      updateMutation.mutate(values)
+    })
   }
 
   if (!batch) return null
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>编辑批次</DialogTitle>
-        </DialogHeader>
+    <Modal
+      visible={open}
+      title="编辑批次"
+      onCancel={handleClose}
+      width={500}
+      closable={true}
+      maskClosable={false}
+      footer={
+        <>
+          <Button onClick={handleClose} disabled={updateMutation.isPending}>
+            取消
+          </Button>
+          <Button
+            theme="solid"
+            onClick={handleSubmit}
+            disabled={updateMutation.isPending}
+            icon={updateMutation.isPending ? <IconLoading spin /> : undefined}
+          >
+            {updateMutation.isPending ? '保存中' : '保存'}
+          </Button>
+        </>
+      }
+    >
+      <Form
+        ref={formRef}
+        initValues={{
+          batch_name: batch.batch_name,
+          batch_description: batch.batch_description || '',
+        }}
+        labelPosition="top"
+      >
+        <Form.Input
+          field="batch_name"
+          label="批次名称"
+          placeholder="请输入批次名称"
+          rules={[
+            { required: true, message: '批次名称不能为空' },
+            { max: 100, message: '批次名称不能超过100个字符' },
+          ]}
+        />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="batch_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>批次名称</FormLabel>
-                  <FormControl>
-                    <Input placeholder="请输入批次名称" className={s.height.controlSm} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="batch_description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>批次备注</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="可选，添加批次备注信息"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className={s.height.controlSm}
-                onClick={handleClose}
-                disabled={updateMutation.isPending}
-              >
-                取消
-              </Button>
-              <Button type="submit" size="sm" className={s.height.controlSm} disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? (
-                  <>
-                    <Loader2 className={cn("mr-2 animate-spin", s.size.icon)} />
-                    保存中
-                  </>
-                ) : (
-                  '保存'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        <Form.TextArea
+          field="batch_description"
+          label="批次备注"
+          placeholder="可选，添加批次备注信息"
+          rows={3}
+          rules={[
+            { max: 500, message: '批次备注不能超过500个字符' },
+          ]}
+        />
+      </Form>
+    </Modal>
   )
 }
