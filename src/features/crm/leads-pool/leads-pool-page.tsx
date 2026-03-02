@@ -34,8 +34,7 @@ import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
 import { FilterSheet } from '../leads/components/filter-sheet'
 import { leadsPoolApi, type ExportStatusResult } from './api'
 import type { LeadPoolItem, LeadPoolListParams } from './types'
-import type { LeadListParams, IntentionLevel } from '../leads/types'
-import { leadStatusLabels, intentionLevelLabels, gradeLabels, followupResultLabels } from '../leads/types'
+import { leadStatusLabels, intentionLevelLabels, gradeLabels, followupResultLabels, type LeadListParams, type IntentionLevel } from '../leads/types'
 import { useIsSuperUser } from '@/stores/auth-store'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { leadsApi } from '../leads/api'
@@ -54,7 +53,6 @@ export function LeadsPoolPage() {
   // 导出相关状态
   const [isExporting, setIsExporting] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
-  const [exportTaskId, setExportTaskId] = useState<string | null>(null)
   const [exportStatus, setExportStatus] = useState<ExportStatusResult | null>(null)
 
   // 搜索和筛选
@@ -268,7 +266,7 @@ export function LeadsPoolPage() {
       key: 'previous_advisor',
       dataIndex: 'pool_info',
       width: 120,
-      render: (_text: any, record: LeadPoolItem) => {
+      render: (_text: unknown, record: LeadPoolItem) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
         return <Text style={{ fontSize: 13 }}>{record.pool_info?.previous_advisor_name || '-'}</Text>
       },
@@ -278,7 +276,7 @@ export function LeadsPoolPage() {
       key: 'days_in_pool',
       dataIndex: 'pool_info',
       width: 80,
-      render: (_text: any, record: LeadPoolItem) => {
+      render: (_text: unknown, record: LeadPoolItem) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={48} />
         return (
           <Text style={{ fontSize: 13 }}>
@@ -292,7 +290,7 @@ export function LeadsPoolPage() {
       key: 'pooled_at',
       dataIndex: 'pool_info',
       width: 150,
-      render: (_text: any, record: LeadPoolItem) => {
+      render: (_text: unknown, record: LeadPoolItem) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={120} />
         return <Text style={{ fontSize: 12 }}>{formatTime(record.pool_info?.pooled_at)}</Text>
       },
@@ -362,7 +360,6 @@ export function LeadsPoolPage() {
         downloadBlob(response, `公海线索导出_${new Date().toISOString().slice(0, 10)}.xlsx`)
         Toast.success({ content: '导出成功' })
       } else if (response.success && response.data?.task_id) {
-        setExportTaskId(response.data.task_id)
         setExportDialogOpen(true)
         Toast.info({ content: response.data.message || '正在后台导出...' })
         pollExportStatus(response.data.task_id)
@@ -370,8 +367,7 @@ export function LeadsPoolPage() {
         Toast.error({ content: response.message || '导出失败' })
       }
     } catch (error) {
-      Toast.error({ content: '导出失败，请稍后重试' })
-      console.error('Export error:', error)
+      showApiErrorToast(error, '导出失败')
     } finally {
       setIsExporting(false)
     }
@@ -414,8 +410,7 @@ export function LeadsPoolPage() {
             setTimeout(poll, 5000)
           }
         }
-      } catch (error) {
-        console.error('Poll export status error:', error)
+      } catch {
         attempts++
         setTimeout(poll, 5000)
       }
@@ -712,13 +707,11 @@ export function LeadsPoolPage() {
         visible={exportDialogOpen}
         onCancel={() => {
           setExportDialogOpen(false)
-          setExportTaskId(null)
           setExportStatus(null)
         }}
         footer={
           <Button onClick={() => {
             setExportDialogOpen(false)
-            setExportTaskId(null)
             setExportStatus(null)
           }}>
             取消

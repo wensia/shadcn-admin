@@ -8,14 +8,13 @@ import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
-import { Tabs, TabPane, Select, DatePicker } from '@douyinfe/semi-ui-19'
+import { Select, DatePicker } from '@douyinfe/semi-ui-19'
 import {
   IconUserGroup,
   IconCalendarClock,
   IconCreditCard,
   IconCalendar,
   IconHistogram,
-  IconTick,
   IconArrowUp,
 } from '@douyinfe/semi-icons'
 import { PromisedVisitTab } from './components/promised-visit-tab'
@@ -68,8 +67,8 @@ export function DailyControlPage() {
         visit_date_from: dateRange.from,
         visit_date_to: dateRange.to,
         creator_campus_id: creatorCampusId,
-      }) as any
-      return result?.total || 0
+      })
+      return result.data?.total ?? 0
     },
   })
 
@@ -83,8 +82,8 @@ export function DailyControlPage() {
         visit_date_from: dateRange.from,
         visit_date_to: dateRange.to,
         creator_campus_id: creatorCampusId,
-      }) as any
-      return result?.total || 0
+      })
+      return result.data?.total ?? 0
     },
   })
 
@@ -98,8 +97,8 @@ export function DailyControlPage() {
         date_from: dateRange.from,
         date_to: dateRange.to,
         creator_campus_id: creatorCampusId,
-      }) as any
-      return result?.total || 0
+      })
+      return result.data?.total ?? 0
     },
   })
 

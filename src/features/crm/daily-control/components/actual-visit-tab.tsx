@@ -3,17 +3,19 @@
  * 状态: visited
  */
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Skeleton, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
 import { IconPlus, IconRefresh, IconMore, IconEdit, IconCreditCard } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
   getVisitSchedules,
   type VisitScheduleItem,
+  type VisitScheduleQueryParams,
 } from '../api'
 import { VisitScheduleDialog } from './visit-schedule-dialog'
 import { CopyableCell } from './copyable-cell'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow } from '@/lib/table-utils'
 
 // 星期映射
@@ -45,27 +47,26 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<VisitScheduleItem | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const params: any = { page, size: pageSize, status: 'visited' }
+      const params: VisitScheduleQueryParams = { page, size: pageSize, status: 'visited' }
       if (dateFrom) params.visit_date_from = dateFrom
       if (dateTo) params.visit_date_to = dateTo
       if (creatorCampusId) params.creator_campus_id = creatorCampusId
       const result = await getVisitSchedules(params)
-      if (result) {
-        setData(result.items || [])
-        setTotal(result.total || 0)
-      }
+      setData(result.data?.items ?? [])
+      setTotal(result.data?.total ?? 0)
     } catch (error) {
-      console.error('获取到访列表失败:', error)
-      Toast.error('获取到访列表失败')
+      showApiErrorToast(error, '获取到访列表失败')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [creatorCampusId, dateFrom, dateTo, page, pageSize])
 
-  useEffect(() => { fetchData() }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
 
   const handleEdit = (item: VisitScheduleItem) => { setEditData(item); setDialogOpen(true) }
   const handleCreate = () => { setEditData(null); setDialogOpen(true) }
@@ -167,7 +168,7 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
           <span style={{ fontSize: 16, fontWeight: 500 }}>到访列表</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>新建到访</Button>
-            <Button icon={<IconRefresh spin={isLoading} />} onClick={fetchData} />
+            <Button icon={<IconRefresh spin={isLoading} />} onClick={() => void fetchData()} />
           </div>
         </div>
       }
@@ -186,7 +187,7 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
       />
       <VisitScheduleDialog
         open={dialogOpen} onOpenChange={setDialogOpen}
-        defaultStatus="visited" onSuccess={fetchData} editData={editData}
+        defaultStatus="visited" onSuccess={() => void fetchData()} editData={editData}
       />
     </Card>
   )

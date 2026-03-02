@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Toast, Button, Spin, DatePicker } from '@douyinfe/semi-ui-19'
+import { Toast, Button, Spin } from '@douyinfe/semi-ui-19'
 import { IconChevronLeft, IconChevronRight, IconCalendar, IconUser } from '@douyinfe/semi-icons'
 import {
   format,
@@ -24,8 +24,7 @@ import {
   isToday,
 } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { getVisitSchedules, getPayments } from '../api'
-import type { VisitScheduleItem, PaymentItem } from '../api'
+import { getVisitSchedules, getPayments, type VisitScheduleItem, type PaymentItem } from '../api'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
 import { brandColors } from '../theme'
 
@@ -58,7 +57,7 @@ const typeConfig = {
   payment: { label: '缴费', color: brandColors.green },
 }
 
-export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabProps) {
+export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: CalendarTabProps) {
   const initialMonth = useMemo(() => {
     if (dateFrom) return parseISO(dateFrom)
     return new Date()
@@ -88,9 +87,9 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
         page: 1, size: 100, status: 'scheduled',
         visit_date_from: monthRange.from, visit_date_to: monthRange.to,
         creator_campus_id: creatorCampusId,
-      }) as any
+      })
       if (response && response.success === false) throw new Error(response.message || '获取诺到数据失败')
-      return response?.items || []
+      return response.data?.items ?? []
     },
     enabled: showPromised,
   })
@@ -102,9 +101,9 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
         page: 1, size: 100, status: 'visited',
         visit_date_from: monthRange.from, visit_date_to: monthRange.to,
         creator_campus_id: creatorCampusId,
-      }) as any
+      })
       if (response && response.success === false) throw new Error(response.message || '获取到访数据失败')
-      return response?.items || []
+      return response.data?.items ?? []
     },
     enabled: showVisited,
   })
@@ -115,9 +114,9 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
       const response = await getPayments({
         page: 1, size: 100, date_from: monthRange.from, date_to: monthRange.to,
         status: 'confirmed', creator_campus_id: creatorCampusId,
-      }) as any
+      })
       if (response && response.success === false) throw new Error(response.message || '获取缴费数据失败')
-      return response?.items || []
+      return response.data?.items ?? []
     },
     enabled: showPayment,
   })
@@ -133,7 +132,7 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
     const map = new Map<string, CalendarItem[]>()
 
     if (showPromised && promisedData) {
-      promisedData.forEach((item: any) => {
+      promisedData.forEach((item) => {
         const dateKey = item.visit_date
         const calendarItem: CalendarItem = {
           id: item.id, type: 'promised', date: dateKey,
@@ -151,7 +150,7 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
     }
 
     if (showVisited && visitedData) {
-      visitedData.forEach((item: any) => {
+      visitedData.forEach((item) => {
         const dateKey = item.visit_date
         const calendarItem: CalendarItem = {
           id: item.id, type: 'visited', date: dateKey,
@@ -168,7 +167,7 @@ export function CalendarTab({ dateFrom, dateTo, creatorCampusId }: CalendarTabPr
     }
 
     if (showPayment && paymentData) {
-      paymentData.forEach((item: any) => {
+      paymentData.forEach((item) => {
         const dateKey = item.payment_at.split('T')[0]
         const timeStr = item.payment_at.includes('T') ? item.payment_at.split('T')[1]?.slice(0, 5) : undefined
         const calendarItem: CalendarItem = {

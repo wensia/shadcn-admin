@@ -1,10 +1,11 @@
 /**
  * 市场部数据统计页面
  * 展示市场专员的录入数量和渠道分布统计
- * Semi Design 重构
+ * Semi Design 重构 — DataTableLayout + useTableScroll
+ * 注：无分页统计排行榜，使用 useTableScroll 替代手动 ResizeObserver
  */
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
@@ -18,7 +19,6 @@ import {
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
-  IconRefresh,
   IconChevronDown,
   IconChevronRight,
 } from '@douyinfe/semi-icons'
@@ -28,7 +28,8 @@ import {
   Tag as TagIcon,
   Building2,
 } from 'lucide-react'
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { useTableScroll } from '@/components/semi/use-table-scroll'
 import { brandColors } from '@/features/crm/daily-control/theme'
 import leadsApi from '@/features/crm/leads/api'
 import { adminApi } from '@/features/admin/api'
@@ -80,22 +81,8 @@ export function MarketingStatisticsPage() {
   const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set())
 
-  // 表格全高
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollY, setScrollY] = useState<number>(400)
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const measure = () => {
-      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
-      const available = el.clientHeight - headerH
-      if (available > 100) setScrollY(available)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+  // 使用 useTableScroll 替代手动 ResizeObserver
+  const { wrapperRef, scrollY } = useTableScroll()
 
   // 获取校区列表
   const { data: campusesData } = useQuery({
@@ -262,136 +249,131 @@ export function MarketingStatisticsPage() {
   ], [maxCount, totalLeads, expandedStaff])
 
   return (
-    <Main fixed style={{ minHeight: 0 }}>
-      <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
-        {/* 顶部指标 */}
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 24 }}>
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Skeleton.Avatar size="small" style={{ width: 32, height: 32 }} />
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
-                </div>
-              </div>
-            ))
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: `${brandColors.blue}15`,
-                }}>
-                  <FileUp style={{ width: 16, height: 16, color: brandColors.blue }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontSize: 20, fontWeight: 600 }}>{totalLeads.toLocaleString()}</span>
-                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总录入量</span>
-                </div>
-              </div>
+    <>
+      <DataTableLayout
+        title="市场数据统计"
+        total={totalLeads}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefetching}
+        toolbar={
+          <>
+            {/* 顶部指标 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 14 }}>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Skeleton.Avatar size="small" style={{ width: 32, height: 32 }} />
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: `${brandColors.blue}15`,
+                    }}>
+                      <FileUp style={{ width: 16, height: 16, color: brandColors.blue }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 20, fontWeight: 600 }}>{totalLeads.toLocaleString()}</span>
+                      <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总录入量</span>
+                    </div>
+                  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: `${brandColors.green}15`,
-                }}>
-                  <Users style={{ width: 16, height: 16, color: brandColors.green }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontSize: 20, fontWeight: 600 }}>{totalStaff}</span>
-                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>市场专员数</span>
-                </div>
-              </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: `${brandColors.green}15`,
+                    }}>
+                      <Users style={{ width: 16, height: 16, color: brandColors.green }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 20, fontWeight: 600 }}>{totalStaff}</span>
+                      <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>市场专员数</span>
+                    </div>
+                  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: `${brandColors.orange}15`,
-                }}>
-                  <TagIcon style={{ width: 16, height: 16, color: brandColors.orange }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontSize: 20, fontWeight: 600 }}>{uniqueChannels}</span>
-                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>来源渠道数</span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: `${brandColors.orange}15`,
+                    }}>
+                      <TagIcon style={{ width: 16, height: 16, color: brandColors.orange }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 20, fontWeight: 600 }}>{uniqueChannels}</span>
+                      <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>来源渠道数</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
-        {/* 工具栏 */}
-        <div style={{ flexShrink: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-          <Select
-            value={period}
-            onChange={(val) => setPeriod(val as string)}
-            optionList={periodOptions}
-            style={{ width: 112 }}
-          />
-
-          <Select
-            value={selectedCampusId}
-            onChange={(val) => setSelectedCampusId(val as string)}
-            optionList={[
-              { value: 'all', label: '全部校区' },
-              ...campusList.map(c => ({ value: c.id, label: c.name })),
-            ]}
-            prefix={<Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />}
-            style={{ width: 144 }}
-          />
-
-          <div style={{ flex: 1 }} />
-
-          <Button
-            icon={<IconRefresh spin={isRefetching} />}
-            onClick={handleRefresh}
-            disabled={isRefetching}
-          >
-            刷新
-          </Button>
-        </div>
-
-        {/* 内容区域 */}
-        <div style={{ display: 'flex', minHeight: 0, flex: 1, gap: 16, overflow: 'hidden' }}>
-          {/* 主表格 */}
-          <Card bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1, overflow: 'hidden' }} style={{ flex: 3, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
-              <Table
-                columns={columns}
-                dataSource={staffList}
-                rowKey="staff_id"
-                pagination={false}
-                scroll={{ y: scrollY }}
-                loading={isLoading}
-                empty={<div style={{ padding: 64, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+            {/* 工具栏 */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <Select
+                value={period}
+                onChange={(val) => setPeriod(val as string)}
+                optionList={periodOptions}
+                style={{ width: 112 }}
+              />
+              <Select
+                value={selectedCampusId}
+                onChange={(val) => setSelectedCampusId(val as string)}
+                optionList={[
+                  { value: 'all', label: '全部校区' },
+                  ...campusList.map(c => ({ value: c.id, label: c.name })),
+                ]}
+                prefix={<Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />}
+                style={{ width: 144 }}
               />
             </div>
-          </Card>
+          </>
+        }
+      >
+        {/* 内容区域：左侧表格 + 右侧渠道汇总 */}
+        <div style={{ display: 'flex', minHeight: 0, flex: 1, gap: 0, overflow: 'hidden' }}>
+          {/* 主表格 */}
+          <div ref={wrapperRef} style={{ flex: 3, minHeight: 0, overflow: 'hidden' }}>
+            <Table
+              columns={columns}
+              dataSource={staffList}
+              rowKey="staff_id"
+              pagination={false}
+              scroll={{ y: scrollY }}
+              loading={isLoading}
+              empty={<div style={{ padding: 64, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+            />
+          </div>
 
           {/* 右侧渠道汇总 */}
-          <Card
-            title={<span style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-2)' }}>渠道汇总</span>}
-            headerStyle={{ padding: '12px 16px' }}
-            bodyStyle={{ padding: '0 16px 16px', overflow: 'auto', flex: 1 }}
-            style={{ width: 288, flexShrink: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-          >
-            {isLoading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton.Paragraph key={i} rows={1} style={{ width: '100%' }} />
-                ))}
-              </div>
-            ) : channelTotals.length === 0 ? (
-              <ChannelTotalsFromStaff staffList={staffList} totalLeads={totalLeads} />
-            ) : (
-              <ChannelTotalsList channels={channelTotals} totalLeads={totalLeads} />
-            )}
-          </Card>
+          <div style={{ width: 288, flexShrink: 0, minHeight: 0, borderLeft: '1px solid var(--semi-color-border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--semi-color-border)' }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-2)' }}>渠道汇总</span>
+            </div>
+            <div style={{ padding: '12px 16px', overflow: 'auto', flex: 1 }}>
+              {isLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton.Paragraph key={i} rows={1} style={{ width: '100%' }} />
+                  ))}
+                </div>
+              ) : channelTotals.length === 0 ? (
+                <ChannelTotalsFromStaff staffList={staffList} totalLeads={totalLeads} />
+              ) : (
+                <ChannelTotalsList channels={channelTotals} totalLeads={totalLeads} />
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </Main>
+      </DataTableLayout>
+    </>
   )
 }
 

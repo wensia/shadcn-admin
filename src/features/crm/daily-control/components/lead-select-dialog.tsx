@@ -3,7 +3,7 @@
  * 需要输入完整手机号（11位）才能搜索
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, Button, Input, Table, Tag } from '@douyinfe/semi-ui-19'
 import { IconSearch, IconTick } from '@douyinfe/semi-icons'
@@ -50,6 +50,11 @@ export function LeadSelectDialog({
   const [searchPhone, setSearchPhone] = useState('')
 
   const isValidPhone = (phone: string) => /^1\d{10}$/.test(phone)
+  const resetDialogState = () => {
+    setSelectedLead(null)
+    setPhoneInput('')
+    setSearchPhone('')
+  }
 
   const { data: searchData, isLoading, isFetched } = useQuery({
     queryKey: ['check-phone-for-select', searchPhone],
@@ -60,14 +65,6 @@ export function LeadSelectDialog({
     enabled: open && isValidPhone(searchPhone),
   })
 
-  useEffect(() => {
-    if (!open) {
-      setSelectedLead(null)
-      setPhoneInput('')
-      setSearchPhone('')
-    }
-  }, [open])
-
   const handleSearch = () => {
     if (isValidPhone(phoneInput)) {
       setSearchPhone(phoneInput)
@@ -75,7 +72,7 @@ export function LeadSelectDialog({
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
     if (e.key === 'Enter') handleSearch()
   }
 
@@ -90,8 +87,14 @@ export function LeadSelectDialog({
         child_name: selectedLead.child_name || '',
         parent_phone: selectedLead.parent_phone || searchPhone || '',
       })
+      resetDialogState()
       onOpenChange(false)
     }
+  }
+
+  const handleCancel = () => {
+    resetDialogState()
+    onOpenChange(false)
   }
 
   const searchResults = searchData?.duplicate_leads || []
@@ -144,7 +147,7 @@ export function LeadSelectDialog({
   return (
     <Modal
       visible={open}
-      onCancel={() => onOpenChange(false)}
+      onCancel={handleCancel}
       title={title}
       width={680}
       style={{ maxHeight: '70vh' }}
@@ -165,7 +168,7 @@ export function LeadSelectDialog({
         <Input
           value={phoneInput}
           onChange={(v) => setPhoneInput(v.replace(/\D/g, '').slice(0, 11))}
-          onKeyDown={handleKeyDown as any}
+          onKeyDown={handleKeyDown}
           placeholder="请输入完整手机号（11位）"
           prefix={<IconSearch />}
           style={{ flex: 1 }}

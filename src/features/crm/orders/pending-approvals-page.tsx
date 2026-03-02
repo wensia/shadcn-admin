@@ -1,28 +1,25 @@
 /**
  * 待审批订单页面
- * Semi Design 重构版 - 包含领导审批和财务确认两个Tab
+ * Semi Design 重构版 — DataTableLayout + OrdersTable(SemiDataTable)
+ * 包含领导审批和财务确认两个 Tab
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Button,
   Input,
   Tabs,
   TabPane,
   Tag,
-  Typography,
 } from '@douyinfe/semi-ui-19'
-import { IconRefresh, IconSearch } from '@douyinfe/semi-icons'
-import { User, DollarSign, ClipboardList } from 'lucide-react'
+import { IconSearch } from '@douyinfe/semi-icons'
+import { User, DollarSign } from 'lucide-react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { orderApi } from './api'
 import { OrdersTable } from './components/orders-table'
 import { ApprovalDialog } from './components/approval-dialog'
 import type { OrderListItem, PendingApprovalParams } from './types'
-
-const { Title: SemiTitle, Text } = Typography
 
 export function PendingApprovalsPage() {
   useDocumentTitle('待审批订单')
@@ -82,26 +79,26 @@ export function PendingApprovalsPage() {
   })
 
   // 点击行打开审批弹窗
-  const handleRowClick = (order: OrderListItem) => {
+  const handleRowClick = useCallback((order: OrderListItem) => {
     setSelectedOrder(order)
     setApprovalDialogOpen(true)
-  }
+  }, [])
 
   // 刷新当前Tab数据
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     if (activeTab === 'leader') {
       refetchLeader()
     } else {
       refetchFinance()
     }
-  }
+  }, [activeTab, refetchLeader, refetchFinance])
 
   // 审批成功后刷新
-  const handleApprovalSuccess = () => {
+  const handleApprovalSuccess = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['pending-leader-approvals'] })
     queryClient.invalidateQueries({ queryKey: ['pending-finance-approvals'] })
     queryClient.invalidateQueries({ queryKey: ['orders'] })
-  }
+  }, [queryClient])
 
   const leaderOrders = leaderData?.items || []
   const leaderTotal = leaderData?.total || 0
@@ -109,27 +106,16 @@ export function PendingApprovalsPage() {
   const financeTotal = financeData?.total || 0
 
   return (
-    <Main fixed style={{ minHeight: 0 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 16, overflow: 'hidden' }}>
-        {/* 页面标题 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div>
-            <SemiTitle heading={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ClipboardList size={24} />
-              待审批订单
-            </SemiTitle>
-            <Text type="tertiary">审核订单并决定是否通过</Text>
-          </div>
-        </div>
-
-        {/* Tabs */}
+    <>
+      <DataTableLayout
+        title="待审批订单"
+        total={activeTab === 'leader' ? leaderTotal : financeTotal}
+        onRefresh={handleRefresh}
+      >
         <Tabs
           activeKey={activeTab}
           onChange={(key) => setActiveTab(key)}
           style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
-          tabBarExtraContent={
-            <Button icon={<IconRefresh />} onClick={handleRefresh} />
-          }
         >
           <TabPane
             tab={
@@ -143,19 +129,17 @@ export function PendingApprovalsPage() {
             }
             itemKey="leader"
           >
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 16, paddingTop: 16 }}>
-              {/* 搜索栏 */}
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 12, paddingTop: 12 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 4px' }}>
                 <Input
                   prefix={<IconSearch />}
                   placeholder="搜索学员姓名、电话、订单号..."
                   value={leaderKeyword}
                   onChange={(val) => setLeaderKeyword(val)}
-                  onEnterPress={() => setLeaderPagination({ ...leaderPagination, page: 1 })}
+                  onEnterPress={() => setLeaderPagination(prev => ({ ...prev, page: 1 }))}
                   style={{ flex: 1 }}
                 />
               </div>
-              {/* 表格 */}
               <div style={{ flex: 1, minHeight: 0 }}>
                 <OrdersTable
                   data={leaderOrders}
@@ -163,7 +147,7 @@ export function PendingApprovalsPage() {
                   page={leaderPagination.page}
                   pageSize={leaderPagination.size}
                   isLoading={isLeaderLoading}
-                  onPageChange={(page) => setLeaderPagination({ ...leaderPagination, page })}
+                  onPageChange={(page) => setLeaderPagination(prev => ({ ...prev, page }))}
                   onPageSizeChange={(size) => setLeaderPagination({ page: 1, size })}
                   onRowClick={handleRowClick}
                 />
@@ -183,19 +167,17 @@ export function PendingApprovalsPage() {
             }
             itemKey="finance"
           >
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 16, paddingTop: 16 }}>
-              {/* 搜索栏 */}
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 12, paddingTop: 12 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 4px' }}>
                 <Input
                   prefix={<IconSearch />}
                   placeholder="搜索学员姓名、电话、订单号..."
                   value={financeKeyword}
                   onChange={(val) => setFinanceKeyword(val)}
-                  onEnterPress={() => setFinancePagination({ ...financePagination, page: 1 })}
+                  onEnterPress={() => setFinancePagination(prev => ({ ...prev, page: 1 }))}
                   style={{ flex: 1 }}
                 />
               </div>
-              {/* 表格 */}
               <div style={{ flex: 1, minHeight: 0 }}>
                 <OrdersTable
                   data={financeOrders}
@@ -203,7 +185,7 @@ export function PendingApprovalsPage() {
                   page={financePagination.page}
                   pageSize={financePagination.size}
                   isLoading={isFinanceLoading}
-                  onPageChange={(page) => setFinancePagination({ ...financePagination, page })}
+                  onPageChange={(page) => setFinancePagination(prev => ({ ...prev, page }))}
                   onPageSizeChange={(size) => setFinancePagination({ page: 1, size })}
                   onRowClick={handleRowClick}
                 />
@@ -211,7 +193,7 @@ export function PendingApprovalsPage() {
             </div>
           </TabPane>
         </Tabs>
-      </div>
+      </DataTableLayout>
 
       {/* 审批弹窗 */}
       <ApprovalDialog
@@ -221,7 +203,7 @@ export function PendingApprovalsPage() {
         approvalType={activeTab as 'leader' | 'finance'}
         onSuccess={handleApprovalSuccess}
       />
-    </Main>
+    </>
   )
 }
 

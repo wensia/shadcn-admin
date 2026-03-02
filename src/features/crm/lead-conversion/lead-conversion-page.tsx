@@ -20,15 +20,19 @@ import { StatsCards } from './components/stats-cards'
 import { ConversionTable, type ConversionRecord } from './components/conversion-table'
 import { PaymentDialog } from './components/payment-dialog'
 import { paymentApi, visitScheduleApi } from './api'
-import type {
-  Payment,
-  VisitSchedule,
-  ConversionType,
-  ConversionStats,
-  PaymentListParams,
-  VisitScheduleListParams
+import {
+  VisitStatus,
+  visitStatusLabels,
+  paymentStatusLabels,
+  paymentMethodLabels,
+  paymentTypeLabels,
+  type Payment,
+  type VisitSchedule,
+  type ConversionType,
+  type ConversionStats,
+  type PaymentListParams,
+  type VisitScheduleListParams,
 } from './types'
-import { VisitStatus, visitStatusLabels, paymentStatusLabels, paymentMethodLabels, paymentTypeLabels } from './types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Title, Text } = Typography
@@ -234,7 +238,7 @@ export function LeadConversionPage() {
         queryClient.invalidateQueries({ queryKey: ['visits'] })
         queryClient.invalidateQueries({ queryKey: ['visit-stats'] })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '删除失败')
     }
   }

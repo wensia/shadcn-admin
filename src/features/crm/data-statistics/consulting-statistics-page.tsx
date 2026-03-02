@@ -1,34 +1,31 @@
 /**
  * 咨询数据统计页面
  * 展示通话统计数据，包括统计卡片和员工通话明细表格
- * Semi Design 重构
+ * Semi Design 重构 — DataTableLayout + useTableScroll
+ * 注：无分页统计排行榜，使用 useTableScroll 替代手动 ResizeObserver
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
   Table,
-  Button,
   Select,
   Skeleton,
   Progress,
   Toast,
-  Card,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import {
-  IconRefresh,
-} from '@douyinfe/semi-icons'
 import {
   Phone,
   Clock,
   Users,
   Building2,
 } from 'lucide-react'
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { useTableScroll } from '@/components/semi/use-table-scroll'
 import { brandColors } from '@/features/crm/daily-control/theme'
-import { callRecordsApi, yunkeCredentialsApi, type EmployeeCampusMapping } from '@/features/yunke/api'
+import { callRecordsApi, yunkeCredentialsApi } from '@/features/yunke/api'
 
 // 时间周期选项
 const periodOptions = [
@@ -96,22 +93,8 @@ export function ConsultingStatisticsPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('')
   const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
 
-  // 表格全高
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollY, setScrollY] = useState<number>(400)
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const measure = () => {
-      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
-      const available = el.clientHeight - headerH
-      if (available > 100) setScrollY(available)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+  // 使用 useTableScroll 替代手动 ResizeObserver
+  const { wrapperRef, scrollY } = useTableScroll()
 
   // 获取云客账号列表
   const { data: accountsData } = useQuery({
@@ -159,36 +142,31 @@ export function ConsultingStatisticsPage() {
     }))
   }, [accountsData])
 
+  const effectiveAccountId = selectedAccountId || accountOptions[0]?.value || ''
+
   // 当前选中的部门ID
   const departmentId = useMemo(() => {
-    if (selectedAccountId) {
-      const selected = accountOptions.find(opt => opt.value === selectedAccountId)
+    if (effectiveAccountId) {
+      const selected = accountOptions.find(opt => opt.value === effectiveAccountId)
       return selected?.deptId || DEFAULT_DEPT_ID
     }
     return accountOptions[0]?.deptId || DEFAULT_DEPT_ID
-  }, [selectedAccountId, accountOptions])
-
-  // 自动选择第一个账号
-  useEffect(() => {
-    if (!selectedAccountId && accountOptions.length > 0) {
-      setSelectedAccountId(accountOptions[0].value)
-    }
-  }, [accountOptions, selectedAccountId])
+  }, [accountOptions, effectiveAccountId])
 
   // 获取通话统计数据
   const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['call-statistics', selectedAccountId, departmentId, period, statType],
+    queryKey: ['call-statistics', effectiveAccountId, departmentId, period, statType],
     queryFn: async () => {
       return callRecordsApi.getCallStatistics({
         department_id: departmentId,
         flag: 'department',
         period: parseInt(period),
         stat_type: parseInt(statType),
-        account_id: selectedAccountId || undefined,
+        account_id: effectiveAccountId || undefined,
       }) as Promise<YunkeCallStatisticsData>
     },
     staleTime: 60 * 1000,
-    enabled: !!departmentId && !!selectedAccountId,
+    enabled: !!departmentId && !!effectiveAccountId,
   })
 
   // 刷新数据
@@ -285,7 +263,7 @@ export function ConsultingStatisticsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Progress percent={(record.callCount / maxCallCount) * 100} size="small" showInfo={false} style={{ flex: 1 }} />
           <span style={{ width: 48, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-            {((record.callCount / totals.totalCount) * 100).toFixed(1)}%
+            {totals.totalCount > 0 ? ((record.callCount / totals.totalCount) * 100).toFixed(1) : '0.0'}%
           </span>
         </div>
       ),
@@ -304,7 +282,7 @@ export function ConsultingStatisticsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Progress percent={(record.duration / maxDuration) * 100} size="small" showInfo={false} style={{ flex: 1 }} />
           <span style={{ width: 48, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-            {((record.duration / totals.totalDuration) * 100).toFixed(1)}%
+            {totals.totalDuration > 0 ? ((record.duration / totals.totalDuration) * 100).toFixed(1) : '0.0'}%
           </span>
         </div>
       ),
@@ -312,125 +290,117 @@ export function ConsultingStatisticsPage() {
   ], [maxCallCount, maxDuration, totals])
 
   return (
-    <Main fixed style={{ minHeight: 0 }}>
-      <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
-        {/* 顶部统计栏 */}
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 24 }}>
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Skeleton.Avatar size="small" style={{ width: 32, height: 32 }} />
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
-                </div>
-              </div>
-            ))
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: `${brandColors.blue}15`,
-                }}>
-                  <Phone style={{ width: 16, height: 16, color: brandColors.blue }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontSize: 20, fontWeight: 600 }}>{totals.totalCount.toLocaleString()}</span>
-                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总通话次数</span>
-                </div>
-              </div>
+    <>
+      <DataTableLayout
+        title="咨询数据统计"
+        total={totals.totalCount}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefetching}
+        toolbar={
+          <>
+            {/* 顶部统计栏 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 14 }}>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Skeleton.Avatar size="small" style={{ width: 32, height: 32 }} />
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: `${brandColors.blue}15`,
+                    }}>
+                      <Phone style={{ width: 16, height: 16, color: brandColors.blue }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 20, fontWeight: 600 }}>{totals.totalCount.toLocaleString()}</span>
+                      <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总通话次数</span>
+                    </div>
+                  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: `${brandColors.green}15`,
-                }}>
-                  <Clock style={{ width: 16, height: 16, color: brandColors.green }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontSize: 20, fontWeight: 600 }}>{formatDuration(totals.totalDuration)}</span>
-                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总通话时长</span>
-                </div>
-              </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: `${brandColors.green}15`,
+                    }}>
+                      <Clock style={{ width: 16, height: 16, color: brandColors.green }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 20, fontWeight: 600 }}>{formatDuration(totals.totalDuration)}</span>
+                      <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>总通话时长</span>
+                    </div>
+                  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: `${brandColors.orange}15`,
-                }}>
-                  <Users style={{ width: 16, height: 16, color: brandColors.orange }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontSize: 20, fontWeight: 600 }}>{totals.userCount}</span>
-                  <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>参与员工数</span>
-                </div>
-              </div>
-            </>
-          )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: `${brandColors.orange}15`,
+                    }}>
+                      <Users style={{ width: 16, height: 16, color: brandColors.orange }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontSize: 20, fontWeight: 600 }}>{totals.userCount}</span>
+                      <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>参与员工数</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 工具栏 */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <Select
+                value={effectiveAccountId || undefined}
+                onChange={(val) => setSelectedAccountId(val as string)}
+                optionList={accountOptions}
+                placeholder="选择云客账号"
+                style={{ width: 160 }}
+              />
+              <Select
+                value={selectedCampusId}
+                onChange={(val) => setSelectedCampusId(val as string)}
+                optionList={[{ value: 'all', label: '全部校区' }, ...campusOptions]}
+                prefix={<Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />}
+                style={{ width: 128 }}
+              />
+              <Select
+                value={period}
+                onChange={(val) => setPeriod(val as string)}
+                optionList={periodOptions}
+                style={{ width: 112 }}
+              />
+              <Select
+                value={statType}
+                onChange={(val) => setStatType(val as string)}
+                optionList={statTypeOptions}
+                style={{ width: 112 }}
+              />
+            </div>
+          </>
+        }
+      >
+        <div ref={wrapperRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <Table
+            columns={columns}
+            dataSource={mergedUserList}
+            rowKey="name"
+            pagination={false}
+            scroll={{ y: scrollY }}
+            loading={isLoading}
+            empty={<div style={{ padding: 64, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
+          />
         </div>
-
-        {/* 工具栏 */}
-        <div style={{ flexShrink: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-          <Select
-            value={selectedAccountId}
-            onChange={(val) => setSelectedAccountId(val as string)}
-            optionList={accountOptions}
-            placeholder="选择云客账号"
-            style={{ width: 160 }}
-          />
-
-          <Select
-            value={selectedCampusId}
-            onChange={(val) => setSelectedCampusId(val as string)}
-            optionList={[{ value: 'all', label: '全部校区' }, ...campusOptions]}
-            prefix={<Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />}
-            style={{ width: 128 }}
-          />
-
-          <Select
-            value={period}
-            onChange={(val) => setPeriod(val as string)}
-            optionList={periodOptions}
-            style={{ width: 112 }}
-          />
-
-          <Select
-            value={statType}
-            onChange={(val) => setStatType(val as string)}
-            optionList={statTypeOptions}
-            style={{ width: 112 }}
-          />
-
-          <div style={{ flex: 1 }} />
-
-          <Button
-            icon={<IconRefresh spin={isRefetching} />}
-            onClick={handleRefresh}
-            disabled={isRefetching}
-          >
-            刷新
-          </Button>
-        </div>
-
-        {/* 员工通话统计表格 */}
-        <Card bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1, overflow: 'hidden' }} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
-            <Table
-              columns={columns}
-              dataSource={mergedUserList}
-              rowKey="name"
-              pagination={false}
-              scroll={{ y: scrollY }}
-              loading={isLoading}
-              empty={<div style={{ padding: 64, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-            />
-          </div>
-        </Card>
-      </div>
-    </Main>
+      </DataTableLayout>
+    </>
   )
 }
 

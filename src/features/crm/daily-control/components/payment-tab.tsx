@@ -81,8 +81,7 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
         setData(result.items || [])
         setTotal(result.total || 0)
       }
-    } catch (error) {
-      console.error('获取缴费列表失败:', error)
+    } catch {
       Toast.error('获取缴费列表失败')
     } finally {
       setIsLoading(false)

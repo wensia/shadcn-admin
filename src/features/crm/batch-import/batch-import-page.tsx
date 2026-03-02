@@ -1,20 +1,18 @@
 /**
  * 批量导入页面
- * Semi Design 重构
+ * Semi Design 重构 — DataTableLayout + SemiDataTable
  */
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
-  Table,
   Button,
   Input,
   Tag,
   Select,
   Dropdown,
   Checkbox,
-  Skeleton,
   Tooltip,
   Progress,
   Toast,
@@ -39,10 +37,9 @@ import {
 } from '@douyinfe/semi-icons'
 import { format } from 'date-fns'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { HeaderActions } from '@/components/layout/header-actions'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 
 import { batchImportApi } from './api'
 import type {
@@ -158,23 +155,6 @@ export function BatchImportPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedBatch, setSelectedBatch] = useState<BatchImportItem | null>(null)
 
-  // 表格全高
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollY, setScrollY] = useState<number>(400)
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const measure = () => {
-      const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
-      const available = el.clientHeight - headerH
-      if (available > 100) setScrollY(available)
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
   // 构建查询参数
   const queryParams = useMemo<BatchImportQueryParams>(() => ({
     page: pagination.page,
@@ -210,7 +190,6 @@ export function BatchImportPage() {
     [batchList]
   )
 
-  // 删除批次
   // 下载模板
   const handleDownloadTemplate = useCallback(async () => {
     try {
@@ -280,29 +259,17 @@ export function BatchImportPage() {
     queryClient.invalidateQueries({ queryKey: ['batch-imports'] })
   }, [queryClient])
 
-  // 是否有筛选条件
-  const isFiltered = searchValue || statusFilter || methodFilter
-
-  // 骨架屏数据
-  const SKELETON_ID_PREFIX = '__skeleton__'
-  const skeletonData = useMemo(() => {
-    return Array.from({ length: 10 }, (_, i) => ({
-      id: `${SKELETON_ID_PREFIX}${i}`,
-      batch_name: '',
-      import_method: 'excel' as ImportMethod,
-      import_source_file: '',
-      total_count: 0,
-      success_count: 0,
-      failed_count: 0,
-      activated_count: 0,
-      status: 'processing' as BatchStatus,
-      created_by_name: '',
-      started_at: '',
-    }))
+  // 分页
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }))
   }, [])
 
-  const isSkeletonRow = (id: string) => id.startsWith(SKELETON_ID_PREFIX)
-  const tableData = isLoading ? skeletonData : batchList
+  const handlePageSizeChange = useCallback((pageSize: number) => {
+    setPagination({ page: 1, pageSize })
+  }, [])
+
+  // 是否有筛选条件
+  const isFiltered = searchValue || statusFilter || methodFilter
 
   // 构建表格列
   const columns = useMemo<ColumnProps<BatchImportItem>[]>(() => {
@@ -314,7 +281,7 @@ export function BatchImportPage() {
         dataIndex: 'batch_name',
         width: 160,
         render: (text: string, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={100} />
           return (
             <Tooltip content={<>{text}{record.batch_description && <div style={{ color: 'var(--semi-color-text-2)' }}>{record.batch_description}</div>}</>}>
               <span>
@@ -332,7 +299,7 @@ export function BatchImportPage() {
         dataIndex: 'import_method',
         width: 120,
         render: (method: ImportMethod, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={50} />
           return <MethodTag method={method} />
         },
       })
@@ -344,7 +311,7 @@ export function BatchImportPage() {
         dataIndex: 'import_source_file',
         width: 160,
         render: (text: string, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 120 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={120} />
           return (
             <Tooltip content={text || '-'}>
               <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
@@ -363,7 +330,7 @@ export function BatchImportPage() {
         width: 80,
         align: 'right' as const,
         render: (val: number, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={30} />
           return val
         },
       })
@@ -376,7 +343,7 @@ export function BatchImportPage() {
         width: 80,
         align: 'right' as const,
         render: (val: number, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={30} />
           return <span style={{ color: 'var(--semi-color-success)' }}>{val}</span>
         },
       })
@@ -389,7 +356,7 @@ export function BatchImportPage() {
         width: 80,
         align: 'right' as const,
         render: (val: number, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={30} />
           return <span style={{ color: 'var(--semi-color-warning)' }}>{val}</span>
         },
       })
@@ -402,7 +369,7 @@ export function BatchImportPage() {
         width: 80,
         align: 'right' as const,
         render: (val: number, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 30, marginLeft: 'auto' }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={30} />
           return <span style={{ color: 'var(--semi-color-danger)' }}>{val}</span>
         },
       })
@@ -414,7 +381,7 @@ export function BatchImportPage() {
         dataIndex: 'success_rate',
         width: 140,
         render: (_: unknown, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
           const rate = record.total_count > 0
             ? Math.round((record.success_count / record.total_count) * 100)
             : 0
@@ -434,7 +401,7 @@ export function BatchImportPage() {
         dataIndex: 'status',
         width: 100,
         render: (status: BatchStatus, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={60} />
           return <StatusTag status={status} />
         },
       })
@@ -446,7 +413,7 @@ export function BatchImportPage() {
         dataIndex: 'created_by_name',
         width: 100,
         render: (text: string, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={50} />
           return text
         },
       })
@@ -458,7 +425,7 @@ export function BatchImportPage() {
         dataIndex: 'started_at',
         width: 160,
         render: (text: string, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 100 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={100} />
           return text ? format(new Date(text), 'yyyy-MM-dd HH:mm') : '-'
         },
       })
@@ -470,7 +437,7 @@ export function BatchImportPage() {
         dataIndex: 'processing_duration',
         width: 100,
         render: (val: number, record: BatchImportItem) => {
-          if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={50} />
           return formatDuration(val)
         },
       })
@@ -483,7 +450,7 @@ export function BatchImportPage() {
       width: 60,
       fixed: 'right' as const,
       render: (_: unknown, record: BatchImportItem) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={32} />
         return (
           <Dropdown
             trigger="click"
@@ -515,7 +482,7 @@ export function BatchImportPage() {
               </Dropdown.Menu>
             }
           >
-            <span>
+            <span data-stop-row-click>
               <Button theme="borderless" icon={<IconMore />} size="small" />
             </span>
           </Dropdown>
@@ -529,12 +496,9 @@ export function BatchImportPage() {
   // 行选择配置
   const rowSelection = useMemo(() => ({
     selectedRowKeys: Array.from(selectedIds),
-    onChange: (selectedRowKeys: (string | number)[] | undefined) => {
-      setSelectedIds(new Set((selectedRowKeys || []).map(String)))
+    onChange: (selectedRowKeys: (string | number)[], _rows: BatchImportItem[]) => {
+      setSelectedIds(new Set(selectedRowKeys.map(String)))
     },
-    getCheckboxProps: (record: BatchImportItem) => ({
-      disabled: record.status !== 'processing' || isSkeletonRow(record.id),
-    }),
   }), [selectedIds])
 
   // 列设置 dropdown menu
@@ -553,145 +517,113 @@ export function BatchImportPage() {
 
   return (
     <>
-      <Header fixed>
-        <h1 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>批量导入</h1>
-        <HeaderActions showSearch={false} />
-      </Header>
-
-      <Main fixed style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 16 }}>
-        {/* 操作栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-          <Button icon={<IconUpload />} theme="solid" onClick={() => setUploadDialogOpen(true)}>
-            上传文件
-          </Button>
-          <Button icon={<IconDownload />} onClick={handleDownloadTemplate}>
-            下载模板
-          </Button>
-          <Button
-            type="danger"
-            icon={<IconDelete />}
-            onClick={handleDeleteSelectedBatches}
-            disabled={selectedIds.size === 0 && !hasProcessingBatches}
-          >
-            {selectedIds.size > 0 ? `删除选中 (${selectedIds.size})` : '删除处理中批次'}
-          </Button>
-        </div>
-
-        {/* 处理中提示条 */}
-        {hasProcessingBatches && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 16px',
-            background: 'var(--semi-color-primary-light-default)',
-            border: '1px solid var(--semi-color-primary-light-active)',
-            borderRadius: 8,
-          }}>
-            <IconLoading spin style={{ color: 'var(--semi-color-primary)' }} />
-            <span style={{ fontSize: 14, color: 'var(--semi-color-primary)' }}>
-              有 {processingBatches.length} 个批次正在处理中，页面将每5秒自动刷新...
-            </span>
-          </div>
-        )}
-
-        {/* 筛选栏 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <DataTableLayout
+        title="批量导入"
+        total={totalCount}
+        headerActions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Input
-              prefix={<IconSearch />}
-              placeholder="搜索批次名称或文件名"
-              value={searchValue}
-              onChange={(val) => {
-                setSearchValue(val)
-                setPagination((prev) => ({ ...prev, page: 1 }))
-              }}
-              showClear
-              style={{ width: 250 }}
-            />
-            <Select
-              placeholder="状态"
-              value={statusFilter}
-              onChange={(val) => {
-                setStatusFilter(val as BatchStatus | undefined)
-                setPagination((prev) => ({ ...prev, page: 1 }))
-              }}
-              optionList={statusOptions}
-              showClear
-              style={{ width: 120 }}
-            />
-            <Select
-              placeholder="导入方式"
-              value={methodFilter}
-              onChange={(val) => {
-                setMethodFilter(val as ImportMethod | undefined)
-                setPagination((prev) => ({ ...prev, page: 1 }))
-              }}
-              optionList={methodOptions}
-              showClear
-              style={{ width: 120 }}
-            />
-            {isFiltered && (
-              <Button theme="borderless" icon={<IconClose />} onClick={handleReset}>
-                重置
-              </Button>
+            <Button icon={<IconUpload />} theme="solid" onClick={() => setUploadDialogOpen(true)}>
+              上传文件
+            </Button>
+            <Button icon={<IconDownload />} onClick={handleDownloadTemplate}>
+              下载模板
+            </Button>
+            <Button
+              type="danger"
+              icon={<IconDelete />}
+              onClick={handleDeleteSelectedBatches}
+              disabled={selectedIds.size === 0 && !hasProcessingBatches}
+            >
+              {selectedIds.size > 0 ? `删除选中 (${selectedIds.size})` : '删除处理中批次'}
+            </Button>
+          </div>
+        }
+        onRefresh={() => refetch()}
+        toolbar={
+          <>
+            {/* 处理中提示条 */}
+            {hasProcessingBatches && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 16px',
+                background: 'var(--semi-color-primary-light-default)',
+                border: '1px solid var(--semi-color-primary-light-active)',
+                borderRadius: 8,
+                marginBottom: 14,
+              }}>
+                <IconLoading spin style={{ color: 'var(--semi-color-primary)' }} />
+                <span style={{ fontSize: 14, color: 'var(--semi-color-primary)' }}>
+                  有 {processingBatches.length} 个批次正在处理中，页面将每5秒自动刷新...
+                </span>
+              </div>
             )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Dropdown trigger="click" render={columnSettingsMenu}>
-              <span>
-                <Button icon={<IconSetting />}>列</Button>
-              </span>
-            </Dropdown>
-            <Button icon={<IconRefresh />} onClick={() => refetch()} />
-          </div>
-        </div>
 
-        {/* 数据表格 */}
-        <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
-          <Table
-            columns={columns}
-            dataSource={tableData}
-            rowKey="id"
-            rowSelection={rowSelection}
-            pagination={false}
-            scroll={{ y: scrollY }}
-            empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-          />
-        </div>
-
-        {/* 分页 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>
-            共 {totalCount} 条记录
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Select
-              value={pagination.pageSize}
-              onChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
-              optionList={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
-              style={{ width: 80 }}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Button
-                disabled={pagination.page <= 1}
-                onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
-              >
-                上一页
-              </Button>
-              <span style={{ padding: '0 8px', fontSize: 14 }}>
-                {pagination.page} / {Math.ceil(totalCount / pagination.pageSize) || 1}
-              </span>
-              <Button
-                disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
-                onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
-              >
-                下一页
-              </Button>
+            {/* 筛选栏 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Input
+                  prefix={<IconSearch />}
+                  placeholder="搜索批次名称或文件名"
+                  value={searchValue}
+                  onChange={(val) => {
+                    setSearchValue(val)
+                    setPagination((prev) => ({ ...prev, page: 1 }))
+                  }}
+                  showClear
+                  style={{ width: 250 }}
+                />
+                <Select
+                  placeholder="状态"
+                  value={statusFilter}
+                  onChange={(val) => {
+                    setStatusFilter(val as BatchStatus | undefined)
+                    setPagination((prev) => ({ ...prev, page: 1 }))
+                  }}
+                  optionList={statusOptions}
+                  showClear
+                  style={{ width: 120 }}
+                />
+                <Select
+                  placeholder="导入方式"
+                  value={methodFilter}
+                  onChange={(val) => {
+                    setMethodFilter(val as ImportMethod | undefined)
+                    setPagination((prev) => ({ ...prev, page: 1 }))
+                  }}
+                  optionList={methodOptions}
+                  showClear
+                  style={{ width: 120 }}
+                />
+                {isFiltered && (
+                  <Button theme="borderless" icon={<IconClose />} onClick={handleReset}>
+                    重置
+                  </Button>
+                )}
+              </div>
+              <Dropdown trigger="click" render={columnSettingsMenu}>
+                <span>
+                  <Button icon={<IconSetting />}>列</Button>
+                </span>
+              </Dropdown>
             </div>
-          </div>
-        </div>
-      </Main>
+          </>
+        }
+      >
+        <SemiDataTable<BatchImportItem>
+          columns={columns}
+          data={batchList}
+          total={totalCount}
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          isLoading={isLoading}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          rowSelection={rowSelection}
+          emptyText="暂无数据"
+        />
+      </DataTableLayout>
 
       {/* 弹窗组件 */}
       <UploadDialog

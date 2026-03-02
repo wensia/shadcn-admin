@@ -14,11 +14,12 @@ import {
   batchImportVisitSchedules,
   batchCancelImportVisitSchedules,
   type VisitScheduleItem,
-  visitScheduleStatusLabels,
+  type VisitScheduleQueryParams,
 } from '../api'
 import { VisitScheduleDialog } from './visit-schedule-dialog'
 import { CopyableCell } from './copyable-cell'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow } from '@/lib/table-utils'
 
 // 星期映射
@@ -33,11 +34,6 @@ function formatDateWithWeekday(dateStr: string | undefined): string {
   } catch {
     return dateStr
   }
-}
-
-// 状态颜色映射
-const statusTagColor: Record<string, 'orange' | 'green' | 'red' | 'grey'> = {
-  scheduled: 'orange', visited: 'green', noshow: 'red', cancelled: 'grey',
 }
 
 interface PromisedVisitTabProps {
@@ -69,24 +65,21 @@ export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: Promised
     setIsLoading(true)
     setSelectedRowKeys([])
     try {
-      const params: Record<string, unknown> = { page, size: pageSize, status: 'scheduled' }
+      const params: VisitScheduleQueryParams = { page, size: pageSize, status: 'scheduled' }
       if (dateFrom) params.visit_date_from = dateFrom
       if (dateTo) params.visit_date_to = dateTo
       if (creatorCampusId) params.creator_campus_id = creatorCampusId
       const result = await getVisitSchedules(params)
-      if (result) {
-        setData(result.items || [])
-        setTotal(result.total || 0)
-      }
+      setData(result.data?.items ?? [])
+      setTotal(result.data?.total ?? 0)
     } catch (error) {
-      console.error('获取诺到列表失败:', error)
-      Toast.error('获取诺到列表失败')
+      showApiErrorToast(error, '获取诺到列表失败')
     } finally {
       setIsLoading(false)
     }
   }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { void fetchData() }, [fetchData])
 
   // 选中的未导入/已导入记录
   const selectedNotImportedIds = useMemo(() => {
