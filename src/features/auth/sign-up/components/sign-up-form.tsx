@@ -12,11 +12,14 @@ export function SignUpForm({
   const [isLoading, setIsLoading] = useState(false)
   const formRef = useRef<FormApi>()
 
-  function handleSubmit(values: Record<string, any>) {
-    setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(values)
+  type SignUpFormValues = {
+    email: string
+    password: string
+    confirmPassword: string
+  }
 
+  function handleSubmit(_values: SignUpFormValues) {
+    setIsLoading(true)
     setTimeout(() => {
       setIsLoading(false)
     }, 3000)
@@ -27,6 +30,7 @@ export function SignUpForm({
       getFormApi={(api) => { formRef.current = api }}
       onSubmit={handleSubmit}
       className={cn('grid gap-3', className)}
+      {...props}
     >
       <Form.Input
         field='email'
@@ -54,7 +58,7 @@ export function SignUpForm({
         rules={[
           { required: true, message: 'Please confirm your password' },
           {
-            validator: (_rule: any, value: string) => {
+            validator: (_rule: unknown, value: string) => {
               const password = formRef.current?.getValue('password')
               if (value && password && value !== password) {
                 return false

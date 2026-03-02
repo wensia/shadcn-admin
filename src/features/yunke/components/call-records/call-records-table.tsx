@@ -2,7 +2,7 @@
  * 通话记录数据表格 - 使用 SemiDataTable 通用组件
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { createCallRecordsColumns } from './call-records-columns'
 import { RecordDetailModal } from './record-detail-modal'
@@ -33,10 +33,10 @@ export function CallRecordsTable({
   const [modalOpen, setModalOpen] = useState(false)
 
   // 处理查看详情（录音/转写）
-  const handlePlayRecord = (record: CallRecord) => {
+  const handlePlayRecord = useCallback((record: CallRecord) => {
     setSelectedRecord(record)
     setModalOpen(true)
-  }
+  }, [])
 
   // 创建列定义
   const columns = useMemo(
@@ -45,7 +45,7 @@ export function CallRecordsTable({
         onPlayRecord: handlePlayRecord,
         onViewLead,
       }),
-    [onViewLead]
+    [handlePlayRecord, onViewLead]
   )
 
   return (

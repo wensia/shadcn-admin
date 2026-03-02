@@ -3,7 +3,7 @@
  * 包含：概览、跟进记录、订单记录、统计图表、变更历史 五个 Tab
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Tabs, TabPane, Table, Tag, Tooltip, Button, Select, Card, Toast } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
@@ -13,8 +13,7 @@ import { copyToClipboard } from '@/lib/utils'
 import { formatTime } from '@/lib/utils/time'
 
 import { leadsApi } from '../../api'
-import type { Lead, LeadFollowup } from '../../types'
-import { followupMethodLabels } from '../../types'
+import { followupMethodLabels, type Lead, type LeadFollowup } from '../../types'
 import { useLeadStatistics } from '../../hooks/use-lead-statistics'
 import { FollowupResultBadge } from '../status-badges'
 
@@ -35,6 +34,11 @@ import { FollowupResultPie } from './charts/followup-result-pie'
 /** 跟进内容单元格 - 支持悬浮展示完整内容和复制 */
 function FollowupContentCell({ content }: { content: string }) {
   const [copied, setCopied] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [])
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -42,7 +46,7 @@ function FollowupContentCell({ content }: { content: string }) {
     if (success) {
       setCopied(true)
       Toast.success('已复制')
-      setTimeout(() => setCopied(false), 2000)
+      timerRef.current = setTimeout(() => setCopied(false), 2000)
     } else { Toast.error('复制失败') }
   }
 
@@ -86,7 +90,7 @@ export function LeadDetailTabs({
   defaultTab = 'overview',
   className,
   useScrollArea = true,
-  height = 'h-full',
+  height: _height = 'h-full',
   onFieldUpdate,
   compact = false,
 }: LeadDetailTabsProps) {
@@ -146,20 +150,20 @@ export function LeadDetailTabs({
   const followupColumns: ColumnProps<LeadFollowup>[] = [
     { title: '跟进时间', dataIndex: 'followup_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{formatTime(text as string)}</span> },
     { title: '跟进方式', dataIndex: 'method', width: 80, render: (text) => <span style={{ fontSize: 13 }}>{followupMethodLabels[text as keyof typeof followupMethodLabels] || text}</span> },
-    { title: '跟进结果', dataIndex: 'result', width: 90, render: (text, record) => text ? <FollowupResultBadge result={text as string} /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span> },
+    { title: '跟进结果', dataIndex: 'result', width: 90, render: (text, _record) => text ? <FollowupResultBadge result={text as string} /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span> },
     {
       title: '跟进内容', dataIndex: 'content',
       render: (text) => text ? <FollowupContentCell content={text as string} /> : '-',
     },
     {
       title: '跟进人', dataIndex: 'followup_by_name', width: 100,
-      render: (text, record) => (
+      render: (text, _record) => (
         <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
           {(text as string) || '-'}
-          {record?.source === 'ai_auto' && (
+          {_record?.source === 'ai_auto' && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 3, padding: '0 4px', fontSize: 10, fontWeight: 500, background: '#faf5ff', color: '#9333ea' }} title="AI 通话分析自动生成">AI</span>
           )}
-          {record?.source === 'ai_supplement' && (
+          {_record?.source === 'ai_supplement' && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 3, padding: '0 4px', fontSize: 10, fontWeight: 500, background: '#eff6ff', color: '#2563eb' }} title="AI 通话分析补充记录">AI补充</span>
           )}
         </span>

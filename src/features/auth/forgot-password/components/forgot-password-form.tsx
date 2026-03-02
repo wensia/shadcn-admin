@@ -6,6 +6,10 @@ import { Form, Button } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { sleep, cn } from '@/lib/utils'
 
+type ForgotPasswordFormValues = {
+  email: string
+}
+
 export function ForgotPasswordForm({
   className,
   ...props
@@ -14,10 +18,8 @@ export function ForgotPasswordForm({
   const [isLoading, setIsLoading] = useState(false)
   const formRef = useRef<FormApi>()
 
-  function handleSubmit(values: Record<string, any>) {
+  function handleSubmit(values: ForgotPasswordFormValues) {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(values)
 
     toast.promise(sleep(2000), {
       loading: 'Sending email...',
