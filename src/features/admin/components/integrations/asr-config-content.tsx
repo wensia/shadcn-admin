@@ -12,6 +12,7 @@ import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Tooltip }
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
 import { asrConfigApi, type ASRConfigCreate, type ASRConfigUpdate } from '../../api'
 import { ASR_PROVIDER_OPTIONS, type ASRConfigItem, type ASRProvider } from '../../types'
 import { StatusBadge } from '../../components/status-badge'
@@ -86,12 +87,9 @@ const VOLCENGINE_DEFAULTS = {
 }
 
 // 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
 function createSkeletonData(count: number): ASRConfigItem[] {
   return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
+    id: `${SKELETON_ID_PREFIX}${i}`,
     provider: 'volcengine' as ASRProvider,
     name: '',
     credentials: {},

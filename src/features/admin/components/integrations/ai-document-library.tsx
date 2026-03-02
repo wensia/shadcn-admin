@@ -17,16 +17,14 @@ import ReactMarkdown from 'react-markdown'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Modal, Form, Tag, Skeleton, Typography, Tooltip, Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import { Table, Button, Modal, Form, Tag, Skeleton, Typography, Tooltip, Tabs, TabPane, Select } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
 import { aiConfigApi } from '../../api'
 import { AI_DOCUMENT_CATEGORIES, type AIDocumentItem } from '../../types'
 
 const { Text } = Typography
-
-const SKELETON_PREFIX = 'skeleton-'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 
 type DocumentFormValues = {
   name: string
@@ -37,7 +35,7 @@ type DocumentFormValues = {
 
 function createSkeletonData(count: number): AIDocumentItem[] {
   return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
+    id: `${SKELETON_ID_PREFIX}${i}`,
     name: '',
     content: '',
     description: null,

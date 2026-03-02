@@ -23,20 +23,17 @@ import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Checkbox,
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
 import { apiKeysApi } from '../../api'
-import type { EmployeeApiKeyInfo, ApiKeyCreateResponse, ApiKeyInfo } from '../../types'
-import { DEFAULT_API_SCOPES } from '../../types'
+import { DEFAULT_API_SCOPES, type EmployeeApiKeyInfo, type ApiKeyCreateResponse, type ApiKeyInfo } from '../../types'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
 
 // 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
 function createSkeletonData(count: number): EmployeeApiKeyInfo[] {
   return Array.from({ length: count }, (_, i) => ({
-    employee_id: `${SKELETON_PREFIX}${i}`,
+    employee_id: `${SKELETON_ID_PREFIX}${i}`,
     username: '',
     name: '',
     is_active: true,
@@ -196,9 +193,42 @@ export function ApiKeysContent() {
     )
   }
 
+  const handleSearch = () => {
+    setPage(1)
+    refetch()
+  }
+
+  const handleRegenerateClick = (employee: EmployeeApiKeyInfo) => {
+    setSelectedEmployee(employee)
+    regenerateMutation.mutate(employee.employee_id)
+  }
+
+  const handleDeleteClick = (employee: EmployeeApiKeyInfo) => {
+    setSelectedEmployee(employee)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (!selectedEmployee) return
+    deleteMutation.mutate(selectedEmployee.employee_id)
+  }
+
+  const handleScopesClick = (employee: EmployeeApiKeyInfo) => {
+    setSelectedEmployee(employee)
+    setSelectedScopes(employee.api_key?.scopes || {})
+    setScopesDialogOpen(true)
+  }
+
+  const handleScopesSubmit = () => {
+    if (!selectedEmployee) return
+    updateScopesMutation.mutate({
+      employeeId: selectedEmployee.employee_id,
+      scopes: selectedScopes,
+    })
+  }
+
   // 列定义
-  const columns: ColumnProps<EmployeeApiKeyInfo>[] = useMemo(
-    () => [
+  const columns: ColumnProps<EmployeeApiKeyInfo>[] = [
       {
         title: '员工信息',
         dataIndex: 'name',
@@ -370,9 +400,7 @@ export function ApiKeysContent() {
           )
         },
       },
-    ],
-    []
-  )
+    ]
 
   // 表格数据
   const tableData = isLoading ? createSkeletonData(5) : employees
@@ -390,41 +418,6 @@ export function ApiKeysContent() {
     formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
       `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
   }), [page, pageSize, total])
-
-  // 处理函数
-  const handleSearch = () => {
-    setPage(1)
-    refetch()
-  }
-
-  const handleRegenerateClick = (employee: EmployeeApiKeyInfo) => {
-    setSelectedEmployee(employee)
-    regenerateMutation.mutate(employee.employee_id)
-  }
-
-  const handleDeleteClick = (employee: EmployeeApiKeyInfo) => {
-    setSelectedEmployee(employee)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirm = () => {
-    if (!selectedEmployee) return
-    deleteMutation.mutate(selectedEmployee.employee_id)
-  }
-
-  const handleScopesClick = (employee: EmployeeApiKeyInfo) => {
-    setSelectedEmployee(employee)
-    setSelectedScopes(employee.api_key?.scopes || {})
-    setScopesDialogOpen(true)
-  }
-
-  const handleScopesSubmit = () => {
-    if (!selectedEmployee) return
-    updateScopesMutation.mutate({
-      employeeId: selectedEmployee.employee_id,
-      scopes: selectedScopes,
-    })
-  }
 
   const toggleScope = (scope: string, permission: string) => {
     setSelectedScopes((prev) => {

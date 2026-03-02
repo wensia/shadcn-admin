@@ -183,8 +183,9 @@ export function EmployeesPage() {
     if (districtOptionsMap[regionId]) return
     try {
       const response = await adminApi.getDistricts({ region_id: regionId, size: 100 })
-      if (response.data?.items) {
-        setDistrictOptionsMap(prev => ({ ...prev, [regionId]: response.data!.items.map(d => ({ id: d.id, name: d.name })) }))
+      const items = response.data?.items
+      if (items) {
+        setDistrictOptionsMap(prev => ({ ...prev, [regionId]: items.map(d => ({ id: d.id, name: d.name })) }))
       }
     } catch (error) {
       showApiErrorToast(error, '加载地区失败')
@@ -196,8 +197,9 @@ export function EmployeesPage() {
     if (areaOptionsMap[districtId]) return
     try {
       const response = await adminApi.getAreas({ district_id: districtId, size: 100 })
-      if (response.data?.items) {
-        setAreaOptionsMap(prev => ({ ...prev, [districtId]: response.data!.items.map(a => ({ id: a.id, name: a.name })) }))
+      const items = response.data?.items
+      if (items) {
+        setAreaOptionsMap(prev => ({ ...prev, [districtId]: items.map(a => ({ id: a.id, name: a.name })) }))
       }
     } catch (error) {
       showApiErrorToast(error, '加载片区失败')
@@ -399,8 +401,9 @@ export function EmployeesPage() {
     if (positionOptionsMap[departmentId]) return
     try {
       const response = await adminApi.getCampusDepartmentPositionsSimple(campusDeptId)
-      if (response.data) {
-        setPositionOptionsMap(prev => ({ ...prev, [departmentId]: response.data! }))
+      const data = response.data
+      if (data) {
+        setPositionOptionsMap(prev => ({ ...prev, [departmentId]: data }))
       }
     } catch (error) {
       showApiErrorToast(error, '加载职位失败')

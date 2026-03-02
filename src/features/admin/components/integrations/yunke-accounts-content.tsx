@@ -24,6 +24,7 @@ import { Table, Button, Input, Modal, Form, Select, Tag, Skeleton, Typography, T
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
 import { yunkeAdminApi } from '../../api'
 import type { YunkeSubAccount, YunkePasswordResetResponse } from '../../types'
 import { formatTime } from '@/lib/utils/time'
@@ -31,12 +32,9 @@ import { formatTime } from '@/lib/utils/time'
 const { Text } = Typography
 
 // 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
-
 function createSkeletonData(count: number): YunkeSubAccount[] {
   return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
+    id: `${SKELETON_ID_PREFIX}${i}`,
     phone: '',
     username: '',
     real_name: '',

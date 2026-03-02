@@ -22,6 +22,7 @@ import { Table, Button, Input, Modal, Form, Select, Tag, Skeleton, Typography, T
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
 import { webhookHooksApi, dingtalkRobotsApi, adminApi } from '../../api'
 import type {
   WebhookHook,
@@ -43,12 +44,9 @@ interface CampusRobotRule {
 }
 
 // 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string | undefined) => id?.startsWith(SKELETON_PREFIX)
-
 function createSkeletonData(count: number): WebhookHook[] {
   return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
+    id: `${SKELETON_ID_PREFIX}${i}`,
     name: '',
     hook_key: '',
     robot_ids: [],
@@ -178,7 +176,7 @@ export function WebhookHooksContent() {
         dataIndex: 'name',
         width: 200,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={2} style={{ width: 160 }} />
           }
           return (
@@ -199,7 +197,7 @@ export function WebhookHooksContent() {
         dataIndex: 'description',
         width: 250,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
           return (
@@ -214,7 +212,7 @@ export function WebhookHooksContent() {
         dataIndex: 'robots',
         width: 200,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
           }
           const hookRobots = record.robots || []
@@ -245,7 +243,7 @@ export function WebhookHooksContent() {
         dataIndex: 'campus_rules',
         width: 140,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
           const rules = (record.extra_config as { campus_robot_map?: CampusRobotRule[] })?.campus_robot_map || []
@@ -265,7 +263,7 @@ export function WebhookHooksContent() {
         dataIndex: 'message_type',
         width: 100,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
           }
           return (
@@ -280,7 +278,7 @@ export function WebhookHooksContent() {
         dataIndex: 'trigger_count',
         width: 100,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
           }
           return (
@@ -295,7 +293,7 @@ export function WebhookHooksContent() {
         dataIndex: 'is_active',
         width: 80,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
           }
           return <StatusBadge isActive={record.is_active} />
@@ -306,7 +304,7 @@ export function WebhookHooksContent() {
         dataIndex: 'created_at',
         width: 160,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 128 }} />
           }
           return formatTime(record.created_at)
@@ -318,7 +316,7 @@ export function WebhookHooksContent() {
         width: 150,
         fixed: 'right' as const,
         render: (_: unknown, record: WebhookHook) => {
-          if (isSkeletonRow(record.id)) {
+          if (isSkeletonRow(record.id || '')) {
             return <Skeleton.Paragraph rows={1} style={{ width: 112 }} />
           }
           return (

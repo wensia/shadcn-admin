@@ -13,6 +13,7 @@ import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography } from '@d
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
+import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
 import { aiConfigApi, type AIConfigCreate, type AIConfigUpdate } from '../../api'
 import { AI_PROVIDER_OPTIONS, type AIConfigItem, type AIProvider } from '../../types'
 import { StatusBadge } from '../../components/status-badge'
@@ -58,11 +59,9 @@ const PROVIDER_DEFAULTS: Record<AIProvider, { base_url: string; default_model: s
 }
 
 // 骨架屏数据
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 function createSkeletonData(count: number): AIConfigItem[] {
   return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_PREFIX}${i}`,
+    id: `${SKELETON_ID_PREFIX}${i}`,
     provider: 'doubao' as AIProvider,
     name: '',
     api_key_masked: '',

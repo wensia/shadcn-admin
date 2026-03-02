@@ -3,7 +3,7 @@
  */
 
 // 标准API响应格式
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   message?: string
   data?: T
@@ -15,7 +15,18 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
   message: string
   code?: string
-  detail?: any
+  detail?: unknown
+}
+
+/**
+ * 从 ApiResponse 中安全提取 data 字段
+ * 替代 response.data! 非空断言，提供运行时检查
+ */
+export function unwrapData<T>(response: ApiResponse<T>): T {
+  if (response.data === undefined || response.data === null) {
+    throw new Error(response.message || 'API 返回数据为空')
+  }
+  return response.data
 }
 
 // 分页参数

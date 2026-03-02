@@ -4,13 +4,12 @@
 
 import * as React from 'react'
 import { Timeline, Tag, Avatar } from '@douyinfe/semi-ui-19'
-import { IconPhone, IconMail } from '@douyinfe/semi-icons'
+import { IconMail } from '@douyinfe/semi-icons'
 import { Phone, MessageSquare, Users, MessageCircle, Sparkles } from 'lucide-react'
 import { formatTime, formatRelativeTime } from '@/lib/utils/time'
 import { EmptyState } from './empty-state'
 import { FollowupResultBadge } from '../status-badges'
-import type { LeadFollowup, FollowupMethod, FollowupResult } from '../../types'
-import { followupMethodLabels } from '../../types'
+import { followupMethodLabels, type LeadFollowup, type FollowupMethod, type FollowupResult } from '../../types'
 
 interface FollowupTimelineProps {
   followups: LeadFollowup[]
@@ -164,7 +163,7 @@ export function FollowupTimeline({
     )
   }
 
-  const grouped = groupFollowups(followups)
+  const grouped = React.useMemo(() => groupFollowups(followups), [followups])
 
   return (
     <Timeline className={className}>

@@ -9,8 +9,6 @@ import {
   FileText,
   Database,
   Plus,
-  ChevronRight,
-  ChevronDown,
   Pencil,
   Copy,
   Eye,
@@ -23,6 +21,7 @@ import { formatTime } from '@/lib/utils/time'
 
 import { Table, Button, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
 import { aiConfigApi } from '../../api'
 import { AI_SCENES, type AIPromptItem } from '../../types'
 import { AIPromptPreviewSheet } from './ai-prompt-preview-sheet'
@@ -48,9 +47,6 @@ interface PromptGroupRow {
   versions: AIPromptItem[]
   versionCount: number
 }
-
-const SKELETON_PREFIX = 'skeleton-'
-const isSkeletonRow = (id: string) => id.startsWith(SKELETON_PREFIX)
 
 const DEFAULT_SCENE_KEY = AI_SCENES.find((s) => s.needsPrompt)?.key || AI_SCENES[0].key
 
@@ -203,7 +199,7 @@ export function AIPromptManager() {
 
     if (isLoading) {
       return scenes.map((scene, i) => ({
-        id: `${SKELETON_PREFIX}${i}`,
+        id: `${SKELETON_ID_PREFIX}${i}`,
         sceneKey: scene.key,
         sceneLabel: scene.label,
         sceneDescription: scene.description,

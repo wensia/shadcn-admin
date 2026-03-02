@@ -3,6 +3,7 @@
  */
 
 import { apiClient } from '@/lib/api/client'
+import { unwrapData } from '@/lib/api/types'
 import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
 import type {
   YunkeAdminStatus,
@@ -38,13 +39,13 @@ export const yunkeApi = {
   /** 管理员登录 */
   async login(data?: { phone?: string; password?: string }): Promise<YunkeAdminLoginResponse> {
     const response = await apiClient.post<ApiResponse<YunkeAdminLoginResponse>>('/yunke/admin/login', data)
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取管理员状态 */
   async getStatus(): Promise<YunkeAdminStatus> {
     const response = await apiClient.get<ApiResponse<YunkeAdminStatus>>('/yunke/admin/status')
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 管理员登出 */
@@ -76,7 +77,7 @@ export const yunkeApi = {
       page: number
       page_size: number
     }>>('/yunke/admin/sub-accounts', params)
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取可绑定的员工列表 */
@@ -92,7 +93,7 @@ export const yunkeApi = {
     employee_id: string
   }): Promise<{ success: boolean; message?: string }> {
     const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>('/yunke/admin/bind-employee', data)
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 解绑员工 */
@@ -100,7 +101,7 @@ export const yunkeApi = {
     employee_id: string
   }): Promise<{ success: boolean; message?: string }> {
     const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>('/yunke/admin/unbind-employee', data)
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 重置密码 */
@@ -110,7 +111,7 @@ export const yunkeApi = {
     credential_id?: string  // 凭证ID，用于获取对应凭证的cookies
   }): Promise<YunkePasswordResetResponse> {
     const response = await apiClient.post<ApiResponse<YunkePasswordResetResponse>>('/yunke/auth/reset-password', data)
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 为员工执行云客登录 */
@@ -129,7 +130,7 @@ export const yunkeApi = {
   /** 自动同步绑定（根据姓名匹配） */
   async autoSyncBindings(): Promise<YunkeAutoSyncResult> {
     const response = await apiClient.post<ApiResponse<YunkeAutoSyncResult>>('/yunke/admin/auto-sync-bindings')
-    return response.data!
+    return unwrapData(response)
   },
 
   // ========================================================================
@@ -139,13 +140,13 @@ export const yunkeApi = {
   /** 检查所有员工的云客登录状态 */
   async checkAllLoginStatus(): Promise<YunkeLoginStatusResult> {
     const response = await apiClient.get<ApiResponse<YunkeLoginStatusResult>>('/yunke/admin/check-login-status')
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 批量更新登录状态 */
   async batchUpdateLogin(): Promise<YunkeBatchLoginResult> {
     const response = await apiClient.post<ApiResponse<YunkeBatchLoginResult>>('/yunke/admin/batch-update-login')
-    return response.data!
+    return unwrapData(response)
   },
 
   // ========================================================================
@@ -181,7 +182,7 @@ export const yunkeCredentialsApi = {
       '/external/yunke-accounts',
       { params }
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取单个账号凭证 */
@@ -189,7 +190,7 @@ export const yunkeCredentialsApi = {
     const response = await apiClient.get<ApiResponse<YunkeCredential>>(
       `/external/yunke-accounts/${id}`
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 创建账号凭证（Upsert） */
@@ -198,7 +199,7 @@ export const yunkeCredentialsApi = {
       '/external/yunke-accounts',
       data
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 更新账号密码 */
@@ -207,7 +208,7 @@ export const yunkeCredentialsApi = {
       `/external/yunke-accounts/${id}`,
       data
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 删除账号凭证 */
@@ -215,7 +216,7 @@ export const yunkeCredentialsApi = {
     const response = await apiClient.delete<ApiResponse<{ success: boolean; message: string }>>(
       `/external/yunke-accounts/${id}`
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 手动登录/刷新登录 */
@@ -237,7 +238,7 @@ export const yunkeCredentialsApi = {
     const response = await apiClient.get<ApiResponse<YunkeCredentialStatus>>(
       `/external/yunke-accounts/${id}/status`
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取所有凭证的子账号列表 */
@@ -257,7 +258,7 @@ export const yunkeCredentialsApi = {
       accounts_count: number
       errors?: Array<{ account_id: string; account_phone: string; error: string }>
     }>>('/external/yunke-accounts/sub-accounts', params)
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取指定凭证的子账号列表 */
@@ -288,7 +289,7 @@ export const yunkeCredentialsApi = {
         company_name: string | null
       }
     }>>(`/external/yunke-accounts/${accountId}/sub-accounts`, params)
-    return response.data!
+    return unwrapData(response)
   },
 }
 
@@ -302,7 +303,7 @@ export const callRecordsApi = {
       '/yunke/call-records',
       { params }
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取通话统计 */
@@ -310,7 +311,7 @@ export const callRecordsApi = {
     const response = await apiClient.get<ApiResponse<CallRecordStats>>(
       '/yunke/call-records/stats'
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取通话记录详情 */
@@ -318,7 +319,7 @@ export const callRecordsApi = {
     const response = await apiClient.get<ApiResponse<CallRecord>>(
       `/yunke/call-records/${id}`
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取录音 URL */
@@ -327,7 +328,7 @@ export const callRecordsApi = {
       '/yunke/call-records/record-url',
       { voice_id: voiceId }
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 提交 AI 分析任务（异步，立即返回） */
@@ -343,7 +344,7 @@ export const callRecordsApi = {
     }>>(
       `/yunke/call-records/${recordId}/analyze`
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 查询 AI 分析状态（轻量级轮询） */
@@ -361,7 +362,7 @@ export const callRecordsApi = {
     }>>(
       `/yunke/call-records/${recordId}/analysis-status`
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取录音流代理 URL */
@@ -404,7 +405,7 @@ export const callRecordsApi = {
       page: number
       size: number
     }>>('/yunke/call-records/search', { params })
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取通话统计数据（从云客 API 实时获取） */
@@ -423,7 +424,7 @@ export const callRecordsApi = {
       '/yunke/call-records/statistics',
       { params }
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取员工-校区映射关系 */
@@ -431,7 +432,7 @@ export const callRecordsApi = {
     const response = await apiClient.get<ApiResponse<EmployeeCampusMapping>>(
       '/yunke/call-records/employee-campus-mapping'
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 获取转录纠错词库 */
@@ -443,7 +444,7 @@ export const callRecordsApi = {
       corrections: Record<string, string>
       total: number
     }>>('/yunke/call-records/transcript-correction/dictionary')
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 预览转录纠错结果 */
@@ -474,7 +475,7 @@ export const callRecordsApi = {
       '/yunke/call-records/transcript-correction/preview',
       { corrections }
     )
-    return response.data!
+    return unwrapData(response)
   },
 
   /** 执行转录纠错 */
@@ -491,7 +492,7 @@ export const callRecordsApi = {
       '/yunke/call-records/transcript-correction/apply',
       { corrections }
     )
-    return response.data!
+    return unwrapData(response)
   },
 }
 
