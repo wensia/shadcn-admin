@@ -384,3 +384,41 @@
     animation: none !important;
   }
 }
+
+/* =============================================================================
+   Fullscreen overlay utilities
+============================================================================= */
+
+.fullscreen-overlay-background {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.bg-foreground-3 {
+  background-color: color-mix(in srgb, var(--foreground) 3%, var(--background));
+}
+
+/* =============================================================================
+   Semi Toast: 全局胶囊形状
+============================================================================= */
+
+.semi-toast-content {
+  border-radius: 999px;
+}
+
+/* =============================================================================
+   Markdown 三级语义标记：***加粗斜体*** = 风险/警告色（红色）
+   原理：***text*** 渲染为 <em><strong>text</strong></em>（react-markdown: em 在外）
+   通过 CSS 级联将 em 内的 strong 变为红色 + 取消斜体
+============================================================================= */
+
+.markdown-content em:has(> strong) {
+  font-style: normal;
+}
+
+.markdown-content em > strong,
+.markdown-content em strong {
+  font-style: normal;
+  color: var(--destructive);
+  opacity: 0.85;
+}

@@ -602,6 +602,7 @@ const AuthenticatedCrmDataStatisticsConsultingRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof AuthenticatedIndexRoute
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -622,7 +623,6 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/excel-demo': typeof FullscreenExcelDemoRoute
-  '/': typeof AuthenticatedIndexRoute
   '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/areas': typeof AuthenticatedAdminAreasRoute
@@ -676,20 +676,21 @@ export interface FileRoutesByFullPath {
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
-  '/apps': typeof AuthenticatedAppsIndexRoute
-  '/chats': typeof AuthenticatedChatsIndexRoute
+  '/apps/': typeof AuthenticatedAppsIndexRoute
+  '/chats/': typeof AuthenticatedChatsIndexRoute
   '/crm/': typeof AuthenticatedCrmIndexRoute
-  '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/tasks': typeof AuthenticatedTasksIndexRoute
-  '/users': typeof AuthenticatedUsersIndexRoute
+  '/tasks/': typeof AuthenticatedTasksIndexRoute
+  '/users/': typeof AuthenticatedUsersIndexRoute
   '/yunke/': typeof AuthenticatedYunkeIndexRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
-  '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
+  '/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof AuthenticatedIndexRoute
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -706,7 +707,6 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/excel-demo': typeof FullscreenExcelDemoRoute
-  '/': typeof AuthenticatedIndexRoute
   '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/areas': typeof AuthenticatedAdminAreasRoute
@@ -869,6 +869,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/clerk'
     | '/disc-test'
     | '/lead-submit'
@@ -889,7 +890,6 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/excel-demo'
-    | '/'
     | '/admin/ai-config'
     | '/admin/api-keys'
     | '/admin/areas'
@@ -943,20 +943,21 @@ export interface FileRouteTypes {
     | '/clerk/sign-up'
     | '/clerk/user-management'
     | '/admin/'
-    | '/apps'
-    | '/chats'
+    | '/apps/'
+    | '/chats/'
     | '/crm/'
-    | '/help-center'
+    | '/help-center/'
     | '/settings/'
-    | '/tasks'
-    | '/users'
+    | '/tasks/'
+    | '/users/'
     | '/yunke/'
     | '/crm/data-statistics/consulting'
     | '/crm/data-statistics/marketing'
     | '/crm/leads/pool'
-    | '/crm/leads'
+    | '/crm/leads/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/clerk'
     | '/disc-test'
     | '/lead-submit'
@@ -973,7 +974,6 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/excel-demo'
-    | '/'
     | '/admin/ai-config'
     | '/admin/api-keys'
     | '/admin/areas'
@@ -1185,14 +1185,14 @@ declare module '@tanstack/react-router' {
     '/_fullscreen': {
       id: '/_fullscreen'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof FullscreenRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1339,14 +1339,14 @@ declare module '@tanstack/react-router' {
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
       path: '/users'
-      fullPath: '/users'
+      fullPath: '/users/'
       preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tasks/': {
       id: '/_authenticated/tasks/'
       path: '/tasks'
-      fullPath: '/tasks'
+      fullPath: '/tasks/'
       preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
@@ -1360,7 +1360,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated/help-center/': {
       id: '/_authenticated/help-center/'
       path: '/help-center'
-      fullPath: '/help-center'
+      fullPath: '/help-center/'
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
@@ -1374,14 +1374,14 @@ declare module '@tanstack/react-router' {
     '/_authenticated/chats/': {
       id: '/_authenticated/chats/'
       path: '/chats'
-      fullPath: '/chats'
+      fullPath: '/chats/'
       preLoaderRoute: typeof AuthenticatedChatsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/apps/': {
       id: '/_authenticated/apps/'
       path: '/apps'
-      fullPath: '/apps'
+      fullPath: '/apps/'
       preLoaderRoute: typeof AuthenticatedAppsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
@@ -1759,7 +1759,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated/crm/leads/': {
       id: '/_authenticated/crm/leads/'
       path: '/leads'
-      fullPath: '/crm/leads'
+      fullPath: '/crm/leads/'
       preLoaderRoute: typeof AuthenticatedCrmLeadsIndexRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }

@@ -1,8 +1,6 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { ClerkProvider } from '@clerk/clerk-react'
-import { ExternalLink, Key } from 'lucide-react'
-import { PanelLeftIcon } from 'lucide-react'
+import { ExternalLink, Key, PanelLeftIcon } from 'lucide-react'
 import { Banner, Divider } from '@douyinfe/semi-ui-19'
 import { useSidebar } from '@/context/sidebar-context'
 import { ConfigDrawer } from '@/components/config-drawer'

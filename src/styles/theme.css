@@ -42,9 +42,18 @@
   --muted: #f0efe9;
   --muted-foreground: #8a8880;
 
+  /* Markdown list markers */
+  --md-bullets: var(--muted-foreground);
+
   /* 强调色 */
   --accent: #f0efe9;
   --accent-foreground: #141413;
+
+  /* 成功色 - Green */
+  --success: #34a853;
+
+  /* 信息色 - Primary Blue */
+  --info: var(--primary);
 
   /* 危险色 - Soft Red */
   --destructive: #cb4b4b;
@@ -217,6 +226,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-info: var(--info);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
