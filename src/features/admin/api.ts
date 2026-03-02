@@ -1357,8 +1357,11 @@ export interface AIConfigUpdate {
   notes?: string
 }
 
-// AI 配置 API 后端返回裸数据（非 ApiResponse 包装），需要 cast
+// AI 配置 API 已改为 ApiResponse 包装，自动解包 data 字段
 function rawResult<T>(response: unknown): T {
+  if (response && typeof response === 'object' && 'success' in response) {
+    return (response as { data: T }).data
+  }
   return response as T
 }
 
