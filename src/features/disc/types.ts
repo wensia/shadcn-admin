@@ -129,6 +129,10 @@ export interface DISCAIAnalysis {
   version: number
   status: 'pending' | 'processing' | 'completed' | 'failed'
   analyzedAt?: string
+  /** v2 craft-md 格式：完整 markdown 报告 */
+  format?: 'craft-md' | 'json'
+  content?: string
+  /** v1 JSON 格式字段（旧版兼容） */
   personalityProfile: string
   dimensionInsights: Record<'D' | 'I' | 'S' | 'C', string>
   communicationStrategy: string[]

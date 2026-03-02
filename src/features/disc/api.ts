@@ -75,10 +75,9 @@ export async function updateTempDiscRecord(id: string, data: { name?: string; ph
   return apiClient.patch(`${HR_BASE}/temp-disc-records/${id}`, data)
 }
 
-/** 触发 DISC AI 分析 */
+/** 触发 DISC AI 分析（异步模式，返回 status） */
 export async function triggerDiscAIAnalysis(id: string, force = false): Promise<ApiResponse<{
-  success: boolean
-  message: string
+  status: string
   aiAnalysis?: import('./types').DISCAIAnalysis
 }>> {
   return apiClient.post(`${HR_BASE}/temp-disc-records/${id}/ai-analyze`, null, {

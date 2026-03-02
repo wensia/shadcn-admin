@@ -1,12 +1,12 @@
 /**
  * DISC性格测试管理页面 - Semi Design 版本
+ * 遵循 DataTableLayout + SemiDataTable 标准布局
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import QRCode from 'qrcode'
 import {
-  Table,
   Tag,
   Button,
   Input,
@@ -19,21 +19,24 @@ import {
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
   IconSearch,
-  IconRefresh,
   IconCopy,
   IconChevronDown,
   IconMore,
   IconEdit,
   IconEyeOpened,
 } from '@douyinfe/semi-icons'
-import { QrCode, Brain, Clock, AlertCircle, Loader2 } from 'lucide-react'
+import { QrCode, Brain, Clock, AlertCircle, Loader2, Sparkles, X } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Main } from '@/components/layout/main'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
+import { formatTime } from '@/lib/utils/time'
 import {
   getTempDiscRecords,
   getTempDiscRecordDetail,
   updateTempDiscRecord,
+  triggerDiscAIAnalysis,
 } from '@/features/disc/api'
 import {
   DISC_TYPE_CONFIG,
@@ -47,34 +50,9 @@ import { useAuthStore } from '@/stores/auth-store'
 
 const { Text } = Typography
 
-function formatTime(time: string) {
-  return new Date(time).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 /** 固定测试 URL（带有当前用户标识） */
 function getFixedTestUrl(username: string): string {
   return `${window.location.origin}/disc-test?ref=${encodeURIComponent(username)}`
-}
-
-// 骨架屏标识前缀
-const SKELETON_ID_PREFIX = '__skeleton__'
-function isSkeletonRow(id: string): boolean {
-  return id.startsWith(SKELETON_ID_PREFIX)
-}
-function SkeletonCell({ width = '70%' }: { width?: string | number }) {
-  return (
-    <Skeleton.Paragraph
-      rows={1}
-      style={{ width, height: 16 }}
-      loading
-    />
-  )
 }
 
 // DISC 类型 Tag 组件
@@ -366,29 +344,35 @@ function MobileRecordCard({
   )
 }
 
-// 生成骨架屏占位数据
-function createSkeletonData(count: number): TempDISCRecordListItem[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_ID_PREFIX}${i}`,
-    name: '',
-    submitted_at: '',
-    is_migrated: false,
-    created_at: '',
-  }))
-}
+// Select 选项定义（模块级常量，避免每次渲染重建）
+const confidenceOptions = [
+  { value: 'all', label: '全部置信度' },
+  { value: 'high', label: '高置信' },
+  { value: 'medium', label: '中置信' },
+  { value: 'low', label: '低置信' },
+]
 
-interface PaginationTextInfo {
-  currentStart: number
-  currentEnd: number
-  total: number
-}
+const mixedTypeOptions = [
+  { value: 'all', label: '全部倾向' },
+  { value: 'yes', label: '复合型' },
+  { value: 'no', label: '单一型' },
+]
+
+const aiStatusOptions = [
+  { value: 'all', label: '全部状态' },
+  { value: 'completed', label: '已分析' },
+  { value: 'processing', label: '分析中' },
+  { value: 'pending', label: '待分析' },
+  { value: 'failed', label: '分析失败' },
+  { value: 'none', label: '未触发' },
+]
 
 export function DiscTestPage() {
   useDocumentTitle('DISC性格测试')
   const queryClient = useQueryClient()
   const username = useAuthStore((state) => state.user?.username ?? '')
 
-  // 搜索
+  // 搜索筛选状态
   const [searchName, setSearchName] = useState('')
   const [searchPhone, setSearchPhone] = useState('')
   const [confidenceFilter, setConfidenceFilter] = useState<string>('all')
@@ -410,26 +394,9 @@ export function DiscTestPage() {
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [editingRecord, setEditingRecord] = useState<TempDISCRecordListItem | null>(null)
 
-  // Table 动态高度
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollY, setScrollY] = useState<number>(400)
-
-  const measure = useCallback(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const headerH = el.querySelector('.semi-table-thead')?.getBoundingClientRect().height ?? 47
-    const available = el.clientHeight - headerH
-    if (available > 100) setScrollY(available)
-  }, [])
-
-  useEffect(() => {
-    measure()
-    const el = wrapperRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => measure())
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [measure])
+  // 多选
+  const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([])
+  const [batchAnalyzing, setBatchAnalyzing] = useState(false)
 
   // 查询已完成记录
   const { data: recordsData, isLoading: loadingRecords } = useQuery({
@@ -444,9 +411,18 @@ export function DiscTestPage() {
       const res = await getTempDiscRecords(params as Parameters<typeof getTempDiscRecords>[0])
       return res.data
     },
+    refetchInterval: (query) => {
+      const items = query.state.data?.items
+      if (items?.some((r) => r.ai_analysis_status === 'processing' || r.ai_analysis_status === 'pending')) {
+        return 5000
+      }
+      return 30000
+    },
   })
+
+  // ⚠️ 必须 useMemo 稳定引用，否则 SemiDataTable 内部 useEffect 因引用变化导致无限循环
   const records = useMemo<TempDISCRecordListItem[]>(() => recordsData?.items ?? [], [recordsData?.items])
-  const total = recordsData?.total || 0
+  const total = recordsData?.total ?? 0
 
   // 查询详情（AI 分析进行中时自动轮询）
   const { data: detailData, isLoading: loadingDetail } = useQuery({
@@ -464,160 +440,168 @@ export function DiscTestPage() {
   })
   const detail = detailData || null
 
-  // 骨架屏数据
-  const displayData = useMemo(() => {
-    return loadingRecords ? createSkeletonData(pageSize) : records
-  }, [loadingRecords, records, pageSize])
+  // 查看详情
+  const handleViewDetail = useCallback((id: string) => {
+    setDetailId(id)
+    setDetailOpen(true)
+  }, [])
 
-  // 表格列定义
-  const columns: ColumnProps<TempDISCRecordListItem>[] = [
-      {
-        title: '姓名',
-        dataIndex: 'name',
-        width: 100,
-        fixed: 'left' as const,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
-          return <Text strong>{record.name}</Text>
-        },
+  // 编辑记录
+  const handleEditRecord = useCallback((record: TempDISCRecordListItem) => {
+    setEditingRecord(record)
+    setEditModalVisible(true)
+  }, [])
+
+  // 表格列定义（useMemo 防止 Semi Table 无限 forceUpdate）
+  const columns: ColumnProps<TempDISCRecordListItem>[] = useMemo(() => [
+    {
+      title: '姓名',
+      dataIndex: 'name',
+      width: 100,
+      fixed: 'left' as const,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return <Text strong>{record.name}</Text>
       },
-      {
-        title: '手机号',
-        dataIndex: 'phone',
-        width: 120,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={96} />
-          return <Text>{record.phone || '-'}</Text>
-        },
+    },
+    {
+      title: '手机号',
+      dataIndex: 'phone',
+      width: 120,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
+        return <Text>{record.phone || '-'}</Text>
       },
-      {
-        title: '主要类型',
-        dataIndex: 'primary_type',
-        width: 120,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={80} />
-          return <DiscTypeTag type={record.primary_type} />
-        },
+    },
+    {
+      title: '主要类型',
+      dataIndex: 'primary_type',
+      width: 120,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        return <DiscTypeTag type={record.primary_type} />
       },
-      {
-        title: '置信度',
-        dataIndex: 'confidence_level',
-        width: 120,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={80} />
-          const level = record.confidence_level
-          if (!level) return <Text type="tertiary">-</Text>
-          const meta = CONFIDENCE_LEVEL_META[level]
-          return (
-            <div className="flex items-center gap-1.5">
-              <Tag size="small" color={meta?.color || 'grey'}>
-                {meta?.label || level}
-              </Tag>
-              {typeof record.confidence_score === 'number' && (
-                <Text type="tertiary" size="small" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {record.confidence_score}
-                </Text>
-              )}
-            </div>
-          )
-        },
+    },
+    {
+      title: '置信度',
+      dataIndex: 'confidence_level',
+      width: 120,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        const level = record.confidence_level
+        if (!level) return <Text type="tertiary">-</Text>
+        const meta = CONFIDENCE_LEVEL_META[level]
+        return (
+          <div className="flex items-center gap-1.5">
+            <Tag size="small" color={meta?.color || 'grey'}>
+              {meta?.label || level}
+            </Tag>
+            {typeof record.confidence_score === 'number' && (
+              <Text type="tertiary" size="small" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {record.confidence_score}
+              </Text>
+            )}
+          </div>
+        )
       },
-      {
-        title: '复合倾向',
-        dataIndex: 'has_mixed_type',
-        width: 100,
-        render: (_text: boolean, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
-          if (!record.has_mixed_type) {
-            return <Text type="tertiary">-</Text>
-          }
-          return <Tag size="small">{record.mixed_type_code || '复合型'}</Tag>
-        },
+    },
+    {
+      title: '复合倾向',
+      dataIndex: 'has_mixed_type',
+      width: 100,
+      render: (_text: boolean, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        if (!record.has_mixed_type) {
+          return <Text type="tertiary">-</Text>
+        }
+        return <Tag size="small">{record.mixed_type_code || '复合型'}</Tag>
       },
-      ...(['D', 'I', 'S', 'C'] as const).map((dim) => ({
-        title: <span style={{ display: 'flex', justifyContent: 'center' }}>{dim}分</span>,
-        dataIndex: `${dim.toLowerCase()}_score`,
-        width: 60,
-        align: 'center' as const,
-        render: (_text: number, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={32} />
-          const scoreKey = `${dim.toLowerCase()}_score` as keyof TempDISCRecordListItem
-          return <span style={{ display: 'flex', justifyContent: 'center' }}>{record[scoreKey] ?? '-'}</span>
-        },
-      })),
-      {
-        title: 'AI分析',
-        dataIndex: 'ai_analysis_status',
-        width: 100,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
-          return <AIStatusTag status={record.ai_analysis_status} />
-        },
+    },
+    ...(['D', 'I', 'S', 'C'] as const).map((dim) => ({
+      title: <span style={{ display: 'flex', justifyContent: 'center' }}>{dim}分</span>,
+      dataIndex: `${dim.toLowerCase()}_score`,
+      width: 60,
+      align: 'center' as const,
+      render: (_text: number, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={32} />
+        const scoreKey = `${dim.toLowerCase()}_score` as keyof TempDISCRecordListItem
+        return <span style={{ display: 'flex', justifyContent: 'center' }}>{record[scoreKey] ?? '-'}</span>
       },
-      {
-        title: '首推岗位',
-        dataIndex: 'best_match_job',
-        width: 100,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={64} />
-          const job = record.best_match_job
-          if (!job) return <Text type="tertiary">-</Text>
-          return <Text strong style={{ fontSize: 13 }}>{job}</Text>
-        },
+    })),
+    {
+      title: 'AI分析',
+      dataIndex: 'ai_analysis_status',
+      width: 100,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return <AIStatusTag status={record.ai_analysis_status} />
       },
-      {
-        title: '提交时间',
-        dataIndex: 'submitted_at',
-        width: 150,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={112} />
-          return (
-            <Text type="tertiary" style={{ fontSize: 13 }}>
-              {formatTime(record.submitted_at)}
-            </Text>
-          )
-        },
+    },
+    {
+      title: '首推岗位',
+      dataIndex: 'best_match_job',
+      width: 100,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        const job = record.best_match_job
+        if (!job) return <Text type="tertiary">-</Text>
+        return <Text strong style={{ fontSize: 13 }}>{job}</Text>
       },
-      {
-        title: '操作',
-        dataIndex: 'id',
-        width: 60,
-        fixed: 'right' as const,
-        render: (_text: string, record: TempDISCRecordListItem) => {
-          if (isSkeletonRow(record.id)) return <SkeletonCell width={32} />
-          return (
-            <Dropdown
-              trigger="click"
-              position="bottomRight"
-              clickToHide
-              render={
-                <Dropdown.Menu>
-                  <Dropdown.Item icon={<IconEyeOpened />} onClick={() => handleViewDetail(record.id)}>
-                    查看详情
-                  </Dropdown.Item>
-                  <Dropdown.Item icon={<IconEdit />} onClick={() => handleEditRecord(record)}>
-                    修改信息
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              }
-            >
-              <span data-stop-row-click onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex' }}>
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  icon={<IconMore />}
-                  size="small"
-                />
-              </span>
-            </Dropdown>
-          )
-        },
+    },
+    {
+      title: '提交时间',
+      dataIndex: 'submitted_at',
+      width: 150,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+        return (
+          <Text type="tertiary" style={{ fontSize: 13 }}>
+            {formatTime(record.submitted_at)}
+          </Text>
+        )
       },
-    ]
+    },
+    {
+      title: '操作',
+      dataIndex: 'id',
+      width: 60,
+      fixed: 'right' as const,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={32} />
+        return (
+          <Dropdown
+            trigger="click"
+            position="bottomRight"
+            clickToHide
+            render={
+              <Dropdown.Menu>
+                <Dropdown.Item icon={<IconEyeOpened />} onClick={() => handleViewDetail(record.id)}>
+                  查看详情
+                </Dropdown.Item>
+                <Dropdown.Item icon={<IconEdit />} onClick={() => handleEditRecord(record)}>
+                  修改信息
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            }
+          >
+            <span data-stop-row-click onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex' }}>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<IconMore />}
+                size="small"
+              />
+            </span>
+          </Dropdown>
+        )
+      },
+    },
+  ], [handleViewDetail, handleEditRecord])
 
   // 搜索
   const handleSearch = () => {
     setPage(1)
+    setSelectedRowKeys([])
   }
 
   // 重置搜索
@@ -628,6 +612,7 @@ export function DiscTestPage() {
     setMixedTypeFilter('all')
     setAiStatusFilter('all')
     setPage(1)
+    setSelectedRowKeys([])
   }
 
   // 刷新
@@ -635,74 +620,52 @@ export function DiscTestPage() {
     queryClient.invalidateQueries({ queryKey: ['disc-records'] })
   }
 
-  // 查看详情
-  const handleViewDetail = (id: string) => {
-    setDetailId(id)
-    setDetailOpen(true)
-  }
-
-  // 编辑记录
-  const handleEditRecord = (record: TempDISCRecordListItem) => {
-    setEditingRecord(record)
-    setEditModalVisible(true)
-  }
+  // 批量 AI 分析
+  const handleBatchAIAnalyze = useCallback(async () => {
+    if (selectedRowKeys.length === 0 || batchAnalyzing) return
+    setBatchAnalyzing(true)
+    let successCount = 0
+    let failCount = 0
+    for (const id of selectedRowKeys) {
+      try {
+        const record = records.find((r) => r.id === id)
+        const force = record?.ai_analysis_status === 'completed'
+        const resp = await triggerDiscAIAnalysis(String(id), force)
+        if (resp.success) {
+          successCount++
+        } else {
+          failCount++
+        }
+      } catch {
+        failCount++
+      }
+    }
+    setBatchAnalyzing(false)
+    setSelectedRowKeys([])
+    queryClient.invalidateQueries({ queryKey: ['disc-records'] })
+    if (failCount === 0) {
+      toast.success(`已提交 ${successCount} 条 AI 分析任务`)
+    } else {
+      toast.warning(`成功 ${successCount} 条，失败 ${failCount} 条`)
+    }
+  }, [selectedRowKeys, batchAnalyzing, records, queryClient])
 
   // 编辑成功后刷新列表
   const handleEditSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['disc-records'] })
   }
 
-  // 分页配置 (useMemo 防止字面量重新创建)
-  const pagination = useMemo(() => {
-    if (total <= 0) return false as const
-    return {
-      currentPage: page,
-      pageSize,
-      total,
-      onPageChange: (p: number) => setPage(p),
-      onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-      showSizeChanger: true,
-      pageSizeOpts: [10, 20, 50],
-      showTotal: true,
-      formatPageText: (info: PaginationTextInfo) =>
-        `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-    }
-  }, [total, page, pageSize])
-
-  // Select 选项定义
-  const confidenceOptions = [
-    { value: 'all', label: '全部置信度' },
-    { value: 'high', label: '高置信' },
-    { value: 'medium', label: '中置信' },
-    { value: 'low', label: '低置信' },
-  ]
-
-  const mixedTypeOptions = [
-    { value: 'all', label: '全部倾向' },
-    { value: 'yes', label: '复合型' },
-    { value: 'no', label: '单一型' },
-  ]
-
-  const aiStatusOptions = [
-    { value: 'all', label: '全部状态' },
-    { value: 'completed', label: '已分析' },
-    { value: 'processing', label: '分析中' },
-    { value: 'pending', label: '待分析' },
-    { value: 'failed', label: '分析失败' },
-    { value: 'none', label: '未触发' },
-  ]
+  // SemiDataTable 行点击
+  const handleRowClick = useCallback((record: TempDISCRecordListItem) => {
+    handleViewDetail(record.id)
+  }, [handleViewDetail])
 
   return (
-    <Main fixed>
-      <div className="flex h-full flex-col gap-4">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">DISC性格测试</h1>
-            <p className="hidden sm:block text-sm text-muted-foreground">
-              管理DISC性格测试记录和查看测试结果
-            </p>
-          </div>
+    <>
+      <DataTableLayout
+        title="DISC性格测试"
+        total={total}
+        headerActions={
           <Button
             theme="solid"
             type="primary"
@@ -712,158 +675,172 @@ export function DiscTestPage() {
             <span className="hidden sm:inline">测试链接</span>
             <span className="sm:hidden">链接</span>
           </Button>
-        </div>
-
-        {/* 搜索筛选区 - 桌面端 */}
-        <div className="hidden sm:flex items-center gap-2">
-          <Input
-            prefix={<IconSearch />}
-            placeholder="姓名"
-            value={searchName}
-            onChange={(v) => setSearchName(v)}
-            onEnterPress={handleSearch}
-            showClear
-            style={{ width: 180 }}
-          />
-          <Input
-            placeholder="手机号"
-            value={searchPhone}
-            onChange={(v) => setSearchPhone(v)}
-            onEnterPress={handleSearch}
-            showClear
-            style={{ width: 160 }}
-          />
-          <Select
-            value={confidenceFilter}
-            onChange={(v) => { setConfidenceFilter(v as string); setPage(1) }}
-            optionList={confidenceOptions}
-            style={{ width: 140 }}
-          />
-          <Select
-            value={mixedTypeFilter}
-            onChange={(v) => { setMixedTypeFilter(v as string); setPage(1) }}
-            optionList={mixedTypeOptions}
-            style={{ width: 140 }}
-          />
-          <Select
-            value={aiStatusFilter}
-            onChange={(v) => { setAiStatusFilter(v as string); setPage(1) }}
-            optionList={aiStatusOptions}
-            style={{ width: 140 }}
-          />
-          <Button theme="outline" type="primary" onClick={handleSearch}>
-            搜索
-          </Button>
-          <Button theme="borderless" type="tertiary" onClick={handleReset}>
-            重置
-          </Button>
-          <div className="flex-1" />
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<IconRefresh />}
-            onClick={handleRefresh}
-          />
-        </div>
-
-        {/* 搜索筛选区 - 移动端（可折叠） */}
-        <div className="sm:hidden space-y-2">
-          <div className="flex items-center gap-2">
-            <Input
-              prefix={<IconSearch />}
-              placeholder="搜索姓名"
-              value={searchName}
-              onChange={(v) => setSearchName(v)}
-              onEnterPress={handleSearch}
-              showClear
-              className="flex-1"
-            />
-            <Button
-              theme="outline"
-              type="tertiary"
-              icon={<IconChevronDown style={{ transform: filterOpen ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />}
-              onClick={() => setFilterOpen(!filterOpen)}
-            />
-            <Button
-              theme="borderless"
-              type="tertiary"
-              icon={<IconRefresh />}
-              onClick={handleRefresh}
-            />
-          </div>
-          {filterOpen && (
-            <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+        }
+        onRefresh={handleRefresh}
+        isRefreshing={loadingRecords}
+        toolbar={
+          <>
+            {/* 搜索筛选区 - 桌面端 */}
+            <div className="hidden sm:flex items-center gap-2" style={{ marginBottom: 10 }}>
+              <Input
+                prefix={<IconSearch />}
+                placeholder="姓名"
+                value={searchName}
+                onChange={(v) => setSearchName(v)}
+                onEnterPress={handleSearch}
+                showClear
+                style={{ width: 180 }}
+              />
               <Input
                 placeholder="手机号"
                 value={searchPhone}
                 onChange={(v) => setSearchPhone(v)}
                 onEnterPress={handleSearch}
                 showClear
+                style={{ width: 160 }}
               />
-              <div className="grid grid-cols-2 gap-2">
-                <Select
-                  value={confidenceFilter}
-                  onChange={(v) => { setConfidenceFilter(v as string); setPage(1) }}
-                  optionList={confidenceOptions}
-                />
-                <Select
-                  value={mixedTypeFilter}
-                  onChange={(v) => { setMixedTypeFilter(v as string); setPage(1) }}
-                  optionList={mixedTypeOptions}
-                />
-                <Select
-                  value={aiStatusFilter}
-                  onChange={(v) => { setAiStatusFilter(v as string); setPage(1) }}
-                  optionList={aiStatusOptions}
-                  className="col-span-2"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button theme="outline" type="primary" className="flex-1" onClick={handleSearch}>搜索</Button>
-                <Button theme="borderless" type="tertiary" className="flex-1" onClick={handleReset}>重置</Button>
-              </div>
+              <Select
+                value={confidenceFilter}
+                onChange={(v) => { setConfidenceFilter(v as string); setPage(1) }}
+                optionList={confidenceOptions}
+                style={{ width: 140 }}
+              />
+              <Select
+                value={mixedTypeFilter}
+                onChange={(v) => { setMixedTypeFilter(v as string); setPage(1) }}
+                optionList={mixedTypeOptions}
+                style={{ width: 140 }}
+              />
+              <Select
+                value={aiStatusFilter}
+                onChange={(v) => { setAiStatusFilter(v as string); setPage(1) }}
+                optionList={aiStatusOptions}
+                style={{ width: 140 }}
+              />
+              <Button theme="outline" type="primary" onClick={handleSearch}>
+                搜索
+              </Button>
+              <Button theme="borderless" type="tertiary" onClick={handleReset}>
+                重置
+              </Button>
             </div>
-          )}
-        </div>
 
-        {/* 测试记录表格 - 桌面端 */}
-        <div
-          ref={wrapperRef}
-          className="hidden sm:flex flex-1"
-          style={{ minHeight: 0, flexDirection: 'column' }}
-        >
-          <Table
-            columns={columns}
-            dataSource={displayData}
-            rowKey="id"
-            pagination={pagination}
-            scroll={{ y: scrollY }}
-            loading={false}
-            onRow={(record) => ({
-              onClick: (e: React.MouseEvent) => {
-                // 忽略操作列按钮和下拉菜单的点击
-                const target = e.target as HTMLElement
-                if (target.closest('.semi-dropdown') || target.closest('.semi-dropdown-menu') || target.closest('[data-stop-row-click]')) return
-                if (record && !isSkeletonRow(record.id)) {
-                  handleViewDetail(record.id)
-                }
-              },
-              style: { cursor: record && !isSkeletonRow(record.id) ? 'pointer' : undefined },
-            })}
-            empty={
-              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--semi-color-text-2)' }}>
-                暂无数据
+            {/* 搜索筛选区 - 移动端（可折叠） */}
+            <div className="sm:hidden space-y-2" style={{ marginBottom: 10 }}>
+              <div className="flex items-center gap-2">
+                <Input
+                  prefix={<IconSearch />}
+                  placeholder="搜索姓名"
+                  value={searchName}
+                  onChange={(v) => setSearchName(v)}
+                  onEnterPress={handleSearch}
+                  showClear
+                  className="flex-1"
+                />
+                <Button
+                  theme="outline"
+                  type="tertiary"
+                  icon={<IconChevronDown style={{ transform: filterOpen ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />}
+                  onClick={() => setFilterOpen(!filterOpen)}
+                />
               </div>
-            }
-            style={loadingRecords ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
+              {filterOpen && (
+                <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+                  <Input
+                    placeholder="手机号"
+                    value={searchPhone}
+                    onChange={(v) => setSearchPhone(v)}
+                    onEnterPress={handleSearch}
+                    showClear
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={confidenceFilter}
+                      onChange={(v) => { setConfidenceFilter(v as string); setPage(1) }}
+                      optionList={confidenceOptions}
+                    />
+                    <Select
+                      value={mixedTypeFilter}
+                      onChange={(v) => { setMixedTypeFilter(v as string); setPage(1) }}
+                      optionList={mixedTypeOptions}
+                    />
+                    <Select
+                      value={aiStatusFilter}
+                      onChange={(v) => { setAiStatusFilter(v as string); setPage(1) }}
+                      optionList={aiStatusOptions}
+                      className="col-span-2"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button theme="outline" type="primary" className="flex-1" onClick={handleSearch}>搜索</Button>
+                    <Button theme="borderless" type="tertiary" className="flex-1" onClick={handleReset}>重置</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 批量操作栏 */}
+            {selectedRowKeys.length > 0 && (
+              <div className="hidden sm:flex items-center gap-3 rounded-md border px-4 py-2" style={{ marginBottom: 10, background: 'var(--semi-color-primary-light-default)' }}>
+                <span className="text-sm font-medium">
+                  已选择 <strong>{selectedRowKeys.length}</strong> 条记录
+                </span>
+                <Button
+                  size="small"
+                  theme="solid"
+                  type="primary"
+                  icon={<Sparkles className="h-3.5 w-3.5" />}
+                  onClick={handleBatchAIAnalyze}
+                  loading={batchAnalyzing}
+                  disabled={batchAnalyzing}
+                >
+                  {batchAnalyzing ? '提交中...' : '批量 AI 分析'}
+                </Button>
+                <div className="flex-1" />
+                <Button
+                  size="small"
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<X className="h-3.5 w-3.5" />}
+                  onClick={() => setSelectedRowKeys([])}
+                >
+                  取消选择
+                </Button>
+              </div>
+            )}
+          </>
+        }
+      >
+        {/* 桌面端：SemiDataTable */}
+        <div className="hidden sm:flex" style={{ flex: 1, minHeight: 0, flexDirection: 'column' }}>
+          <SemiDataTable<TempDISCRecordListItem>
+            columns={columns}
+            data={records}
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            isLoading={loadingRecords}
+            scrollX={1310}
+            onPageChange={(p) => { setPage(p); setSelectedRowKeys([]) }}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); setSelectedRowKeys([]) }}
+            onRowClick={handleRowClick}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (_keys, rows) => {
+                setSelectedRowKeys(rows.filter((r) => r && !isSkeletonRow(r.id)).map((r) => r.id))
+              },
+              fixed: 'left',
+              width: 48,
+            }}
+            emptyText="暂无数据"
           />
         </div>
 
-        {/* 测试记录卡片列表 - 移动端 */}
-        <div className="sm:hidden flex-1 overflow-auto space-y-3">
+        {/* 移动端：卡片列表 */}
+        <div className="flex-1 overflow-auto sm:hidden" style={{ padding: 12 }}>
           {loadingRecords ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="rounded-lg border p-4 space-y-3">
+              <div key={i} className="rounded-lg border p-4 space-y-3 mb-3">
                 <div className="flex items-center justify-between">
                   <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
                   <Skeleton.Paragraph rows={1} style={{ width: 80, height: 20 }} loading />
@@ -895,16 +872,15 @@ export function DiscTestPage() {
             ))
           )}
         </div>
-      </div>
+      </DataTableLayout>
 
-      {/* 固定测试链接弹窗 */}
+      {/* 弹窗/抽屉放在 DataTableLayout 外面 */}
       <FixedLinkModal
         visible={qrModalVisible}
         onClose={() => setQrModalVisible(false)}
         url={getFixedTestUrl(username)}
       />
 
-      {/* 编辑弹窗 */}
       <EditRecordModal
         visible={editModalVisible}
         onClose={() => { setEditModalVisible(false); setEditingRecord(null) }}
@@ -912,19 +888,39 @@ export function DiscTestPage() {
         onSuccess={handleEditSuccess}
       />
 
-      {/* 详情抽屉 */}
       <DiscDetailDrawer
         open={detailOpen}
         onOpenChange={(open) => {
           setDetailOpen(open)
-          if (!open) setDetailId(null)
+          if (!open) {
+            setDetailId(null)
+            queryClient.invalidateQueries({ queryKey: ['disc-records'] })
+          }
         }}
         detail={detail}
         loading={loadingDetail}
         onDetailUpdate={(updated: TempDISCRecordDetail) => {
           queryClient.setQueryData(['disc-record-detail', detailId], updated)
+          const aiStatus = updated?.result?.aiAnalysis?.status
+          if (aiStatus === 'processing' || aiStatus === 'pending') {
+            queryClient.setQueriesData<typeof recordsData>(
+              { queryKey: ['disc-records'] },
+              (old) => {
+                if (!old?.items) return old
+                return {
+                  ...old,
+                  items: old.items.map((item) =>
+                    item.id === updated.id
+                      ? { ...item, ai_analysis_status: aiStatus }
+                      : item
+                  ),
+                }
+              },
+            )
+            queryClient.invalidateQueries({ queryKey: ['disc-records'] })
+          }
         }}
       />
-    </Main>
+    </>
   )
 }

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * DISC 岗位适配度卡片组件（AI 驱动版）
  * 纯文字分析布局，支持 **加粗** 和 【标记】 渲染
