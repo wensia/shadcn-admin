@@ -29,6 +29,25 @@ const STORAGE_KEY = 'excel-demo-data'
 const STORAGE_NAME_KEY = 'excel-demo-doc-name'
 const SAVE_DEBOUNCE_MS = 1500
 
+interface WorkbookSnapshot {
+  [key: string]: unknown
+}
+
+interface WorkbookLike {
+  save: () => WorkbookSnapshot
+}
+
+interface CommandSubscription {
+  dispose?: () => void
+}
+
+interface UniverApiLike {
+  createWorkbook: (data: WorkbookSnapshot) => void
+  getActiveWorkbook: () => WorkbookLike | null
+  onCommandExecuted: (callback: () => void) => CommandSubscription
+  dispose: () => void
+}
+
 // 示例数据
 const SAMPLE_DATA = {
   sheetOrder: ['sheet1'],
@@ -101,7 +120,7 @@ const SAMPLE_DATA = {
 }
 
 /** 重新创建 Univer 实例的工具函数 */
-function initUniver(container: HTMLElement, data?: any) {
+function initUniver(container: HTMLElement, data?: WorkbookSnapshot) {
   const { univerAPI } = createUniver({
     locale: LocaleType.ZH_CN,
     locales: {
@@ -111,12 +130,13 @@ function initUniver(container: HTMLElement, data?: any) {
       UniverSheetsCorePreset({ container }),
     ],
   })
-  univerAPI.createWorkbook(data ?? {})
-  return univerAPI
+  const api = univerAPI as unknown as UniverApiLike
+  api.createWorkbook(data ?? {})
+  return api
 }
 
 /** 从 localStorage 加载已保存的数据 */
-function loadSavedData(): { data: any; name: string } | null {
+function loadSavedData(): { data: WorkbookSnapshot; name: string } | null {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (!saved) return null
@@ -129,7 +149,7 @@ function loadSavedData(): { data: any; name: string } | null {
 }
 
 /** 保存数据到 localStorage */
-function saveToStorage(data: any, name: string) {
+function saveToStorage(data: WorkbookSnapshot, name: string) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
     localStorage.setItem(STORAGE_NAME_KEY, name)
@@ -140,7 +160,7 @@ function saveToStorage(data: any, name: string) {
 
 export function ExcelDemoPage() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const apiRef = useRef<any>(null)
+  const apiRef = useRef<UniverApiLike | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -179,7 +199,7 @@ export function ExcelDemoPage() {
 
     const api = initUniver(containerRef.current, initialData)
     apiRef.current = api
-    setIsReady(true)
+    const readyTimer = window.setTimeout(() => setIsReady(true), 0)
 
     // 监听所有命令执行，触发自动保存
     const subscription = api.onCommandExecuted(() => {
@@ -187,6 +207,7 @@ export function ExcelDemoPage() {
     })
 
     return () => {
+      window.clearTimeout(readyTimer)
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       subscription?.dispose()
       api.dispose()
@@ -252,8 +273,8 @@ export function ExcelDemoPage() {
     if (!workbook) return
 
     const snapshot = workbook.save()
-    console.log('=== 工作簿快照 ===', snapshot)
-    toast.success('数据已打印到浏览器控制台 (F12)')
+    ;(window as Window & { __EXCEL_DEMO_SNAPSHOT__?: WorkbookSnapshot }).__EXCEL_DEMO_SNAPSHOT__ = snapshot
+    toast.success('快照已挂到 window.__EXCEL_DEMO_SNAPSHOT__')
   }, [])
 
   // 清空表格（同时清除 localStorage）

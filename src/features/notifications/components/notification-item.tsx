@@ -6,8 +6,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { Bell, FileText, Users, Info } from 'lucide-react'
-import type { Notification } from '../types'
-import { NotificationType } from '../types'
+import { NotificationType, type Notification } from '../types'
 
 interface NotificationItemProps {
   notification: Notification

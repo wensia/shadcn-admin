@@ -8,8 +8,12 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { FileEdit, UserCog, ArrowRight } from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
 import { EmptyState } from './empty-state'
-import type { LeadInfoChangeLog, LeadOwnershipChangeLog } from '../../types'
-import { infoChangeTypeLabels, ownershipChangeTypeLabels } from '../../types'
+import {
+  infoChangeTypeLabels,
+  ownershipChangeTypeLabels,
+  type LeadInfoChangeLog,
+  type LeadOwnershipChangeLog,
+} from '../../types'
 
 // Semi Design 配色
 const semiColors = {

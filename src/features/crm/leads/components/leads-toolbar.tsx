@@ -10,7 +10,6 @@ import {
   Button,
   Dropdown,
   Modal,
-  Typography,
   Toast,
   Space,
 } from '@douyinfe/semi-ui-19'
@@ -23,15 +22,13 @@ import {
 import {
   leadStatusLabels,
   intentionLevelLabels,
-  LeadStatus,
-  IntentionLevel,
+  type Lead,
+  type LeadStatus,
+  type IntentionLevel,
 } from '../types'
-import type { Lead } from '../types'
 import { leadsApi } from '../api'
 import { LeadInfoDisplay } from './detail/lead-info-display'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-const { Text } = Typography
 
 const isValidPhone = (value: string) => /^1[3-9]\d{9}$/.test(value)
 
@@ -89,7 +86,7 @@ export function LeadsToolbar({
       } else {
         Toast.info({ content: '未找到该手机号对应的线索' })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '查询失败')
     } finally {
       setIsLookingUp(false)

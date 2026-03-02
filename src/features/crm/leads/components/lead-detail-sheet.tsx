@@ -12,8 +12,7 @@ import {
   Typography,
   Toast,
   Popover,
-  Spin,
-  Space,
+  Skeleton,
 } from '@douyinfe/semi-ui-19'
 import {
   IconEdit,
@@ -23,20 +22,18 @@ import {
   IconStar,
 } from '@douyinfe/semi-icons'
 import { leadsApi, yunkeApi } from '../api'
-import type { Lead } from '../types'
-import { IntentionLevel, intentionLevelLabels } from '../types'
+import { intentionLevelLabels, type Lead, type IntentionLevel } from '../types'
 import { LeadStatusBadge, IntentionLevelBadge } from './status-badges'
 import { LeadDetailTabs } from './detail/lead-detail-tabs'
 import { FollowupForm } from '../../continuous-call/components/followup-form'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 interface LeadDetailSheetProps {
   leadId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onEdit?: (lead: Lead) => void
-  onCreateFollowup?: (leadId: string) => void
 }
 
 export function LeadDetailSheet({
@@ -44,7 +41,6 @@ export function LeadDetailSheet({
   open,
   onOpenChange,
   onEdit,
-  onCreateFollowup,
 }: LeadDetailSheetProps) {
   const queryClient = useQueryClient()
 
@@ -149,12 +145,13 @@ export function LeadDetailSheet({
       queryClient.invalidateQueries({ queryKey: ['leads'] })
     },
   })
+  const { mutateAsync: updateLeadField } = updateFieldMutation
 
   const handleFieldUpdate = useCallback(
     async (field: string, value: string) => {
-      await updateFieldMutation.mutateAsync({ field, value })
+      await updateLeadField({ field, value })
     },
-    [updateFieldMutation]
+    [updateLeadField]
   )
 
   // 快捷键
@@ -184,8 +181,6 @@ export function LeadDetailSheet({
     }
   }, [])
 
-  if (!lead && !isLoading) return null
-
   return (
     <>
       <SideSheet
@@ -209,93 +204,139 @@ export function LeadDetailSheet({
             flexShrink: 0,
           }}
         >
-          {/* 状态标签 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {lead && <LeadStatusBadge status={lead.status} />}
-            {lead && (
-              <Popover
-                visible={intentionPopoverOpen}
-                onVisibleChange={setIntentionPopoverOpen}
-                trigger="click"
-                position="bottomLeft"
-                content={
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: 4 }}>
-                    {Object.entries(intentionLevelLabels).map(([value, label]) => (
-                      <div
-                        key={value}
-                        style={{
-                          padding: '6px 12px',
-                          cursor: 'pointer',
-                          borderRadius: 4,
-                          background: lead.intention_level === value ? 'var(--semi-color-fill-0)' : 'transparent',
-                        }}
-                        onClick={async () => {
-                          await handleFieldUpdate('intention_level', value)
-                          setIntentionPopoverOpen(false)
-                        }}
-                      >
-                        <IntentionLevelBadge level={value as IntentionLevel} />
+          {isLoading && !lead ? (
+            /* 骨架屏 Header */
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Skeleton.Title style={{ width: 60, height: 22 }} />
+                <Skeleton.Title style={{ width: 52, height: 22 }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                <Skeleton.Button style={{ width: 64, height: 32 }} />
+                <Skeleton.Button style={{ width: 64, height: 32 }} />
+                <Skeleton.Button style={{ width: 88, height: 32 }} />
+                <Button icon={<IconClose />} theme="borderless" onClick={() => onOpenChange(false)} />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 状态标签 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {lead && <LeadStatusBadge status={lead.status} />}
+                {lead && (
+                  <Popover
+                    visible={intentionPopoverOpen}
+                    onVisibleChange={setIntentionPopoverOpen}
+                    trigger="click"
+                    position="bottomLeft"
+                    content={
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: 4 }}>
+                        {Object.entries(intentionLevelLabels).map(([value]) => (
+                          <div
+                            key={value}
+                            style={{
+                              padding: '6px 12px',
+                              cursor: 'pointer',
+                              borderRadius: 4,
+                              background: lead.intention_level === value ? 'var(--semi-color-fill-0)' : 'transparent',
+                            }}
+                            onClick={async () => {
+                              await handleFieldUpdate('intention_level', value)
+                              setIntentionPopoverOpen(false)
+                            }}
+                          >
+                            <IntentionLevelBadge level={value as IntentionLevel} />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                }
-              >
-                <span style={{ cursor: 'pointer' }} title="点击修改意向等级">
-                  {lead.intention_level ? (
-                    <IntentionLevelBadge level={lead.intention_level} />
-                  ) : (
-                    <Tag style={{ border: '1px dashed var(--semi-color-border)' }}>
-                      设置意向
-                    </Tag>
-                  )}
-                </span>
-              </Popover>
-            )}
-            {lead?.is_starred && (
-              <IconStar style={{ color: '#fadb14', fontSize: 16 }} />
-            )}
-          </div>
+                    }
+                  >
+                    <span style={{ cursor: 'pointer' }} title="点击修改意向等级">
+                      {lead.intention_level ? (
+                        <IntentionLevelBadge level={lead.intention_level} />
+                      ) : (
+                        <Tag style={{ border: '1px dashed var(--semi-color-border)' }}>
+                          设置意向
+                        </Tag>
+                      )}
+                    </span>
+                  </Popover>
+                )}
+                {lead?.is_starred && (
+                  <IconStar style={{ color: '#fadb14', fontSize: 16 }} />
+                )}
+              </div>
 
-          {/* 操作按钮 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-            {lead && (
-              <>
+              {/* 操作按钮 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                {lead && (
+                  <>
+                    <Button
+                      icon={<IconEdit />}
+                      theme="light"
+                      onClick={() => onEdit?.(lead)}
+                    >
+                      编辑
+                    </Button>
+                    <Button
+                      icon={<IconPhone />}
+                      theme={isInCall ? 'solid' : 'light'}
+                      type={isInCall ? 'danger' : 'primary'}
+                      onClick={() => isInCall ? hangUpCall() : makeOutboundCall(lead.parent_phone || '')}
+                      disabled={outboundLoading || (!isInCall && !lead?.parent_phone)}
+                      loading={outboundLoading}
+                    >
+                      {isInCall ? `挂断 ${formatCallDuration(callDuration)}` : '外呼'}
+                    </Button>
+                    <Button
+                      icon={<IconPlus />}
+                      theme="solid"
+                      onClick={() => setFollowupDialogOpen(true)}
+                    >
+                      新建跟进
+                    </Button>
+                  </>
+                )}
                 <Button
-                  icon={<IconEdit />}
-                  theme="light"
-                  onClick={() => onEdit?.(lead)}
-                >
-                  编辑
-                </Button>
-                <Button
-                  icon={<IconPhone />}
-                  theme={isInCall ? 'solid' : 'light'}
-                  type={isInCall ? 'danger' : 'primary'}
-                  onClick={() => isInCall ? hangUpCall() : makeOutboundCall(lead.parent_phone || '')}
-                  disabled={outboundLoading || (!isInCall && !lead?.parent_phone)}
-                  loading={outboundLoading}
-                >
-                  {isInCall ? `挂断 ${formatCallDuration(callDuration)}` : '外呼'}
-                </Button>
-                <Button
-                  icon={<IconPlus />}
-                  theme="solid"
-                  onClick={() => setFollowupDialogOpen(true)}
-                >
-                  新建跟进
-                </Button>
-              </>
-            )}
-            <Button
-              icon={<IconClose />}
-              theme="borderless"
-              onClick={() => onOpenChange(false)}
-            />
-          </div>
+                  icon={<IconClose />}
+                  theme="borderless"
+                  onClick={() => onOpenChange(false)}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Tabs 区域 */}
-        {leadId && (
+        {isLoading && !lead ? (
+          <div style={{ flex: 1, padding: '16px 20px' }}>
+            <Skeleton loading active>
+              {/* Tab 栏骨架 */}
+              <div style={{ display: 'flex', gap: 24, marginBottom: 20, borderBottom: '1px solid var(--semi-color-border)', paddingBottom: 10 }}>
+                <Skeleton.Title style={{ width: 48, height: 20 }} />
+                <Skeleton.Title style={{ width: 48, height: 20 }} />
+                <Skeleton.Title style={{ width: 64, height: 20 }} />
+              </div>
+              {/* 内容骨架 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px' }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i}>
+                    <Skeleton.Title style={{ width: 60, height: 14, marginBottom: 8 }} />
+                    <Skeleton.Paragraph rows={1} style={{ width: '100%' }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 24 }}>
+                <Skeleton.Title style={{ width: 80, height: 16, marginBottom: 12 }} />
+                <Skeleton.Paragraph rows={3} style={{ width: '100%' }} />
+              </div>
+              <div style={{ marginTop: 24 }}>
+                <Skeleton.Title style={{ width: 80, height: 16, marginBottom: 12 }} />
+                <Skeleton.Paragraph rows={2} style={{ width: '100%' }} />
+              </div>
+            </Skeleton>
+          </div>
+        ) : leadId ? (
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <LeadDetailTabs
               leadId={leadId}
@@ -306,7 +347,7 @@ export function LeadDetailSheet({
               onFieldUpdate={handleFieldUpdate}
             />
           </div>
-        )}
+        ) : null}
       </SideSheet>
 
       {/* 新建跟进对话框 */}

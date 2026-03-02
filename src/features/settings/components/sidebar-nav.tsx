@@ -11,15 +11,20 @@ type SidebarNavProps = React.HTMLAttributes<HTMLElement> & {
   }[]
 }
 
+type SidebarSelectValue = string | number | undefined
+type SidebarSelectedOption = {
+  value?: string | number
+}
+
 export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const [val, setVal] = useState(pathname ?? '/settings')
 
-  const handleSelect = (value: string | number | any[] | Record<string, any>) => {
-    const v = value as string
-    setVal(v)
-    navigate({ to: v })
+  const handleSelect = (value: SidebarSelectValue) => {
+    if (typeof value !== 'string') return
+    setVal(value)
+    navigate({ to: value })
   }
 
   const selectOptions = items.map((item) => ({
@@ -40,7 +45,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
           onChange={handleSelect}
           optionList={selectOptions}
           style={{ width: '100%' }}
-          renderSelectedItem={(option: any) => {
+          renderSelectedItem={(option: SidebarSelectedOption) => {
             const item = items.find((i) => i.href === option.value)
             return item ? (
               <div className='flex gap-x-4 px-2 py-1'>

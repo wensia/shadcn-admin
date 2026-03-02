@@ -38,10 +38,11 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
 
   // 组件卸载或关闭时停止播放
   useEffect(() => {
+    const audioElement = audioRef.current
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.currentTime = 0
+      if (audioElement) {
+        audioElement.pause()
+        audioElement.currentTime = 0
       }
     }
   }, [])

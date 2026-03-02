@@ -10,7 +10,7 @@ export const Route = createFileRoute('/login')({
     // 重定向到sign-in,保留redirect参数
     throw redirect({
       to: '/sign-in',
-      search: search as any
+      search: search as Record<string, unknown>
     })
   }
 })

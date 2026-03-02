@@ -52,7 +52,10 @@ export function DailyNoticeDialog() {
 
   useEffect(() => {
     if (noticeData?.id && !isDismissedToday(noticeData.id)) {
-      setOpen(true)
+      const openTimer = window.setTimeout(() => {
+        setOpen(true)
+      }, 0)
+      return () => window.clearTimeout(openTimer)
     }
   }, [noticeData])
 

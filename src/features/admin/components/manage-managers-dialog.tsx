@@ -11,13 +11,13 @@ import { Button, Modal, Select, Tag, Typography } from '@douyinfe/semi-ui-19'
 import { IconLoading } from '@douyinfe/semi-icons'
 import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
 import { adminApi } from '../api'
-import type {
-  CampusDepartmentItem,
-  DepartmentManagerItem,
-  DepartmentManagerCreate,
-  ManagerType,
+import {
+  MANAGER_TYPE_OPTIONS,
+  type CampusDepartmentItem,
+  type DepartmentManagerItem,
+  type DepartmentManagerCreate,
+  type ManagerType,
 } from '../types'
-import { MANAGER_TYPE_OPTIONS } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography

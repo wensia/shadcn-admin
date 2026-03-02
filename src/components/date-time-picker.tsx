@@ -5,8 +5,7 @@
  */
 
 import * as React from 'react'
-import { format, addDays, nextMonday, setHours, setMinutes } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
+import { addDays, nextMonday, setHours, setMinutes } from 'date-fns'
 import { X } from 'lucide-react'
 import { DatePicker as SemiDatePicker, Button } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
@@ -79,10 +78,6 @@ export function DateTimePicker({
   }
 
   // 格式化显示
-  const displayValue = selectedDate
-    ? format(selectedDate, 'MM/dd HH:mm', { locale: zhCN })
-    : null
-
   // 禁用日期
   const disabledDate = React.useCallback(
     (date?: Date) => {

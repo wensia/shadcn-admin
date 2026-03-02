@@ -15,25 +15,23 @@ import {
   Divider,
   Tag,
 } from '@douyinfe/semi-ui-19'
-import { IconClose } from '@douyinfe/semi-icons'
 import { leadsApi } from '../api'
 import { apiClient } from '@/lib/api/client'
-import type {
-  LeadListParams,
-  LeadStatus,
-  IntentionLevel,
-  SourceChannelExtraField,
-  Grade,
-  FollowupResult,
-} from '../types'
 import {
   leadStatusLabels,
   intentionLevelLabels,
   gradeLabels,
   followupResultLabels,
+  type LeadListParams,
+  type LeadStatus,
+  type IntentionLevel,
+  type SourceChannelExtraField,
+  type Grade,
+  type FollowupResult,
 } from '../types'
 
-const { Text, Title } = Typography
+const { Text } = Typography
+type DateRangeValue = [Date | undefined, Date | undefined] | undefined
 
 // 来源渠道响应类型
 interface SourceChannelItem {
@@ -87,7 +85,7 @@ export function FilterSheet({
   }, [open, filters])
 
   // 获取来源渠道
-  const { data: sourceChannels } = useQuery({
+  const { data: sourceChannels, isLoading: isLoadingChannels } = useQuery({
     queryKey: ['source-channels-active'],
     queryFn: async () => {
       const response = await apiClient.get<{
@@ -101,7 +99,7 @@ export function FilterSheet({
   })
 
   // 获取其他筛选选项
-  const { data: filterOptions } = useQuery({
+  const { data: filterOptions, isLoading: isLoadingOptions } = useQuery({
     queryKey: ['filter-options'],
     queryFn: async () => {
       const response = await leadsApi.getFilterOptions()
@@ -153,7 +151,7 @@ export function FilterSheet({
       return value !== undefined && value !== '' && value !== null
     }).length + (Object.keys(sourceExtraFilters).length > 0 ? 1 : 0)
 
-  const updateFilter = (key: keyof LeadListParams, value: any) => {
+  const updateFilter = <K extends keyof LeadListParams>(key: K, value: LeadListParams[K] | undefined) => {
     setLocalFilters((prev) => ({ ...prev, [key]: value || undefined }))
   }
 
@@ -219,6 +217,7 @@ export function FilterSheet({
             onChange={(v) => updateFilter('source_channel_id', v)}
             style={{ width: '100%' }}
             showClear
+            loading={isLoadingChannels}
           >
             {sourceChannels?.map((ch) => (
               <Select.Option key={ch.id} value={ch.id}>
@@ -377,6 +376,7 @@ export function FilterSheet({
               onChange={(v) => updateFilter('owner_campus_id', v)}
               style={{ width: '100%' }}
               showClear
+              loading={isLoadingOptions}
             >
               {filterOptions?.campuses?.map((campus) => (
                 <Select.Option key={campus.id} value={campus.id}>
@@ -449,10 +449,10 @@ export function FilterSheet({
             type="dateRange"
             value={
               localFilters.created_from || localFilters.created_to
-                ? [
+                ? ([
                     localFilters.created_from ? new Date(localFilters.created_from) : undefined,
                     localFilters.created_to ? new Date(localFilters.created_to) : undefined,
-                  ] as any
+                  ] as DateRangeValue)
                 : undefined
             }
             onChange={(dates) => {
@@ -497,10 +497,10 @@ export function FilterSheet({
                 type="dateRange"
                 value={
                   localFilters.activated_from || localFilters.activated_to
-                    ? [
+                    ? ([
                         localFilters.activated_from ? new Date(localFilters.activated_from) : undefined,
                         localFilters.activated_to ? new Date(localFilters.activated_to) : undefined,
-                      ] as any
+                      ] as DateRangeValue)
                     : undefined
                 }
                 onChange={(dates) => {

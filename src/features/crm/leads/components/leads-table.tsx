@@ -9,15 +9,15 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { formatTime } from '@/lib/utils/time'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
-import type { LeadListItem } from '../types'
 import {
-  LeadStatus,
-  IntentionLevel,
-  FollowupResult,
   leadStatusLabels,
   intentionLevelLabels,
   gradeLabels,
   followupResultLabels,
+  type LeadListItem,
+  type LeadStatus,
+  type IntentionLevel,
+  type FollowupResult,
 } from '../types'
 
 const { Text } = Typography

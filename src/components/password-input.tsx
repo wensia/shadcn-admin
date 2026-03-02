@@ -3,23 +3,17 @@ import { Input } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
 
 type PasswordInputProps = Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  'type' | 'onChange'
+  React.ComponentProps<typeof Input>,
+  'mode' | 'onChange'
 > & {
   inputClassName?: string
-  ref?: React.Ref<HTMLInputElement>
   onChange?: (value: string) => void
-  value?: string
 }
 
 export function PasswordInput({
   className,
   inputClassName,
-  disabled,
-  ref,
   onChange,
-  value,
-  placeholder,
   ...props
 }: PasswordInputProps) {
   return (
@@ -27,11 +21,8 @@ export function PasswordInput({
       <Input
         mode='password'
         className={inputClassName}
-        disabled={disabled}
-        value={value}
-        placeholder={placeholder}
         onChange={(v) => onChange?.(v)}
-        {...(props as any)}
+        {...props}
       />
     </div>
   )

@@ -3,9 +3,7 @@
  * 以等宽字体展示 prompt 完整内容
  */
 
-import { X } from 'lucide-react'
-
-import { Button, Tag, SideSheet, Typography } from '@douyinfe/semi-ui-19'
+import { Tag, SideSheet, Typography } from '@douyinfe/semi-ui-19'
 import { formatTime } from '@/lib/utils/time'
 import type { AIPromptItem } from '../../types'
 

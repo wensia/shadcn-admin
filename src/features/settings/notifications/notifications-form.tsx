@@ -1,13 +1,22 @@
 import { useRef } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Form, Button, Switch, Checkbox, RadioGroup, Radio } from '@douyinfe/semi-ui-19'
+import { Form, Button, Radio } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { showSubmittedData } from '@/lib/show-submitted-data'
+
+type NotificationFormValues = {
+  type?: 'all' | 'mentions' | 'none'
+  mobile: boolean
+  communication_emails: boolean
+  social_emails: boolean
+  marketing_emails: boolean
+  security_emails: boolean
+}
 
 export function NotificationsForm() {
   const formRef = useRef<FormApi>()
 
-  function handleSubmit(values: Record<string, any>) {
+  function handleSubmit(values: NotificationFormValues) {
     showSubmittedData(values)
   }
 

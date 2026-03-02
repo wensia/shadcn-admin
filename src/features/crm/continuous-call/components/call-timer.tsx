@@ -17,6 +17,7 @@ export function CallTimer({ startTime, style }: CallTimerProps) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
+    let resetTimer: ReturnType<typeof setTimeout> | null = null
     if (startTime) {
       // 启动计时器
       timerRef.current = setInterval(() => {
@@ -29,10 +30,15 @@ export function CallTimer({ startTime, style }: CallTimerProps) {
       }, 1000)
     } else {
       // 重置计时器
-      setDuration('00:00')
+      resetTimer = setTimeout(() => {
+        setDuration('00:00')
+      }, 0)
     }
 
     return () => {
+      if (resetTimer) {
+        clearTimeout(resetTimer)
+      }
       if (timerRef.current) {
         clearInterval(timerRef.current)
         timerRef.current = null

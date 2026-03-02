@@ -11,6 +11,7 @@ import {
   Form,
   Toast,
 } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import {
   IconLoading,
 } from '@douyinfe/semi-icons'
@@ -32,7 +33,7 @@ interface FormValues {
 }
 
 export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBatchDialogProps) {
-  const formRef = useRef<any>(null)
+  const formRef = useRef<FormApi>()
 
   // 当 batch 变化时重置表单
   useEffect(() => {

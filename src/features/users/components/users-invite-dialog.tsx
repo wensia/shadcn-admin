@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Modal, Form, Button, TextArea } from '@douyinfe/semi-ui-19'
+import { Modal, Form, Button } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { MailPlus, Send } from 'lucide-react'
 import { showSubmittedData } from '@/lib/show-submitted-data'

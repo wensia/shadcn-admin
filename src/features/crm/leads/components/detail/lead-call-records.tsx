@@ -111,7 +111,7 @@ export function LeadCallRecords({
   const [detailRecord, setDetailRecord] = useState<CallRecord | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['lead-call-records', leadId, page],
+    queryKey: ['lead-call-records', leadId, page, pageSize],
     queryFn: async () => {
       const response = await getLeadCallRecords(leadId, { page, size: pageSize })
       return response.data

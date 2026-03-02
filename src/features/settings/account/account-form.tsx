@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { Form, Button } from '@douyinfe/semi-ui-19'
-import { DatePicker as SemiDatePicker } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 
@@ -19,7 +18,7 @@ const languages = [
 export function AccountForm() {
   const formRef = useRef<FormApi>()
 
-  function handleSubmit(values: Record<string, any>) {
+  function handleSubmit(values: { name: string; dob?: string; language: string }) {
     showSubmittedData(values)
   }
 

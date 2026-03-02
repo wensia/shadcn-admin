@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, X, Search } from 'lucide-react'
+import { Check, Search } from 'lucide-react'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { Button, Tag, Modal, Input, Typography } from '@douyinfe/semi-ui-19'
 import { type ChatUser } from '../data/chat-types'

@@ -4,8 +4,14 @@
  */
 
 import * as React from 'react'
-import type { Lead, LeadFollowup, LeadStatus, FollowupMethod, FollowupResult } from '../types'
-import { followupMethodLabels } from '../types'
+import {
+  followupMethodLabels,
+  type Lead,
+  type LeadFollowup,
+  type LeadStatus,
+  type FollowupMethod,
+  type FollowupResult,
+} from '../types'
 import { getFollowupResultStyle } from '@/lib/status-styles'
 import type { FollowupFrequencyData } from '../components/detail/charts/followup-frequency-chart'
 import type { MethodDistributionData } from '../components/detail/charts/followup-method-pie'

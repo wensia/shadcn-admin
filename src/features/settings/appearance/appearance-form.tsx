@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Form, Button, RadioGroup, Radio } from '@douyinfe/semi-ui-19'
+import { Form, Button, Radio } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { fonts } from '@/config/fonts'
 import { showSubmittedData } from '@/lib/show-submitted-data'
@@ -11,12 +11,17 @@ const fontOptions = fonts.map((f) => ({
   label: f.charAt(0).toUpperCase() + f.slice(1),
 }))
 
+type AppearanceFormValues = {
+  font: string
+  theme: 'light' | 'dark'
+}
+
 export function AppearanceForm() {
   const { font, setFont } = useFont()
   const { theme, setTheme } = useTheme()
   const formRef = useRef<FormApi>()
 
-  function handleSubmit(values: Record<string, any>) {
+  function handleSubmit(values: AppearanceFormValues) {
     if (values.font !== font) setFont(values.font)
     if (values.theme !== theme) setTheme(values.theme)
     showSubmittedData(values)

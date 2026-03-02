@@ -8,7 +8,6 @@ import { CheckCheck, Loader2 } from 'lucide-react'
 import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks'
 import { NotificationItem } from './notification-item'
 import type { Notification } from '../types'
-import { NotificationType } from '../types'
 
 interface NotificationPopoverProps {
   onClose?: () => void

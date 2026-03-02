@@ -3,11 +3,9 @@
  */
 
 import React, { useState } from 'react'
-import { Popover, Button, Toast, Spin, Tag } from '@douyinfe/semi-ui-19'
-import { Input } from '@douyinfe/semi-ui-19'
+import { Popover, Button, Toast, Spin, Tag, Input } from '@douyinfe/semi-ui-19'
 import { IconEdit, IconLoading, IconTick, IconChevronDown } from '@douyinfe/semi-icons'
-import type { Lead } from '../../types'
-import { gradeLabels, LeadStatus, IntentionLevel } from '../../types'
+import { gradeLabels, type Lead, type LeadStatus, type IntentionLevel } from '../../types'
 import { formatTime } from '@/lib/utils/time'
 import { InfoItem } from './info-item'
 import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
@@ -76,7 +74,7 @@ function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; 
       await onSave(newStatus)
       setOpen(false)
       Toast.success('线索状态已更新')
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '更新失败')
     } finally { setIsSaving(false) }
   }
@@ -153,7 +151,7 @@ function EditableIntentionLevel({ level, editable, onSave }: { level: IntentionL
       await onSave(newLevel)
       setOpen(false)
       Toast.success('意向等级已更新')
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '更新失败')
     } finally { setIsSaving(false) }
   }
@@ -223,7 +221,7 @@ function NotesInline({ notes, editable, onSave }: { notes?: string; editable?: b
       await onSave(editValue)
       setIsEditing(false)
       Toast.success('备注已更新')
-    } catch (error: any) {
+    } catch (error: unknown) {
       showApiErrorToast(error, '保存失败')
     } finally { setIsSaving(false) }
   }

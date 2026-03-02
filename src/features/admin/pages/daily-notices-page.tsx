@@ -10,8 +10,7 @@ import { Plus, Pencil, Trash2, Power, PowerOff, Eye } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Button, Input, Modal, Tag, Switch, Typography, TextArea } from '@douyinfe/semi-ui-19'
-import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import { Button, Input, Modal, Tag, Switch, Typography, TextArea, Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
@@ -255,8 +254,8 @@ export function DailyNoticesPage() {
         onRefresh={() => refetch()}
         isRefreshing={isLoading}
       >
-        <SemiDataTable
-          columns={columns as any}
+        <SemiDataTable<DailyNoticeItem>
+          columns={columns}
           data={notices}
           total={notices.length}
           page={page}

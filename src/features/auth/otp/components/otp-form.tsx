@@ -1,11 +1,14 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Form, Button, Input } from '@douyinfe/semi-ui-19'
+import { Form, Button } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
 
 type OtpFormProps = React.HTMLAttributes<HTMLDivElement>
+type OtpFormValues = {
+  otp: string
+}
 
 export function OtpForm({ className, ...props }: OtpFormProps) {
   const navigate = useNavigate()
@@ -13,7 +16,7 @@ export function OtpForm({ className, ...props }: OtpFormProps) {
   const [otp, setOtp] = useState('')
   const formRef = useRef<FormApi>()
 
-  function handleSubmit(values: Record<string, any>) {
+  function handleSubmit(values: OtpFormValues) {
     setIsLoading(true)
     showSubmittedData({ otp: values.otp })
 

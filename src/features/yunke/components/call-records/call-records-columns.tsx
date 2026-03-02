@@ -4,6 +4,7 @@
 
 import { Skeleton, Tag, Button, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import type { TagColor } from '@douyinfe/semi-ui-19/lib/es/tag/interface'
 import { Play, FileText, UserRound } from 'lucide-react'
 import { isSkeletonRow } from '@/lib/table-utils'
 import { formatTime } from '@/lib/utils/time'
@@ -27,7 +28,7 @@ function formatDuration(seconds: number | null): string {
 /**
  * 获取通话类型标签
  */
-function getCallTypeLabel(type: string | null): { label: string; color: string } {
+function getCallTypeLabel(type: string | null): { label: string; color: TagColor } {
   switch (type) {
     case 's':
     case 'outbound':
@@ -45,7 +46,7 @@ function getCallTypeLabel(type: string | null): { label: string; color: string }
  */
 function getCallResultStyle(result: string | null, duration: number | null): {
   label: string
-  color: string
+  color: TagColor
 } {
   // 如果有通话时长，说明接通了
   if (duration && duration > 0) {
@@ -78,6 +79,11 @@ function getCallResultStyle(result: string | null, duration: number | null): {
 interface CreateColumnsOptions {
   onPlayRecord?: (record: CallRecord) => void
   onViewLead?: (leadId: string) => void
+}
+
+type IntentTagConfig = {
+  label: string
+  tagColor: TagColor
 }
 
 export function createCallRecordsColumns(options: CreateColumnsOptions = {}): ColumnProps<CallRecord>[] {
@@ -140,7 +146,7 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
       render: (text: string, record: CallRecord) => {
         if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
         const { label, color } = getCallTypeLabel(text)
-        return <Tag color={color as any} type="light">{label}</Tag>
+        return <Tag color={color} type="light">{label}</Tag>
       },
     },
     {
@@ -174,7 +180,7 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
       render: (_text: string, record: CallRecord) => {
         if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 56 }} />
         const { label, color } = getCallResultStyle(record.call_result, record.duration)
-        return <Tag color={color as any} type="light">{label}</Tag>
+        return <Tag color={color} type="light">{label}</Tag>
       },
     },
     {
@@ -202,7 +208,7 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
         }
         const color =
           score >= 80 ? 'var(--semi-color-success)' : score >= 60 ? 'var(--semi-color-warning)' : score >= 40 ? 'orange' : 'var(--semi-color-danger)'
-        const intentMap: Record<string, { label: string; tagColor: string }> = {
+        const intentMap: Record<string, IntentTagConfig> = {
           high: { label: '高', tagColor: 'green' },
           medium: { label: '中', tagColor: 'yellow' },
           low: { label: '低', tagColor: 'orange' },
@@ -214,7 +220,7 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
             <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color }}>
               {Math.round(score)}
             </span>
-            <Tag size="small" color={intent.tagColor as any} type="light">{intent.label}</Tag>
+            <Tag size="small" color={intent.tagColor} type="light">{intent.label}</Tag>
           </div>
         )
       },

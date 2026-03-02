@@ -8,8 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Info, ChevronDown, ChevronRight, Mic } from 'lucide-react'
 
-import { Button, Select, Switch, Tag, Tooltip, Typography } from '@douyinfe/semi-ui-19'
-import { Input as SemiInput, InputNumber } from '@douyinfe/semi-ui-19'
+import { Button, Select, Switch, Tag, Tooltip, Typography, Input as SemiInput, InputNumber } from '@douyinfe/semi-ui-19'
 import { asrConfigApi } from '../api'
 import { TIME_RANGE_PRESETS, ASR_PROVIDER_OPTIONS } from '../types'
 

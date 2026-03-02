@@ -47,10 +47,13 @@ export function LeadAccessNotifyDialog({
   // 初始化表单
   useEffect(() => {
     if (config) {
-      setRobotId(config.robot_id)
-      setNotifyAt80(config.notify_at_80)
-      setNotifyAt100(config.notify_at_100)
-      setIsActive(config.is_active)
+      const syncTimer = window.setTimeout(() => {
+        setRobotId(config.robot_id)
+        setNotifyAt80(config.notify_at_80)
+        setNotifyAt100(config.notify_at_100)
+        setIsActive(config.is_active)
+      }, 0)
+      return () => window.clearTimeout(syncTimer)
     }
   }, [config])
 

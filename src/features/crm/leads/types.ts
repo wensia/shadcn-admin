@@ -152,7 +152,7 @@ export interface Lead {
   source_channel_id: string
   source_channel_name?: string
   source_detail?: string
-  source_extra_info?: Record<string, any>  // 渠道额外信息（根据channel_config动态字段）
+  source_extra_info?: Record<string, unknown>  // 渠道额外信息（根据channel_config动态字段）
   batch_remark?: string  // 批次备注
 
   // 状态信息
@@ -265,7 +265,7 @@ export interface LeadCreate {
   notes?: string
   source_channel_id: string
   source_detail?: string
-  source_extra_info?: Record<string, any>  // 渠道额外信息
+  source_extra_info?: Record<string, unknown>  // 渠道额外信息
   intention_level?: IntentionLevel  // 意向等级
   next_followup_at?: string  // 下次跟进时间
   status?: LeadStatus  // 线索状态
@@ -297,7 +297,7 @@ export interface LeadUpdate {
   notes?: string
   intention_level?: IntentionLevel
   next_followup_at?: string
-  source_extra_info?: Record<string, any>  // 渠道额外信息（更新时可修改）
+  source_extra_info?: Record<string, unknown>  // 渠道额外信息（更新时可修改）
   status?: LeadStatus  // 线索状态
 }
 
@@ -357,7 +357,7 @@ export interface LeadInfoChangeLog {
   }>
   change_reason?: string
   change_summary: string
-  extra_data?: Record<string, any>
+  extra_data?: Record<string, unknown>
   // 跨校区记录字段
   source_campus_id?: string
   source_campus_name?: string
@@ -383,7 +383,7 @@ export interface LeadOwnershipChangeLog {
   is_in_pool_after: boolean
   change_reason?: string
   change_summary: string
-  extra_data?: Record<string, any>
+  extra_data?: Record<string, unknown>
   // 跨校区记录字段
   source_campus_id?: string
   source_campus_name?: string

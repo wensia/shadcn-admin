@@ -13,7 +13,6 @@ import {
   Typography,
   TextArea,
   Toast,
-  Descriptions,
 } from '@douyinfe/semi-ui-19'
 import { IconTick, IconClose } from '@douyinfe/semi-icons'
 import {
@@ -79,7 +78,7 @@ export function ApprovalDialog({
       setComment('')
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '操作失败')
     }
   })
@@ -96,7 +95,7 @@ export function ApprovalDialog({
       setComment('')
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '操作失败')
     }
   })
@@ -256,7 +255,7 @@ export function SubmitApprovalDialog({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '提交失败')
     }
   })
@@ -351,7 +350,7 @@ export function CancelOrderDialog({
       setReason('')
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showApiErrorToast(error, '取消失败')
     }
   })

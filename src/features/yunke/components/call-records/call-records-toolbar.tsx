@@ -38,6 +38,11 @@ interface CallRecordsToolbarProps {
   isLoading?: boolean
 }
 
+type DateRangeValue = [Date | undefined, Date | undefined] | undefined
+type SelectOptionNode = {
+  label?: React.ReactNode
+}
+
 export function CallRecordsToolbar({
   filters,
   onFilterChange,
@@ -205,12 +210,12 @@ export function CallRecordsToolbar({
   )
 
   // 日期范围值
-  const dateRangeValue: [Date | undefined, Date | undefined] | undefined =
+  const dateRangeValue: DateRangeValue =
     filters.start_date || filters.end_date
       ? [
           filters.start_date ? new Date(filters.start_date) : undefined,
           filters.end_date ? new Date(filters.end_date) : undefined,
-        ] as [Date | undefined, Date | undefined]
+        ]
       : undefined
 
   return (
@@ -234,7 +239,7 @@ export function CallRecordsToolbar({
       {/* 日期范围 */}
       <DatePicker
         type="dateRange"
-        value={dateRangeValue as any}
+        value={dateRangeValue}
         onChange={(dates) => {
           if (Array.isArray(dates) && dates.length === 2) {
             const [start, end] = dates as [Date | undefined, Date | undefined]
@@ -271,9 +276,8 @@ export function CallRecordsToolbar({
           filter
           showClear
           style={{ width: 130 }}
-          renderSelectedItem={(optionNode) => {
-            const item = optionNode as any
-            return <span>{item?.label || '全部员工'}</span>
+          renderSelectedItem={(optionNode: SelectOptionNode) => {
+            return <span>{optionNode.label || '全部员工'}</span>
           }}
         />
       )}

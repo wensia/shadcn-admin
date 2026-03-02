@@ -1,4 +1,4 @@
-import { type ChangeEvent, useState } from 'react'
+import { useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { SlidersHorizontal, ArrowUpAZ, ArrowDownAZ } from 'lucide-react'
 import { Button, Input, Select, Divider, Typography } from '@douyinfe/semi-ui-19'
@@ -13,12 +13,6 @@ const { Text } = Typography
 const route = getRouteApi('/_authenticated/apps/')
 
 type AppType = 'all' | 'connected' | 'notConnected'
-
-const appText = new Map<AppType, string>([
-  ['all', 'All Apps'],
-  ['connected', 'Connected'],
-  ['notConnected', 'Not Connected'],
-])
 
 const appTypeOptions = [
   { value: 'all', label: 'All Apps' },
@@ -43,7 +37,7 @@ export function Apps() {
   const [appType, setAppType] = useState(type)
   const [searchTerm, setSearchTerm] = useState(filter)
 
-  const filteredApps = apps
+  const filteredApps = [...apps]
     .sort((a, b) =>
       sort === 'asc'
         ? a.name.localeCompare(b.name)
@@ -111,7 +105,7 @@ export function Apps() {
             />
             <Select
               value={appType}
-              onChange={handleTypeChange as any}
+              onChange={(value) => handleTypeChange(value as AppType)}
               optionList={appTypeOptions}
               style={{ width: 144 }}
             />
@@ -119,10 +113,10 @@ export function Apps() {
 
           <Select
             value={sort}
-            onChange={handleSortChange as any}
+            onChange={(value) => handleSortChange(value as 'asc' | 'desc')}
             optionList={sortOptions}
             style={{ width: 160 }}
-            triggerRender={({ value }) => (
+            triggerRender={() => (
               <div className='flex h-9 w-16 cursor-pointer items-center justify-center rounded-md border' style={{ borderColor: 'var(--semi-color-border)' }}>
                 <SlidersHorizontal size={18} />
               </div>

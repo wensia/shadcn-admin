@@ -124,8 +124,7 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true
             })
           }
-        } catch (error) {
-          console.error('Failed to restore auth state from localStorage:', error)
+        } catch {
           get().clearAuthState()
         }
       },

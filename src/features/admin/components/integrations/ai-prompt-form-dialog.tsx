@@ -28,6 +28,12 @@ interface AIPromptFormDialogProps {
   isPending: boolean
 }
 
+interface PromptFormValues {
+  name: string
+  content: string
+  description?: string
+}
+
 export function AIPromptFormDialog({
   state,
   onClose,
@@ -60,7 +66,7 @@ export function AIPromptFormDialog({
     }, 0)
   }, [open, mode, prompt, sourcePrompt])
 
-  const handleSubmit = (formData: Record<string, any>) => {
+  const handleSubmit = (formData: PromptFormValues) => {
     onSubmit({
       name: formData.name,
       content: formData.content,

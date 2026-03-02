@@ -217,7 +217,7 @@ export const useTabsStore = create<TabsState>()(
       storage: createJSONStorage(() => sessionStorage),
       version: 1,
       // 迁移旧版本数据
-      migrate: (persistedState, version) => {
+      migrate: (persistedState, _version) => {
         // 旧版本数据（无版本号）直接返回，由merge函数处理验证
         return persistedState as TabsState
       },

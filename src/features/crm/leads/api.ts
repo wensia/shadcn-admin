@@ -81,8 +81,8 @@ const leadsApi = {
   // ==================== 导出功能 ====================
 
   /** 导出线索 */
-  exportLeads(params?: LeadListParams): Promise<any> {
-    return apiClient.get('/leads/export', { params, responseType: 'blob' })
+  exportLeads(params?: LeadListParams): Promise<Blob> {
+    return apiClient.get<Blob>('/leads/export', { params, responseType: 'blob' })
   },
 
   // ==================== 跟进记录 ====================
@@ -259,7 +259,7 @@ const leadsApi = {
     sort_order?: string
     compact?: boolean
   }): Promise<ApiResponse<{
-    items: any[]
+    items: unknown[]
     total: number
     page: number
     size: number

@@ -17,13 +17,18 @@ interface UserAuthFormProps {
   redirectTo?: string
 }
 
+type SignInFormValues = {
+  username: string
+  password: string
+}
+
 export function UserAuthForm({ redirectTo }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { setAuthState } = useAuthStore()
   const formApiRef = useRef<FormApi>()
 
-  async function handleSubmit(values: Record<string, any>) {
+  async function handleSubmit(values: SignInFormValues) {
     setIsLoading(true)
     try {
       const response = await authApi.login({
@@ -44,9 +49,8 @@ export function UserAuthForm({ redirectTo }: UserAuthFormProps) {
       } else {
         toast.error(response.message || '登录失败')
       }
-    } catch (error: any) {
-      console.error('Login error:', error)
-      if (!error.messageShown) {
+    } catch (error: unknown) {
+      if (!(error instanceof Error && 'messageShown' in error && error.messageShown)) {
         showApiErrorToast(error, '登录失败')
       }
     } finally {

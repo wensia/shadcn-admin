@@ -1,7 +1,10 @@
 import { AxiosError } from 'axios'
 import type { ApiResponse, PaginatedResponse } from './types'
 
-type AnyRecord = Record<string, any>
+type JsonRecord = Record<string, unknown>
+type ErrorResponsePayload = {
+  data?: unknown
+}
 
 export class ApiClientError extends Error {
   status?: number
@@ -9,7 +12,7 @@ export class ApiClientError extends Error {
   isNetworkError?: boolean
   isTimeout?: boolean
   isBusinessError?: boolean
-  response?: any
+  response?: ErrorResponsePayload
   messageShown?: boolean
   isAuthError?: boolean
 
@@ -19,16 +22,16 @@ export class ApiClientError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is AnyRecord {
+function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null
 }
 
-export function isApiResponse<T = any>(value: unknown): value is ApiResponse<T> {
+export function isApiResponse<T = unknown>(value: unknown): value is ApiResponse<T> {
   if (!isRecord(value)) return false
   return typeof value.success === 'boolean'
 }
 
-export function isPaginatedResponse<T = any>(value: unknown): value is PaginatedResponse<T> {
+export function isPaginatedResponse<T = unknown>(value: unknown): value is PaginatedResponse<T> {
   if (!isRecord(value)) return false
   return (
     Array.isArray(value.items) &&
@@ -45,13 +48,13 @@ export function normalizeAxiosError(error: unknown): ApiClientError {
   }
 
   if (error instanceof AxiosError) {
-    const apiResponse = isApiResponse(error.response?.data) ? (error.response?.data as ApiResponse) : undefined
+    const apiResponse = isApiResponse(error.response?.data) ? error.response?.data : undefined
     const message = apiResponse?.message || error.message || '请求失败'
 
     const normalized = new ApiClientError(message)
     normalized.status = error.response?.status
     normalized.code = apiResponse?.code || error.code
-    normalized.response = error.response
+    normalized.response = error.response ? { data: error.response.data } : undefined
     normalized.isTimeout =
       error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')
     normalized.isNetworkError = !error.response
@@ -69,8 +72,8 @@ export function normalizeAxiosError(error: unknown): ApiClientError {
 export function getErrorMessage(error: unknown, fallback = '请求失败'): string {
   const normalized = normalizeAxiosError(error)
 
-  if (normalized.response && isApiResponse(normalized.response.data)) {
-    const apiResponse = normalized.response.data as ApiResponse
+  if (normalized.response?.data && isApiResponse(normalized.response.data)) {
+    const apiResponse = normalized.response.data
     if (apiResponse.message) return apiResponse.message
   }
 

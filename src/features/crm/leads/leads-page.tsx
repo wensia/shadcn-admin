@@ -23,19 +23,17 @@ import {
 } from './components/batch-dialogs'
 import { leadsApi } from './api'
 import { apiClient } from '@/lib/api/client'
-import type {
-  LeadListParams,
-  LeadListItem,
-  Lead,
-  LeadStatus,
-  IntentionLevel,
-  Grade,
-} from './types'
 import {
   leadStatusLabels,
   intentionLevelLabels,
   gradeLabels,
   followupResultLabels,
+  type LeadListParams,
+  type LeadListItem,
+  type Lead,
+  type LeadStatus,
+  type IntentionLevel,
+  type Grade,
 } from './types'
 
 export function LeadsPage() {

@@ -4,8 +4,14 @@
  */
 
 import { Tag } from '@douyinfe/semi-ui-19'
-import { LeadStatus, FollowupResult, IntentionLevel } from '../types'
-import { leadStatusLabels, intentionLevelLabels, followupResultLabels } from '../types'
+import {
+  leadStatusLabels,
+  intentionLevelLabels,
+  followupResultLabels,
+  type LeadStatus,
+  type FollowupResult,
+  type IntentionLevel,
+} from '../types'
 
 /* ── 状态颜色映射 ── */
 const statusColorMap: Record<string, string> = {

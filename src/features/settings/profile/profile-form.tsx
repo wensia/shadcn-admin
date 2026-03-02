@@ -10,6 +10,12 @@ const emailOptions = [
   { value: 'm@support.com', label: 'm@support.com' },
 ]
 
+type ProfileFormValues = {
+  username: string
+  email: string
+  bio: string
+}
+
 export function ProfileForm() {
   const formRef = useRef<FormApi>()
   const [urls, setUrls] = useState([
@@ -17,7 +23,7 @@ export function ProfileForm() {
     { value: 'https://x.com/ruimf' },
   ])
 
-  function handleSubmit(values: Record<string, any>) {
+  function handleSubmit(values: ProfileFormValues) {
     showSubmittedData({ ...values, urls })
   }
 

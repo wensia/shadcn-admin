@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Semi Design 侧边栏状态 Context
  * 替代 shadcn SidebarProvider，保持 useSidebar() 接口兼容

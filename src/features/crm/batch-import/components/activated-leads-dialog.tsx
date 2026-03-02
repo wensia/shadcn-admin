@@ -55,7 +55,10 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
   // 重置分页状态
   useEffect(() => {
     if (open && batch) {
-      setPagination({ page: 1, pageSize: 20 })
+      const resetTimer = window.setTimeout(() => {
+        setPagination({ page: 1, pageSize: 20 })
+      }, 0)
+      return () => window.clearTimeout(resetTimer)
     }
   }, [open, batch])
 

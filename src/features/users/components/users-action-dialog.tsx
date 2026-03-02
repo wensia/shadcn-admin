@@ -1,8 +1,7 @@
 import { useRef, useEffect } from 'react'
-import { Modal, Form, Button, Input, Select } from '@douyinfe/semi-ui-19'
+import { Modal, Form, Button } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { showSubmittedData } from '@/lib/show-submitted-data'
-import { PasswordInput } from '@/components/password-input'
 import { roles } from '../data/data'
 import { type User } from '../data/schema'
 
