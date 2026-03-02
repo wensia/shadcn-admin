@@ -67,28 +67,3 @@ export function ConfirmDialog({
     </Modal>
   )
 }
-
-/**
- * 命令式确认对话框 (适用于简单场景)
- * 用法: confirmDelete({ title: '确认删除', content: '不可撤销', onOk: () => {...} })
- */
-export function confirmDelete({
-  title = '确认删除',
-  content,
-  onOk,
-  okText = '删除',
-}: {
-  title?: string
-  content: ReactNode
-  onOk: () => Promise<void> | void
-  okText?: string
-}) {
-  return Modal.confirm({
-    title,
-    content,
-    okText,
-    cancelText: '取消',
-    okButtonProps: { type: 'danger', theme: 'solid' } as any,
-    onOk,
-  })
-}

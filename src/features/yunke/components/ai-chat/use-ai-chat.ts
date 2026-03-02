@@ -30,6 +30,18 @@ export interface ChatMessage {
   streamStartTime?: number
 }
 
+interface PersistedChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
+interface ChatMessagesResponse {
+  success?: boolean
+  data?: PersistedChatMessage[]
+}
+
 export function useAIChat(options?: {
   sessionId?: string | null
   onTitleGenerated?: (title: string) => void
@@ -215,19 +227,19 @@ export function useAIChat(options?: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
-      const json = await res.json()
+      const json = await res.json() as ChatMessagesResponse
       if (json.success && Array.isArray(json.data)) {
-        const loaded: ChatMessage[] = json.data.map((m: any) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-          timestamp: new Date(m.created_at),
+        const loaded: ChatMessage[] = json.data.map((message) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          timestamp: new Date(message.created_at),
           isStreaming: false,
         }))
         setMessages(loaded)
       }
-    } catch (e) {
-      console.error('加载消息失败', e)
+    } catch {
+      setMessages([])
     }
   }, [])
 

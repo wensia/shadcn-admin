@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * 通话记录 Context Provider
  * 管理通话记录相关的状态和数据
@@ -7,7 +8,6 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 import { useQuery } from '@tanstack/react-query'
 import { callRecordsApi } from '../../api'
 import type { CallRecord, CallRecordListParams, CallRecordStats } from '../../types'
-import type { PaginatedResponse } from '@/lib/api/types'
 
 interface CallRecordsContextValue {
   // 数据

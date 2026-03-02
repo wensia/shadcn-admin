@@ -115,9 +115,20 @@ export function SemiDataTable<T extends { id: string }>({
     }
   }, [currentSelectedKeys, hasRowSelection, stableSelectionChange, selectionFixed, selectionWidth])
 
-  // 稳定的 onRow 回调
+  // 稳定的 onRow 回调 — 通过 ref 访问最新回调，避免闭包过时
+  // Semi BaseRow.render() 每次渲染都会调用 onRow() 并缓存返回的 onClick，
+  // handleClick 从缓存读取并调用，因此 onClick 始终是最新的。
   const handleRow = useCallback((record: T | undefined) => ({
-    onClick: () => {
+    onClick: (e: React.MouseEvent) => {
+      // 跳过交互元素：checkbox、下拉菜单、显式标记的按钮
+      const target = e.target as HTMLElement
+      if (
+        target.closest('.semi-table-selection-wrap') ||
+        target.closest('.semi-checkbox-inner') ||
+        target.closest('[data-stop-row-click]') ||
+        target.closest('.semi-dropdown') ||
+        target.closest('.semi-dropdown-menu')
+      ) return
       if (record && !isSkeletonId(record.id)) {
         onRowClickRef.current?.(record)
       }

@@ -211,7 +211,10 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
   const scorecardKeys = useMemo(() => scoreDimensions.map((d) => d.key), [])
   const [scorecardExpanded, setScorecardExpanded] = useState<Record<string, boolean>>({})
   useEffect(() => {
-    setScorecardExpanded({})
+    const resetTimer = window.setTimeout(() => {
+      setScorecardExpanded({})
+    }, 0)
+    return () => window.clearTimeout(resetTimer)
   }, [analysis.scorecard, analysis.prompt_version, analysis.version])
 
   const scoreItems = scoreDimensions.map((item) => {

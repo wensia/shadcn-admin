@@ -10,7 +10,6 @@ import {
   Input,
   Tag,
   Spin,
-  Typography,
 } from '@douyinfe/semi-ui-19'
 import {
   IconPlus,
@@ -21,8 +20,6 @@ import {
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { callRecordsApi } from '../../api'
-
-const { Text } = Typography
 
 type CorrectionStep = 'dictionary' | 'preview' | 'result'
 
@@ -512,7 +509,7 @@ export function TranscriptCorrectionDialog({
         okText="确认执行"
         cancelText="取消"
         okButtonProps={{
-          type: 'danger' as any,
+          type: 'danger',
           loading: isLoading,
         }}
         closeOnEsc

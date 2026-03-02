@@ -98,8 +98,10 @@ function ResponseCard({
 
   useEffect(() => {
     if (!isStreaming) {
-      setDisplayedText(text)
-      return
+      const syncTimer = window.setTimeout(() => {
+        setDisplayedText(text)
+      }, 0)
+      return () => window.clearTimeout(syncTimer)
     }
     if (throttleRef.current) return
     throttleRef.current = setTimeout(() => {

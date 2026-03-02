@@ -181,7 +181,7 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
         size="small"
         showHeader
         scroll={{ y: tableHeight - 38 }}
-        onRow={onRow as any}
+        onRow={onRow}
         empty="暂无转写文本"
         style={{ height: '100%' }}
       />

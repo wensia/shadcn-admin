@@ -110,11 +110,12 @@ export function ChatToolIndicator({
   // the "awaiting" phase (tools done, response not yet started).
   useEffect(() => {
     if (userToggledRef.current) return
-    if (hasRunning || isThinking) {
-      setIsExpanded(true)
-    } else if (allDone && !isThinking) {
-      setIsExpanded(false)
-    }
+    const nextExpanded = hasRunning || isThinking ? true : allDone && !isThinking ? false : null
+    if (nextExpanded === null) return
+    const syncTimer = window.setTimeout(() => {
+      setIsExpanded(nextExpanded)
+    }, 0)
+    return () => window.clearTimeout(syncTimer)
   }, [hasRunning, allDone, isThinking])
 
   if (!toolCalls.length) return null

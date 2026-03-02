@@ -2,7 +2,7 @@
  * 云客登录状态页面 - Semi Design
  */
 
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import {
   CheckCircle,
   XCircle,

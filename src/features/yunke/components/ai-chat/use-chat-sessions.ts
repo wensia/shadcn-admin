@@ -31,8 +31,8 @@ export function useChatSessions() {
       if (json.success && Array.isArray(json.data)) {
         setSessions(json.data)
       }
-    } catch (e) {
-      console.error('加载会话列表失败', e)
+    } catch {
+      setSessions([])
     } finally {
       setIsLoading(false)
     }

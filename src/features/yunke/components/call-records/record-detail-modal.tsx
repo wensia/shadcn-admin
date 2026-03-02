@@ -568,10 +568,17 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
           {/* 转写文本 */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
             {isDetailLoading ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, color: 'var(--semi-color-text-2)' }}>
-                <Spin style={{ marginRight: 8 }} />
-                加载转写文本...
-              </div>
+              <Skeleton loading active style={{ padding: '12px 16px' }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'flex-start' }}>
+                    <Skeleton.Avatar size="extra-small" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ flex: 1 }}>
+                      <Skeleton.Title style={{ width: i % 2 === 0 ? '85%' : '60%', height: 14, marginBottom: 6 }} />
+                      {i % 3 === 0 && <Skeleton.Title style={{ width: '40%', height: 14 }} />}
+                    </div>
+                  </div>
+                ))}
+              </Skeleton>
             ) : hasFullTranscript ? (
               <TranscriptViewer
                 transcript={fullTranscript || []}
@@ -631,10 +638,14 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
           {/* AI 分析内容 */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
             {isDetailLoading ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, color: 'var(--semi-color-text-2)' }}>
-                <Spin style={{ marginRight: 8 }} />
-                加载 AI 分析...
-              </div>
+              <Skeleton loading active style={{ padding: '16px 20px' }}>
+                <Skeleton.Title style={{ width: 120, height: 18, marginBottom: 16 }} />
+                <Skeleton.Paragraph rows={3} style={{ width: '100%', marginBottom: 20 }} />
+                <Skeleton.Title style={{ width: 100, height: 18, marginBottom: 16 }} />
+                <Skeleton.Paragraph rows={4} style={{ width: '100%', marginBottom: 20 }} />
+                <Skeleton.Title style={{ width: 140, height: 18, marginBottom: 16 }} />
+                <Skeleton.Paragraph rows={2} style={{ width: '100%' }} />
+              </Skeleton>
             ) : fullRecord ? (
               <AIAnalysisPanel
                 record={fullRecord}

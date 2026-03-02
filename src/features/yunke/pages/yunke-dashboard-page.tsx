@@ -24,7 +24,7 @@ import { Main } from '@/components/layout/main'
 import { Button, Card, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import { yunkeApi } from '../api'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 export function YunkeDashboardPage() {
   const queryClient = useQueryClient()
