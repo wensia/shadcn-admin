@@ -54,6 +54,7 @@ export interface SingleLeadRequest {
   parent_name?: string
   notes?: string
   campus_id?: string
+  advisor_id?: string
   extra_fields?: Record<string, string>
 }
 
@@ -73,14 +74,23 @@ export async function submitSingleLead(data: SingleLeadRequest) {
 
 export interface DailyStatItem {
   date: string
-  count: number
+  total: number
+  success: number
+  created: number
+  collision_taken: number
+  collision_active: number
+  duplicate: number
+  invalid: number
+  error: number
 }
 
 export interface ChannelStatsResponse {
   channel_name: string
   employee_name: string
   today_count: number
+  today_success: number
   total_count: number
+  total_success: number
   daily_stats: DailyStatItem[]
 }
 
@@ -88,4 +98,19 @@ export async function fetchChannelStats(token: string) {
   const { data } = await publicClient.get('/public/leads/channel-stats', { params: { token } })
   if (data.success === false) throw new Error(data.message || '获取统计失败')
   return data.data as ChannelStatsResponse
+}
+
+/* ─── 校区员工查询 ─── */
+
+export interface CampusEmployee {
+  id: string
+  name: string
+}
+
+export async function fetchCampusEmployees(campusId: string, token: string) {
+  const { data } = await publicClient.get('/public/leads/campus-employees', {
+    params: { campus_id: campusId, token },
+  })
+  if (data.success === false) throw new Error(data.message || '获取员工列表失败')
+  return data.data as CampusEmployee[]
 }

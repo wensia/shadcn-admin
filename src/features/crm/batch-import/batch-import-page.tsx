@@ -42,13 +42,13 @@ import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 
 import { batchImportApi } from './api'
-import type {
-  BatchImportItem,
-  BatchImportQueryParams,
-  BatchStatus,
-  ImportMethod,
+import {
   batchStatusLabels,
   importMethodLabels,
+  type BatchImportItem,
+  type BatchImportQueryParams,
+  type BatchStatus,
+  type ImportMethod,
 } from './types'
 
 import { UploadDialog } from './components/upload-dialog'

@@ -60,6 +60,11 @@ export const crmNavGroups: NavGroup[] = [
         url: '/crm/data-statistics/marketing',
         icon: BarChart3,
       },
+      {
+        title: '创建日志',
+        url: '/crm/lead-creation-logs',
+        icon: ClipboardList,
+      },
     ],
   },
   {

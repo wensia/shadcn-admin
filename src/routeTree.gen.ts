@@ -64,6 +64,7 @@ import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authent
 import { Route as AuthenticatedCrmVisitScheduleRouteImport } from './routes/_authenticated/crm/visit-schedule'
 import { Route as AuthenticatedCrmPendingApprovalsRouteImport } from './routes/_authenticated/crm/pending-approvals'
 import { Route as AuthenticatedCrmOrdersRouteImport } from './routes/_authenticated/crm/orders'
+import { Route as AuthenticatedCrmLeadCreationLogsRouteImport } from './routes/_authenticated/crm/lead-creation-logs'
 import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
 import { Route as AuthenticatedCrmCallRecordsRouteImport } from './routes/_authenticated/crm/call-records'
@@ -392,6 +393,12 @@ const AuthenticatedCrmOrdersRoute = AuthenticatedCrmOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => AuthenticatedCrmRouteRoute,
 } as any)
+const AuthenticatedCrmLeadCreationLogsRoute =
+  AuthenticatedCrmLeadCreationLogsRouteImport.update({
+    id: '/lead-creation-logs',
+    path: '/lead-creation-logs',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmLeadConversionRoute =
   AuthenticatedCrmLeadConversionRouteImport.update({
     id: '/lead-conversion',
@@ -662,6 +669,7 @@ export interface FileRoutesByFullPath {
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
+  '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
@@ -747,6 +755,7 @@ export interface FileRoutesByTo {
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
+  '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
@@ -841,6 +850,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
+  '/_authenticated/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
   '/_authenticated/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/_authenticated/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/_authenticated/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
@@ -932,6 +942,7 @@ export interface FileRouteTypes {
     | '/crm/call-records'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
+    | '/crm/lead-creation-logs'
     | '/crm/orders'
     | '/crm/pending-approvals'
     | '/crm/visit-schedule'
@@ -1017,6 +1028,7 @@ export interface FileRouteTypes {
     | '/crm/call-records'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
+    | '/crm/lead-creation-logs'
     | '/crm/orders'
     | '/crm/pending-approvals'
     | '/crm/visit-schedule'
@@ -1110,6 +1122,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/call-records'
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/crm/lead-conversion'
+    | '/_authenticated/crm/lead-creation-logs'
     | '/_authenticated/crm/orders'
     | '/_authenticated/crm/pending-approvals'
     | '/_authenticated/crm/visit-schedule'
@@ -1552,6 +1565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmOrdersRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/lead-creation-logs': {
+      id: '/_authenticated/crm/lead-creation-logs'
+      path: '/lead-creation-logs'
+      fullPath: '/crm/lead-creation-logs'
+      preLoaderRoute: typeof AuthenticatedCrmLeadCreationLogsRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/lead-conversion': {
       id: '/_authenticated/crm/lead-conversion'
       path: '/lead-conversion'
@@ -1888,6 +1908,7 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
+  AuthenticatedCrmLeadCreationLogsRoute: typeof AuthenticatedCrmLeadCreationLogsRoute
   AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
   AuthenticatedCrmPendingApprovalsRoute: typeof AuthenticatedCrmPendingApprovalsRoute
   AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
@@ -1905,6 +1926,7 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
   AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
+  AuthenticatedCrmLeadCreationLogsRoute: AuthenticatedCrmLeadCreationLogsRoute,
   AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
   AuthenticatedCrmPendingApprovalsRoute: AuthenticatedCrmPendingApprovalsRoute,
   AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
