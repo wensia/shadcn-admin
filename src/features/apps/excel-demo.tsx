@@ -300,13 +300,15 @@ export function ExcelDemoPage() {
       <header className="flex h-12 flex-shrink-0 items-center gap-2 border-b px-3" style={{ borderColor: 'var(--semi-color-border)', background: 'var(--semi-color-bg-1)' }}>
         {/* 左侧：返回 + 文档标题 */}
         <Tooltip content="返回首页" position="bottom">
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<ArrowLeft className="h-4 w-4" />}
-            style={{ width: 32, height: 32 }}
-            onClick={() => navigate({ to: '/' })}
-          />
+          <span style={{ display: 'inline-flex' }}>
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<ArrowLeft className="h-4 w-4" />}
+              style={{ width: 32, height: 32 }}
+              onClick={() => navigate({ to: '/' })}
+            />
+          </span>
         </Tooltip>
 
         <div className="flex items-center gap-2">
@@ -343,56 +345,64 @@ export function ExcelDemoPage() {
         {/* 操作按钮组 */}
         <div className="flex items-center gap-1">
           <Tooltip content="导入 JSON 快照" position="bottom">
-            <Button
-              theme="borderless"
-              type="tertiary"
-              size="small"
-              icon={<FileUp className="h-3.5 w-3.5" />}
-              onClick={handleImportJSON}
-            >
-              导入
-            </Button>
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<FileUp className="h-3.5 w-3.5" />}
+                onClick={handleImportJSON}
+              >
+                导入
+              </Button>
+            </span>
           </Tooltip>
 
           <Tooltip content="导出 JSON 快照" position="bottom">
-            <Button
-              theme="borderless"
-              type="tertiary"
-              size="small"
-              icon={<Download className="h-3.5 w-3.5" />}
-              onClick={handleExportJSON}
-              disabled={!isReady}
-            >
-              导出
-            </Button>
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<Download className="h-3.5 w-3.5" />}
+                onClick={handleExportJSON}
+                disabled={!isReady}
+              >
+                导出
+              </Button>
+            </span>
           </Tooltip>
 
           <Tooltip content="将工作簿数据打印到浏览器控制台 (F12)" position="bottom">
-            <Button
-              theme="borderless"
-              type="tertiary"
-              size="small"
-              icon={<Terminal className="h-3.5 w-3.5" />}
-              onClick={handlePrintData}
-              disabled={!isReady}
-            >
-              控制台
-            </Button>
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<Terminal className="h-3.5 w-3.5" />}
+                onClick={handlePrintData}
+                disabled={!isReady}
+              >
+                控制台
+              </Button>
+            </span>
           </Tooltip>
         </div>
 
         <div className="ml-auto flex items-center gap-1">
           <Tooltip content="新建空白表格" position="bottom">
-            <Button
-              theme="borderless"
-              type="tertiary"
-              size="small"
-              icon={<Plus className="h-3.5 w-3.5" />}
-              onClick={handleClear}
-              disabled={!isReady}
-            >
-              新建
-            </Button>
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<Plus className="h-3.5 w-3.5" />}
+                onClick={handleClear}
+                disabled={!isReady}
+              >
+                新建
+              </Button>
+            </span>
           </Tooltip>
         </div>
       </header>

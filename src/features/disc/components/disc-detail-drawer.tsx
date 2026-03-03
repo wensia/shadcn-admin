@@ -1,22 +1,34 @@
 /**
  * DISC 测评报告抽屉
- * AI 分析返回 Markdown 格式，用 DiscReportMarkdown 精简组件渲染
- * 旧版 JSON 格式和未分析状态有降级展示
+ *
+ * AI 分析返回 craft-md Markdown，前端解析为结构化数据后用 Semi 组件渲染。
+ * 旧版 JSON 格式和未分析状态有降级展示。
  */
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { toBlob, toPng } from 'html-to-image'
-import { Copy, Download, Image, Loader2, Sparkles } from 'lucide-react'
+import { Copy, Download, Image, Loader2, Sparkles, Map, History } from 'lucide-react'
 import { toast } from '@/lib/toast'
-import { SideSheet, Dropdown, Skeleton, Tag, Button as SemiButton } from '@douyinfe/semi-ui-19'
-import { DiscReportMarkdown } from './disc-report-markdown'
+import { SideSheet, Dropdown, Skeleton, Tag, Button as SemiButton, Tabs, TabPane, Typography } from '@douyinfe/semi-ui-19'
 import {
   DISC_TYPE_CONFIG,
-  type TempDISCRecordDetail,
   type DISCDimension,
+  type TempDISCRecordDetail,
   type DISCAIAnalysis,
 } from '../types'
 import { triggerDiscAIAnalysis } from '../api'
+import { DiscRawDataSection } from './disc-raw-data-section'
+import {
+  parseDiscReport,
+  type ParsedDiscReport,
+  SectionProfile,
+  SectionDimensions,
+  SectionBehavior,
+  SectionJobFit,
+  SectionBestMatch,
+  SectionAdvice,
+  SectionTeam,
+} from './disc-report-sections'
 
 // ─── 类型 ────────────────────────────────────────────────
 
@@ -28,8 +40,6 @@ interface DiscDetailDrawerProps {
   onDetailUpdate?: (updated: TempDISCRecordDetail) => void
   onReanalyzeStart?: (payload: { recordId: string; previousAnalyzedAt?: string | null }) => void
 }
-
-const DIMENSIONS: DISCDimension[] = ['D', 'I', 'S', 'C']
 
 // ─── 辅助函数 ────────────────────────────────────────────
 
@@ -70,6 +80,7 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
   const [exporting, setExporting] = useState(false)
   const [copying, setCopying] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [activeTab, setActiveTab] = useState('1')
   const analyzingRef = useRef(false) // 防重复点击（闭包安全）
 
   // AI 分析结果：从 detail.result.aiAnalysis 读取（通过 query 缓存 + 轮询自动更新）
@@ -78,11 +89,25 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
   const isCraftMd = hasAI && cachedAI?.format === 'craft-md' && typeof cachedAI?.content === 'string' && cachedAI.content.length > 0
   const isAnalyzing = cachedAI?.status === 'processing' || cachedAI?.status === 'pending' || analyzing
 
-  // 切换记录时重置 analyzing 状态
+  // 解析 AI 报告 Markdown 为结构化数据
+  const parsedReport = useMemo(() => {
+    if (!isCraftMd || !cachedAI?.content) return null
+    return parseDiscReport(cachedAI.content)
+  }, [isCraftMd, cachedAI?.content])
+
+  // 切换记录时重置状态
   useEffect(() => {
     analyzingRef.current = false
     setAnalyzing(false)
+    setActiveTab('1')
   }, [detail?.id])
+
+  // AI 报告完成时自动切回深度洞察页（仅在 hasAI 变为 true 时触发）
+  useEffect(() => {
+    if (hasAI) {
+      setActiveTab('1')
+    }
+  }, [hasAI, detail?.id])
 
   const handleAIAnalyze = useCallback(async () => {
     if (!detail?.id || analyzingRef.current) return
@@ -144,12 +169,18 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
   const result = detail?.result
   const filename = `DISC报告_${detail?.name || '未知'}_${new Date().toISOString().slice(0, 10)}.png`
 
+  // 置信度颜色 / 标签（提取避免 JSX 内三元嵌套）
+  const confidenceColor = result?.confidence?.level === 'high' ? 'green'
+    : result?.confidence?.level === 'medium' ? 'blue' : 'grey'
+  const confidenceLabel = result?.confidence?.level === 'high' ? '高'
+    : result?.confidence?.level === 'medium' ? '中' : '低'
+
   async function handleDownload() {
     if (!bodyRef.current) return
     setExporting(true)
     try {
       const url = await captureFullContent(bodyRef.current, (el) =>
-        toPng(el, { backgroundColor: '#ffffff', pixelRatio: 2 }),
+        toPng(el, { backgroundColor: '#f8fafc', pixelRatio: 2 }),
       )
       triggerDownload(url, filename)
       toast.success('图片已下载')
@@ -165,7 +196,7 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
     setCopying(true)
     try {
       const blob = await captureFullContent(bodyRef.current, (el) =>
-        toBlob(el, { backgroundColor: '#ffffff', pixelRatio: 2 }),
+        toBlob(el, { backgroundColor: '#f8fafc', pixelRatio: 2 }),
       )
       if (!blob) throw new Error('生成图片失败')
 
@@ -194,62 +225,51 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
       placement="right"
       width={780}
       title={
-        <div className="flex items-center justify-between w-full">
-          <span className="text-sm font-semibold tracking-tight">
-            DISC 测评报告
-          </span>
-          <div className="flex items-center gap-1">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>DISC 测评报告</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* 上次分析时间 */}
             {hasAI && cachedAI?.analyzedAt && (
-              <span className="text-[11px] text-muted-foreground mr-1 hidden sm:inline">
-                {formatTime(cachedAI.analyzedAt)} 分析
-              </span>
+              <Typography.Text type="tertiary" style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <History className="w-3 h-3" />
+                {formatTime(cachedAI.analyzedAt)}
+              </Typography.Text>
             )}
             {/* AI 分析按钮 */}
             {result && (
-              hasAI ? (
+              isAnalyzing ? (
                 <SemiButton
                   theme="light"
                   size="small"
-                  onClick={handleAIAnalyze}
-                  disabled={analyzing}
-                  loading={analyzing}
-                  icon={!analyzing ? <Sparkles className="h-3.5 w-3.5 text-primary" /> : undefined}
-                  style={{ fontSize: 12, height: 28, gap: 4 }}
+                  disabled
+                  loading
+                  style={{ fontSize: 12 }}
                 >
-                  {analyzing ? '分析中...' : '重新分析'}
+                  分析中...
                 </SemiButton>
-              ) : isAnalyzing ? (
-                <Tag type="ghost" style={{ fontSize: 12, height: 28, gap: 4 }} className="animate-pulse">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  AI 分析中...
-                </Tag>
-              ) : cachedAI?.status === 'failed' ? (
+              ) : hasAI || cachedAI?.status === 'failed' ? (
                 <SemiButton
                   theme="light"
                   size="small"
                   onClick={handleAIAnalyze}
-                  disabled={analyzing}
-                  loading={analyzing}
-                  icon={!analyzing ? <Sparkles className="h-3.5 w-3.5" /> : undefined}
-                  style={{ fontSize: 12, height: 28, gap: 4 }}
+                  icon={<Sparkles className="h-3.5 w-3.5" />}
+                  style={{ fontSize: 12 }}
                 >
-                  {analyzing ? '分析中...' : '重新分析'}
+                  重新分析
                 </SemiButton>
               ) : (
                 <SemiButton
-                  theme="light"
+                  theme="solid"
                   size="small"
                   onClick={handleAIAnalyze}
-                  disabled={analyzing}
-                  loading={analyzing}
-                  icon={!analyzing ? <Sparkles className="h-3.5 w-3.5 text-primary" /> : undefined}
-                  style={{ fontSize: 12, height: 28, gap: 4 }}
+                  icon={<Sparkles className="h-3.5 w-3.5" />}
+                  style={{ fontSize: 12 }}
                 >
-                  {analyzing ? '分析中...' : 'AI 分析'}
+                  AI 分析
                 </SemiButton>
               )
             )}
+            {/* 导出 */}
             <Dropdown
               trigger="click"
               position="bottomRight"
@@ -261,14 +281,14 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
                     onClick={handleCopy}
                     disabled={copying || !result}
                   >
-                    复制到剪贴板
+                    复制报告
                   </Dropdown.Item>
                   <Dropdown.Item
                     icon={<Download className="h-3.5 w-3.5" />}
                     onClick={handleDownload}
                     disabled={exporting || !result}
                   >
-                    下载为图片
+                    下载图片
                   </Dropdown.Item>
                 </Dropdown.Menu>
               }
@@ -276,55 +296,151 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
               <span style={{ display: 'inline-flex' }}>
                 <SemiButton
                   theme="borderless"
+                  type="tertiary"
                   size="small"
-                  disabled={(copying || exporting) || !result}
+                  disabled={copying || exporting || !result}
                   loading={copying || exporting}
                   icon={!(copying || exporting) ? <Image className="h-3.5 w-3.5" /> : undefined}
-                  style={{ fontSize: 12, height: 28, gap: 4, color: 'var(--semi-color-text-2)' }}
+                  style={{ fontSize: 12 }}
                 >
-                  {copying ? '复制中...' : exporting ? '导出中...' : '导出图片'}
+                  {copying ? '复制中' : exporting ? '导出中' : '导出'}
                 </SemiButton>
               </span>
             </Dropdown>
           </div>
         </div>
       }
-      headerStyle={{ borderBottom: '1px solid var(--semi-color-border)' }}
-      bodyStyle={{ padding: 0, overflow: 'hidden' }}
+      headerStyle={{ padding: '12px 24px', borderBottom: 'none' }}
+      bodyStyle={{ padding: 0, overflow: 'hidden', backgroundColor: 'var(--semi-color-bg-0)' }}
       closable={true}
     >
       {/* ─── Body ─── */}
-      <div ref={bodyRef} className="flex-1 overflow-y-auto" style={{ height: 'calc(100vh - 60px)' }}>
+      <div ref={bodyRef} className="flex-1 overflow-y-auto w-full bg-slate-50/50" style={{ height: 'calc(100vh - 60px)' }}>
         {loading ? (
           <LoadingSkeleton />
-        ) : isAnalyzing ? (
-          <AnalyzingState />
-        ) : isCraftMd ? (
-          <div className="px-6 py-6 text-[14px]">
-            <DiscReportMarkdown>
-              {cachedAI?.content ?? ''}
-            </DiscReportMarkdown>
-          </div>
-        ) : hasAI && !isCraftMd ? (
-          <LegacyFormatPrompt
-            name={detail?.name}
-            analyzing={analyzing}
-            onReanalyze={handleAIAnalyze}
-          />
         ) : detail && result ? (
-          <NoAnalysisState
-            detail={detail}
-            result={result}
-            analyzing={analyzing}
-            onTriggerAI={handleAIAnalyze}
-          />
+          <div className="flex flex-col min-h-full">
+            {/* Hero 卡片：姓名 + DISC 类型 + 元信息 */}
+            <div style={{
+              padding: '14px 24px',
+              borderBottom: '1px solid var(--semi-color-border)',
+              background: 'var(--semi-color-bg-0)',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+            }}>
+              {/* 第一行：姓名 + DISC 类型 Tag */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Typography.Title heading={5} style={{ margin: 0, fontSize: 15 }}>
+                  {detail.name}
+                </Typography.Title>
+                {result.primaryType && (
+                  <Tag size="small" style={{
+                    backgroundColor: DISC_TYPE_CONFIG[result.primaryType.code]?.bgColor,
+                    color: DISC_TYPE_CONFIG[result.primaryType.code]?.color,
+                    borderColor: DISC_TYPE_CONFIG[result.primaryType.code]?.color,
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                  }}>
+                    {result.primaryType.code} - {DISC_TYPE_CONFIG[result.primaryType.code]?.label}
+                  </Tag>
+                )}
+              </div>
+
+              {/* 第二行：手机 · 时间 · 置信度 */}
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                <Typography.Text type="tertiary" style={{ fontSize: 12 }}>
+                  {detail.phone || '未留手机'}
+                </Typography.Text>
+                <Typography.Text type="quaternary" style={{ fontSize: 12 }}>·</Typography.Text>
+                <Typography.Text type="tertiary" style={{ fontSize: 12 }}>
+                  {formatTime(detail.submitted_at)}
+                </Typography.Text>
+                {result.confidence && (
+                  <>
+                    <Typography.Text type="quaternary" style={{ fontSize: 12 }}>·</Typography.Text>
+                    <Tag size="small" color={confidenceColor} type="light" style={{ fontSize: 11 }}>
+                      置信度 {result.confidence.score} ({confidenceLabel})
+                    </Tag>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Tabs 切换页面 */}
+            <div className="flex-1 px-6 pt-4 pb-12">
+              <Tabs
+                type="line"
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                tabBarStyle={{ marginBottom: 16 }}
+                className="disc-tabs-wrapper"
+              >
+                {/* 选项卡 1：深度解读（默认展示） */}
+                <TabPane
+                  tab={<span className="font-medium text-[14px]">深度洞察</span>}
+                  itemKey="1"
+                >
+                  {isAnalyzing ? (
+                    <AnalyzingState />
+                  ) : parsedReport ? (
+                    <DiscReportContent report={parsedReport} scores={result.scores} />
+                  ) : hasAI && !isCraftMd ? (
+                    <LegacyFormatPrompt
+                      analyzing={analyzing}
+                      onReanalyze={handleAIAnalyze}
+                    />
+                  ) : (
+                    <NoAnalysisState
+                      analyzing={analyzing}
+                      onTriggerAI={handleAIAnalyze}
+                    />
+                  )}
+                </TabPane>
+
+                {/* 选项卡 2：原始数据明细 */}
+                <TabPane
+                  tab={<span className="font-medium text-[14px]">测评数据</span>}
+                  itemKey="2"
+                >
+                  <DiscRawDataSection result={result} />
+                </TabPane>
+              </Tabs>
+            </div>
+          </div>
         ) : (
-          <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-            无数据
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <Map className="w-10 h-10 opacity-20" />
+              <p className="text-sm">无法加载测评数据</p>
+            </div>
           </div>
         )}
       </div>
     </SideSheet>
+  )
+}
+
+// ─── AI 报告渲染组件 ─────────────────────────────────────
+
+function DiscReportContent({ report, scores }: { report: ParsedDiscReport; scores?: Record<DISCDimension, number> }) {
+  return (
+    <div style={{ fontSize: 14 }}>
+      <SectionProfile profile={report.profile} />
+      <SectionDimensions dimensions={report.dimensions} scores={scores} />
+      <SectionBehavior
+        behaviorTable={report.behaviorTable}
+        behaviorInsight={report.behaviorInsight}
+      />
+      <SectionJobFit jobFitTable={report.jobFitTable} />
+      <SectionBestMatch bestMatchAnalysis={report.bestMatchAnalysis} />
+      <SectionAdvice
+        communicationStrategies={report.communicationStrategies}
+        riskConcerns={report.riskConcerns}
+        developmentDirections={report.developmentDirections}
+      />
+      <SectionTeam teamAdvice={report.teamAdvice} />
+    </div>
   )
 }
 
@@ -333,24 +449,21 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
 function LoadingSkeleton() {
   return (
     <Skeleton loading active>
-      <div className="px-8 pb-12">
-        <div className="pt-4 pb-4 border-b">
-          <div className="flex items-baseline gap-3 mb-1.5">
-            <Skeleton.Title style={{ width: 80, height: 24 }} />
-            <Skeleton.Paragraph rows={1} style={{ width: 200, height: 14 }} />
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <Skeleton.Paragraph rows={1} style={{ width: 100, height: 28 }} />
-            <Skeleton.Paragraph rows={1} style={{ width: 80, height: 28 }} />
+      <div className="px-6 py-8">
+        <div className="flex items-center gap-4 mb-8 pb-6 border-b">
+          <Skeleton.Avatar style={{ width: 56, height: 56, borderRadius: '50%' }} />
+          <div>
+            <Skeleton.Title style={{ width: 120, height: 24, marginBottom: 8 }} />
+            <Skeleton.Paragraph rows={1} style={{ width: 200, height: 16 }} />
           </div>
         </div>
-        <div className="pt-6 pb-4">
-          <Skeleton.Title style={{ width: 120, height: 18, marginBottom: 16 }} />
-          <Skeleton.Paragraph rows={4} style={{ width: '100%' }} />
-        </div>
-        <div className="pt-4 pb-4 border-t">
-          <Skeleton.Title style={{ width: 140, height: 18, marginBottom: 12 }} />
-          <Skeleton.Paragraph rows={3} style={{ width: '100%' }} />
+        <div className="space-y-6">
+          <Skeleton.Title style={{ width: 180, height: 20 }} />
+          <Skeleton.Paragraph rows={6} style={{ width: '100%' }} />
+          <div className="mt-8">
+            <Skeleton.Title style={{ width: 140, height: 20, marginBottom: 12 }} />
+            <Skeleton.Paragraph rows={4} style={{ width: '100%' }} />
+          </div>
         </div>
       </div>
     </Skeleton>
@@ -359,12 +472,17 @@ function LoadingSkeleton() {
 
 function AnalyzingState() {
   return (
-    <div className="flex flex-col items-center justify-center py-32 gap-4">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <div className="flex flex-col items-center justify-center py-20 gap-6 h-full min-h-[300px]">
+      <div className="relative">
+        <div className="absolute inset-0 rounded-full blur-xl bg-primary/20 animate-pulse"></div>
+        <div className="w-16 h-16 rounded-full bg-white border shadow-sm flex items-center justify-center relative z-10">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      </div>
       <div className="text-center">
-        <p className="text-sm font-medium">AI 正在分析中...</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          正在生成完整的 DISC 测评报告，请稍候
+        <p className="text-[15px] font-semibold text-slate-800">神经脉络解析中</p>
+        <p className="text-[13px] text-slate-500 mt-2 max-w-[280px] leading-relaxed">
+          AI 正在对该参与者的四维数据进行深度模型推演，即将为您展现实时性格洞见结构图。
         </p>
       </div>
     </div>
@@ -372,201 +490,68 @@ function AnalyzingState() {
 }
 
 function LegacyFormatPrompt({
-  name,
   analyzing,
   onReanalyze,
 }: {
-  name?: string
   analyzing: boolean
   onReanalyze: () => void
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-32 gap-5">
-      <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
-        <Sparkles className="h-6 w-6 text-amber-500" />
+    <div className="flex flex-col items-center justify-center py-16 gap-5 h-full min-h-[300px]">
+      <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
+        <Sparkles className="h-7 w-7 text-amber-500" />
       </div>
       <div className="text-center max-w-sm">
-        <p className="text-sm font-medium mb-1">
-          {name ? `${name} 的报告` : '此报告'}使用旧版格式生成
+        <p className="text-base font-semibold text-slate-800 mb-2">
+          发现旧版本数据
         </p>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          点击下方按钮重新分析，将生成全新的富文本报告，包含图表、数据表格等可视化内容
+        <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
+          当前查看的是系统更早之前生成的降级数据格式。您可以让 AI 根据最新的 2.0 解析引擎重新生成更详尽、带有业务洞察的富文本报告。
         </p>
+        <SemiButton
+          theme="solid"
+          size="default"
+          onClick={onReanalyze}
+          disabled={analyzing}
+          loading={analyzing}
+          icon={!analyzing ? <Sparkles className="h-4 w-4" /> : undefined}
+          className="px-6"
+        >
+          {analyzing ? '转化中...' : '使用新引擎深度扫描'}
+        </SemiButton>
       </div>
-      <SemiButton
-        theme="solid"
-        size="default"
-        onClick={onReanalyze}
-        disabled={analyzing}
-        loading={analyzing}
-        icon={!analyzing ? <Sparkles className="h-4 w-4" /> : undefined}
-      >
-        {analyzing ? '分析中...' : '重新生成报告'}
-      </SemiButton>
     </div>
   )
 }
 
 function NoAnalysisState({
-  detail,
-  result,
   analyzing,
   onTriggerAI,
 }: {
-  detail: TempDISCRecordDetail
-  result: NonNullable<TempDISCRecordDetail['result']>
   analyzing: boolean
   onTriggerAI: () => void
 }) {
   return (
-    <div className="px-8 pb-12">
-      {/* 提示卡片 */}
-      <div className="flex flex-col items-center justify-center py-16 gap-5 border-b">
-        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-          <Sparkles className="h-6 w-6 text-primary" />
-        </div>
-        <div className="text-center max-w-sm">
-          <p className="text-sm font-medium mb-1">尚未进行 AI 分析</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            点击右上角 "AI 分析" 按钮或下方按钮，AI 将生成包含图表、深度洞察的完整报告
-          </p>
-        </div>
+    <div className="flex flex-col items-center justify-center py-20 gap-5 h-full min-h-[300px]">
+      <div className="w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center border border-primary/10">
+        <Sparkles className="h-7 w-7 text-primary/60" />
+      </div>
+      <div className="text-center max-w-[320px]">
+        <h3 className="text-base font-semibold text-slate-800 mb-2">报告尚未解析</h3>
+        <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
+          我们收集到了完整的性格画像雷达。点击解析按钮，立刻让大语言模型输出精细的特征解析报告。
+        </p>
         <SemiButton
           theme="solid"
-          size="default"
+          type="primary"
           onClick={onTriggerAI}
           disabled={analyzing}
           loading={analyzing}
           icon={!analyzing ? <Sparkles className="h-4 w-4" /> : undefined}
+          style={{ width: 140 }}
         >
-          {analyzing ? '分析中...' : '开始 AI 分析'}
+          {analyzing ? '解析中...' : '开始解析报告'}
         </SemiButton>
-      </div>
-
-      {/* 原始数据附录 */}
-      <div className="pt-6">
-        <h3 className="text-sm font-semibold mb-4">原始数据</h3>
-
-        {/* 候选人信息 */}
-        <div className="mb-5 text-sm">
-          <span className="font-medium">{detail.name}</span>
-          <span className="text-muted-foreground ml-2">{detail.phone || ''}</span>
-          <span className="text-muted-foreground ml-2">{formatTime(detail.submitted_at)}</span>
-        </div>
-
-        {/* 四维分数 */}
-        <div className="mb-5">
-          <p className="text-xs font-medium text-muted-foreground mb-2">四维百分位分数</p>
-          <div className="rounded-lg border overflow-hidden text-sm">
-            <div className="grid grid-cols-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
-              {DIMENSIONS.map((dim) => (
-                <span key={dim} className="text-center">{dim} - {DISC_TYPE_CONFIG[dim].label}</span>
-              ))}
-            </div>
-            <div className="grid grid-cols-4 px-4 py-3 border-t">
-              {DIMENSIONS.map((dim) => (
-                <span key={dim} className="text-center tabular-nums font-medium">
-                  {Math.round(result.scores?.[dim] ?? 0)}%
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 主要类型 */}
-        {result.primaryType && (
-          <div className="mb-5">
-            <p className="text-xs font-medium text-muted-foreground mb-2">判定类型</p>
-            <div className="flex items-center gap-2">
-              <Tag
-                size="large"
-                style={{
-                  backgroundColor: DISC_TYPE_CONFIG[result.primaryType.code]?.bgColor,
-                  color: DISC_TYPE_CONFIG[result.primaryType.code]?.color,
-                  borderColor: DISC_TYPE_CONFIG[result.primaryType.code]?.color,
-                }}
-              >
-                {result.primaryType.code} - {DISC_TYPE_CONFIG[result.primaryType.code]?.label}
-              </Tag>
-              {result.secondaryType && (
-                <>
-                  <span className="text-muted-foreground/40">/</span>
-                  <Tag
-                    style={{
-                      backgroundColor: DISC_TYPE_CONFIG[result.secondaryType.code]?.bgColor,
-                      color: DISC_TYPE_CONFIG[result.secondaryType.code]?.color,
-                      borderColor: DISC_TYPE_CONFIG[result.secondaryType.code]?.color,
-                    }}
-                  >
-                    {result.secondaryType.code} - {DISC_TYPE_CONFIG[result.secondaryType.code]?.label}
-                  </Tag>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 原始计分 */}
-        {result.rawData && (
-          <div className="mb-5">
-            <p className="text-xs font-medium text-muted-foreground mb-2">原始计分明细</p>
-            <div className="rounded-lg border overflow-hidden text-sm">
-              <div className="grid grid-cols-5 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
-                <span>维度</span>
-                <span className="text-center">Most</span>
-                <span className="text-center">Least</span>
-                <span className="text-center">Raw</span>
-                <span className="text-center">Percentile</span>
-              </div>
-              {DIMENSIONS.map((dim) => {
-                const config = DISC_TYPE_CONFIG[dim]
-                return (
-                  <div key={dim} className="grid grid-cols-5 border-t px-4 py-2">
-                    <span className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
-                      <span className="font-medium">{dim}</span>
-                      <span className="text-xs text-muted-foreground">{config.label}</span>
-                    </span>
-                    <span className="text-center tabular-nums">{result.rawData?.mostCounts?.[dim] ?? '—'}</span>
-                    <span className="text-center tabular-nums">{result.rawData?.leastCounts?.[dim] ?? '—'}</span>
-                    <span className="text-center tabular-nums">{result.rawData?.rawScores?.[dim] ?? '—'}</span>
-                    <span className="text-center tabular-nums font-medium">{result.scores?.[dim] ?? '—'}%</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* 置信度 */}
-        {result.confidence && (
-          <div className="mb-5">
-            <p className="text-xs font-medium text-muted-foreground mb-2">判定置信度</p>
-            <div className="rounded-lg border p-4 text-sm">
-              <div className="flex items-center gap-3">
-                <Tag
-                  color={
-                    result.confidence.level === 'high' ? 'green'
-                      : result.confidence.level === 'medium' ? 'blue'
-                        : 'grey'
-                  }
-                  type={result.confidence.level === 'low' ? 'ghost' : 'light'}
-                >
-                  {result.confidence.level === 'high' ? '高置信' : result.confidence.level === 'medium' ? '中置信' : '低置信'}
-                </Tag>
-                <span className="tabular-nums">
-                  {result.confidence.score}/100
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  主次分差 {result.confidence.gap}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mt-2">
-                {result.confidence.reason}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

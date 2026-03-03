@@ -185,7 +185,7 @@ export function InfoItem({
             value={editValue}
             onChange={(val) => setEditValue(val)}
             onKeyDown={handleKeyDown}
-            autofocus
+            autoFocus
           />
         )
       case 'async-select': {
@@ -250,7 +250,7 @@ export function InfoItem({
             onChange={(val) => setEditValue(val)}
             onKeyDown={handleKeyDown}
             maxLength={maxLength}
-            autofocus
+            autoFocus
           />
         )
     }
@@ -294,6 +294,7 @@ export function InfoItem({
             </div>
           }
         >
+          <span style={{ display: 'inline-flex' }}>
             <Button
               theme="borderless"
               title="点击编辑"
@@ -318,6 +319,7 @@ export function InfoItem({
                 </>
               )}
             </Button>
+          </span>
         </Popover>
       )
     }

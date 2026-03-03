@@ -1,6 +1,6 @@
 /**
  * 云客管理模块路由布局
- * /yunke/ai-assistant 对所有登录用户开放
+ * /yunke/ai-assistant 与 /yunke/advisor-training 对所有登录用户开放
  * 配置了 page access 的路径对授权员工开放
  * 其他 /yunke/* 路径仅超级管理员可访问
  */
@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { ForbiddenError } from '@/features/errors/forbidden'
 
 // 所有用户都可以访问的路径
-const PUBLIC_PATHS = ['/yunke/ai-assistant', '/yunke/call-records']
+const PUBLIC_PATHS = ['/yunke/ai-assistant', '/yunke/advisor-training', '/yunke/call-records']
 
 // 需要 page access 检查的路径映射 (URL 前缀 -> page_key)
 const PAGE_ACCESS_MAP: Record<string, string> = {}

@@ -292,13 +292,19 @@ export function ASRConfigContent() {
           return (
             <div className="flex items-center gap-1">
               <Tooltip content="编辑">
-                <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+                </span>
               </Tooltip>
               <Tooltip content="测试">
-                <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTest(record.id)} loading={testMutation.isPending} />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTest(record.id)} loading={testMutation.isPending} />
+                </span>
               </Tooltip>
               <Tooltip content="删除">
-                <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} size="small" onClick={() => handleDeleteClick(record)} />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} size="small" onClick={() => handleDeleteClick(record)} />
+                </span>
               </Tooltip>
             </div>
           )

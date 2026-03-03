@@ -408,6 +408,11 @@ export const yunkeNavGroups: NavGroup[] = [
         url: '/yunke/ai-assistant',
         icon: Bot,
       },
+      {
+        title: '顾问陪练',
+        url: '/yunke/advisor-training',
+        icon: BrainCircuit,
+      },
     ],
   },
   {

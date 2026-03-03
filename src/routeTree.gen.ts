@@ -51,6 +51,7 @@ import { Route as AuthenticatedYunkeDashboardRouteImport } from './routes/_authe
 import { Route as AuthenticatedYunkeCredentialsRouteImport } from './routes/_authenticated/yunke/credentials'
 import { Route as AuthenticatedYunkeCallRecordsRouteImport } from './routes/_authenticated/yunke/call-records'
 import { Route as AuthenticatedYunkeAiAssistantRouteImport } from './routes/_authenticated/yunke/ai-assistant'
+import { Route as AuthenticatedYunkeAdvisorTrainingRouteImport } from './routes/_authenticated/yunke/advisor-training'
 import { Route as AuthenticatedYunkeAccountsRouteImport } from './routes/_authenticated/yunke/accounts'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
@@ -313,6 +314,12 @@ const AuthenticatedYunkeAiAssistantRoute =
   AuthenticatedYunkeAiAssistantRouteImport.update({
     id: '/ai-assistant',
     path: '/ai-assistant',
+    getParentRoute: () => AuthenticatedYunkeRouteRoute,
+  } as any)
+const AuthenticatedYunkeAdvisorTrainingRoute =
+  AuthenticatedYunkeAdvisorTrainingRouteImport.update({
+    id: '/advisor-training',
+    path: '/advisor-training',
     getParentRoute: () => AuthenticatedYunkeRouteRoute,
   } as any)
 const AuthenticatedYunkeAccountsRoute =
@@ -667,6 +674,7 @@ export interface FileRoutesByFullPath {
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
+  '/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
   '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
   '/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
@@ -751,6 +759,7 @@ export interface FileRoutesByTo {
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
+  '/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
   '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
   '/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
@@ -844,6 +853,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
+  '/_authenticated/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/_authenticated/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
   '/_authenticated/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
   '/_authenticated/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
@@ -934,6 +944,7 @@ export interface FileRouteTypes {
     | '/settings/display'
     | '/settings/notifications'
     | '/yunke/accounts'
+    | '/yunke/advisor-training'
     | '/yunke/ai-assistant'
     | '/yunke/call-records'
     | '/yunke/credentials'
@@ -1018,6 +1029,7 @@ export interface FileRouteTypes {
     | '/settings/display'
     | '/settings/notifications'
     | '/yunke/accounts'
+    | '/yunke/advisor-training'
     | '/yunke/ai-assistant'
     | '/yunke/call-records'
     | '/yunke/credentials'
@@ -1110,6 +1122,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/yunke/accounts'
+    | '/_authenticated/yunke/advisor-training'
     | '/_authenticated/yunke/ai-assistant'
     | '/_authenticated/yunke/call-records'
     | '/_authenticated/yunke/credentials'
@@ -1446,6 +1459,13 @@ declare module '@tanstack/react-router' {
       path: '/ai-assistant'
       fullPath: '/yunke/ai-assistant'
       preLoaderRoute: typeof AuthenticatedYunkeAiAssistantRouteImport
+      parentRoute: typeof AuthenticatedYunkeRouteRoute
+    }
+    '/_authenticated/yunke/advisor-training': {
+      id: '/_authenticated/yunke/advisor-training'
+      path: '/advisor-training'
+      fullPath: '/yunke/advisor-training'
+      preLoaderRoute: typeof AuthenticatedYunkeAdvisorTrainingRouteImport
       parentRoute: typeof AuthenticatedYunkeRouteRoute
     }
     '/_authenticated/yunke/accounts': {
@@ -1939,6 +1959,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 
 interface AuthenticatedYunkeRouteRouteChildren {
   AuthenticatedYunkeAccountsRoute: typeof AuthenticatedYunkeAccountsRoute
+  AuthenticatedYunkeAdvisorTrainingRoute: typeof AuthenticatedYunkeAdvisorTrainingRoute
   AuthenticatedYunkeAiAssistantRoute: typeof AuthenticatedYunkeAiAssistantRoute
   AuthenticatedYunkeCallRecordsRoute: typeof AuthenticatedYunkeCallRecordsRoute
   AuthenticatedYunkeCredentialsRoute: typeof AuthenticatedYunkeCredentialsRoute
@@ -1950,6 +1971,8 @@ interface AuthenticatedYunkeRouteRouteChildren {
 const AuthenticatedYunkeRouteRouteChildren: AuthenticatedYunkeRouteRouteChildren =
   {
     AuthenticatedYunkeAccountsRoute: AuthenticatedYunkeAccountsRoute,
+    AuthenticatedYunkeAdvisorTrainingRoute:
+      AuthenticatedYunkeAdvisorTrainingRoute,
     AuthenticatedYunkeAiAssistantRoute: AuthenticatedYunkeAiAssistantRoute,
     AuthenticatedYunkeCallRecordsRoute: AuthenticatedYunkeCallRecordsRoute,
     AuthenticatedYunkeCredentialsRoute: AuthenticatedYunkeCredentialsRoute,

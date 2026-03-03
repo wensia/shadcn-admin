@@ -121,15 +121,17 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
       {/* 控制按钮组 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <Tooltip content="快退 10 秒" position="top">
-          <Button
-            theme="borderless"
-            type="tertiary"
-            size="small"
-            icon={<SkipBack style={{ height: 14, width: 14 }} />}
-            onClick={skipBackward}
-            aria-label="快退 10 秒"
-            style={{ height: 28, width: 28, padding: 0 }}
-          />
+          <span style={{ display: 'inline-flex' }}>
+            <Button
+              theme="borderless"
+              type="tertiary"
+              size="small"
+              icon={<SkipBack style={{ height: 14, width: 14 }} />}
+              onClick={skipBackward}
+              aria-label="快退 10 秒"
+              style={{ height: 28, width: 28, padding: 0 }}
+            />
+          </span>
         </Tooltip>
         <Button
           theme="solid"
@@ -144,15 +146,17 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
           style={{ height: 32, width: 32, borderRadius: '50%', padding: 0 }}
         />
         <Tooltip content="快进 10 秒" position="top">
-          <Button
-            theme="borderless"
-            type="tertiary"
-            size="small"
-            icon={<SkipForward style={{ height: 14, width: 14 }} />}
-            onClick={skipForward}
-            aria-label="快进 10 秒"
-            style={{ height: 28, width: 28, padding: 0 }}
-          />
+          <span style={{ display: 'inline-flex' }}>
+            <Button
+              theme="borderless"
+              type="tertiary"
+              size="small"
+              icon={<SkipForward style={{ height: 14, width: 14 }} />}
+              onClick={skipForward}
+              aria-label="快进 10 秒"
+              style={{ height: 28, width: 28, padding: 0 }}
+            />
+          </span>
         </Tooltip>
       </div>
 
@@ -214,7 +218,7 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
         position="top"
         trigger="click"
       >
-        <Tooltip content={isMuted ? '取消静音' : '静音'} position="top">
+        <span style={{ display: 'inline-flex' }} title={isMuted ? '取消静音' : '静音'}>
           <Button
             theme="borderless"
             type="tertiary"
@@ -228,7 +232,7 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
             aria-label={isMuted ? '取消静音' : '静音'}
             style={{ height: 28, width: 28, padding: 0 }}
           />
-        </Tooltip>
+        </span>
       </Popover>
 
       {/* 下载按钮 */}
@@ -251,15 +255,17 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
 
       {/* 关闭按钮 */}
       <Tooltip content="关闭播放器" position="top">
-        <Button
-          theme="borderless"
-          type="tertiary"
-          size="small"
-          icon={<X style={{ height: 14, width: 14 }} />}
-          onClick={handleClose}
-          aria-label="关闭播放器"
-          style={{ height: 28, width: 28, padding: 0 }}
-        />
+        <span style={{ display: 'inline-flex' }}>
+          <Button
+            theme="borderless"
+            type="tertiary"
+            size="small"
+            icon={<X style={{ height: 14, width: 14 }} />}
+            onClick={handleClose}
+            aria-label="关闭播放器"
+            style={{ height: 28, width: 28, padding: 0 }}
+          />
+        </span>
       </Tooltip>
     </div>
   )

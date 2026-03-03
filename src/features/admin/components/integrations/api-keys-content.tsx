@@ -370,31 +370,37 @@ export function ApiKeysContent() {
           return (
             <div className="flex items-center gap-1">
               <Tooltip content="编辑权限">
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  icon={<Shield className="h-4 w-4" />}
-                  size="small"
-                  onClick={() => handleScopesClick(record)}
-                />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button
+                    theme="borderless"
+                    type="tertiary"
+                    icon={<Shield className="h-4 w-4" />}
+                    size="small"
+                    onClick={() => handleScopesClick(record)}
+                  />
+                </span>
               </Tooltip>
               <Tooltip content="重新生成">
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  icon={<IconRefresh />}
-                  size="small"
-                  onClick={() => handleRegenerateClick(record)}
-                />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button
+                    theme="borderless"
+                    type="tertiary"
+                    icon={<IconRefresh />}
+                    size="small"
+                    onClick={() => handleRegenerateClick(record)}
+                  />
+                </span>
               </Tooltip>
               <Tooltip content="删除">
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  icon={<Trash2 className="h-4 w-4 text-red-500" />}
-                  size="small"
-                  onClick={() => handleDeleteClick(record)}
-                />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button
+                    theme="borderless"
+                    type="tertiary"
+                    icon={<Trash2 className="h-4 w-4 text-red-500" />}
+                    size="small"
+                    onClick={() => handleDeleteClick(record)}
+                  />
+                </span>
               </Tooltip>
             </div>
           )

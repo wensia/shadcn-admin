@@ -249,37 +249,43 @@ export function AIDocumentLibrary() {
         return (
           <div className="flex items-center gap-1">
             <Tooltip content="编辑">
-              <Button
-                theme="borderless"
-                type="tertiary"
-                size="small"
-                icon={<Pencil className="h-3.5 w-3.5" />}
-                onClick={() => handleEdit(record)}
-              />
+              <span style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  size="small"
+                  icon={<Pencil className="h-3.5 w-3.5" />}
+                  onClick={() => handleEdit(record)}
+                />
+              </span>
             </Tooltip>
             <Tooltip content={record.is_active ? '停用' : '启用'}>
-              <Button
-                theme="borderless"
-                type="tertiary"
-                size="small"
-                icon={record.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                onClick={() =>
-                  toggleMutation.mutate({
-                    id: record.id,
-                    is_active: !record.is_active,
-                  })
-                }
-                disabled={toggleMutation.isPending}
-              />
+              <span style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  size="small"
+                  icon={record.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  onClick={() =>
+                    toggleMutation.mutate({
+                      id: record.id,
+                      is_active: !record.is_active,
+                    })
+                  }
+                  disabled={toggleMutation.isPending}
+                />
+              </span>
             </Tooltip>
             <Tooltip content="删除">
-              <Button
-                theme="borderless"
-                type="danger"
-                size="small"
-                icon={<Trash2 className="h-3.5 w-3.5" />}
-                onClick={() => setDeleteDoc(record)}
-              />
+              <span style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="danger"
+                  size="small"
+                  icon={<Trash2 className="h-3.5 w-3.5" />}
+                  onClick={() => setDeleteDoc(record)}
+                />
+              </span>
             </Tooltip>
           </div>
         )

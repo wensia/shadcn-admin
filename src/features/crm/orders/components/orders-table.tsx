@@ -187,7 +187,7 @@ export function OrdersTable({
         title: '校区',
         dataIndex: 'campus_name',
         width: 100,
-        ellipsis: true,
+        ellipsis: { showTooltip: false },
         render: (_text: string, record: OrderListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
           return <Text style={{ fontSize: 13 }}>{record.campus_name || '-'}</Text>

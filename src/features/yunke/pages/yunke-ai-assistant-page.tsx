@@ -1,15 +1,11 @@
 import { useCallback, useState } from 'react'
-import { MessageSquareText, PhoneCall } from 'lucide-react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Main } from '@/components/layout/main'
-import { Button, SideSheet } from '@douyinfe/semi-ui-19'
+import { SideSheet } from '@douyinfe/semi-ui-19'
 import { AIChatContainer } from '../components/ai-chat/ai-chat-container'
 import { ChatSessionSidebar } from '../components/ai-chat/chat-session-sidebar'
 import { useChatSessions } from '../components/ai-chat/use-chat-sessions'
-import { CoachWorkspace } from '../components/coach/coach-workspace'
-
-type WorkspaceMode = 'assistant' | 'coach'
 
 function AIDataWorkspace() {
   const isMobile = useIsMobile()
@@ -82,42 +78,11 @@ function AIDataWorkspace() {
 }
 
 export function YunkeAIAssistantPage() {
-  const [mode, setMode] = useState<WorkspaceMode>('assistant')
-
-  useDocumentTitle(mode === 'coach' ? '课程顾问陪练' : 'AI 数据助手')
+  useDocumentTitle('AI 数据助手')
 
   return (
     <Main fixed className='pt-0'>
-      <div className="px-4 pb-4 pt-4">
-        <div
-          className="inline-flex rounded-[20px] border p-1.5"
-          style={{
-            borderColor: 'rgba(148, 163, 184, 0.18)',
-            background: 'linear-gradient(145deg, rgba(255,252,248,0.92), rgba(248,250,252,0.94))',
-          }}
-        >
-          <Button
-            icon={<MessageSquareText className="h-4 w-4" />}
-            type={mode === 'assistant' ? 'primary' : 'tertiary'}
-            theme={mode === 'assistant' ? 'solid' : 'borderless'}
-            onClick={() => setMode('assistant')}
-            style={{ borderRadius: 14 }}
-          >
-            AI 数据助手
-          </Button>
-          <Button
-            icon={<PhoneCall className="h-4 w-4" />}
-            type={mode === 'coach' ? 'primary' : 'tertiary'}
-            theme={mode === 'coach' ? 'solid' : 'borderless'}
-            onClick={() => setMode('coach')}
-            style={{ borderRadius: 14 }}
-          >
-            顾问陪练
-          </Button>
-        </div>
-      </div>
-
-      {mode === 'coach' ? <CoachWorkspace /> : <AIDataWorkspace />}
+      <AIDataWorkspace />
     </Main>
   )
 }

@@ -315,14 +315,16 @@ export function YunkeAccountsContent() {
                   {bound.name}
                 </Tag>
                 <Tooltip content="解绑">
-                  <Button
-                    theme="borderless"
-                    type="tertiary"
-                    icon={<Unlink className="h-3 w-3" />}
-                    size="small"
-                    style={{ width: 24, height: 24, padding: 0 }}
-                    onClick={() => handleUnbindClick(record)}
-                  />
+                  <span style={{ display: 'inline-flex' }}>
+                    <Button
+                      theme="borderless"
+                      type="tertiary"
+                      icon={<Unlink className="h-3 w-3" />}
+                      size="small"
+                      style={{ width: 24, height: 24, padding: 0 }}
+                      onClick={() => handleUnbindClick(record)}
+                    />
+                  </span>
                 </Tooltip>
               </div>
             )

@@ -116,19 +116,21 @@ function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; 
         </div>
       }
     >
-      <Button
-        theme="borderless"
-        size="small"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
-          borderRadius: 12, border: `1px solid ${selectedColor}`,
-          background: selectedColor + '15', color: selectedColor, fontSize: 12,
-          height: 'auto',
-        }}
-        disabled={isSaving}
-      >
-        {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || status}<IconChevronDown style={{ fontSize: 12 }} /></>}
-      </Button>
+      <span style={{ display: 'inline-flex' }}>
+        <Button
+          theme="borderless"
+          size="small"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+            borderRadius: 12, border: `1px solid ${selectedColor}`,
+            background: selectedColor + '15', color: selectedColor, fontSize: 12,
+            height: 'auto',
+          }}
+          disabled={isSaving}
+        >
+          {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || status}<IconChevronDown style={{ fontSize: 12 }} /></>}
+        </Button>
+      </span>
     </Popover>
   )
 }
@@ -194,19 +196,21 @@ function EditableIntentionLevel({ level, editable, onSave }: { level: IntentionL
         </div>
       }
     >
-      <Button
-        theme="borderless"
-        size="small"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
-          borderRadius: 12, border: `1px solid ${selectedColor}`,
-          background: selectedColor + '15', color: selectedColor, fontSize: 12,
-          height: 'auto',
-        }}
-        disabled={isSaving}
-      >
-        {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || level}<IconChevronDown style={{ fontSize: 12 }} /></>}
-      </Button>
+      <span style={{ display: 'inline-flex' }}>
+        <Button
+          theme="borderless"
+          size="small"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+            borderRadius: 12, border: `1px solid ${selectedColor}`,
+            background: selectedColor + '15', color: selectedColor, fontSize: 12,
+            height: 'auto',
+          }}
+          disabled={isSaving}
+        >
+          {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || level}<IconChevronDown style={{ fontSize: 12 }} /></>}
+        </Button>
+      </span>
     </Popover>
   )
 }
@@ -253,14 +257,16 @@ function NotesInline({ notes, editable, onSave }: { notes?: string; editable?: b
             </div>
           }
         >
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<IconEdit style={{ fontSize: 14 }} />}
-            size="small"
-            style={{ padding: 4, flexShrink: 0, height: 'auto', width: 'auto' }}
-            title="编辑备注"
-          />
+          <span style={{ display: 'inline-flex', flexShrink: 0 }}>
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<IconEdit style={{ fontSize: 14 }} />}
+              size="small"
+              style={{ padding: 4, height: 'auto', width: 'auto' }}
+              title="编辑备注"
+            />
+          </span>
         </Popover>
       )}
     </div>

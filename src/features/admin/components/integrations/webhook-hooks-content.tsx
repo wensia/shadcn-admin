@@ -322,16 +322,24 @@ export function WebhookHooksContent() {
           return (
             <div className="flex items-center gap-1">
               <Tooltip content="配置">
-                <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+                </span>
               </Tooltip>
               <Tooltip content="测试">
-                <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTestClick(record)} />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTestClick(record)} />
+                </span>
               </Tooltip>
               <Tooltip content="复制标识">
-                <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} size="small" onClick={() => handleCopyHookKey(record.hook_key)} />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} size="small" onClick={() => handleCopyHookKey(record.hook_key)} />
+                </span>
               </Tooltip>
               <Tooltip content="删除">
-                <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} size="small" onClick={() => handleDeleteClick(record)} />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} size="small" onClick={() => handleDeleteClick(record)} />
+                </span>
               </Tooltip>
             </div>
           )

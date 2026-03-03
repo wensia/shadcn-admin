@@ -585,15 +585,15 @@ export function FollowupForm({
             value={nextFollowupDate}
             onChange={(date: Date | null) => setNextFollowupDate(date || undefined)}
             disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-            triggerRender={({ value, ref }: DateTriggerRenderProps) => (
+            triggerRender={({ ref }: DateTriggerRenderProps) => (
               <span ref={ref} style={{ display: 'inline-flex' }}>
                 <Button
                   style={{
                     height: 28, padding: '0 8px', fontSize: 12, minWidth: 90,
-                    color: value ? undefined : 'var(--semi-color-text-2)',
+                    color: nextFollowupDate ? undefined : 'var(--semi-color-text-2)',
                   }}
                 >
-                  {value ? format(value as Date, 'MM月dd日', { locale: zhCN }) : '选择日期'}
+                  {nextFollowupDate ? format(nextFollowupDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
                 </Button>
               </span>
             )}
@@ -650,15 +650,15 @@ export function FollowupForm({
                 value={appointmentDate}
                 onChange={(date: Date | null) => setAppointmentDate(date || undefined)}
                 disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-                triggerRender={({ value, ref }: DateTriggerRenderProps) => (
+                triggerRender={({ ref }: DateTriggerRenderProps) => (
                   <span ref={ref} style={{ display: 'inline-flex' }}>
                     <Button
                       style={{
                         height: 28, padding: '0 8px', fontSize: 12, minWidth: 90,
-                        color: value ? undefined : 'var(--semi-color-text-2)',
+                        color: appointmentDate ? undefined : 'var(--semi-color-text-2)',
                       }}
                     >
-                      {value ? format(value as Date, 'MM月dd日', { locale: zhCN }) : '选择日期'}
+                      {appointmentDate ? format(appointmentDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
                     </Button>
                   </span>
                 )}

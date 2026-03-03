@@ -375,9 +375,6 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--semi-color-text-0, #1c1f23);
-}
-
-.login-forgot-link {
   font-size: 12px;
   font-weight: 500;
   color: var(--semi-color-primary, #0064FA);
@@ -387,6 +384,35 @@
 .login-forgot-link:hover {
   color: var(--semi-color-primary-hover, #0050C8);
 }
+
+/* DISC Report Drawer Custom Tabs Styles */
+.disc-tabs-wrapper .semi-tabs-bar {
+  border-bottom: 2px solid theme('colors.slate.100') !important;
+}
+
+.disc-tabs-wrapper .semi-tabs-tab {
+  padding: 8px 16px !important;
+  margin-right: 24px !important;
+  color: theme('colors.slate.500') !important;
+  transition: all 0.2s ease;
+}
+
+.disc-tabs-wrapper .semi-tabs-tab:hover {
+  color: theme('colors.slate.800') !important;
+  background-color: transparent !important;
+}
+
+.disc-tabs-wrapper .semi-tabs-tab-active {
+  color: theme('colors.slate.900') !important;
+  font-weight: 600 !important;
+}
+
+.disc-tabs-wrapper .semi-tabs-bar-line {
+  background-color: theme('colors.slate.900') !important;
+  height: 2px !important;
+  border-radius: 2px !important;
+}
+
 
 /* ── Accessibility: Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {

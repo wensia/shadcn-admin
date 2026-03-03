@@ -177,7 +177,7 @@ export function LeadsTable({
         title: '来源渠道',
         dataIndex: 'source_channel_name',
         width: 130,
-        ellipsis: true,
+        ellipsis: { showTooltip: false },
         render: (_text: string, record: LeadListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
           return (
@@ -280,7 +280,7 @@ export function LeadsTable({
         title: '校区',
         dataIndex: 'owner_campus_name',
         width: 110,
-        ellipsis: true,
+        ellipsis: { showTooltip: false },
         render: (_text: string, record: LeadListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
           return (
@@ -307,7 +307,7 @@ export function LeadsTable({
         title: '备注',
         dataIndex: 'notes',
         width: 160,
-        ellipsis: true,
+        ellipsis: { showTooltip: false },
         render: (_text: string, record: LeadListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
           return record.notes ? (

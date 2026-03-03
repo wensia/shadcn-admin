@@ -61,14 +61,16 @@ export function DataTableBulkActions({
           )}
         >
           <Tooltip content='Clear selection (Escape)'>
-            <Button
-              theme='borderless'
-              type='tertiary'
-              icon={<X size={14} />}
-              size='small'
-              onClick={onClearSelection}
-              style={{ borderRadius: '50%', width: 24, height: 24, padding: 0 }}
-            />
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme='borderless'
+                type='tertiary'
+                icon={<X size={14} />}
+                size='small'
+                onClick={onClearSelection}
+                style={{ borderRadius: '50%', width: 24, height: 24, padding: 0 }}
+              />
+            </span>
           </Tooltip>
 
           <Divider layout='vertical' style={{ height: 20 }} />
@@ -87,44 +89,52 @@ export function DataTableBulkActions({
           <Divider layout='vertical' style={{ height: 20 }} />
 
           <Tooltip content='Invite selected users'>
-            <Button
-              theme='outline'
-              size='small'
-              icon={<Mail size={16} />}
-              onClick={handleBulkInvite}
-              style={{ width: 32, height: 32 }}
-            />
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme='outline'
+                size='small'
+                icon={<Mail size={16} />}
+                onClick={handleBulkInvite}
+                style={{ width: 32, height: 32 }}
+              />
+            </span>
           </Tooltip>
 
           <Tooltip content='Activate selected users'>
-            <Button
-              theme='outline'
-              size='small'
-              icon={<UserCheck size={16} />}
-              onClick={() => handleBulkStatusChange('active')}
-              style={{ width: 32, height: 32 }}
-            />
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme='outline'
+                size='small'
+                icon={<UserCheck size={16} />}
+                onClick={() => handleBulkStatusChange('active')}
+                style={{ width: 32, height: 32 }}
+              />
+            </span>
           </Tooltip>
 
           <Tooltip content='Deactivate selected users'>
-            <Button
-              theme='outline'
-              size='small'
-              icon={<UserX size={16} />}
-              onClick={() => handleBulkStatusChange('inactive')}
-              style={{ width: 32, height: 32 }}
-            />
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme='outline'
+                size='small'
+                icon={<UserX size={16} />}
+                onClick={() => handleBulkStatusChange('inactive')}
+                style={{ width: 32, height: 32 }}
+              />
+            </span>
           </Tooltip>
 
           <Tooltip content='Delete selected users'>
-            <Button
-              type='danger'
-              theme='solid'
-              size='small'
-              icon={<Trash2 size={16} />}
-              onClick={() => setShowDeleteConfirm(true)}
-              style={{ width: 32, height: 32 }}
-            />
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                type='danger'
+                theme='solid'
+                size='small'
+                icon={<Trash2 size={16} />}
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{ width: 32, height: 32 }}
+              />
+            </span>
           </Tooltip>
         </div>
       </div>
