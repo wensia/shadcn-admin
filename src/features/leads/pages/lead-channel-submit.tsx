@@ -6,7 +6,7 @@
  * Touch target ≥ 44 px, focus-visible, prefers-reduced-motion
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import {
@@ -15,13 +15,12 @@ import {
   AlertTriangle,
   XCircle,
   RotateCcw,
-  ChevronDown,
-  Check,
   BarChart3,
   FileText,
   ArrowRight,
   Loader2,
 } from 'lucide-react'
+import { Input, TextArea, Select, Button as SemiButton, RadioGroup, Radio } from '@douyinfe/semi-ui-19'
 import { cn } from '@/lib/utils'
 import type { SourceChannelExtraField } from '@/features/crm/leads/types'
 import {
@@ -79,93 +78,6 @@ const textareaCls =
 /* ─── Tab type ─── */
 type TabType = 'form' | 'stats'
 
-/* ─── FormSelect ─── */
-function FormSelect({
-  options,
-  value,
-  onChange,
-  placeholder,
-}: {
-  options: { label: string; value: string }[]
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  const selectedLabel = options.find((o) => o.value === value)?.label
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={cn(
-          'flex h-11 w-full items-center justify-between rounded-lg border bg-white px-3.5 text-[14px] outline-none transition-all',
-          open
-            ? 'border-[#2563eb] ring-2 ring-[#2563eb]/10'
-            : 'border-[#e4e4e7] hover:border-[#a1a1aa]',
-        )}
-      >
-        <span className={cn('truncate', value ? 'text-[#18181b]' : 'text-[#a1a1aa]')}>
-          {selectedLabel || placeholder || '请选择'}
-        </span>
-        <ChevronDown
-          className={cn(
-            'h-4 w-4 shrink-0 text-[#a1a1aa] transition-transform duration-200',
-            open && 'rotate-180',
-          )}
-        />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-[220px] overflow-y-auto rounded-lg border border-[#e4e4e7] bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
-          >
-            {options.map((opt) => {
-              const isSelected = opt.value === value
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.value)
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    'flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] transition-colors',
-                    isSelected
-                      ? 'bg-[#eff6ff] text-[#2563eb]'
-                      : 'text-[#18181b] hover:bg-[#f4f4f5]',
-                  )}
-                >
-                  <span className="flex-1 truncate">{opt.label}</span>
-                  {isSelected && <Check className="h-4 w-4 shrink-0 text-[#2563eb]" />}
-                </button>
-              )
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
 /* ─── Render a single dynamic field ─── */
 function DynamicField({
   field,
@@ -185,10 +97,12 @@ function DynamicField({
           {label}
           {field.required && <span className="text-[#dc2626]"> *</span>}
         </label>
-        <FormSelect
-          options={field.options.map((o) => ({ label: o.label, value: o.value }))}
-          value={value}
-          onChange={onChange}
+        <Select
+          className={inputCls}
+          style={{ width: '100%' }}
+          optionList={field.options.map((o) => ({ label: o.label, value: o.value }))}
+          value={value || undefined}
+          onChange={(selected) => onChange((selected as string) || '')}
           placeholder={field.placeholder || `请选择${label}`}
         />
       </div>
@@ -202,12 +116,12 @@ function DynamicField({
           {label}
           {field.required && <span className="text-[#dc2626]"> *</span>}
         </label>
-        <textarea
+        <TextArea
           className={textareaCls}
-          style={{ minHeight: '80px' }}
           placeholder={field.placeholder || `请输入${label}`}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(val) => onChange(val)}
+          autosize={{ minRows: 3, maxRows: 6 }}
         />
       </div>
     )
@@ -225,12 +139,12 @@ function DynamicField({
         {label}
         {field.required && <span className="text-[#dc2626]"> *</span>}
       </label>
-      <input
+      <Input
         type={inputType}
         className={inputCls}
         placeholder={field.placeholder || `请输入${label}`}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(val) => onChange(val)}
       />
     </div>
   )
@@ -528,27 +442,25 @@ export function LeadChannelSubmit() {
                   </p>
 
                   {/* Tabs — underline style */}
-                  <div className="-mb-px mt-4 flex">
+                  <RadioGroup
+                    type="button"
+                    buttonSize="large"
+                    value={activeTab}
+                    onChange={(e) => setActiveTab(e.target.value as TabType)}
+                    style={{ display: 'flex', width: '100%', marginTop: 16, marginBottom: -1 }}
+                  >
                     {([
                       { key: 'form' as TabType, label: '录入', icon: FileText },
                       { key: 'stats' as TabType, label: '统计', icon: BarChart3 },
                     ]).map(({ key, label, icon: Icon }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setActiveTab(key)}
-                        className={cn(
-                          'flex flex-1 cursor-pointer items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-1 text-[13px] font-medium transition-colors',
-                          activeTab === key
-                            ? 'border-[#2563eb] text-[#2563eb]'
-                            : 'border-transparent text-[#a1a1aa] hover:text-[#52525b]',
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
+                      <Radio key={key} value={key} style={{ flex: 1 }}>
+                        <span className="flex items-center justify-center gap-1.5">
+                          <Icon className="h-3.5 w-3.5" />
+                          {label}
+                        </span>
+                      </Radio>
                     ))}
-                  </div>
+                  </RadioGroup>
                 </div>
 
                 {/* Body */}
@@ -565,10 +477,12 @@ export function LeadChannelSubmit() {
                           <label className="mb-1.5 block text-[13px] font-medium text-[#18181b]">
                             归属校区 <span className="text-[#dc2626]">*</span>
                           </label>
-                          <FormSelect
-                            options={campuses.map((cp) => ({ label: cp.name, value: cp.id }))}
-                            value={selectedCampusId}
-                            onChange={setSelectedCampusId}
+                          <Select
+                            className={inputCls}
+                            style={{ width: '100%' }}
+                            optionList={campuses.map((cp) => ({ label: cp.name, value: cp.id }))}
+                            value={selectedCampusId || undefined}
+                            onChange={(selected) => setSelectedCampusId((selected as string) || '')}
                             placeholder="请选择归属校区"
                           />
                         </div>
@@ -589,12 +503,11 @@ export function LeadChannelSubmit() {
                         <label className="mb-1.5 block text-[13px] font-medium text-[#18181b]">
                           客户名字
                         </label>
-                        <input
-                          type="text"
+                        <Input
                           className={inputCls}
                           placeholder="选填"
                           value={parentName}
-                          onChange={(e) => setParentName(e.target.value)}
+                          onChange={(val) => setParentName(val)}
                         />
                       </div>
 
@@ -603,13 +516,12 @@ export function LeadChannelSubmit() {
                         <label className="mb-1.5 block text-[13px] font-medium text-[#18181b]">
                           联系电话 <span className="text-[#dc2626]">*</span>
                         </label>
-                        <input
-                          type="tel"
+                        <Input
                           className={inputCls}
                           placeholder="11位手机号"
                           maxLength={11}
                           value={parentPhone}
-                          onChange={(e) => setParentPhone(e.target.value.replace(/\D/g, ''))}
+                          onChange={(val) => setParentPhone(val.replace(/\D/g, ''))}
                         />
                       </div>
 
@@ -618,12 +530,12 @@ export function LeadChannelSubmit() {
                         <label className="mb-1.5 block text-[13px] font-medium text-[#18181b]">
                           备注
                         </label>
-                        <textarea
+                        <TextArea
                           className={textareaCls}
-                          style={{ minHeight: '72px' }}
                           placeholder="选填"
                           value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
+                          onChange={(val) => setNotes(val)}
+                          autosize={{ minRows: 3, maxRows: 6 }}
                         />
                       </div>
 
@@ -643,15 +555,13 @@ export function LeadChannelSubmit() {
                       </AnimatePresence>
 
                       {/* Submit */}
-                      <button
-                        type="button"
+                      <SemiButton
+                        theme="solid"
                         disabled={!canSubmit}
-                        className={cn(
-                          'flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg text-[14px] font-medium text-white transition-all active:scale-[0.98] motion-reduce:active:scale-100',
-                          canSubmit
-                            ? 'bg-[#2563eb] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-[#1d4ed8]'
-                            : 'cursor-not-allowed bg-[#e4e4e7] text-[#a1a1aa]',
-                        )}
+                        className='!flex !h-11 !w-full !items-center !justify-center !gap-2 !rounded-lg !text-[14px] !font-medium'
+                        style={canSubmit
+                          ? { backgroundColor: c.accent, color: '#fff' }
+                          : { backgroundColor: c.border, color: c.muted }}
                         onClick={handleSubmit}
                       >
                         {requireCampusSelection && !selectedCampusId
@@ -662,7 +572,7 @@ export function LeadChannelSubmit() {
                               <ArrowRight className="h-4 w-4" />
                             </>
                           )}
-                      </button>
+                      </SemiButton>
                     </div>
                   )}
                 </div>
@@ -752,14 +662,15 @@ export function LeadChannelSubmit() {
                     </div>
 
                     {/* Continue button */}
-                    <button
-                      type="button"
-                      className="mt-4 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#2563eb] text-[14px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all hover:bg-[#1d4ed8] active:scale-[0.98] motion-reduce:active:scale-100"
+                    <SemiButton
+                      theme="solid"
+                      className="!mt-4 !flex !h-11 !w-full !items-center !justify-center !gap-2 !rounded-lg !text-[14px] !font-medium"
+                      style={{ backgroundColor: c.accent, color: '#fff' }}
                       onClick={handleReset}
                     >
                       <RotateCcw className="h-4 w-4" />
                       继续录入
-                    </button>
+                    </SemiButton>
                   </div>
                 )
               })()}

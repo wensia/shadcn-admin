@@ -1416,6 +1416,7 @@ export const AI_PROVIDER_OPTIONS = [
 /** AI 使用场景 */
 export const AI_SCENES = [
   { key: 'ai_chat', label: 'AI 数据助手', description: '对话式AI助手，支持Function Calling', needsPrompt: false },
+  { key: 'advisor_training', label: '课程顾问陪练', description: '课程顾问文字/语音陪练与会后评分', needsPrompt: true },
   { key: 'call_analysis', label: '通话分析', description: '通话录音AI质检分析', needsPrompt: true },
   { key: 'disc_analysis', label: 'DISC 测评分析', description: 'DISC性格测试AI深度分析报告', needsPrompt: true },
 ] as const
@@ -1461,6 +1462,7 @@ export interface AIPromptUpdate {
 
 /** 文档分类选项 */
 export const AI_DOCUMENT_CATEGORIES = [
+  { label: '陪练知识库', value: 'advisor_training_knowledge' },
   { label: '产品资料', value: 'product_info' },
   { label: '常见问题', value: 'faq' },
   { label: '销售指南', value: 'sales_guide' },

@@ -23,6 +23,7 @@ import {
   Divider,
   DatePicker,
   TimePicker,
+  TextArea,
 } from '@douyinfe/semi-ui-19'
 
 import {
@@ -508,16 +509,16 @@ export function FollowupForm({
             {aiSuggestion.ai_quality_score ? `（评分 ${aiSuggestion.ai_quality_score}）` : ''}
             预填充建议，可直接修改
           </span>
-          <button
-            type="button"
-            style={{ flexShrink: 0, borderRadius: 4, padding: 2, border: 'none', background: 'transparent', cursor: 'pointer' }}
+          <Button
+            theme="borderless"
+            style={{ flexShrink: 0, borderRadius: 4, padding: 2, minWidth: 'auto', height: 'auto' }}
             onClick={() => {
               setAiApplied(false)
               resetForm()
             }}
           >
             <X style={{ width: 12, height: 12 }} />
-          </button>
+          </Button>
         </div>
       )}
       {hasAiFollowup && !aiLoading && (
@@ -686,20 +687,12 @@ export function FollowupForm({
             <label style={{ fontSize: 12, fontWeight: 500, color: '#ef4444', whiteSpace: 'nowrap', width: 64, flexShrink: 0, paddingTop: 8 }}>
               诺到理由
             </label>
-            <textarea
+            <TextArea
               placeholder="请输入诺到理由..."
               value={appointmentReason}
-              onChange={(e) => {
-                setAppointmentReason(e.target.value)
-                e.target.style.height = 'auto'
-                e.target.style.height = `${e.target.scrollHeight}px`
-              }}
-              rows={1}
-              style={{
-                flex: 1, resize: 'none', minHeight: 32, padding: '6px 8px', fontSize: 14,
-                overflow: 'hidden', border: '1px solid var(--semi-color-border)',
-                borderRadius: 4, backgroundColor: 'var(--semi-color-fill-0)', outline: 'none',
-              }}
+              onChange={(value) => setAppointmentReason(value)}
+              autosize={{ minRows: 1, maxRows: 4 }}
+              style={{ flex: 1 }}
             />
           </div>
         </>
@@ -745,16 +738,13 @@ export function FollowupForm({
       {/* 跟进内容 */}
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
         <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap', width: 64, flexShrink: 0, paddingTop: 8 }}>跟进内容</label>
-        <textarea
+        <TextArea
           placeholder="输入跟进内容..."
           value={followupContent}
-          onChange={(e) => setFollowupContent(e.target.value)}
-          rows={2}
-          style={{
-            flex: 1, resize: 'none', padding: '6px 8px', fontSize: 14,
-            border: '1px solid var(--semi-color-border)', borderRadius: 4,
-            backgroundColor: 'var(--semi-color-fill-0)', outline: 'none',
-          }}
+          onChange={(value) => setFollowupContent(value)}
+          maxCount={500}
+          autosize={{ minRows: 2, maxRows: 6 }}
+          style={{ flex: 1 }}
         />
       </div>
     </>

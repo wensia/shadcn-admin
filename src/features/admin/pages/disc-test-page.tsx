@@ -367,6 +367,11 @@ const aiStatusOptions = [
   { value: 'none', label: '未触发' },
 ]
 
+type ReanalyzeGuard = {
+  recordId: string
+  previousAnalyzedAt?: string | null
+}
+
 export function DiscTestPage() {
   useDocumentTitle('DISC性格测试')
   const queryClient = useQueryClient()
@@ -389,6 +394,7 @@ export function DiscTestPage() {
   // 详情抽屉
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
+  const reanalyzeGuardRef = useRef<ReanalyzeGuard | null>(null)
 
   // 编辑弹窗
   const [editModalVisible, setEditModalVisible] = useState(false)
@@ -439,6 +445,64 @@ export function DiscTestPage() {
     },
   })
   const detail = detailData || null
+
+  useEffect(() => {
+    const reanalyzeGuard = reanalyzeGuardRef.current
+    if (!detailId || !detailData || !reanalyzeGuard || reanalyzeGuard.recordId !== detailId) return
+
+    const currentAI = detailData.result?.aiAnalysis
+    if (!currentAI) return
+
+    if (currentAI.status === 'failed') {
+      reanalyzeGuardRef.current = null
+      queryClient.invalidateQueries({ queryKey: ['disc-records'] })
+      return
+    }
+
+    if (currentAI.status !== 'completed') return
+
+    if (currentAI.analyzedAt && currentAI.analyzedAt !== reanalyzeGuard.previousAnalyzedAt) {
+      reanalyzeGuardRef.current = null
+      queryClient.invalidateQueries({ queryKey: ['disc-records'] })
+      return
+    }
+
+    queryClient.setQueryData<TempDISCRecordDetail | undefined>(
+      ['disc-record-detail', detailId],
+      (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          result: {
+            ...old.result,
+            aiAnalysis: { status: 'processing' } as TempDISCRecordDetail['result']['aiAnalysis'],
+          },
+        }
+      },
+    )
+    queryClient.setQueriesData<typeof recordsData>(
+      { queryKey: ['disc-records'] },
+      (old) => {
+        if (!old?.items) return old
+        return {
+          ...old,
+          items: old.items.map((item) =>
+            item.id === detailId
+              ? { ...item, ai_analysis_status: 'processing' }
+              : item
+          ),
+        }
+      },
+    )
+  }, [detailData, detailId, queryClient, recordsData])
+
+  // AI 分析完成/失败时自动同步刷新列表（由详情轮询检测到状态变化）
+  const detailAIStatus = detail?.result?.aiAnalysis?.status
+  useEffect(() => {
+    if (detailAIStatus === 'completed' || detailAIStatus === 'failed') {
+      queryClient.invalidateQueries({ queryKey: ['disc-records'] })
+    }
+  }, [detailAIStatus, queryClient])
 
   // 查看详情
   const handleViewDetail = useCallback((id: string) => {
@@ -894,11 +958,15 @@ export function DiscTestPage() {
           setDetailOpen(open)
           if (!open) {
             setDetailId(null)
+            reanalyzeGuardRef.current = null
             queryClient.invalidateQueries({ queryKey: ['disc-records'] })
           }
         }}
         detail={detail}
         loading={loadingDetail}
+        onReanalyzeStart={(payload) => {
+          reanalyzeGuardRef.current = payload
+        }}
         onDetailUpdate={(updated: TempDISCRecordDetail) => {
           queryClient.setQueryData(['disc-record-detail', detailId], updated)
           const aiStatus = updated?.result?.aiAnalysis?.status
@@ -918,6 +986,8 @@ export function DiscTestPage() {
               },
             )
             queryClient.invalidateQueries({ queryKey: ['disc-records'] })
+          } else if (aiStatus === 'completed' || aiStatus === 'failed') {
+            reanalyzeGuardRef.current = null
           }
         }}
       />

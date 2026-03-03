@@ -116,18 +116,19 @@ function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; 
         </div>
       }
     >
-      <button
-        type="button"
+      <Button
+        theme="borderless"
+        size="small"
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
-          borderRadius: 12, border: `1px solid ${selectedColor}`, cursor: 'pointer',
+          borderRadius: 12, border: `1px solid ${selectedColor}`,
           background: selectedColor + '15', color: selectedColor, fontSize: 12,
-          transition: 'opacity 0.2s',
+          height: 'auto',
         }}
         disabled={isSaving}
       >
         {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || status}<IconChevronDown style={{ fontSize: 12 }} /></>}
-      </button>
+      </Button>
     </Popover>
   )
 }
@@ -193,17 +194,19 @@ function EditableIntentionLevel({ level, editable, onSave }: { level: IntentionL
         </div>
       }
     >
-      <button
-        type="button"
+      <Button
+        theme="borderless"
+        size="small"
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
-          borderRadius: 12, border: `1px solid ${selectedColor}`, cursor: 'pointer',
+          borderRadius: 12, border: `1px solid ${selectedColor}`,
           background: selectedColor + '15', color: selectedColor, fontSize: 12,
+          height: 'auto',
         }}
         disabled={isSaving}
       >
         {isSaving ? <IconLoading spin style={{ fontSize: 12 }} /> : <>{selectedOption?.label || level}<IconChevronDown style={{ fontSize: 12 }} /></>}
-      </button>
+      </Button>
     </Popover>
   )
 }
@@ -250,13 +253,14 @@ function NotesInline({ notes, editable, onSave }: { notes?: string; editable?: b
             </div>
           }
         >
-          <button
-            type="button"
-            style={{ color: 'var(--semi-color-text-2)', padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+          <Button
+            theme="borderless"
+            type="tertiary"
+            icon={<IconEdit style={{ fontSize: 14 }} />}
+            size="small"
+            style={{ padding: 4, flexShrink: 0, height: 'auto', width: 'auto' }}
             title="编辑备注"
-          >
-            <IconEdit style={{ fontSize: 14 }} />
-          </button>
+          />
         </Popover>
       )}
     </div>

@@ -3,6 +3,7 @@ import { Copy, Check } from 'lucide-react'
 import { motion } from 'motion/react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { cn, copyToClipboard } from '@/lib/utils'
 import type { ChatMessage } from './use-ai-chat'
 import { ChatToolIndicator } from './chat-tool-indicator'
@@ -190,7 +191,8 @@ function ResponseCard({
       ) : (
         <div className="px-4 py-2 border-t border-border/30 flex items-center justify-between bg-muted/20 text-[13px]">
           <div className="flex items-center gap-3">
-            <button
+            <SemiButton
+              theme="borderless"
               onClick={handleCopy}
               className={cn(
                 'flex items-center gap-1.5 transition-colors select-none',
@@ -210,7 +212,7 @@ function ResponseCard({
                   <span>复制</span>
                 </>
               )}
-            </button>
+            </SemiButton>
           </div>
         </div>
       )}

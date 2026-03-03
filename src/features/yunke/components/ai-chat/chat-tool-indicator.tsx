@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, CheckCircle2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
+import { Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { Spinner } from './spinner'
 import type { ToolCallInfo } from './use-ai-chat'
 
@@ -130,7 +131,8 @@ export function ChatToolIndicator({
   return (
     <div className="mb-2">
       {/* ---- Header button ---- */}
-      <button
+      <SemiButton
+        theme="borderless"
         onClick={toggleExpanded}
         className={cn(
           'flex items-center gap-2 w-full pl-2.5 pr-1.5 py-1.5 rounded-[8px] text-left',
@@ -169,7 +171,7 @@ export function ChatToolIndicator({
             </motion.span>
           </AnimatePresence>
         </span>
-      </button>
+      </SemiButton>
 
       {/* ---- Expandable activity list ---- */}
       <AnimatePresence initial={false}>

@@ -146,23 +146,23 @@ function SessionItem({
           </Dropdown.Menu>
         }
       >
-        <button
+        <Button
+          theme="borderless"
           style={{
             opacity: 0,
             flexShrink: 0,
             padding: 2,
             borderRadius: 4,
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
+            minWidth: 'auto',
+            height: 'auto',
           }}
           className="group-hover:!opacity-100"
           onClick={e => e.stopPropagation()}
         >
           <MoreHorizontal style={{ width: 14, height: 14, color: 'var(--semi-color-text-2)' }} />
-        </button>
+        </Button>
       </Dropdown>
     </div>
   )

@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Button, Card, Skeleton, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
+import { Button, Card, Skeleton, Dropdown, Tag, Toast, Modal } from '@douyinfe/semi-ui-19'
 import { IconPlus, IconRefresh, IconMore, IconEdit, IconTickCircle, IconDelete, IconUpload } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { useAuthStore } from '@/stores/auth-store'
@@ -128,11 +128,18 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
   const handleEdit = (item: PaymentItem) => { setEditData(item); setDialogOpen(true) }
   const handleCreate = () => { setEditData(null); setDialogOpen(true) }
 
-  const handleDelete = async (item: PaymentItem) => {
+  const handleDelete = (item: PaymentItem) => {
     if (item.is_counted) { Toast.error('已导入日控表的记录不可删除，请先取消导入'); return }
-    if (!confirm(`确定要删除 ${item.child_name || '该学生'} 的缴费记录吗？`)) return
-    try { await deletePayment(item.id); Toast.success('删除成功'); fetchData() }
-    catch { Toast.error('删除失败') }
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除 ${item.child_name || '该学生'} 的缴费记录吗？`,
+      okText: '删除',
+      okButtonProps: { type: 'danger' },
+      onOk: async () => {
+        try { await deletePayment(item.id); Toast.success('删除成功'); fetchData() }
+        catch { Toast.error('删除失败') }
+      },
+    })
   }
 
   const columns: ColumnProps<PaymentItem>[] = [

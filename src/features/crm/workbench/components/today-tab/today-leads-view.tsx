@@ -9,6 +9,7 @@ import { format, startOfDay, endOfDay, parseISO, isBefore, isWithinInterval } fr
 import { zhCN } from 'date-fns/locale'
 import { Card, Button, Skeleton } from '@douyinfe/semi-ui-19'
 import { IconClock, IconUser, IconAlertCircle, IconChevronRight } from '@douyinfe/semi-icons'
+import { cn } from '@/lib/utils'
 import { leadsApi } from '@/features/crm/leads/api'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
 import { LeadStatusBadge, IntentionLevelBadge } from '@/features/crm/leads/components/status-badges'
@@ -156,19 +157,21 @@ function LeadCard({ lead, isOverdue, onClick }: LeadCardProps) {
     : null
 
   return (
-    <button
-      type="button"
+    <Button
+      theme="borderless"
       onClick={onClick}
+      className={cn(
+        '!h-auto !w-full !justify-start !rounded-lg !p-3 !text-left',
+        isOverdue
+          ? 'hover:!bg-[var(--semi-color-danger-light-hover)]'
+          : 'hover:!bg-[var(--semi-color-fill-0)]'
+      )}
       style={{
         width: '100%', borderRadius: 8,
         border: `1px solid ${isOverdue ? 'var(--semi-color-danger-light-default)' : 'var(--semi-color-border)'}`,
         padding: 12, textAlign: 'left',
-        transition: 'background 0.15s',
         background: isOverdue ? 'var(--semi-color-danger-light-default)' : 'transparent',
-        cursor: 'pointer',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = isOverdue ? 'var(--semi-color-danger-light-hover)' : 'var(--semi-color-fill-0)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = isOverdue ? 'var(--semi-color-danger-light-default)' : 'transparent' }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -209,6 +212,6 @@ function LeadCard({ lead, isOverdue, onClick }: LeadCardProps) {
           )}
         </div>
       </div>
-    </button>
+    </Button>
   )
 }

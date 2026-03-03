@@ -15,8 +15,8 @@ export const SKELETON_ID_PREFIX = '__skeleton__'
 /**
  * 判断是否是骨架屏行
  */
-export function isSkeletonRow(id: string): boolean {
-  return id.startsWith(SKELETON_ID_PREFIX)
+export function isSkeletonRow(id: string | number): boolean {
+  return typeof id === 'string' && id.startsWith(SKELETON_ID_PREFIX)
 }
 
 /**
@@ -24,7 +24,7 @@ export function isSkeletonRow(id: string): boolean {
  * @param count 生成的行数
  * @param factory 可选的工厂函数，用于生成符合表格类型的占位数据
  */
-export function createSkeletonData<T extends { id: string }>(
+export function createSkeletonData<T extends { id: string | number }>(
   count: number,
   factory?: (index: number) => Omit<T, 'id'>
 ): T[] {

@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { ClerkProvider } from '@clerk/clerk-react'
 import { ExternalLink, Key, PanelLeftIcon } from 'lucide-react'
-import { Banner, Divider } from '@douyinfe/semi-ui-19'
+import { Banner, Divider, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { useSidebar } from '@/context/sidebar-context'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
@@ -139,12 +139,13 @@ function MissingClerkPubKey() {
 function ClerkSidebarTrigger() {
   const { toggleSidebar } = useSidebar()
   return (
-    <button
+    <SemiButton
+      theme='outline'
       onClick={toggleSidebar}
       className='inline-flex items-center justify-center rounded-md border border-input bg-background p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground scale-125 sm:scale-100'
     >
       <PanelLeftIcon className='size-4' />
       <span className='sr-only'>Toggle Sidebar</span>
-    </button>
+    </SemiButton>
   )
 }

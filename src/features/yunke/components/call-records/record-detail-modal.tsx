@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { SideSheet, Button, Tag, Slider, Skeleton, Dropdown, Toast, Spin } from '@douyinfe/semi-ui-19'
+import { SideSheet, Button, Tag, Slider, Skeleton, Dropdown, Toast, Spin, Modal } from '@douyinfe/semi-ui-19'
 import {
   Play, Pause, Volume2, VolumeX, SkipBack, SkipForward,
   Download, FileText, BrainCircuit, Copy, FileJson, FileType,
@@ -102,6 +102,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
   const [playbackRate, setPlaybackRate] = useState(1)
+  const [reanalyzeConfirmOpen, setReanalyzeConfirmOpen] = useState(false)
 
   // 懒加载完整记录（含 transcript 和 ai_analysis）
   const [fullRecord, setFullRecord] = useState<CallRecord | null>(null)
@@ -183,6 +184,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
       Toast.error(`提交分析失败: ${error.message}`)
     },
   })
+  const { mutate: triggerAnalyze, isPending: isAnalyzePending } = analyzeMutation
 
   // 重置播放状态
   useEffect(() => {
@@ -196,6 +198,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const handleClose = useCallback(() => {
     resetPlayerState()
     setFullRecord(null)
+    setReanalyzeConfirmOpen(false)
     onOpenChange(false)
   }, [onOpenChange, resetPlayerState])
 
@@ -269,68 +272,82 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const hasFullTranscript = fullTranscript && fullTranscript.length > 0
   const analysisStatus = fullRecord?.ai_analysis_status ?? record?.ai_analysis_status
 
-  return (
-    <SideSheet
-      visible={open}
-      onCancel={handleClose}
-      placement="right"
-      width="100vw"
-      title={record ? (
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: '6px 16px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--semi-color-text-0)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {record.staff_name || '未知员工'}
-            </span>
-            <ArrowRight style={{ height: 14, width: 14, color: 'var(--semi-color-text-3)', flexShrink: 0 }} />
-            <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {record.callee || record.caller || '-'}
-            </span>
-          </div>
-          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
-          <Tag size="small" color={getCallResultColor(record.call_result)} style={{ height: 20, fontSize: 11 }}>
-            {record.call_result || '未知'}
-          </Tag>
-          <Tag size="small" color="blue" style={{ height: 20, fontSize: 11 }}>
-            {record.call_type || '未知'}
-          </Tag>
-          <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
-            {formatDurationDisplay(record.duration)}
-          </span>
-          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-            <Building2 style={{ height: 12, width: 12, flexShrink: 0 }} />
-            <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {record.department || '-'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-            <Clock style={{ height: 12, width: 12, flexShrink: 0 }} />
-            <span>{formatTime(record.call_time) || '-'}</span>
-          </div>
-          {record.lead_child_name && (
-            <>
-              <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                <Baby style={{ height: 12, width: 12, color: BRAND.accent, flexShrink: 0 }} />
-                <span style={{ color: BRAND.accent, fontWeight: 500 }}>{record.lead_child_name}</span>
-              </div>
-            </>
-          )}
-        </div>
-      ) : '通话详情'}
-      closable
-      closeOnEsc
-      headerStyle={{ background: 'var(--semi-color-bg-0)', borderBottom: `1px solid ${BRAND.cardBorder}`, padding: '10px 20px' }}
-      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
-    >
+  const handleAnalyzeClick = useCallback(() => {
+    if (analysisStatus === 'completed') {
+      setReanalyzeConfirmOpen(true)
+      return
+    }
+    triggerAnalyze()
+  }, [analysisStatus, triggerAnalyze])
 
-      {/* ====== 主体：左右双列 ====== */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+  const handleConfirmReanalyze = useCallback(() => {
+    setReanalyzeConfirmOpen(false)
+    triggerAnalyze()
+  }, [triggerAnalyze])
+
+  return (
+    <>
+      <SideSheet
+        visible={open}
+        onCancel={handleClose}
+        placement="right"
+        width="100vw"
+        title={record ? (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '6px 16px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--semi-color-text-0)', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {record.staff_name || '未知员工'}
+              </span>
+              <ArrowRight style={{ height: 14, width: 14, color: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+              <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {record.callee || record.caller || '-'}
+              </span>
+            </div>
+            <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+            <Tag size="small" color={getCallResultColor(record.call_result)} style={{ height: 20, fontSize: 11 }}>
+              {record.call_result || '未知'}
+            </Tag>
+            <Tag size="small" color="blue" style={{ height: 20, fontSize: 11 }}>
+              {record.call_type || '未知'}
+            </Tag>
+            <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
+              {formatDurationDisplay(record.duration)}
+            </span>
+            <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+              <Building2 style={{ height: 12, width: 12, flexShrink: 0 }} />
+              <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {record.department || '-'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+              <Clock style={{ height: 12, width: 12, flexShrink: 0 }} />
+              <span>{formatTime(record.call_time) || '-'}</span>
+            </div>
+            {record.lead_child_name && (
+              <>
+                <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                  <Baby style={{ height: 12, width: 12, color: BRAND.accent, flexShrink: 0 }} />
+                  <span style={{ color: BRAND.accent, fontWeight: 500 }}>{record.lead_child_name}</span>
+                </div>
+              </>
+            )}
+          </div>
+        ) : '通话详情'}
+        closable
+        closeOnEsc
+        headerStyle={{ background: 'var(--semi-color-bg-0)', borderBottom: `1px solid ${BRAND.cardBorder}`, padding: '10px 20px' }}
+        bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
+      >
+
+        {/* ====== 主体：左右双列 ====== */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
 
         {/* ===== 左列：播放器 + 转写文本（占 1/3） ===== */}
         <div style={{
@@ -435,6 +452,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Slider
+                        key={duration}
                         min={0}
                         value={currentTime}
                         max={duration || 100}
@@ -521,8 +539,10 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <a
-                        href={audioUrl}
-                        download={`${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}.mp3`}
+                        href={record?.voice_id
+                          ? `${callRecordsApi.getRecordStreamUrl(record.voice_id)}&download=1&filename=${encodeURIComponent(record?.staff_name || '录音')}_${encodeURIComponent(record?.callee || record?.caller || '')}`
+                          : '#'}
+                        download
                         aria-label="下载录音"
                         style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                       >
@@ -622,11 +642,11 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                 ? <RefreshCw style={{ height: 12, width: 12 }} />
                 : <BrainCircuit style={{ height: 12, width: 12 }} />
               }
-              onClick={() => analyzeMutation.mutate()}
-              disabled={analyzeMutation.isPending || isPolling || isDetailLoading || !hasFullTranscript}
+              onClick={handleAnalyzeClick}
+              disabled={isAnalyzePending || isPolling || isDetailLoading || !hasFullTranscript}
               style={{ height: 24, padding: '0 8px', fontSize: 11 }}
             >
-              {analyzeMutation.isPending || isPolling ? (
+              {isAnalyzePending || isPolling ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Spin size="small" />
                   分析中
@@ -649,19 +669,41 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
             ) : fullRecord ? (
               <AIAnalysisPanel
                 record={fullRecord}
-                isAnalyzing={analyzeMutation.isPending || isPolling}
-                onAnalyze={() => analyzeMutation.mutate()}
+                isAnalyzing={isAnalyzePending || isPolling}
+                onAnalyze={triggerAnalyze}
               />
             ) : record ? (
               <AIAnalysisPanel
                 record={record}
-                isAnalyzing={analyzeMutation.isPending || isPolling}
-                onAnalyze={() => analyzeMutation.mutate()}
+                isAnalyzing={isAnalyzePending || isPolling}
+                onAnalyze={triggerAnalyze}
               />
             ) : null}
           </div>
         </div>
-      </div>
-    </SideSheet>
+        </div>
+      </SideSheet>
+
+      <Modal
+        title="确认重新分析"
+        visible={reanalyzeConfirmOpen}
+        onCancel={() => setReanalyzeConfirmOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setReanalyzeConfirmOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={handleConfirmReanalyze}
+              loading={isAnalyzePending}
+            >
+              确认重新分析
+            </Button>
+          </div>
+        }
+      >
+        确定要重新分析当前通话记录吗？系统会基于当前转写内容重新生成 AI 分析结果，并覆盖当前展示内容。
+      </Modal>
+    </>
   )
 }

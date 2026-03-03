@@ -240,18 +240,17 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
           return (
             <Tooltip content={`查看线索: ${leadRecord.lead_child_name}`}>
               <span>
-                <button
-                  type="button"
+                <Button
+                  theme="borderless"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
                     fontSize: 13,
                     color: 'var(--semi-color-primary)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
                     padding: 0,
+                    minWidth: 'auto',
+                    height: 'auto',
                   }}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -262,7 +261,7 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
                 >
                   <UserRound style={{ width: 14, height: 14 }} />
                   {leadRecord.lead_child_name}
-                </button>
+                </Button>
               </span>
             </Tooltip>
           )

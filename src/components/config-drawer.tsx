@@ -1,6 +1,6 @@
-import { type SVGProps } from 'react'
+import { type ReactElement, type SVGProps } from 'react'
 import { Check, CircleCheck, RotateCcw, Settings } from 'lucide-react'
-import { SideSheet, Button as SemiButton } from '@douyinfe/semi-ui-19'
+import { SideSheet, Button as SemiButton, Radio, RadioGroup } from '@douyinfe/semi-ui-19'
 import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
 import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
@@ -118,36 +118,30 @@ function SectionTitle({
 function RadioGroupItem({
   item,
   selected,
-  onSelect,
   isTheme = false,
 }: {
   item: {
     value: string
     label: string
-    icon: (props: SVGProps<SVGSVGElement>) => React.ReactElement
+    icon: (props: SVGProps<SVGSVGElement>) => ReactElement
   }
   selected: boolean
-  onSelect: (value: string) => void
   isTheme?: boolean
 }) {
   return (
-    <button
-      type='button'
-      onClick={() => onSelect(item.value)}
+    <label
       className={cn(
-        'group border-0 bg-transparent p-0 text-left outline-none',
+        'block cursor-pointer text-left',
         'transition duration-200 ease-in'
       )}
       aria-label={`Select ${item.label.toLowerCase()}`}
       aria-describedby={`${item.value}-description`}
-      role='radio'
-      aria-checked={selected}
     >
+      <Radio value={item.value} style={{ display: 'none' }} />
       <div
         className={cn(
           'relative rounded-[6px] ring-[1px] ring-border',
-          selected && 'shadow-2xl ring-primary',
-          'group-focus-visible:ring-2'
+          selected && 'shadow-2xl ring-primary'
         )}
         role='img'
         aria-hidden='false'
@@ -177,7 +171,7 @@ function RadioGroupItem({
       >
         {item.label}
       </div>
-    </button>
+    </label>
   )
 }
 
@@ -190,38 +184,39 @@ function ThemeConfig() {
         showReset={theme !== defaultTheme}
         onReset={() => setTheme(defaultTheme)}
       />
-      <div
-        className='grid w-full max-w-md grid-cols-3 gap-4'
-        role='radiogroup'
+      <RadioGroup
+        value={theme}
+        onChange={(event) => setTheme(event.target.value as typeof theme)}
         aria-label='Select theme preference'
         aria-describedby='theme-description'
       >
-        {[
-          {
-            value: 'system',
-            label: 'System',
-            icon: IconThemeSystem,
-          },
-          {
-            value: 'light',
-            label: 'Light',
-            icon: IconThemeLight,
-          },
-          {
-            value: 'dark',
-            label: 'Dark',
-            icon: IconThemeDark,
-          },
-        ].map((item) => (
-          <RadioGroupItem
-            key={item.value}
-            item={item}
-            selected={theme === item.value}
-            onSelect={(value) => setTheme(value as typeof theme)}
-            isTheme
-          />
-        ))}
-      </div>
+        <div className='grid w-full max-w-md grid-cols-3 gap-4'>
+          {[
+            {
+              value: 'system',
+              label: 'System',
+              icon: IconThemeSystem,
+            },
+            {
+              value: 'light',
+              label: 'Light',
+              icon: IconThemeLight,
+            },
+            {
+              value: 'dark',
+              label: 'Dark',
+              icon: IconThemeDark,
+            },
+          ].map((item) => (
+            <RadioGroupItem
+              key={item.value}
+              item={item}
+              selected={theme === item.value}
+              isTheme
+            />
+          ))}
+        </div>
+      </RadioGroup>
       <div id='theme-description' className='sr-only'>
         Choose between system preference, light mode, or dark mode
       </div>
@@ -242,32 +237,36 @@ function AccentColorConfig() {
         showReset={accentColor !== defaultAccentColor}
         onReset={() => setAccentColor(defaultAccentColor)}
       />
-      <div
-        className='grid grid-cols-6 gap-2'
-        role='radiogroup'
+      <RadioGroup
+        value={accentColor}
+        onChange={(event) => setAccentColor(event.target.value as AccentColor)}
         aria-label='Select accent color'
       >
-        {ACCENT_COLORS.map((colorOption) => (
-          <button
-            key={colorOption.value}
-            type='button'
-            onClick={() => setAccentColor(colorOption.value as AccentColor)}
-            className={cn(
-              'relative flex h-9 w-9 items-center justify-center rounded-full transition-all',
-              'hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-              accentColor === colorOption.value && 'ring-2 ring-offset-2 ring-primary'
-            )}
-            style={{ backgroundColor: colorOption.color }}
-            aria-label={colorOption.label}
-            aria-pressed={accentColor === colorOption.value}
-            title={'description' in colorOption ? colorOption.description : colorOption.label}
-          >
-            {accentColor === colorOption.value && (
-              <Check className='h-4 w-4 text-white drop-shadow-md' />
-            )}
-          </button>
-        ))}
-      </div>
+        <div className='grid grid-cols-6 gap-2'>
+          {ACCENT_COLORS.map((colorOption) => (
+            <label
+              key={colorOption.value}
+              className='block cursor-pointer'
+              aria-label={colorOption.label}
+            >
+              <Radio value={colorOption.value} style={{ display: 'none' }} />
+              <div
+                className={cn(
+                  'relative flex h-9 w-9 items-center justify-center rounded-full transition-all',
+                  'hover:scale-110',
+                  accentColor === colorOption.value && 'ring-2 ring-offset-2 ring-primary'
+                )}
+                style={{ backgroundColor: colorOption.color }}
+                title={'description' in colorOption ? colorOption.description : colorOption.label}
+              >
+                {accentColor === colorOption.value && (
+                  <Check className='h-4 w-4 text-white drop-shadow-md' />
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
+      </RadioGroup>
       <div className='mt-2 text-xs text-[var(--semi-color-text-2)]'>
         {currentColor?.label}
         {currentDescription && (
@@ -289,37 +288,38 @@ function SidebarConfig() {
         showReset={defaultVariant !== variant}
         onReset={() => setVariant(defaultVariant)}
       />
-      <div
-        className='grid w-full max-w-md grid-cols-3 gap-4'
-        role='radiogroup'
+      <RadioGroup
+        value={variant}
+        onChange={(event) => setVariant(event.target.value as typeof variant)}
         aria-label='Select sidebar style'
         aria-describedby='sidebar-description'
       >
-        {[
-          {
-            value: 'inset',
-            label: 'Inset',
-            icon: IconSidebarInset,
-          },
-          {
-            value: 'floating',
-            label: 'Floating',
-            icon: IconSidebarFloating,
-          },
-          {
-            value: 'sidebar',
-            label: 'Sidebar',
-            icon: IconSidebarSidebar,
-          },
-        ].map((item) => (
-          <RadioGroupItem
-            key={item.value}
-            item={item}
-            selected={variant === item.value}
-            onSelect={(value) => setVariant(value as typeof variant)}
-          />
-        ))}
-      </div>
+        <div className='grid w-full max-w-md grid-cols-3 gap-4'>
+          {[
+            {
+              value: 'inset',
+              label: 'Inset',
+              icon: IconSidebarInset,
+            },
+            {
+              value: 'floating',
+              label: 'Floating',
+              icon: IconSidebarFloating,
+            },
+            {
+              value: 'sidebar',
+              label: 'Sidebar',
+              icon: IconSidebarSidebar,
+            },
+          ].map((item) => (
+            <RadioGroupItem
+              key={item.value}
+              item={item}
+              selected={variant === item.value}
+            />
+          ))}
+        </div>
+      </RadioGroup>
       <div id='sidebar-description' className='sr-only'>
         Choose between inset, floating, or standard sidebar layout
       </div>
@@ -343,44 +343,46 @@ function LayoutConfig() {
           setCollapsible(defaultCollapsible)
         }}
       />
-      <div
-        className='grid w-full max-w-md grid-cols-3 gap-4'
-        role='radiogroup'
+      <RadioGroup
+        value={radioState}
+        onChange={(event) => {
+          const value = event.target.value
+          if (value === 'default') {
+            setOpen(true)
+            return
+          }
+          setOpen(false)
+          setCollapsible(value as Collapsible)
+        }}
         aria-label='Select layout style'
         aria-describedby='layout-description'
       >
-        {[
-          {
-            value: 'default',
-            label: 'Default',
-            icon: IconLayoutDefault,
-          },
-          {
-            value: 'icon',
-            label: 'Compact',
-            icon: IconLayoutCompact,
-          },
-          {
-            value: 'offcanvas',
-            label: 'Full layout',
-            icon: IconLayoutFull,
-          },
-        ].map((item) => (
-          <RadioGroupItem
-            key={item.value}
-            item={item}
-            selected={radioState === item.value}
-            onSelect={(value) => {
-              if (value === 'default') {
-                setOpen(true)
-                return
-              }
-              setOpen(false)
-              setCollapsible(value as Collapsible)
-            }}
-          />
-        ))}
-      </div>
+        <div className='grid w-full max-w-md grid-cols-3 gap-4'>
+          {[
+            {
+              value: 'default',
+              label: 'Default',
+              icon: IconLayoutDefault,
+            },
+            {
+              value: 'icon',
+              label: 'Compact',
+              icon: IconLayoutCompact,
+            },
+            {
+              value: 'offcanvas',
+              label: 'Full layout',
+              icon: IconLayoutFull,
+            },
+          ].map((item) => (
+            <RadioGroupItem
+              key={item.value}
+              item={item}
+              selected={radioState === item.value}
+            />
+          ))}
+        </div>
+      </RadioGroup>
       <div id='layout-description' className='sr-only'>
         Choose between default expanded, compact icon-only, or full layout mode
       </div>
@@ -397,36 +399,37 @@ function DirConfig() {
         showReset={defaultDir !== dir}
         onReset={() => setDir(defaultDir)}
       />
-      <div
-        className='grid w-full max-w-md grid-cols-2 gap-4'
-        role='radiogroup'
+      <RadioGroup
+        value={dir}
+        onChange={(event) => setDir(event.target.value as typeof dir)}
         aria-label='Select site direction'
         aria-describedby='direction-description'
       >
-        {[
-          {
-            value: 'ltr',
-            label: 'Left to Right',
-            icon: (props: SVGProps<SVGSVGElement>) => (
-              <IconDir dir='ltr' {...props} />
-            ),
-          },
-          {
-            value: 'rtl',
-            label: 'Right to Left',
-            icon: (props: SVGProps<SVGSVGElement>) => (
-              <IconDir dir='rtl' {...props} />
-            ),
-          },
-        ].map((item) => (
-          <RadioGroupItem
-            key={item.value}
-            item={item}
-            selected={dir === item.value}
-            onSelect={(value) => setDir(value as typeof dir)}
-          />
-        ))}
-      </div>
+        <div className='grid w-full max-w-md grid-cols-2 gap-4'>
+          {[
+            {
+              value: 'ltr',
+              label: 'Left to Right',
+              icon: (props: SVGProps<SVGSVGElement>) => (
+                <IconDir dir='ltr' {...props} />
+              ),
+            },
+            {
+              value: 'rtl',
+              label: 'Right to Left',
+              icon: (props: SVGProps<SVGSVGElement>) => (
+                <IconDir dir='rtl' {...props} />
+              ),
+            },
+          ].map((item) => (
+            <RadioGroupItem
+              key={item.value}
+              item={item}
+              selected={dir === item.value}
+            />
+          ))}
+        </div>
+      </RadioGroup>
       <div id='direction-description' className='sr-only'>
         Choose between left-to-right or right-to-left site direction
       </div>

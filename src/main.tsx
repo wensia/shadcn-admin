@@ -19,6 +19,15 @@ import { routeTree } from './routeTree.gen'
 // Styles
 import './styles/index.css'
 
+// Chunk 加载失败时自动刷新（部署新版后旧 chunk 被删除的场景）
+window.addEventListener('vite:preloadError', () => {
+  const lastReload = sessionStorage.getItem('chunk-reload')
+  if (!lastReload || Date.now() - Number(lastReload) > 10_000) {
+    sessionStorage.setItem('chunk-reload', String(Date.now()))
+    window.location.reload()
+  }
+})
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

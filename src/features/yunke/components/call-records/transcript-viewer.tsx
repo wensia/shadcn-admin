@@ -106,7 +106,7 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
     {
       title: '角色',
       dataIndex: 'speaker',
-      width: 52,
+      width: 44,
       render: (_: unknown, row: RowData | undefined) => {
         if (!row) return null
         return (
@@ -123,9 +123,9 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
     {
       title: '时间',
       dataIndex: 'startTime',
-      width: 52,
+      width: 44,
       render: (val: unknown) => (
-        <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
+        <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap' }}>
           {fmtTime(val as number)}
         </span>
       ),
@@ -133,9 +133,9 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
     {
       title: '时长',
       dataIndex: 'duration',
-      width: 40,
+      width: 34,
       render: (val: unknown) => (
-        <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-3)' }}>
+        <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-3)', whiteSpace: 'nowrap' }}>
           {fmtDuration(val as number)}
         </span>
       ),
@@ -174,16 +174,27 @@ export function TranscriptViewer({ transcript, currentTime = 0, onSeek }: Transc
 
   return (
     <div ref={containerRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      <style>{`
+        .transcript-compact .semi-table-thead > tr > th,
+        .transcript-compact .semi-table-tbody > tr > td {
+          padding: 4px 6px !important;
+          line-height: 1.4;
+        }
+        .transcript-compact .semi-table-thead > tr > th {
+          font-size: 11px;
+        }
+      `}</style>
       <Table<RowData>
         dataSource={dataSource}
         columns={columns}
         pagination={false}
         size="small"
         showHeader
-        scroll={{ y: tableHeight - 38 }}
+        scroll={{ y: tableHeight - 30 }}
         onRow={onRow}
         empty="暂无转写文本"
         style={{ height: '100%' }}
+        className="transcript-compact"
       />
     </div>
   )

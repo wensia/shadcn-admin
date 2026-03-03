@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { TextArea } from '@douyinfe/semi-ui-19'
 import {
   AlertTriangle,
   ChevronDown,
@@ -543,19 +544,9 @@ function CreateLeadDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
         <div className="space-y-1.5">
           <label className="text-sm" style={{ color: td.textPrimary, fontFamily: td.fontFamily }}>备注</label>
-          <textarea
-            className="w-full px-3 py-2 text-sm outline-none resize-none"
-            style={{
-              fontFamily: td.fontFamily,
-              color: td.textPrimary,
-              border: `1px solid ${td.border}`,
-              borderRadius: td.radiusDefault,
-              minHeight: '72px',
-              fontSize: td.fontSize.sm,
-            }}
+          <TextArea
             placeholder="请输入备注信息"
-            onFocus={(e) => { e.currentTarget.style.borderColor = td.brand7 }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = td.border }}
+            autosize={{ minRows: 3, maxRows: 6 }}
           />
         </div>
       </div>

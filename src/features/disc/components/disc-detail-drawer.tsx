@@ -26,6 +26,7 @@ interface DiscDetailDrawerProps {
   detail: TempDISCRecordDetail | null
   loading: boolean
   onDetailUpdate?: (updated: TempDISCRecordDetail) => void
+  onReanalyzeStart?: (payload: { recordId: string; previousAnalyzedAt?: string | null }) => void
 }
 
 const DIMENSIONS: DISCDimension[] = ['D', 'I', 'S', 'C']
@@ -64,7 +65,7 @@ function triggerDownload(url: string, filename: string) {
 
 // ─── 主组件 ──────────────────────────────────────────────
 
-export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetailUpdate }: DiscDetailDrawerProps) {
+export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetailUpdate, onReanalyzeStart }: DiscDetailDrawerProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const [exporting, setExporting] = useState(false)
   const [copying, setCopying] = useState(false)
@@ -83,19 +84,17 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
     setAnalyzing(false)
   }, [detail?.id])
 
-  // 一旦缓存 AI 状态反映了最新情况，清除本地 analyzing 标志
-  useEffect(() => {
-    if (analyzing && cachedAI?.status) {
-      analyzingRef.current = false
-      setAnalyzing(false)
-    }
-  }, [analyzing, cachedAI?.status])
-
   const handleAIAnalyze = useCallback(async () => {
     if (!detail?.id || analyzingRef.current) return
 
     analyzingRef.current = true
     const prevAI = cachedAI // 保存当前状态，出错时回滚
+    if (hasAI) {
+      onReanalyzeStart?.({
+        recordId: detail.id,
+        previousAnalyzedAt: cachedAI?.analyzedAt ?? null,
+      })
+    }
     setAnalyzing(true)
 
     // 立即乐观更新：抽屉显示"分析中"，列表也同步刷新
@@ -116,8 +115,6 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
             ...detail,
             result: { ...detail.result, aiAnalysis: ai },
           })
-          analyzingRef.current = false
-          setAnalyzing(false)
           toast.success('AI 分析完成')
         } else {
           rollback()
@@ -130,17 +127,17 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
     } catch {
       rollback()
       toast.error('AI 分析请求失败，请稍后重试')
+    } finally {
+      analyzingRef.current = false
+      setAnalyzing(false)
     }
 
     function rollback() {
-      analyzingRef.current = false
-      setAnalyzing(false)
       if (detail) {
-        // 恢复到操作前的状态
         onDetailUpdate?.({ ...detail, result: { ...detail.result, aiAnalysis: prevAI } })
       }
     }
-  }, [detail, hasAI, cachedAI, onDetailUpdate])
+  }, [detail, hasAI, cachedAI, onDetailUpdate, onReanalyzeStart])
 
   if (!open) return null
 
@@ -202,6 +199,12 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
             DISC 测评报告
           </span>
           <div className="flex items-center gap-1">
+            {/* 上次分析时间 */}
+            {hasAI && cachedAI?.analyzedAt && (
+              <span className="text-[11px] text-muted-foreground mr-1 hidden sm:inline">
+                {formatTime(cachedAI.analyzedAt)} 分析
+              </span>
+            )}
             {/* AI 分析按钮 */}
             {result && (
               hasAI ? (

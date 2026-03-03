@@ -459,8 +459,8 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
                       }}
                     >
                       {!isOpen ? (
-                        <button
-                          type="button"
+                        <Button
+                          theme="borderless"
                           style={{
                             display: 'flex',
                             width: '100%',
@@ -469,14 +469,11 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
                             padding: '10px 12px',
                             textAlign: 'left',
                             transition: 'background 0.15s',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
                             font: 'inherit',
+                            justifyContent: 'space-between',
                           }}
                           onClick={() => setScorecardExpanded((prev) => ({ ...prev, [item.key]: true }))}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.02)' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                          className="hover:!bg-black/5"
                         >
                           <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -488,7 +485,7 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
                             </div>
                           </div>
                           <ChevronDown style={{ height: 14, width: 14, flexShrink: 0, color: 'var(--semi-color-text-2)' }} />
-                        </button>
+                        </Button>
                       ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, padding: 12 }}>
                           {/* 左 1/3：维度名 + 分数 + 进度条 + 收起 */}
@@ -501,8 +498,8 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
                             <div style={{ height: 6, width: '100%', overflow: 'hidden', borderRadius: 999, background: 'rgba(0,0,0,0.04)' }}>
                               <div style={{ height: '100%', borderRadius: 999, width: `${item.percent}%`, backgroundColor: color }} />
                             </div>
-                            <button
-                              type="button"
+                            <Button
+                              theme="borderless"
                               style={{
                                 marginTop: 4,
                                 display: 'flex',
@@ -510,19 +507,17 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
                                 gap: 4,
                                 fontSize: 10,
                                 color: 'var(--semi-color-text-2)',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
                                 padding: 0,
                                 font: 'inherit',
+                                minWidth: 'auto',
+                                height: 'auto',
                               }}
                               onClick={() => setScorecardExpanded((prev) => ({ ...prev, [item.key]: false }))}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--semi-color-text-0)' }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--semi-color-text-2)' }}
+                              className="hover:!text-[var(--semi-color-text-0)]"
                             >
                               <ChevronDown style={{ height: 12, width: 12, transform: 'rotate(180deg)' }} />
                               收起
-                            </button>
+                            </Button>
                           </div>
                           {/* 右 2/3：文字说明 + 证据 */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

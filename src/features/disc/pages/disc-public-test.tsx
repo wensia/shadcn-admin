@@ -9,6 +9,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
+import { Input, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { toast } from '@/lib/toast'
 import { ChevronLeft, ChevronRight, Send, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -297,37 +298,37 @@ export function DiscPublicTest() {
               {/* 表单卡片 */}
               <div className="space-y-4 rounded-2xl bg-white/70 p-6 shadow-[0_2px_12px_rgba(0,0,0,0.05)] backdrop-blur-sm">
                 <Field label="姓名" error={nameErr}>
-                  <input
+                  <Input
                     className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#0064FA]/40"
                     style={{ color: c.text }}
                     placeholder="请输入您的姓名"
                     autoComplete="name"
                     value={name}
-                    onChange={(e) => { setName(e.target.value); if (nameErr) setNameErr('') }}
+                    onChange={(value) => { setName(value); if (nameErr) setNameErr('') }}
                     onKeyDown={(e) => e.key === 'Enter' && handleStart()}
                   />
                 </Field>
 
                 <Field label="手机号" error={phoneErr}>
-                  <input
+                  <Input
                     className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#0064FA]/40"
                     style={{ color: c.text }}
                     placeholder="请输入您的手机号"
                     inputMode="tel" autoComplete="tel"
                     value={phone}
-                    onChange={(e) => { setPhone(e.target.value); if (phoneErr) setPhoneErr('') }}
+                    onChange={(value) => { setPhone(value); if (phoneErr) setPhoneErr('') }}
                     onKeyDown={(e) => e.key === 'Enter' && handleStart()}
                   />
                 </Field>
 
-                <button
-                  type="button"
+                <SemiButton
+                  theme="solid"
                   className="h-12 w-full cursor-pointer rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100"
                   style={cta}
                   onClick={handleStart}
                 >
                   开始测试
-                </button>
+                </SemiButton>
               </div>
             </motion.div>
           )}
@@ -497,8 +498,8 @@ function NavBtn({
   children: React.ReactNode
 }) {
   return (
-    <button
-      type="button"
+    <SemiButton
+      theme="solid"
       disabled={disabled}
       onClick={onClick}
       className={cn(
@@ -510,6 +511,6 @@ function NavBtn({
       style={style}
     >
       {children}
-    </button>
+    </SemiButton>
   )
 }

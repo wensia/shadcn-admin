@@ -133,16 +133,26 @@
 
 /* =============================================================================
    Semi Tabs: Fix flex height chain for full-height tab content
-   The .semi-tabs-pane-motion-overlay breaks flex layout propagation
-   because it defaults to display:block + flex:0 1 auto.
-   This override makes it participate in flex layout so children
-   (like calendar grids) can properly fill the available height.
+   When .semi-tabs is set to flex-col layout (e.g. className="flex flex-col"),
+   three internal layers must participate in flex to propagate height:
+     .semi-tabs-content → .semi-tabs-pane-motion-overlay → .semi-tabs-pane-active
 
    IMPORTANT: Do NOT set display on .semi-tabs-pane via inline styles!
    Semi uses .semi-tabs-pane-inactive { display: none } to hide tabs.
    Inline display:flex overrides this and causes all panes to share space.
 ============================================================================= */
 
+/* Layer 1: .semi-tabs-content — between .semi-tabs and .semi-tabs-pane-motion-overlay.
+   flex/min-height only takes effect when parent .semi-tabs is display:flex. */
+.semi-tabs-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Layer 2: .semi-tabs-pane-motion-overlay */
 .semi-tabs-pane-motion-overlay {
   display: flex !important;
   flex-direction: column !important;

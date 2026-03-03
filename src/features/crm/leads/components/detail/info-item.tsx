@@ -294,17 +294,16 @@ export function InfoItem({
             </div>
           }
         >
-            <button
-              type="button"
+            <Button
+              theme="borderless"
               title="点击编辑"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, textAlign: 'left',
                 borderRadius: 4, padding: '2px 4px', margin: '-2px -4px',
-                background: 'transparent', border: 'none', cursor: 'pointer',
                 transition: 'background 0.2s', fontSize: 'inherit', color: 'inherit',
+                minWidth: 'auto', height: 'auto',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+              className="hover:!bg-[var(--semi-color-fill-0)]"
               disabled={isSaving}
             >
               {isSaving ? (
@@ -318,7 +317,7 @@ export function InfoItem({
                   <IconEdit style={{ fontSize: 12, color: 'var(--semi-color-text-2)', opacity: 0, transition: 'opacity 0.2s' }} className="info-item-edit-icon" />
                 </>
               )}
-            </button>
+            </Button>
         </Popover>
       )
     }
@@ -327,20 +326,19 @@ export function InfoItem({
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ wordBreak: 'break-word' }}>{displayValue}</span>
         {copyable && value && typeof value === 'string' && (
-          <button
-            type="button"
+          <Button
+            theme="borderless"
             onClick={handleCopy}
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              width: 20, height: 20, borderRadius: 4, border: 'none', cursor: 'pointer',
-              background: 'transparent', color: 'var(--semi-color-text-2)', transition: 'background 0.2s',
+              width: 20, height: 20, borderRadius: 4, color: 'var(--semi-color-text-2)', transition: 'background 0.2s',
+              minWidth: 'auto',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+            className="hover:!bg-[var(--semi-color-fill-0)]"
             title="复制"
           >
             {copied ? <IconTick style={{ fontSize: 14, color: 'var(--semi-color-success)' }} /> : <IconCopy style={{ fontSize: 14 }} />}
-          </button>
+          </Button>
         )}
       </div>
     )

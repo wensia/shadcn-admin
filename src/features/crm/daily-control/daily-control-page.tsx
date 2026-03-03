@@ -193,8 +193,9 @@ export function DailyControlPage() {
               {tabConfig.map((tab) => {
                 const isActive = activeTab === tab.id
                 return (
-                  <button
+                  <Button
                     key={tab.id}
+                    theme="borderless"
                     onClick={() => setActiveTab(tab.id)}
                     style={{
                       position: 'relative',
@@ -204,7 +205,6 @@ export function DailyControlPage() {
                       borderBottom: `2px solid ${isActive ? 'var(--semi-color-text-0)' : 'transparent'}`,
                       marginBottom: -1,
                       color: isActive ? 'var(--semi-color-text-0)' : 'var(--semi-color-text-2)',
-                      background: 'none', border: 'none', cursor: 'pointer',
                     }}
                   >
                     {tab.icon}
@@ -220,7 +220,7 @@ export function DailyControlPage() {
                         {tab.count}
                       </span>
                     )}
-                  </button>
+                  </Button>
                 )
               })}
             </div>

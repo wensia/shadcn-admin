@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, ChevronRight, Laptop, Moon, Sun } from 'lucide-react'
-import { Modal } from '@douyinfe/semi-ui-19'
+import { Modal, Input, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { useSearch } from '@/context/search-provider'
 import { useTheme } from '@/context/theme-provider'
 import { sidebarData } from './layout/data/sidebar-data'
@@ -137,11 +137,11 @@ export function CommandMenu() {
     >
       <div className='flex flex-col'>
         <div className='border-b px-3 py-2'>
-          <input
-            className='w-full bg-transparent text-sm outline-none placeholder:text-[var(--semi-color-text-2)]'
+          <Input
+            className='w-full'
             placeholder='Type a command or search...'
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={(value) => setSearchValue(value)}
             autoFocus
           />
         </div>
@@ -157,13 +157,14 @@ export function CommandMenu() {
                   {group}
                 </div>
                 {items.map((item) => (
-                  <div
+                  <SemiButton
                     key={item.value}
-                    className='flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-[var(--semi-color-fill-0)]'
+                    theme='borderless'
+                    className='!flex !h-auto !w-full !justify-start !rounded-sm !px-2 !py-1.5 !text-sm hover:!bg-[var(--semi-color-fill-0)]'
                     onClick={item.onSelect}
                   >
                     {item.label}
-                  </div>
+                  </SemiButton>
                 ))}
               </div>
             ))

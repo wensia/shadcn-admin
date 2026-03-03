@@ -55,13 +55,13 @@ function FollowupContentCell({ content }: { content: string }) {
       content={
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 300 }}>
           <p style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, margin: 0 }}>{content}</p>
-          <button
-            type="button"
+          <Button
+            theme="borderless"
             onClick={handleCopy}
-            style={{ flexShrink: 0, background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: 'inherit' }}
+            style={{ flexShrink: 0, padding: 2, color: 'inherit', minWidth: 'auto', height: 'auto' }}
           >
             {copied ? <IconTick style={{ fontSize: 12, color: 'var(--semi-color-success)' }} /> : <IconCopy style={{ fontSize: 12 }} />}
-          </button>
+          </Button>
         </div>
       }
       position="topLeft"

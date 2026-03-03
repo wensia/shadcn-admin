@@ -15,7 +15,7 @@ import {
   MessagesSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Avatar, Button, Divider } from '@douyinfe/semi-ui-19'
+import { Avatar, Button, Divider, Input as SemiInput } from '@douyinfe/semi-ui-19'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -86,23 +86,14 @@ export function Chats() {
                 />
               </div>
 
-              <label
-                className={cn(
-                  'focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden',
-                  'flex h-10 w-full items-center space-x-0 rounded-md border ps-2'
-                )}
-                style={{ borderColor: 'var(--semi-color-border)' }}
-              >
-                <SearchIcon size={15} className='me-2 stroke-slate-500' />
-                <span className='sr-only'>Search</span>
-                <input
-                  type='text'
-                  className='w-full flex-1 bg-inherit text-sm focus-visible:outline-hidden'
-                  placeholder='Search chat...'
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </label>
+              <SemiInput
+                prefix={<SearchIcon size={15} className='stroke-slate-500' />}
+                placeholder='Search chat...'
+                value={search}
+                onChange={(v) => setSearch(v)}
+                showClear
+                style={{ width: '100%' }}
+              />
             </div>
 
             <div className='-mx-3 h-full overflow-auto p-3'>
@@ -115,16 +106,23 @@ export function Chats() {
                     : lastConvo.message
                 return (
                   <Fragment key={id}>
-                    <button
-                      type='button'
+                    <div
+                      role='button'
+                      tabIndex={0}
                       className={cn(
-                        'group hover:bg-accent hover:text-accent-foreground',
+                        'group hover:bg-accent hover:text-accent-foreground cursor-pointer',
                         `flex w-full rounded-md px-2 py-2 text-start text-sm`,
                         selectedUser?.id === id && 'sm:bg-muted'
                       )}
                       onClick={() => {
                         setSelectedUser(chatUsr)
                         setMobileSelectedUser(chatUsr)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          setSelectedUser(chatUsr)
+                          setMobileSelectedUser(chatUsr)
+                        }
                       }}
                     >
                       <div className='flex gap-2'>
@@ -138,7 +136,7 @@ export function Chats() {
                           </span>
                         </div>
                       </div>
-                    </button>
+                    </div>
                     <Divider style={{ margin: '4px 0' }} />
                   </Fragment>
                 )
@@ -242,7 +240,7 @@ export function Chats() {
                     </div>
                   </div>
                 </div>
-                <form className='flex w-full flex-none gap-2'>
+                <div className='flex w-full flex-none gap-2'>
                   <div className='flex flex-1 items-center gap-2 rounded-md border px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4' style={{ borderColor: 'var(--semi-color-border)', background: 'var(--semi-color-bg-1)' }}>
                     <div className='space-x-1'>
                       <Button
@@ -264,14 +262,10 @@ export function Chats() {
                         className='hidden h-8 rounded-md lg:inline-flex'
                       />
                     </div>
-                    <label className='flex-1'>
-                      <span className='sr-only'>Chat Text Box</span>
-                      <input
-                        type='text'
-                        placeholder='Type your messages...'
-                        className='h-8 w-full bg-inherit focus-visible:outline-hidden'
-                      />
-                    </label>
+                    <SemiInput
+                      placeholder='Type your messages...'
+                      style={{ flex: 1, border: 'none', background: 'transparent' }}
+                    />
                     <Button
                       theme='borderless'
                       type='tertiary'
@@ -282,7 +276,7 @@ export function Chats() {
                   <Button theme='solid' className='h-full sm:hidden'>
                     <Send size={18} /> Send
                   </Button>
-                </form>
+                </div>
               </div>
             </div>
           ) : (

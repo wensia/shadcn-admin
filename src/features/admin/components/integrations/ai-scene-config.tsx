@@ -4,12 +4,12 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Settings2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Table, Select, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { aiConfigApi } from '../../api'
 import {
   AI_PROVIDER_OPTIONS,
@@ -230,22 +230,26 @@ export function AISceneConfigContent() {
   ]
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Settings2 className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
-        <h3 className="text-sm font-medium">场景配置</h3>
-        <Text type="tertiary" size="small">
-          为每个 AI 场景指定模型和 Prompt
-        </Text>
+    <DataTableLayout
+      title="场景配置"
+      total={AI_SCENES.length}
+      onRefresh={() => {
+        queryClient.invalidateQueries({ queryKey: ['admin-ai-scene-mapping'] })
+        queryClient.invalidateQueries({ queryKey: ['admin-ai-configs-all'] })
+        queryClient.invalidateQueries({ queryKey: ['admin-ai-prompts-all'] })
+      }}
+      isRefreshing={isLoading}
+    >
+      {/* 静态配置表（无分页），保留 Table：行数固定为 AI_SCENES */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <Table
+          columns={columns}
+          dataSource={AI_SCENES as unknown as SceneRow[]}
+          rowKey="key"
+          pagination={false}
+          loading={false}
+        />
       </div>
-
-      <Table
-        columns={columns}
-        dataSource={AI_SCENES as unknown as SceneRow[]}
-        rowKey="key"
-        pagination={false}
-        loading={false}
-      />
-    </div>
+    </DataTableLayout>
   )
 }

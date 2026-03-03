@@ -22,6 +22,7 @@ import { formatTime } from '@/lib/utils/time'
 import { Table, Button, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { aiConfigApi } from '../../api'
 import { AI_SCENES, type AIPromptItem } from '../../types'
 import { AIPromptPreviewSheet } from './ai-prompt-preview-sheet'
@@ -132,41 +133,49 @@ function VersionHistoryPanel({
             onClick={(e) => e.stopPropagation()}
           >
             <Tooltip content="预览内容">
-              <Button
-                theme="borderless"
-                type="tertiary"
-                size="small"
-                icon={<Eye className="h-3.5 w-3.5" />}
-                onClick={() => onPreview(prompt)}
-              />
+              <span style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  size="small"
+                  icon={<Eye className="h-3.5 w-3.5" />}
+                  onClick={() => onPreview(prompt)}
+                />
+              </span>
             </Tooltip>
             <Tooltip content="编辑">
-              <Button
-                theme="borderless"
-                type="tertiary"
-                size="small"
-                icon={<Pencil className="h-3.5 w-3.5" />}
-                onClick={() => onEdit(prompt)}
-              />
+              <span style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  size="small"
+                  icon={<Pencil className="h-3.5 w-3.5" />}
+                  onClick={() => onEdit(prompt)}
+                />
+              </span>
             </Tooltip>
             <Tooltip content="基于此版本创建">
-              <Button
-                theme="borderless"
-                type="tertiary"
-                size="small"
-                icon={<Copy className="h-3.5 w-3.5" />}
-                onClick={() => onCopy(prompt)}
-              />
+              <span style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  size="small"
+                  icon={<Copy className="h-3.5 w-3.5" />}
+                  onClick={() => onCopy(prompt)}
+                />
+              </span>
             </Tooltip>
             {!prompt.is_active && (
               <Tooltip content="激活此版本">
-                <Button
-                  theme="borderless"
-                  size="small"
-                  icon={<CircleCheck className="h-3.5 w-3.5" />}
-                  style={{ color: '#16a34a' }}
-                  onClick={() => onActivate(prompt.id)}
-                />
+                <span style={{ display: 'inline-flex' }}>
+                  <Button
+                    theme="borderless"
+                    size="small"
+                    icon={<CircleCheck className="h-3.5 w-3.5" />}
+                    style={{ color: '#16a34a' }}
+                    onClick={() => onActivate(prompt.id)}
+                  />
+                </span>
               </Tooltip>
             )}
           </div>
@@ -430,62 +439,67 @@ export function AIPromptManager() {
 
   return (
     <>
-      <div className="flex flex-col gap-4">
-        {/* 工具栏 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
-            <h3 className="text-sm font-medium">Prompt 版本管理</h3>
-            <Text type="tertiary" size="small">
-              点击行展开查看历史版本
-            </Text>
-          </div>
+      <DataTableLayout
+        title="Prompt 版本管理"
+        headerActions={
           <Tooltip content="将代码中硬编码的默认 Prompt 写入数据库（已有则跳过）">
-            <Button
-              theme="outline"
-              size="small"
-              icon={<Database className="h-3.5 w-3.5" />}
-              onClick={() => seedMutation.mutate()}
-              disabled={seedMutation.isPending}
-            >
-              初始化默认
-            </Button>
+            <span style={{ display: 'inline-flex' }}>
+              <Button
+                theme="outline"
+                size="small"
+                icon={<Database className="h-3.5 w-3.5" />}
+                onClick={() => seedMutation.mutate()}
+                disabled={seedMutation.isPending}
+              >
+                初始化默认
+              </Button>
+            </span>
           </Tooltip>
+        }
+        onRefresh={() => invalidatePrompts()}
+        isRefreshing={isLoading}
+      >
+        {/* 保留 Table：SemiDataTable 不支持 expandable rows */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey="id"
+            pagination={false}
+            loading={false}
+            expandedRowKeys={expandedRowKeys}
+            onExpand={(expanded, record) => {
+              setExpandedRowKeys((prev) =>
+                expanded
+                  ? [...prev, (record as PromptGroupRow).id]
+                  : prev.filter((key) => key !== (record as PromptGroupRow).id)
+              )
+            }}
+            expandedRowRender={(record: PromptGroupRow) => (
+              <VersionHistoryPanel
+                record={record}
+                onEdit={(p) => openDialog('edit', p.scene_key, p)}
+                onCopy={(p) => openDialog('copy', p.scene_key, p)}
+                onPreview={handlePreview}
+                onActivate={(id) => activateMutation.mutate(id)}
+              />
+            )}
+            rowExpandable={(record: PromptGroupRow) => record.versionCount > 0}
+            onRow={(record: PromptGroupRow) => ({
+              style: { cursor: record.versionCount > 0 ? 'pointer' : 'default' },
+            })}
+            empty={
+              <div className="flex flex-col items-center py-8" style={{ color: 'var(--semi-color-text-2)' }}>
+                <FileText className="mb-2 h-8 w-8" />
+                <p>暂无 Prompt 配置</p>
+                <Text type="tertiary" size="small" style={{ marginTop: 4 }}>
+                  点击"初始化默认"导入系统默认 Prompt
+                </Text>
+              </div>
+            }
+          />
         </div>
-
-        {/* 数据表 */}
-        <Table
-          columns={columns}
-          dataSource={tableData}
-          rowKey="id"
-          pagination={false}
-          loading={false}
-          expandedRowKeys={expandedRowKeys}
-          onExpandedRowsChange={(rows) => setExpandedRowKeys(rows as (string | number)[])}
-          expandedRowRender={(record: PromptGroupRow) => (
-            <VersionHistoryPanel
-              record={record}
-              onEdit={(p) => openDialog('edit', p.scene_key, p)}
-              onCopy={(p) => openDialog('copy', p.scene_key, p)}
-              onPreview={handlePreview}
-              onActivate={(id) => activateMutation.mutate(id)}
-            />
-          )}
-          rowExpandable={(record: PromptGroupRow) => record.versionCount > 0}
-          onRow={(record: PromptGroupRow) => ({
-            style: { cursor: record.versionCount > 0 ? 'pointer' : 'default' },
-          })}
-          empty={
-            <div className="flex flex-col items-center py-8" style={{ color: 'var(--semi-color-text-2)' }}>
-              <FileText className="mb-2 h-8 w-8" />
-              <p>暂无 Prompt 配置</p>
-              <Text type="tertiary" size="small" style={{ marginTop: 4 }}>
-                点击"初始化默认"导入系统默认 Prompt
-              </Text>
-            </div>
-          }
-        />
-      </div>
+      </DataTableLayout>
 
       {/* 创建/编辑弹窗 */}
       <AIPromptFormDialog

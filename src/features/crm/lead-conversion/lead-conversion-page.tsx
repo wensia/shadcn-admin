@@ -10,6 +10,7 @@ import { Main } from '@/components/layout/main'
 import {
   Button,
   Input,
+  Modal,
   Tabs,
   TabPane,
   Toast,
@@ -221,26 +222,32 @@ export function LeadConversionPage() {
   }
 
   // 删除记录
-  const handleDelete = async (record: ConversionRecord) => {
-    if (!confirm('确定要删除这条记录吗？')) return
-
-    try {
-      if (record.type === 'payment') {
-        const payment = record.original as Payment
-        await paymentApi.deletePayment(payment.id)
-        Toast.success({ content: '删除成功' })
-        queryClient.invalidateQueries({ queryKey: ['payments'] })
-        queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
-      } else {
-        const visit = record.original as VisitSchedule
-        await visitScheduleApi.deleteVisitSchedule(visit.id)
-        Toast.success({ content: '删除成功' })
-        queryClient.invalidateQueries({ queryKey: ['visits'] })
-        queryClient.invalidateQueries({ queryKey: ['visit-stats'] })
-      }
-    } catch (error: unknown) {
-      showApiErrorToast(error, '删除失败')
-    }
+  const handleDelete = (record: ConversionRecord) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这条记录吗？',
+      okText: '删除',
+      okButtonProps: { type: 'danger' },
+      onOk: async () => {
+        try {
+          if (record.type === 'payment') {
+            const payment = record.original as Payment
+            await paymentApi.deletePayment(payment.id)
+            Toast.success({ content: '删除成功' })
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+            queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
+          } else {
+            const visit = record.original as VisitSchedule
+            await visitScheduleApi.deleteVisitSchedule(visit.id)
+            Toast.success({ content: '删除成功' })
+            queryClient.invalidateQueries({ queryKey: ['visits'] })
+            queryClient.invalidateQueries({ queryKey: ['visit-stats'] })
+          }
+        } catch (error: unknown) {
+          showApiErrorToast(error, '删除失败')
+        }
+      },
+    })
   }
 
   // Tab 切换

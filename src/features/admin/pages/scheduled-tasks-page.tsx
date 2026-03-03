@@ -26,12 +26,13 @@ import {
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Modal, Form, Tag, Typography, Switch, Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import { Button, Modal, Form, Tag, Typography, Switch, Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconRefresh } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
-import { SemiSkeletonCell } from '@/lib/table-utils'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { scheduledTasksApi } from '../api'
 import {
   INTERVAL_PERIOD_OPTIONS,
@@ -51,15 +52,6 @@ const { Text } = Typography
 // ASR 任务名称常量
 const ASR_TASK_NAME = 'rmf.asr_transcribe'
 
-// 骨架屏前缀（本页 id 为 number，无法使用共享 isSkeletonRow）
-const SKELETON_PREFIX = '__skeleton__'
-const isSkeletonRowByName = (name: string) => name.startsWith(SKELETON_PREFIX)
-
-interface PaginationTextInfo {
-  currentStart: number
-  currentEnd: number
-  total: number
-}
 
 interface ScheduledTaskFormValues {
   name: string
@@ -79,16 +71,6 @@ interface ScheduledTaskFormValues {
   kwargs_json?: string
 }
 
-function createSkeletonData(count: number): ScheduledTask[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: i,
-    name: `${SKELETON_PREFIX}${i}`,
-    task: '',
-    enabled: true,
-    one_off: false,
-    total_run_count: 0,
-  }))
-}
 
 // 格式化调度信息
 function formatSchedule(task: ScheduledTask): string {
@@ -291,7 +273,7 @@ export function ScheduledTasksPage() {
         dataIndex: 'name',
         width: 200,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRowByName(record.name)) {
+          if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={128} />
           }
           return (
@@ -314,7 +296,7 @@ export function ScheduledTasksPage() {
         dataIndex: 'task',
         width: 250,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRowByName(record.name)) {
+          if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={160} />
           }
           return (
@@ -329,7 +311,7 @@ export function ScheduledTasksPage() {
         dataIndex: 'schedule',
         width: 180,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRowByName(record.name)) {
+          if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={112} />
           }
           const st = getScheduleType(record)
@@ -350,7 +332,7 @@ export function ScheduledTasksPage() {
         dataIndex: 'enabled',
         width: 100,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRowByName(record.name)) {
+          if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={56} />
           }
           return (
@@ -368,7 +350,7 @@ export function ScheduledTasksPage() {
         dataIndex: 'last_run_at',
         width: 160,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRowByName(record.name)) {
+          if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={112} />
           }
           return record.last_run_at ? formatTime(record.last_run_at) : '-'
@@ -379,7 +361,7 @@ export function ScheduledTasksPage() {
         dataIndex: 'total_run_count',
         width: 100,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRowByName(record.name)) {
+          if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={48} />
           }
           return <Tag size="small">{record.total_run_count}</Tag>
@@ -391,7 +373,7 @@ export function ScheduledTasksPage() {
         width: 150,
         fixed: 'right' as const,
         render: (_: unknown, record: ScheduledTask) => {
-          if (isSkeletonRowByName(record.name)) {
+          if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={96} />
           }
           return (
@@ -515,31 +497,6 @@ export function ScheduledTasksPage() {
       },
     ]
 
-  const taskDisplayData = isLoading ? createSkeletonData(5) : tasks
-
-  const taskTablePagination = useMemo(() => ({
-    currentPage: tasksPagination.page,
-    pageSize: tasksPagination.size,
-    total: data?.total || 0,
-    onPageChange: (p: number) => setTasksPagination(prev => ({ ...prev, page: p })),
-    onPageSizeChange: (s: number) => setTasksPagination({ page: 1, size: s }),
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: PaginationTextInfo) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [tasksPagination.page, tasksPagination.size, data?.total])
-
-  const historyTablePagination = useMemo(() => ({
-    currentPage: historyPagination.page,
-    pageSize: historyPagination.size,
-    total: historyData?.total || 0,
-    onPageChange: (p: number) => setHistoryPagination(prev => ({ ...prev, page: p })),
-    onPageSizeChange: (s: number) => setHistoryPagination({ page: 1, size: s }),
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: PaginationTextInfo) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [historyPagination.page, historyPagination.size, historyData?.total])
 
   // 打开新增对话框
   const handleCreate = () => {
@@ -767,31 +724,31 @@ export function ScheduledTasksPage() {
       >
         {/* 顶层 Tab */}
         <Tabs activeKey={activeTab} onChange={(v) => setActiveTab(v as 'tasks' | 'history')} className="flex-1 flex flex-col min-h-0">
-          <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Clock size={16}/>定时任务</span>} itemKey="tasks">
-            <div style={{ marginTop: 16 }}>
-              <Table
-                columns={taskColumns}
-                dataSource={taskDisplayData}
-                rowKey="id"
-                pagination={taskTablePagination}
-              />
-            </div>
+          <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Clock size={16}/>定时任务</span>} itemKey="tasks" className="flex-1 flex flex-col min-h-0" style={{ marginTop: 16 }}>
+            <SemiDataTable<ScheduledTask>
+              columns={taskColumns}
+              data={tasks}
+              total={data?.total ?? 0}
+              page={tasksPagination.page}
+              pageSize={tasksPagination.size}
+              isLoading={isLoading}
+              onPageChange={(p) => setTasksPagination(prev => ({ ...prev, page: p }))}
+              onPageSizeChange={(s) => setTasksPagination({ page: 1, size: s })}
+            />
           </TabPane>
 
-          <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><History size={16}/>执行记录</span>} itemKey="history">
-            <div style={{ marginTop: 16 }}>
-              <Table
-                columns={historyColumns}
-                dataSource={historyLoading ? [] : executionHistory}
-                rowKey="id"
-                pagination={historyTablePagination}
-                loading={historyLoading}
-                onRow={(record) => ({
-                  onClick: () => handleViewLog(record as TaskExecutionHistory),
-                  style: { cursor: 'pointer' },
-                })}
-              />
-            </div>
+          <TabPane tab={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><History size={16}/>执行记录</span>} itemKey="history" className="flex-1 flex flex-col min-h-0" style={{ marginTop: 16 }}>
+            <SemiDataTable<TaskExecutionHistory>
+              columns={historyColumns}
+              data={executionHistory}
+              total={historyData?.total ?? 0}
+              page={historyPagination.page}
+              pageSize={historyPagination.size}
+              isLoading={historyLoading}
+              onPageChange={(p) => setHistoryPagination(prev => ({ ...prev, page: p }))}
+              onPageSizeChange={(s) => setHistoryPagination({ page: 1, size: s })}
+              onRowClick={(record) => handleViewLog(record)}
+            />
           </TabPane>
         </Tabs>
       </DataTableLayout>

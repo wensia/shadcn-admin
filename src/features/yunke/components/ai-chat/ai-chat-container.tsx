@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
+import { Button } from '@douyinfe/semi-ui-19'
 import { Sparkles, PanelLeft } from 'lucide-react'
 import { useAIChat } from './use-ai-chat'
 import { ChatMessageItem } from './chat-message-item'
@@ -66,13 +67,17 @@ export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession, on
   const hasMessages = messages.length > 0
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-theme(spacing.16))]">
+    <div className="flex flex-col h-full">
       {/* 移动端顶栏 */}
       {onOpenSidebar && (
         <div className="shrink-0 flex items-center h-12 px-3 border-b md:hidden">
-          <button onClick={onOpenSidebar} className="p-1.5 -ml-1 rounded-md hover:bg-accent">
-            <PanelLeft className="h-5 w-5" />
-          </button>
+          <Button
+            theme="borderless"
+            type="tertiary"
+            icon={<PanelLeft className="h-5 w-5" />}
+            onClick={onOpenSidebar}
+            style={{ marginLeft: -4, padding: 6, borderRadius: 6 }}
+          />
           <span className="ml-2 text-sm font-medium truncate">AI 数据助手</span>
         </div>
       )}
@@ -105,13 +110,21 @@ export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession, on
                 {/* 快捷提问按钮 */}
                 <div className="flex flex-wrap justify-center gap-2">
                   {QUICK_QUESTIONS.map((q) => (
-                    <button
+                    <Button
                       key={q}
-                      className="rounded-[8px] bg-foreground/5 hover:bg-foreground/[0.08] text-[13px] px-3 py-2 transition-colors text-foreground/80"
+                      theme="borderless"
+                      size="small"
+                      style={{
+                        borderRadius: 8,
+                        background: 'var(--semi-color-fill-0)',
+                        fontSize: 13,
+                        padding: '6px 12px',
+                        color: 'var(--semi-color-text-1)',
+                      }}
                       onClick={() => sendMessage(q)}
                     >
                       {q}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>

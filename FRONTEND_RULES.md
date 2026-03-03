@@ -388,7 +388,8 @@ try { ... } catch (error) {
 
 | 规则 | 作用 |
 |------|------|
-| `.semi-tabs-pane-motion-overlay` | 修复 Tabs 内容区 flex 高度链断裂 |
+| `.semi-tabs-content` | 修复 Tabs 内容区 flex 高度链断裂（Layer 1） |
+| `.semi-tabs-pane-motion-overlay` | 修复 Tabs 内容区 flex 高度链断裂（Layer 2） |
 | `.semi-navigation-*` | 侧边栏 Nav 可滚动 + Footer 固定底部 |
 | `*:focus` | 移除所有焦点轮廓 |
 | 表格粘性列 | `[data-slot="table-row"] > .sticky` 背景色 |
@@ -489,6 +490,175 @@ export function MyPage() {
 - DataTableLayout 自带刷新按钮（`onRefresh` prop），toolbar 中不需要额外的刷新按钮
 - 骨架屏使用 `isSkeletonRow(record.id)` + `<SemiSkeletonCell width={N} />`
 - 所有弹窗（Modal / SideSheet）放在 `<DataTableLayout>` 外面
+
+## 数据表高度链规范（强制）
+
+**核心原则：所有数据表页面的分页器必须紧贴浏览器底部，表格体在固定区域内滚动，而非分页器跟随数据表高度浮动。**
+
+### 高度链原理
+
+从根布局到分页器，必须形成一条**不间断的 flex 高度链**。任何中间层缺少关键 CSS 属性都会导致高度链断裂，表现为分页器"飘"在表格下方。
+
+```
+Layout (100vh, overflow: hidden)
+  └── Layout.Content (flex: 1, overflow: hidden)
+      └── TabsManager
+          ├── Tab 栏 (flexShrink: 0)
+          └── 内容区 (flex: 1, min-h-0, overflow: hidden)
+              └── Outlet → 页面组件
+                  └── DataTableLayout (h: 100%, overflow: hidden, flex-col)
+                      ├── 头部/工具栏 (flexShrink: 0)
+                      └── 表格容器 (flex: 1, min-h-0, overflow: hidden)
+                          └── SemiDataTable (flex: 1, min-h-0, flex-col)
+                              ├── 表格包装器 (flex: 1, min-h-0) ← useTableScroll 测量
+                              │   └── Table (scroll.y = 动态计算)
+                              └── 分页器 (flexShrink: 0) ← 贴底锚点
+```
+
+### 中间层三要素
+
+高度链中每个容器层**必须同时具备**以下三个属性，缺一不可：
+
+```css
+flex: 1;           /* 填充父容器剩余空间 */
+min-height: 0;     /* 允许 flex 子项缩小于内容高度（CSS 默认 min-height: auto 会撑开） */
+overflow: hidden;  /* 截断溢出，将滚动权委托给内部 Table scroll.y */
+```
+
+### Semi Tabs 高度链修复
+
+Semi Design Tabs 内部有三层默认 `flex: 0 1 auto` 的容器会**打断**高度链。`src/styles/index.css` 中的全局覆盖修复了这三层：
+
+```css
+/* Layer 1 */  .semi-tabs-content           { display: flex; flex: 1 1 0%; ... }
+/* Layer 2 */  .semi-tabs-pane-motion-overlay { display: flex; flex: 1 1 0%; ... }
+/* Layer 3 */  .semi-tabs-pane-active         { display: flex; flex: 1 1 0%; ... }
+```
+
+### 禁止的做法
+
+- **禁止**使用 `h-[calc(100vh-Npx)]` 硬编码视口高度 → 必须通过 flex 链自适应
+- **禁止**在中间层遗漏 `min-height: 0` → 会导致 flex 子项被内容撑开，高度链断裂
+- **禁止**在中间层使用 `overflow: auto/scroll` → 滚动权应委托给最内层 `Table scroll.y`
+- **禁止**给表格容器设定固定 `height` → 应使用 `flex: 1` 自适应
+
+### 排查高度链断裂
+
+如果分页器没有贴底（跟随表格内容浮动），逐层检查：
+
+1. 打开浏览器 DevTools → 从 `<body>` 逐层向下检查
+2. 找到第一个**高度超出视口**的元素 → 该层缺少 `overflow: hidden`
+3. 找到第一个**高度等于内容高度**（而非父容器分配的高度）的 flex 子项 → 该层缺少 `min-height: 0`
+4. 检查 Semi Tabs 相关层 → 确认 `index.css` 中的 `.semi-tabs-pane-motion-overlay` 修复存在
+
+## SideSheet 抽屉加载规范
+
+**核心原则：抽屉必须在用户点击时立即打开，数据加载期间显示骨架屏，禁止等待 API 响应后才打开抽屉。**
+
+### 标准模式
+
+```tsx
+// ✅ 正确 — 先打开抽屉，再加载数据
+const handleViewDetail = (id: string) => {
+  setDetailId(id)     // 触发查询
+  setDetailOpen(true) // 立即打开抽屉
+}
+
+const { data, isLoading } = useQuery({
+  queryKey: ['detail', detailId],
+  queryFn: () => api.getDetail(detailId!),
+  enabled: !!detailId && detailOpen, // 打开时才请求
+})
+
+// ❌ 错误 — 等数据返回后才打开
+const handleViewDetail = async (id: string) => {
+  const data = await api.getDetail(id)  // 用户等待...
+  setDetail(data)
+  setDetailOpen(true)  // 数据回来后才打开
+}
+
+// ❌ 错误 — 数据未就绪时阻止渲染
+if (!data && !isLoading) return null  // 抽屉无法展示
+```
+
+### 抽屉内骨架屏
+
+使用 Semi Design `<Skeleton>` 组件，根据抽屉内容类型选择骨架屏布局：
+
+```tsx
+<SideSheet visible={open} ...>
+  {isLoading && !data ? (
+    // Header 骨架
+    <div style={{ display: 'flex', gap: 8, padding: '10px 16px' }}>
+      <Skeleton.Title style={{ width: 60, height: 22 }} />
+      <Skeleton.Button style={{ width: 64, height: 32 }} />
+    </div>
+    // 内容骨架
+    <Skeleton loading active style={{ padding: '16px 20px' }}>
+      <Skeleton.Title style={{ width: 120, height: 18, marginBottom: 16 }} />
+      <Skeleton.Paragraph rows={4} style={{ width: '100%' }} />
+    </Skeleton>
+  ) : (
+    // 真实内容
+  )}
+</SideSheet>
+```
+
+### 各场景骨架屏参考
+
+| 抽屉类型 | 骨架屏布局 | 参考实现 |
+|---------|-----------|---------|
+| 详情查看（Tab 式） | Header 标签占位 + Tab 栏 + 表单字段网格 | `lead-detail-sheet.tsx` |
+| 报告/文档 | 标题 + 段落 + 数据表格 | `disc-detail-drawer.tsx` |
+| 对话/转写 | 头像 + 不等宽文本行（气泡式） | `record-detail-modal.tsx` |
+| 筛选面板 | Select 组件设置 `loading` prop | `filter-sheet.tsx` |
+| 表单编辑（prop 驱动） | 无需骨架屏（数据由 prop 传入） | `tasks-mutate-drawer.tsx` |
+
+### 关闭按钮
+
+骨架屏状态下**关闭按钮必须始终可用**，确保用户任何时候都能关闭抽屉。
+
+## 禁止使用原生 HTML/JS 组件（强制）
+
+**核心原则：所有交互元素必须使用 Semi Design 组件，禁止使用原生 HTML 表单元素和浏览器弹窗 API。**
+
+### 禁止的浏览器 API
+
+| 禁止 | 替代方案 |
+|------|---------|
+| `window.confirm()` / `confirm()` | `Modal.confirm({ title, content, onOk })` |
+| `window.alert()` / `alert()` | `Toast.info()` / `Toast.warning()` / `Modal.info()` |
+| `window.prompt()` / `prompt()` | 自定义 `Modal` + `Input` 表单 |
+
+### 禁止的原生 HTML 表单元素
+
+| 禁止 | 替代方案 |
+|------|---------|
+| `<button>` | `Button` (`@douyinfe/semi-ui-19`) |
+| `<input>` | `Input` / `InputNumber` / `DatePicker` |
+| `<select>` | `Select` |
+| `<textarea>` | `Input` 的 `TextArea` (`Input.TextArea`) |
+| `<form>` | Semi `Form` 或普通 `<div>` 布局 |
+| `<label>` | Semi `Form.Label` / `Form.Item` 的 `label` prop |
+
+### 允许的例外
+
+以下场景中使用原生 HTML 标签是可接受的：
+
+| 场景 | 说明 |
+|------|------|
+| Markdown 渲染器内的组件覆写 | `react-markdown` 的 `components` 配置中使用 `<table>`、`<button>` 等是标准做法 |
+| `src/lib/craft-renderer/` 库组件 | 自包含的渲染库，使用 Tailwind 独立于 Semi 设计体系 |
+| `document.createElement('a')` 下载触发器 | 标准的文件下载模式，无 Semi 替代方案 |
+| 布局用 `<table>` (key-value 信息展示) | `lead-info-display.tsx`、`info-grid.tsx` 中用于表格式信息布局，非数据表格 |
+
+### 自查清单
+
+新增/修改组件时：
+1. 是否使用了 `confirm()` / `alert()` / `prompt()`？→ 替换为 `Modal.confirm()` / `Toast` / `Modal`
+2. 是否使用了 `<button>`？→ 替换为 Semi `Button`
+3. 是否使用了 `<input>` / `<select>` / `<textarea>`？→ 替换为 Semi `Input` / `Select` / `Input.TextArea`
+4. `<form>` 是否必要？→ 仅在需要原生表单提交语义时使用，否则用 `<div>` 或 Semi `Form`
 
 ## 开发命令
 

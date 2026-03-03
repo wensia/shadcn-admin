@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Outlet } from '@tanstack/react-router'
 import { X, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Dropdown } from '@douyinfe/semi-ui-19'
+import { Dropdown, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { useTabsStore, type TabInfo } from '@/stores/tabs-store'
 import { getRouteConfig } from '@/lib/route-components'
 
@@ -67,9 +67,10 @@ function TabItem({
         <LayoutDashboard className='h-4 w-4 shrink-0' />
         <span className='max-w-[120px] truncate'>{tab.title}</span>
         {tab.closable && (
-          <button
+          <SemiButton
+            theme='borderless'
             className={cn(
-              'ml-1 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100',
+              '!ml-1 !h-auto !min-w-0 !rounded-sm !p-0.5 opacity-0 transition-opacity hover:!bg-muted group-hover:opacity-100',
               isActive && 'opacity-100'
             )}
             onClick={(e) => {
@@ -78,7 +79,7 @@ function TabItem({
             }}
           >
             <X className='h-3.5 w-3.5' />
-          </button>
+          </SemiButton>
         )}
       </div>
     </Dropdown>

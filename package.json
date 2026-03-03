@@ -25,6 +25,7 @@
     "@uiw/react-json-view": "2.0.0-alpha.41",
     "@univerjs/preset-sheets-core": "^0.15.5",
     "@univerjs/presets": "^0.15.5",
+    "@volcengine/rtc": "^4.68.1",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

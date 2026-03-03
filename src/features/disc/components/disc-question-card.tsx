@@ -10,6 +10,7 @@
 
 import { cn } from '@/lib/utils'
 import { Check, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Button as SemiButton } from '@douyinfe/semi-ui-19'
 import type { DISCQuestion, DISCAnswer } from '../types'
 
 /* ─── Palette ─── */
@@ -127,8 +128,8 @@ function ActionBtn({
   const Icon = kind === 'most' ? ThumbsUp : ThumbsDown
 
   return (
-    <button
-      type="button"
+    <SemiButton
+      theme="solid"
       onClick={onClick}
       className={cn(
         // 基础：pill, 44px 触控高度, flex 居中
@@ -161,6 +162,6 @@ function ActionBtn({
         <Icon className="h-3 w-3 opacity-30" />
       )}
       {label}
-    </button>
+    </SemiButton>
   )
 }

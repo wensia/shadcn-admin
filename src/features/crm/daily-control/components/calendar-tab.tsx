@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Toast, Button, Spin } from '@douyinfe/semi-ui-19'
+import { Toast, Button, Spin, RadioGroup, Radio } from '@douyinfe/semi-ui-19'
 import { IconChevronLeft, IconChevronRight, IconCalendar, IconUser } from '@douyinfe/semi-icons'
 import {
   format,
@@ -237,74 +237,57 @@ export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: Cale
       {/* 顶部筛选栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         {/* 左侧筛选器 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, borderBottom: '1px solid #e8e6dc' }}>
-          {filters.map(({ key, show, setShow }) => {
-            const config = typeConfig[key]
-            return (
-              <button
-                key={key}
-                onClick={() => setShow(!show)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '8px 12px', fontSize: 14, fontWeight: 500,
-                  transition: 'color 0.15s', cursor: 'pointer',
-                  borderBottom: `2px solid ${show ? 'var(--semi-color-text-0)' : 'transparent'}`,
-                  marginBottom: -1,
-                  color: show ? 'var(--semi-color-text-0)' : 'var(--semi-color-text-2)',
-                  background: 'none', border: 'none',
-                }}
-              >
-                <span style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  backgroundColor: show ? config.color : '#e8e6dc',
-                }} />
-                <span>{config.label}</span>
-              </button>
-            )
-          })}
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, borderBottom: '1px solid #e8e6dc' }}>
+            {filters.map(({ key, show, setShow }) => {
+              const config = typeConfig[key]
+              return (
+                <Button
+                  key={key}
+                  theme="borderless"
+                  onClick={() => setShow(!show)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 12px', fontSize: 14, fontWeight: 500,
+                    borderBottom: `2px solid ${show ? 'var(--semi-color-text-0)' : 'transparent'}`,
+                    marginBottom: -1,
+                    color: show ? 'var(--semi-color-text-0)' : 'var(--semi-color-text-2)',
+                    borderRadius: 0,
+                  }}
+                >
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    backgroundColor: show ? config.color : '#e8e6dc',
+                  }} />
+                  <span>{config.label}</span>
+                </Button>
+              )
+            })}
+          </div>
 
         {/* 右侧导航 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {isLoading && <Spin size="small" />}
 
           {/* 视图切换 */}
-          <div style={{ display: 'flex', alignItems: 'center', borderRadius: 8, border: '1px solid #e8e6dc', background: '#faf9f5', padding: 2 }}>
-            <button
-              onClick={() => setViewMode('week')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                background: viewMode === 'week' ? '#ff7d00' : 'transparent',
-                color: viewMode === 'week' ? '#fff' : '#86909c',
-                border: 'none', cursor: 'pointer',
-              }}
-            >
-              周
-            </button>
-            <button
-              onClick={() => setViewMode('month')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                background: viewMode === 'month' ? '#ff7d00' : 'transparent',
-                color: viewMode === 'month' ? '#fff' : '#86909c',
-                border: 'none', cursor: 'pointer',
-              }}
-            >
-              月
-            </button>
-          </div>
+          <RadioGroup
+            type="button"
+            buttonSize="small"
+            value={viewMode}
+            onChange={(event) => setViewMode(event.target.value as 'month' | 'week')}
+          >
+            <Radio value="week">周</Radio>
+            <Radio value="month">月</Radio>
+          </RadioGroup>
 
           <Button theme="solid" size="small" onClick={goToToday} style={{ background: 'var(--semi-color-text-0)' }}>今天</Button>
 
           <div style={{ display: 'flex', alignItems: 'center', borderRadius: 8, border: '1px solid #e8e6dc', background: '#faf9f5' }}>
-            <button
+            <Button
+              theme="borderless"
+              icon={<IconChevronLeft style={{ color: '#86909c' }} />}
               onClick={viewMode === 'week' ? prevWeek : prevMonth}
-              style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px 0 0 8px' }}
-            >
-              <IconChevronLeft style={{ color: '#86909c' }} />
-            </button>
+              style={{ padding: 8, borderRadius: '8px 0 0 8px' }}
+            />
             <span style={{
               padding: '6px 12px', width: 180, textAlign: 'center',
               borderLeft: '1px solid #e8e6dc', borderRight: '1px solid #e8e6dc',
@@ -315,12 +298,12 @@ export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: Cale
                 : format(currentMonth, 'yy-MM', { locale: zhCN })
               }
             </span>
-            <button
+            <Button
+              theme="borderless"
+              icon={<IconChevronRight style={{ color: '#86909c' }} />}
               onClick={viewMode === 'week' ? nextWeek : nextMonth}
-              style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', borderRadius: '0 8px 8px 0' }}
-            >
-              <IconChevronRight style={{ color: '#86909c' }} />
-            </button>
+              style={{ padding: 8, borderRadius: '0 8px 8px 0' }}
+            />
           </div>
         </div>
       </div>

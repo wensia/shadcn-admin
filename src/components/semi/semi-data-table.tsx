@@ -12,7 +12,7 @@ import { SemiTablePagination } from './table-pagination'
 
 const { Text } = Typography
 
-interface SemiDataTableProps<T extends { id: string }> {
+interface SemiDataTableProps<T extends { id: string | number }> {
   columns: ColumnProps<T>[]
   data: T[]
   total: number
@@ -36,7 +36,7 @@ interface SemiDataTableProps<T extends { id: string }> {
   rowClassName?: (record: T, index: number) => string
 }
 
-export function SemiDataTable<T extends { id: string }>({
+export function SemiDataTable<T extends { id: string | number }>({
   columns,
   data,
   total,
@@ -84,7 +84,7 @@ export function SemiDataTable<T extends { id: string }>({
     return isLoading ? createSkeletonData<T>(pageSize, skeletonFactory) : data
   }, [isLoading, data, pageSize, skeletonFactory])
 
-  const isSkeletonId = (id: string) => id.startsWith('__skeleton__')
+  const isSkeletonId = (id: string | number) => typeof id === 'string' && id.startsWith('__skeleton__')
 
   // 稳定的 scroll 对象引用（防止 Semi Table componentDidUpdate 无限 forceUpdate）
   const scrollConfig = useMemo(() => ({ x: scrollX, y: scrollY }), [scrollX, scrollY])

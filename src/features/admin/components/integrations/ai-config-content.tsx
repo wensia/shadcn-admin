@@ -9,22 +9,18 @@ import { BrainCircuit, Plus, Pencil, Trash2, Play, Star } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import { Button, Input, Modal, Form, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
-import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
+import { IconSearch } from '@douyinfe/semi-icons'
+import { isSkeletonRow } from '@/lib/table-utils'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { aiConfigApi, type AIConfigCreate, type AIConfigUpdate } from '../../api'
 import { AI_PROVIDER_OPTIONS, type AIConfigItem, type AIProvider } from '../../types'
 import { StatusBadge } from '../../components/status-badge'
 
 const { Text } = Typography
-
-interface PaginationTextInfo {
-  currentStart: number
-  currentEnd: number
-  total: number
-}
 
 interface AIConfigFormValues {
   provider: AIProvider
@@ -56,22 +52,6 @@ const PROVIDER_DEFAULTS: Record<AIProvider, { base_url: string; default_model: s
     base_url: '',
     default_model: 'gemini-2.5-flash',
   },
-}
-
-// 骨架屏数据
-function createSkeletonData(count: number): AIConfigItem[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_ID_PREFIX}${i}`,
-    provider: 'doubao' as AIProvider,
-    name: '',
-    api_key_masked: '',
-    base_url: '',
-    default_model: null,
-    endpoint_id: null,
-    is_active: true,
-    is_default: false,
-    notes: null,
-  }))
 }
 
 export function AIConfigContent() {
@@ -284,19 +264,8 @@ export function AIConfigContent() {
       },
     ]
 
-  const tableData = isLoading ? createSkeletonData(3) : (data?.items || [])
-
-  const pagination = useMemo(() => ({
-    currentPage: page,
-    pageSize,
-    total: data?.total || 0,
-    onPageChange: setPage,
-    onPageSizeChange: (s: number) => { setPageSize(s); setPage(1) },
-    showSizeChanger: true,
-    pageSizeOpts: [10, 20, 50, 100],
-    showTotal: true,
-    formatPageText: (info: PaginationTextInfo) => `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
-  }), [page, pageSize, data?.total])
+  const items = useMemo(() => data?.items ?? [], [data?.items])
+  const total = data?.total ?? 0
 
   const handleCreate = () => {
     setEditingItem(null)
@@ -418,10 +387,18 @@ export function AIConfigContent() {
 
   return (
     <>
-      <div className="flex h-full flex-col gap-4">
-        {/* 工具栏 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <DataTableLayout
+        title="模型配置"
+        total={total}
+        headerActions={
+          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
+            新增配置
+          </Button>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <Input
               prefix={<IconSearch />}
               placeholder="搜索配置名称或提供商..."
@@ -431,27 +408,21 @@ export function AIConfigContent() {
               onEnterPress={handleSearch}
             />
             <Button theme="outline" onClick={handleSearch}>搜索</Button>
-            <Button theme="borderless" type="tertiary" icon={<IconRefresh />} onClick={() => refetch()} title="刷新" />
           </div>
-          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
-            新增配置
-          </Button>
-        </div>
-
-        {/* 表格 */}
-        <Table
+        }
+      >
+        <SemiDataTable
           columns={columns}
-          dataSource={tableData}
-          rowKey="id"
-          pagination={data && data.total > 0 ? pagination : false}
-          loading={false}
-          empty={
-            <div className="py-8 text-center" style={{ color: 'var(--semi-color-text-2)' }}>
-              暂无数据
-            </div>
-          }
+          data={items}
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          scrollX={950}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
         />
-      </div>
+      </DataTableLayout>
 
       {/* 创建/编辑对话框 */}
       <Modal

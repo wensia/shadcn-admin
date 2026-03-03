@@ -15,7 +15,6 @@ import {
   Skeleton,
   Progress,
   Toast,
-  Card,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
@@ -227,12 +226,13 @@ export function MarketingStatisticsPage() {
               )
             })}
             {record.channels.length > 2 && (
-              <button
+              <Button
+                theme="borderless"
                 onClick={() => toggleExpand(record.staff_id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 2,
                   fontSize: 10, color: 'var(--semi-color-text-2)',
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  padding: 0, minWidth: 'auto', height: 'auto',
                 }}
               >
                 {isExpanded ? (
@@ -240,7 +240,7 @@ export function MarketingStatisticsPage() {
                 ) : (
                   <><IconChevronRight size="small" /> 还有 {record.channels.length - 2} 个渠道</>
                 )}
-              </button>
+              </Button>
             )}
           </div>
         )

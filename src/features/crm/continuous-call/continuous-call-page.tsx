@@ -21,6 +21,7 @@ import {
   TimePicker,
   Tag,
   Divider,
+  TextArea,
 } from '@douyinfe/semi-ui-19'
 import { Main } from '@/components/layout/main'
 import { useSidebar } from '@/context/sidebar-context'
@@ -794,21 +795,11 @@ export function ContinuousCallPage() {
                         />
                       </div>
                       <label style={{ ...labelStyle, color: 'var(--semi-color-danger)' }}>诺到理由</label>
-                      <textarea
+                      <TextArea
                         placeholder="请输入诺到理由..."
                         value={appointmentReason}
-                        onChange={(e) => {
-                          setAppointmentReason(e.target.value)
-                          e.target.style.height = 'auto'
-                          e.target.style.height = `${e.target.scrollHeight}px`
-                        }}
-                        rows={1}
-                        style={{
-                          width: '100%', resize: 'none', minHeight: 32, padding: '6px 8px', fontSize: 13,
-                          overflow: 'hidden', border: '1px solid var(--semi-color-border)',
-                          borderRadius: 6, backgroundColor: 'var(--semi-color-bg-0)', outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
+                        onChange={(value) => setAppointmentReason(value)}
+                        autosize={{ minRows: 1, maxRows: 4 }}
                       />
                     </div>
                   )}
@@ -836,21 +827,12 @@ export function ContinuousCallPage() {
 
                   <div>
                     <label style={labelStyle}>跟进内容</label>
-                    <textarea
+                    <TextArea
                       placeholder="输入跟进内容..."
                       value={followupContent}
-                      onChange={(e) => {
-                        setFollowupContent(e.target.value)
-                        e.target.style.height = 'auto'
-                        e.target.style.height = `${e.target.scrollHeight}px`
-                      }}
-                      rows={2}
-                      style={{
-                        width: '100%', resize: 'none', padding: '8px 10px', fontSize: 13,
-                        border: '1px solid var(--semi-color-border)', borderRadius: 6,
-                        backgroundColor: 'var(--semi-color-bg-0)', outline: 'none',
-                        boxSizing: 'border-box', overflow: 'hidden',
-                      }}
+                      onChange={(value) => setFollowupContent(value)}
+                      maxCount={500}
+                      autosize={{ minRows: 2, maxRows: 6 }}
                     />
                   </div>
                 </div>

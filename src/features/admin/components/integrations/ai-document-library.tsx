@@ -3,7 +3,7 @@
  * 支持导入和编辑 Markdown 文档，供 AI 分析时作为参考资料
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   BookOpen,
@@ -17,10 +17,12 @@ import ReactMarkdown from 'react-markdown'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Modal, Form, Tag, Skeleton, Typography, Tooltip, Tabs, TabPane, Select } from '@douyinfe/semi-ui-19'
+import { Button, Modal, Form, Tag, Skeleton, Typography, Tooltip, Tabs, TabPane, Select } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { isSkeletonRow, SKELETON_ID_PREFIX } from '@/lib/table-utils'
+import { isSkeletonRow } from '@/lib/table-utils'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { aiConfigApi } from '../../api'
 import { AI_DOCUMENT_CATEGORIES, type AIDocumentItem } from '../../types'
 
@@ -33,19 +35,6 @@ type DocumentFormValues = {
   category?: string
 }
 
-function createSkeletonData(count: number): AIDocumentItem[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${SKELETON_ID_PREFIX}${i}`,
-    name: '',
-    content: '',
-    description: null,
-    category: null,
-    is_active: true,
-    created_at: '',
-    updated_at: '',
-  }))
-}
-
 function getCategoryLabel(value: string | null): string {
   if (!value) return '-'
   return AI_DOCUMENT_CATEGORIES.find((c) => c.value === value)?.label || value
@@ -54,6 +43,8 @@ function getCategoryLabel(value: string | null): string {
 export function AIDocumentLibrary() {
   const queryClient = useQueryClient()
   const formRef = useRef<FormApi>()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingDoc, setEditingDoc] = useState<AIDocumentItem | null>(null)
@@ -62,12 +53,13 @@ export function AIDocumentLibrary() {
   const [previewContent, setPreviewContent] = useState('')
 
   // 查询文档列表
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-ai-documents', categoryFilter],
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['admin-ai-documents', categoryFilter, page, pageSize],
     queryFn: () =>
       aiConfigApi.listDocuments({
         category: categoryFilter === 'all' ? undefined : categoryFilter,
-        limit: 100,
+        skip: (page - 1) * pageSize,
+        limit: pageSize,
       }),
   })
 
@@ -167,6 +159,9 @@ export function AIDocumentLibrary() {
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
+
+  const items = useMemo(() => data?.items ?? [], [data?.items])
+  const total = data?.total ?? 0
 
   // 表格列定义
   const columns: ColumnProps<AIDocumentItem>[] = [
@@ -292,19 +287,23 @@ export function AIDocumentLibrary() {
     },
   ]
 
-  const tableData = isLoading ? createSkeletonData(3) : (data?.items || [])
-
   return (
     <>
-      <div className="flex flex-col gap-4">
-        {/* 工具栏 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
-            <h3 className="text-sm font-medium">资料库管理</h3>
+      <DataTableLayout
+        title="资料库管理"
+        total={total}
+        headerActions={
+          <Button size="small" theme="solid" type="primary" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleCreate}>
+            新建文档
+          </Button>
+        }
+        onRefresh={() => refetch()}
+        isRefreshing={isLoading}
+        toolbar={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <Select
               value={categoryFilter}
-              onChange={(v) => setCategoryFilter(v as string)}
+              onChange={(v) => { setCategoryFilter(v as string); setPage(1) }}
               size="small"
               style={{ width: 128 }}
               optionList={[
@@ -313,29 +312,21 @@ export function AIDocumentLibrary() {
               ]}
             />
           </div>
-          <Button size="small" theme="solid" type="primary" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleCreate}>
-            新建文档
-          </Button>
-        </div>
-
-        {/* 数据表 */}
-        <Table
+        }
+      >
+        <SemiDataTable
           columns={columns}
-          dataSource={tableData}
-          rowKey="id"
-          pagination={false}
-          loading={false}
-          empty={
-            <div className="flex flex-col items-center py-8" style={{ color: 'var(--semi-color-text-2)' }}>
-              <BookOpen className="mb-2 h-8 w-8" />
-              <p>暂无资料文档</p>
-              <Text type="tertiary" size="small" style={{ marginTop: 4 }}>
-                点击"新建文档"添加 Markdown 格式的参考资料
-              </Text>
-            </div>
-          }
+          data={items}
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          scrollX={700}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+          emptyText="暂无资料文档，点击「新建文档」添加 Markdown 格式的参考资料"
         />
-      </div>
+      </DataTableLayout>
 
       {/* 新建/编辑对话框 */}
       <Modal
