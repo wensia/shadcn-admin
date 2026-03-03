@@ -44,6 +44,9 @@ importers:
       '@univerjs/presets':
         specifier: ^0.15.5
         version: 0.15.5(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@wendellhu/redi@1.1.1(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)
+      '@volcengine/rtc':
+        specifier: ^4.68.1
+        version: 4.68.1
       axios:
         specifier: ^1.13.2
         version: 1.13.6
@@ -2574,6 +2577,9 @@ packages:
     peerDependencies:
       vite: ^4 || ^5 || ^6 || ^7
 
+  '@volcengine/rtc@4.68.1':
+    resolution: {integrity: sha512-+S08IaTuouwG5B+aWAnC2PYvQcKimMIIFngtMrYTLgghHW5vCa96Tiq1vdkXK6QRKCB04W1ec8qrPM2ESSU96A==}
+
   '@wendellhu/redi@1.1.1':
     resolution: {integrity: sha512-y2fuAgHJ2n8sI8Pe/1QtAuPQ6ZbZ9/Dn3uVQI8cctVqLZzp/0OpLM7DSMOU6vmGYXNsIQwsquR91WcxZ4jrRvA==}
     peerDependencies:
@@ -3086,6 +3092,9 @@ packages:
   esutils@2.0.3:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
+
+  eventemitter3@4.0.7:
+    resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
 
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
@@ -8194,6 +8203,10 @@ snapshots:
     transitivePeerDependencies:
       - '@swc/helpers'
 
+  '@volcengine/rtc@4.68.1':
+    dependencies:
+      eventemitter3: 4.0.7
+
   '@wendellhu/redi@1.1.1(react@19.2.4)':
     optionalDependencies:
       react: 19.2.4
@@ -8733,6 +8746,8 @@ snapshots:
       '@types/estree': 1.0.8
 
   esutils@2.0.3: {}
+
+  eventemitter3@4.0.7: {}
 
   eventemitter3@5.0.4: {}
 

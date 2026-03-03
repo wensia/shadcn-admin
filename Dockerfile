@@ -25,9 +25,9 @@ COPY . .
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-# 构建应用 (跳过 TypeScript 类型检查)
+# 构建应用 (增加 Node 内存限制，跳过 TypeScript 类型检查)
 RUN --mount=type=cache,target=/app/node_modules/.cache \
-    pnpm exec vite build
+    NODE_OPTIONS="--max-old-space-size=4096" pnpm exec vite build
 
 # 生产阶段 - 使用 Nginx 服务静态文件
 FROM nginx:alpine AS production
