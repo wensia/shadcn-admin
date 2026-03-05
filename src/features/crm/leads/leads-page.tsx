@@ -162,8 +162,8 @@ export function LeadsPage() {
       const response = await leadsApi.getLeads({
         ...filters,
         search: committedSearch || undefined,
-        status: statusFilter.length > 0 ? statusFilter : filters.status,
-        intention_level: intentionFilter.length > 0 ? intentionFilter : filters.intention_level,
+        status: statusFilter.length > 0 ? statusFilter : undefined,
+        intention_level: intentionFilter.length > 0 ? intentionFilter : undefined,
         page: pagination.page,
         size: pagination.size,
         include_styles: true,
@@ -236,7 +236,11 @@ export function LeadsPage() {
   const handleFilter = () => setFilterSheetOpen(true)
 
   const handleApplyFilters = (newFilters: LeadListParams) => {
-    setFilters(newFilters)
+    // 从高级筛选结果中提取 status/intention，同步到快速筛选
+    const { status, intention_level, ...rest } = newFilters
+    setStatusFilter(status ?? [])
+    setIntentionFilter(intention_level ?? [])
+    setFilters(rest)
     resetToFirstPage()
   }
 
@@ -261,11 +265,6 @@ export function LeadsPage() {
   const handleRowClick = (lead: LeadListItem) => {
     setCurrentLeadId(lead.id)
     setDetailSheetOpen(true)
-  }
-
-  const handleClearQuickFilters = () => {
-    setStatusFilter([])
-    setIntentionFilter([])
   }
 
   const handleClearAllFilters = () => {
@@ -328,15 +327,6 @@ export function LeadsPage() {
     })
   }
 
-  if (filters.status && filters.status.length > 0) {
-    filterTags.push({
-      key: 'adv-status',
-      label: '状态',
-      value: filters.status.map((s) => leadStatusLabels[s]).join(', '),
-      onClose: () => setFilters((prev) => { const { status, ...rest } = prev; return rest }),
-    })
-  }
-
   if (filters.source_channel_id && filters.source_channel_id.length > 0) {
     filterTags.push({
       key: 'channel',
@@ -370,15 +360,6 @@ export function LeadsPage() {
       label: '校区',
       value: getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区') || '',
       onClose: () => setFilters((prev) => { const { owner_campus_id, ...rest } = prev; return rest }),
-    })
-  }
-
-  if (filters.intention_level && filters.intention_level.length > 0) {
-    filterTags.push({
-      key: 'adv-intention',
-      label: '意向',
-      value: filters.intention_level.map((l) => intentionLevelLabels[l]).join(', '),
-      onClose: () => setFilters((prev) => { const { intention_level, ...rest } = prev; return rest }),
     })
   }
 
@@ -476,9 +457,12 @@ export function LeadsPage() {
       <FilterSheet
         open={filterSheetOpen}
         onOpenChange={setFilterSheetOpen}
-        filters={filters}
+        filters={{
+          ...filters,
+          ...(statusFilter.length > 0 ? { status: statusFilter } : {}),
+          ...(intentionFilter.length > 0 ? { intention_level: intentionFilter } : {}),
+        }}
         onApplyFilters={handleApplyFilters}
-        onClearQuickFilters={handleClearQuickFilters}
       />
 
       {/* 批量操作弹窗 */}

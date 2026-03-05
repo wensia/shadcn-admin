@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Star } from 'lucide-react'
 import { Button, SideSheet, Toast } from '@douyinfe/semi-ui-19'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -15,8 +15,8 @@ import type { CoachMode, TrainingSetupForm } from './coach-types'
 
 const DEFAULT_SETUP: TrainingSetupForm = {
   mode: 'text',
-  scene_key: 'parent_consulting',
-  persona_key: 'friendly_parent',
+  scene_key: 'S1',
+  persona_key: 'anxious_father',
   difficulty: 'L1',
   subject: '数学',
   student_grade: '初二',
@@ -110,10 +110,12 @@ export function CoachWorkspace() {
     setCurrentStage(currentDetail?.session.current_stage || null)
   }, [currentDetail?.session.current_stage, setCurrentStage])
 
-  const activeMode = useMemo<CoachMode>(() => currentSession?.mode || setup.mode, [currentSession?.mode, setup.mode])
+  const activeMode = setup.mode
+  const modeMatches = currentSession?.mode === activeMode
+  const activeSession = modeMatches ? currentSession : null
   const review = currentDetail?.review || null
-  const voiceStatus = currentDetail?.voice_status || null
-  const messages = currentDetail?.messages || []
+  const voiceStatus = modeMatches ? (currentDetail?.voice_status || null) : null
+  const messages = modeMatches ? (currentDetail?.messages || []) : []
   const bootstrapError = sessionListError || catalogError || detailError
 
   const handleSetupChange = useCallback((patch: Partial<TrainingSetupForm>) => {
@@ -190,98 +192,91 @@ export function CoachWorkspace() {
       ) : null}
 
       <div className="min-w-0 flex-1 overflow-hidden">
-        <div className="flex h-full min-w-0 flex-col gap-4 px-4 py-4 lg:px-5">
+        <div className="flex h-full min-w-0 flex-col gap-3 px-4 py-3 lg:px-5">
           {bootstrapError ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              陪练数据加载失败：{bootstrapError}。如果你刚更新了后端，请重启 `9876` 服务后刷新页面。
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              数据加载失败：{bootstrapError}
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-lg font-semibold text-slate-900">课程顾问陪练</div>
-              <div className="mt-1 text-sm text-slate-500">同一页支持文字对练和电话式语音陪练，会后统一输出结构化评分。</div>
-            </div>
+          {/* 页面标题行 */}
+          <div className="flex items-center justify-between">
+            <div className="text-base font-semibold text-slate-900">课程顾问陪练</div>
             <div className="flex items-center gap-2">
               {isMobile ? (
                 <Button theme="light" onClick={() => setSidebarOpen(true)}>
-                  打开会话
+                  会话
                 </Button>
               ) : null}
-              <Button theme="light" icon={<Star className="h-4 w-4" />} onClick={() => setReviewOpen(true)}>
-                评分区
+              <Button
+                theme="light"
+                icon={<Star className="h-4 w-4" />}
+                onClick={() => setReviewOpen(true)}
+              >
+                评分
               </Button>
             </div>
           </div>
 
-          <div className={`grid min-h-0 flex-1 gap-4 ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-[minmax(0,1fr)_360px]'}`}>
-            <div className="flex min-h-0 flex-col gap-4">
-              <CoachSetupCard
-                catalog={catalog}
-                draft={currentSession ? mapSessionToSetup(currentSession) : setup}
-                currentSession={currentSession}
-                isCreating={isCreating}
-                onChange={handleSetupChange}
-                onCreateTextSession={() => handleCreateSession('text')}
-                onCreateVoiceSession={() => handleCreateSession('voice')}
+          {/* 设置栏 */}
+          <CoachSetupCard
+            catalog={catalog}
+            draft={currentSession ? { ...mapSessionToSetup(currentSession), mode: setup.mode } : setup}
+            currentSession={currentSession}
+            isCreating={isCreating}
+            onChange={handleSetupChange}
+            onCreateSession={() => handleCreateSession(setup.mode)}
+          />
+
+          {/* 对话区（填满剩余高度） */}
+          <div className="min-h-0 flex-1">
+            {activeMode === 'voice' ? (
+              <CoachVoicePanel
+                session={activeSession}
+                voiceStatus={voiceStatus}
+                isStarting={isStarting}
+                isStopping={isStopping}
+                isMuted={isMuted}
+                rtcError={rtcError}
+                onStart={startCall}
+                onStop={stopCall}
+                onToggleMute={toggleMute}
+                onSwitchToText={() => handleCreateSession('text', activeSession ? {
+                  scene_key: activeSession.scene_key,
+                  persona_key: activeSession.persona_key,
+                  difficulty: activeSession.difficulty,
+                  subject: activeSession.subject || '',
+                  student_grade: activeSession.student_grade || '',
+                  goal: activeSession.goal || '',
+                } : undefined)}
+                onOpenSidebar={isMobile ? () => setSidebarOpen(true) : undefined}
+                onOpenReview={() => setReviewOpen(true)}
+                hasReview={Boolean(review)}
               />
-
-              <div className="min-h-0 flex-1">
-                {activeMode === 'voice' ? (
-                  <CoachVoicePanel
-                    session={currentSession}
-                    voiceStatus={voiceStatus}
-                    isStarting={isStarting}
-                    isStopping={isStopping}
-                    isMuted={isMuted}
-                    rtcError={rtcError}
-                    onStart={startCall}
-                    onStop={stopCall}
-                    onToggleMute={toggleMute}
-                    onSwitchToText={() => handleCreateSession('text', currentSession ? {
-                      scene_key: currentSession.scene_key,
-                      persona_key: currentSession.persona_key,
-                      difficulty: currentSession.difficulty,
-                      subject: currentSession.subject || '',
-                      student_grade: currentSession.student_grade || '',
-                      goal: currentSession.goal || '',
-                    } : undefined)}
-                    onOpenSidebar={isMobile ? () => setSidebarOpen(true) : undefined}
-                    onOpenReview={isMobile ? () => setReviewOpen(true) : undefined}
-                    hasReview={Boolean(review)}
-                  />
-                ) : (
-                  <CoachTextPanel
-                    session={currentSession}
-                    messages={messages}
-                    currentStage={currentStage}
-                    isLoading={isTextLoading}
-                    onSend={sendMessage}
-                    onStop={stopGeneration}
-                    onGenerateReview={handleGenerateReview}
-                    onOpenSidebar={isMobile ? () => setSidebarOpen(true) : undefined}
-                    onOpenReview={isMobile ? () => setReviewOpen(true) : undefined}
-                    hasReview={Boolean(review)}
-                  />
-                )}
-              </div>
-            </div>
-
-            {!isMobile ? (
-              <CoachReviewDrawer review={review} isMobile={false} />
-            ) : null}
+            ) : (
+              <CoachTextPanel
+                session={activeSession}
+                messages={messages}
+                currentStage={currentStage}
+                isLoading={isTextLoading}
+                onSend={sendMessage}
+                onStop={stopGeneration}
+                onGenerateReview={handleGenerateReview}
+                onOpenSidebar={isMobile ? () => setSidebarOpen(true) : undefined}
+                onOpenReview={() => setReviewOpen(true)}
+                hasReview={Boolean(review)}
+              />
+            )}
           </div>
         </div>
       </div>
 
-      {isMobile ? (
-        <CoachReviewDrawer
-          review={review}
-          isMobile
-          visible={reviewOpen}
-          onVisibleChange={setReviewOpen}
-        />
-      ) : null}
+      {/* 评分抽屉（始终 SideSheet） */}
+      <CoachReviewDrawer
+        review={review}
+        visible={reviewOpen}
+        onVisibleChange={setReviewOpen}
+      />
     </div>
   )
 }

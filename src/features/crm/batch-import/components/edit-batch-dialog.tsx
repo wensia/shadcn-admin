@@ -72,8 +72,6 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
     })
   }
 
-  if (!batch) return null
-
   return (
     <Modal
       visible={open}
@@ -98,34 +96,36 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
         </>
       }
     >
-      <Form
-        ref={formRef}
-        initValues={{
-          batch_name: batch.batch_name,
-          batch_description: batch.batch_description || '',
-        }}
-        labelPosition="top"
-      >
-        <Form.Input
-          field="batch_name"
-          label="批次名称"
-          placeholder="请输入批次名称"
-          rules={[
-            { required: true, message: '批次名称不能为空' },
-            { max: 100, message: '批次名称不能超过100个字符' },
-          ]}
-        />
+      {batch && (
+        <Form
+          ref={formRef}
+          initValues={{
+            batch_name: batch.batch_name,
+            batch_description: batch.batch_description || '',
+          }}
+          labelPosition="top"
+        >
+          <Form.Input
+            field="batch_name"
+            label="批次名称"
+            placeholder="请输入批次名称"
+            rules={[
+              { required: true, message: '批次名称不能为空' },
+              { max: 100, message: '批次名称不能超过100个字符' },
+            ]}
+          />
 
-        <Form.TextArea
-          field="batch_description"
-          label="批次备注"
-          placeholder="可选，添加批次备注信息"
-          rows={3}
-          rules={[
-            { max: 500, message: '批次备注不能超过500个字符' },
-          ]}
-        />
-      </Form>
+          <Form.TextArea
+            field="batch_description"
+            label="批次备注"
+            placeholder="可选，添加批次备注信息"
+            rows={3}
+            rules={[
+              { max: 500, message: '批次备注不能超过500个字符' },
+            ]}
+          />
+        </Form>
+      )}
     </Modal>
   )
 }

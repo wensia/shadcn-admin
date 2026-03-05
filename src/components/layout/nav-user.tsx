@@ -40,6 +40,7 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
       <Dropdown
         trigger='click'
         position='topLeft'
+        clickToHide
         render={
           <Dropdown.Menu>
             {/* 用户信息头 */}

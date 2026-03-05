@@ -1,11 +1,11 @@
 /**
  * 云客通话记录页面
- * 布局参考线索管理页面
+ * 使用 DataTableLayout 标准布局
  */
 
 import { useState, useCallback } from 'react'
-import { Main } from '@/components/layout/main'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
+import { DataTableLayout } from '@/components/semi/data-table-layout'
 import {
   CallRecordsProvider,
   useCallRecords,
@@ -40,25 +40,24 @@ function CallRecordsContent() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
-      {/* 统计卡片 */}
-      <div style={{ flexShrink: 0 }}>
-        <StatsCards stats={stats} isLoading={isStatsLoading} />
-      </div>
-
-      {/* 筛选工具栏 */}
-      <div style={{ flexShrink: 0 }}>
-        <CallRecordsToolbar
-          filters={filters}
-          onFilterChange={updateFilter}
-          onReset={resetFilters}
-          onRefresh={refetch}
-          isLoading={isLoading}
-        />
-      </div>
-
-      {/* 数据表格容器 */}
-      <div style={{ display: 'flex', minHeight: 0, flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
+    <>
+      <DataTableLayout
+        title="通话记录"
+        total={total}
+        onRefresh={refetch}
+        isRefreshing={isLoading}
+        toolbar={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
+            <StatsCards stats={stats} isLoading={isStatsLoading} />
+            <CallRecordsToolbar
+              filters={filters}
+              onFilterChange={updateFilter}
+              onReset={resetFilters}
+              isLoading={isLoading}
+            />
+          </div>
+        }
+      >
         <CallRecordsTable
           records={records}
           total={total}
@@ -69,24 +68,21 @@ function CallRecordsContent() {
           onSizeChange={setSize}
           onViewLead={handleViewLead}
         />
-      </div>
+      </DataTableLayout>
 
-      {/* 线索详情抽屉 */}
       <LeadDetailSheet
         leadId={selectedLeadId}
         open={leadSheetOpen}
         onOpenChange={setLeadSheetOpen}
       />
-    </div>
+    </>
   )
 }
 
 export function YunkeCallRecordsPage() {
   return (
-    <Main fixed style={{ minHeight: 0 }}>
-      <CallRecordsProvider>
-        <CallRecordsContent />
-      </CallRecordsProvider>
-    </Main>
+    <CallRecordsProvider>
+      <CallRecordsContent />
+    </CallRecordsProvider>
   )
 }

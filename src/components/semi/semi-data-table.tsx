@@ -71,14 +71,20 @@ export function SemiDataTable<T extends { id: string | number }>({
     onRowClickRef.current = onRowClick
   }, [onRowClick])
 
-  // 数据/页码变化时清空选中（仅在有选中项时才触发，防止空数组引用变化导致无限循环）
+  // 数据/页码变化时清空选中
+  const prevDataRef = useRef(data)
+  const prevPageRef = useRef(page)
+  const prevPageSizeRef = useRef(pageSize)
   useEffect(() => {
-    setInternalSelectedKeys(prev => {
-      if (prev.length === 0) return prev // 已为空，返回同一引用，React 不会重渲染
+    const changed = prevDataRef.current !== data || prevPageRef.current !== page || prevPageSizeRef.current !== pageSize
+    prevDataRef.current = data
+    prevPageRef.current = page
+    prevPageSizeRef.current = pageSize
+    if (changed && internalSelectedKeys.length > 0) {
+      setInternalSelectedKeys([])
       rowSelectionRef.current?.onChange([], [])
-      return []
-    })
-  }, [data, page, pageSize])
+    }
+  }, [data, page, pageSize, internalSelectedKeys.length])
 
   const displayData = useMemo(() => {
     return isLoading ? createSkeletonData<T>(pageSize, skeletonFactory) : data

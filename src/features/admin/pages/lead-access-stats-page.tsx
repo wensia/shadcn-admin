@@ -16,9 +16,10 @@ import {
   Activity,
   Bell,
 } from 'lucide-react'
-import { Table, Button, Input, Select, Modal, Typography } from '@douyinfe/semi-ui-19'
+import { Button, Input, Select, Modal, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
+import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { leadAccessStatsApi } from '../api'
 import { LeadAccessNotifyDialog } from '../components/lead-access-notify-dialog'
@@ -42,19 +43,8 @@ const TIME_RANGE_OPTIONS = [
   { label: '本月', value: 'thismonth' },
 ]
 
-// 骨架屏数据 - 在组件外部创建，避免每次渲染都创建新数组
-const SKELETON_DATA: AdvisorAccessStatistics[] = Array.from({ length: 10 }, (_, i) => ({
-  user_id: `__skeleton__${i}`,
-  user_name: '',
-  username: '',
-  campus_name: '',
-  view_count: 0,
-  total_access: 0,
-  daily_limit: 0,
-  time_range: '',
-  start_date: '',
-  end_date: '',
-}))
+/** 带 id 字段的行数据类型，满足 SemiDataTable 约束 */
+type StatsRow = AdvisorAccessStatistics & { id: string }
 
 export function LeadAccessStatsPage() {
   useDocumentTitle('线索查看统计')
@@ -66,6 +56,8 @@ export function LeadAccessStatsPage() {
     time_range: 'today',
   })
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   // 编辑弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -106,26 +98,32 @@ export function LeadAccessStatsPage() {
     return Math.round((summary.active_users / summary.total_users) * 100)
   }, [summary.total_users, summary.active_users])
 
-  // 过滤后的数据
-  const filteredData = useMemo(() => {
-    if (!searchValue) return statistics
-    const keyword = searchValue.toLowerCase()
-    return statistics.filter(
-      (item) =>
-        item.user_name.toLowerCase().includes(keyword) ||
-        item.username.toLowerCase().includes(keyword)
-    )
+  // 过滤后的数据（带 id）
+  const filteredData = useMemo<StatsRow[]>(() => {
+    const source = searchValue
+      ? statistics.filter((item) => {
+          const keyword = searchValue.toLowerCase()
+          return (
+            item.user_name.toLowerCase().includes(keyword) ||
+            item.username.toLowerCase().includes(keyword)
+          )
+        })
+      : statistics
+    return source.map((item) => ({
+      ...item,
+      id: `${item.user_id}_${item.campus_name || ''}`,
+    }))
   }, [statistics, searchValue])
 
-  // 表格数据
-  const tableData = isLoading ? SKELETON_DATA : filteredData
+  // 当前页数据（前端分页）
+  const pagedData = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filteredData.slice(start, start + pageSize)
+  }, [filteredData, page, pageSize])
 
   // 选中的行数据
   const selectedRows = useMemo(() => {
-    return filteredData.filter((item) => {
-      const key = `${item.user_id}_${item.campus_name || ''}`
-      return selectedRowKeys.includes(key)
-    })
+    return filteredData.filter((item) => selectedRowKeys.includes(item.id))
   }, [filteredData, selectedRowKeys])
 
   // 批量更新访问限制
@@ -153,12 +151,12 @@ export function LeadAccessStatsPage() {
   }, [])
 
   // Semi Table 列定义
-  const columns: ColumnProps<AdvisorAccessStatistics>[] = useMemo(
+  const columns: ColumnProps<StatsRow>[] = useMemo(
     () => [
       {
         title: '顾问姓名',
         dataIndex: 'user_name',
-        render: (_text: string, record: AdvisorAccessStatistics) => {
+        render: (_text: string, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={80} />
           }
@@ -168,7 +166,7 @@ export function LeadAccessStatsPage() {
       {
         title: '所属校区',
         dataIndex: 'campus_name',
-        render: (_text: string, record: AdvisorAccessStatistics) => {
+        render: (_text: string, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={112} />
           }
@@ -178,7 +176,7 @@ export function LeadAccessStatsPage() {
       {
         title: '地区',
         dataIndex: 'district_name',
-        render: (_text: string, record: AdvisorAccessStatistics) => {
+        render: (_text: string, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={80} />
           }
@@ -188,8 +186,8 @@ export function LeadAccessStatsPage() {
       {
         title: '查看线索数',
         dataIndex: 'view_count',
-        sorter: (a: AdvisorAccessStatistics, b: AdvisorAccessStatistics) => (a?.view_count ?? 0) - (b?.view_count ?? 0),
-        render: (_text: number, record: AdvisorAccessStatistics) => {
+        sorter: (a: StatsRow, b: StatsRow) => (a?.view_count ?? 0) - (b?.view_count ?? 0),
+        render: (_text: number, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={48} />
           }
@@ -209,8 +207,8 @@ export function LeadAccessStatsPage() {
       {
         title: '总访问次数',
         dataIndex: 'total_access',
-        sorter: (a: AdvisorAccessStatistics, b: AdvisorAccessStatistics) => (a?.total_access ?? 0) - (b?.total_access ?? 0),
-        render: (_text: number, record: AdvisorAccessStatistics) => {
+        sorter: (a: StatsRow, b: StatsRow) => (a?.total_access ?? 0) - (b?.total_access ?? 0),
+        render: (_text: number, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={48} />
           }
@@ -220,7 +218,7 @@ export function LeadAccessStatsPage() {
       {
         title: '每日限制',
         dataIndex: 'daily_limit',
-        render: (_text: number, record: AdvisorAccessStatistics) => {
+        render: (_text: number, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={64} />
           }
@@ -239,16 +237,16 @@ export function LeadAccessStatsPage() {
         },
       },
       {
-        title: '使用率',
+        title: '使用率(按查看线索数)',
         dataIndex: 'usage_rate',
-        render: (_text: unknown, record: AdvisorAccessStatistics) => {
+        render: (_text: unknown, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={48} />
           }
           const rate =
             record.daily_limit > 0
               ? Math.round(
-                  (record.total_access / record.daily_limit) * 100
+                  (record.view_count / record.daily_limit) * 100
                 )
               : 0
 
@@ -260,15 +258,15 @@ export function LeadAccessStatsPage() {
         },
       },
       {
-        title: '今日剩余',
+        title: '今日剩余可查看',
         dataIndex: 'remaining',
-        render: (_text: unknown, record: AdvisorAccessStatistics) => {
+        render: (_text: unknown, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={48} />
           }
           const remaining = Math.max(
             0,
-            record.daily_limit - record.total_access
+            record.daily_limit - record.view_count
           )
 
           let colorClass = 'text-green-600'
@@ -289,6 +287,7 @@ export function LeadAccessStatsPage() {
       [key]: value === 'all' ? undefined : value,
     }))
     setSelectedRowKeys([])
+    setPage(1)
   }, [])
 
   // 保存单个限制
@@ -350,7 +349,7 @@ export function LeadAccessStatsPage() {
         item.view_count.toString(),
         item.total_access.toString(),
         item.daily_limit.toString(),
-        `${item.daily_limit > 0 ? Math.round((item.total_access / item.daily_limit) * 100) : 0}%`,
+        `${item.daily_limit > 0 ? Math.round((item.view_count / item.daily_limit) * 100) : 0}%`,
       ])
 
       const csvContent = [
@@ -394,13 +393,10 @@ export function LeadAccessStatsPage() {
     }
   }, [refetch])
 
-  // Semi Table rowSelection
+  // SemiDataTable rowSelection
   const rowSelection = useMemo(() => ({
     selectedRowKeys,
-    onChange: (keys: string[]) => setSelectedRowKeys(keys),
-    getCheckboxProps: (record: AdvisorAccessStatistics) => ({
-      disabled: isSkeletonRow(record.user_id),
-    }),
+    onChange: (keys: (string | number)[], _rows: StatsRow[]) => setSelectedRowKeys(keys as string[]),
   }), [selectedRowKeys])
 
   return (
@@ -487,7 +483,7 @@ export function LeadAccessStatsPage() {
                 prefix={<Search className="h-4 w-4" />}
                 placeholder="搜索顾问姓名..."
                 value={searchValue}
-                onChange={(v) => setSearchValue(v)}
+                onChange={(v) => { setSearchValue(v); setPage(1) }}
                 style={{ width: 200 }}
               />
               {selectedRows.length > 0 && (
@@ -499,17 +495,18 @@ export function LeadAccessStatsPage() {
           </div>
         }
       >
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          <Table
-            columns={columns}
-            dataSource={tableData}
-            rowKey={(record) => `${record.user_id}_${record.campus_name || ''}`}
-            rowSelection={rowSelection}
-            pagination={false}
-            empty={<div className="py-6 text-center" style={{ color: 'var(--semi-color-text-2)' }}>暂无数据</div>}
-            size="middle"
-          />
-        </div>
+        <SemiDataTable<StatsRow>
+          columns={columns}
+          data={pagedData}
+          total={filteredData.length}
+          page={page}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          rowSelection={rowSelection}
+          emptyText="暂无数据"
+        />
       </DataTableLayout>
 
       {/* 单个编辑弹窗 */}
@@ -533,14 +530,14 @@ export function LeadAccessStatsPage() {
         width={400}
       >
         <div className="space-y-4 py-2">
-          <Text type="tertiary" size="small">修改顾问每日访问线索的限制次数</Text>
+          <Text type="tertiary" size="small">修改顾问每日可查看线索的限制数量</Text>
           <div className="flex items-center gap-4">
             <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>顾问姓名</span>
             <span>{editingUser?.user_name}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>当前限制</span>
-            <span>{editingUser?.daily_limit} 次/天</span>
+            <span>{editingUser?.daily_limit} 个/天</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>新的限制</span>
@@ -551,7 +548,7 @@ export function LeadAccessStatsPage() {
                 onChange={(v) => setEditDailyLimit(parseInt(v) || 0)}
                 style={{ width: 128 }}
               />
-              <Text type="tertiary">次/天</Text>
+              <Text type="tertiary">个/天</Text>
             </div>
           </div>
         </div>
@@ -578,7 +575,7 @@ export function LeadAccessStatsPage() {
         width={400}
       >
         <div className="space-y-4 py-2">
-          <Text type="tertiary" size="small">为选中的顾问统一设置每日访问限制</Text>
+          <Text type="tertiary" size="small">为选中的顾问统一设置每日可查看线索限制</Text>
           <div className="flex items-center gap-4">
             <span className="w-20 text-right" style={{ color: 'var(--semi-color-text-2)' }}>选中顾问</span>
             <span>已选择 {selectedRows.length} 名顾问</span>
@@ -592,7 +589,7 @@ export function LeadAccessStatsPage() {
                 onChange={(v) => setBatchDailyLimit(parseInt(v) || 0)}
                 style={{ width: 128 }}
               />
-              <Text type="tertiary">次/天</Text>
+              <Text type="tertiary">个/天</Text>
             </div>
           </div>
         </div>

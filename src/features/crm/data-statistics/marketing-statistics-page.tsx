@@ -25,7 +25,6 @@ import {
   FileUp,
   Users,
   Tag as TagIcon,
-  Building2,
 } from 'lucide-react'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { useTableScroll } from '@/components/semi/use-table-scroll'
@@ -330,7 +329,7 @@ export function MarketingStatisticsPage() {
                   { value: 'all', label: '全部校区' },
                   ...campusList.map(c => ({ value: c.id, label: c.name })),
                 ]}
-                prefix={<Building2 style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />}
+
                 style={{ width: 144 }}
               />
             </div>

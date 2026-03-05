@@ -15,7 +15,7 @@ import {
   Empty,
   Typography,
 } from '@douyinfe/semi-ui-19'
-import { IconSend, IconRefresh } from '@douyinfe/semi-icons'
+import { IconSend, IconRefresh, IconExternalOpen } from '@douyinfe/semi-icons'
 import type { SourceChannelExtraField } from '@/features/crm/leads/types'
 import {
   validateChannelToken,
@@ -523,6 +523,14 @@ export function LeadChannelSubmit() {
             <TabPane tab="统计" itemKey="stats">
               <div style={{ marginTop: 16 }}>
                 <StatsPanel token={token} />
+                <Button
+                  icon={<IconExternalOpen />}
+                  block
+                  style={{ marginTop: 16 }}
+                  onClick={() => window.open(`/channel-portal?token=${encodeURIComponent(token)}`, '_blank')}
+                >
+                  查看数据看板
+                </Button>
               </div>
             </TabPane>
           </Tabs>

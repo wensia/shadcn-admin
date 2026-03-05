@@ -145,7 +145,7 @@ export function CoachTextPanel({
         {!session ? (
           <div className="flex h-full items-center justify-center">
             <div className="max-w-md text-center">
-              <div className="text-xl font-semibold text-slate-900">从右上训练设置创建第一场文字陪练</div>
+              <div className="text-xl font-semibold text-slate-900">先创建一场文字陪练</div>
               <Text type="tertiary" size="small" className="mt-3 block">
                 建议先用 L1 和友好型家长热身，把开场、提问和课程价值表达顺一遍，再切到更高难度。
               </Text>

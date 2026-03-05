@@ -114,3 +114,91 @@ export async function fetchCampusEmployees(campusId: string, token: string) {
   if (data.success === false) throw new Error(data.message || '获取员工列表失败')
   return data.data as CampusEmployee[]
 }
+
+/* ─── 渠道数据看板 ─── */
+
+export interface PortalLeadItem {
+  id: string
+  registered_at: string
+  name_masked: string
+  phone_masked: string
+  notes: string
+  source_extra_info: Record<string, string>
+  status: string
+  status_label: string
+  validity: 'valid' | 'invalid' | 'pending'
+  campus_name: string
+  advisor_name: string
+  followup_count: number
+  latest_followup_result: string
+  latest_followup_at: string
+  next_action: string
+}
+
+export interface PortalLeadsResponse {
+  items: PortalLeadItem[]
+  total: number
+  page: number
+  size: number
+  channel_name: string
+}
+
+export interface PortalLeadsParams {
+  token: string
+  page?: number
+  size?: number
+  date_from?: string
+  date_to?: string
+  validity?: 'valid' | 'invalid' | 'pending' | ''
+}
+
+export async function fetchPortalLeads(params: PortalLeadsParams) {
+  const { data } = await publicClient.get('/public/leads/channel-portal', { params })
+  if (data.success === false) throw new Error(data.message || '获取线索列表失败')
+  return data.data as PortalLeadsResponse
+}
+
+export interface PortalStatsOverview {
+  total: number
+  valid: number
+  invalid: number
+  pending: number
+  followed_up: number
+}
+
+export interface PortalAdvisorStat {
+  advisor_name: string
+  total: number
+  valid: number
+  invalid: number
+  pending: number
+  followed_up: number
+}
+
+export interface PortalDailyTrend {
+  date: string
+  total: number
+  valid: number
+  invalid: number
+  pending: number
+}
+
+export interface PortalStatsResponse {
+  channel_name: string
+  overview: PortalStatsOverview
+  by_advisor: PortalAdvisorStat[]
+  daily_trend: PortalDailyTrend[]
+}
+
+export async function fetchPortalStats(
+  token: string,
+  dateFrom?: string,
+  dateTo?: string
+) {
+  const params: Record<string, string> = { token }
+  if (dateFrom) params.date_from = dateFrom
+  if (dateTo) params.date_to = dateTo
+  const { data } = await publicClient.get('/public/leads/channel-portal-stats', { params })
+  if (data.success === false) throw new Error(data.message || '获取统计数据失败')
+  return data.data as PortalStatsResponse
+}

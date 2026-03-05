@@ -6,8 +6,6 @@ import type {
   TrainingReview,
   TrainingSession,
   TrainingSessionDetail,
-  TrainingVoiceStartPayload,
-  TrainingVoiceStatus,
 } from './coach-types'
 
 const BASE_URL = '/yunke/advisor-training'
@@ -54,16 +52,15 @@ export const coachApi = {
     await apiClient.delete<ApiResponse<{ deleted: boolean }>>(`${BASE_URL}/sessions/${sessionId}`)
   },
 
-  async startVoice(sessionId: string) {
-    const response = await apiClient.post<ApiResponse<TrainingVoiceStartPayload>>(`${BASE_URL}/sessions/${sessionId}/voice/start`)
-    return unwrapData(response)
+  /** 获取语音 WebSocket URL。 */
+  getVoiceWsUrl(sessionId: string): string {
+    const token = localStorage.getItem('access_token') || ''
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    return `${protocol}//${host}/api/v1/yunke/advisor-training/sessions/${sessionId}/voice/ws?token=${encodeURIComponent(token)}`
   },
 
-  async getVoiceStatus(sessionId: string) {
-    const response = await apiClient.get<ApiResponse<TrainingVoiceStatus>>(`${BASE_URL}/sessions/${sessionId}/voice/status`)
-    return unwrapData(response)
-  },
-
+  /** 备用停止端点 (WebSocket 异常时)。 */
   async stopVoice(sessionId: string) {
     const response = await apiClient.post<ApiResponse<{ accepted: boolean; status: string }>>(
       `${BASE_URL}/sessions/${sessionId}/voice/stop`

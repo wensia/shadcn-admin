@@ -5,7 +5,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import { Bell, FileText, Users, Info } from 'lucide-react'
+import { Bell, FileText, Users, Info, AlertTriangle } from 'lucide-react'
 import { NotificationType, type Notification } from '../types'
 
 interface NotificationItemProps {
@@ -18,6 +18,8 @@ function getNotificationIcon(type: string) {
   switch (type) {
     case NotificationType.LEAD_ASSIGNED:
       return <Users className="h-4 w-4" />
+    case NotificationType.LEAD_ACCESS_LIMIT:
+      return <AlertTriangle className="h-4 w-4" />
     case NotificationType.ORDER_APPROVAL_PENDING:
     case NotificationType.ORDER_APPROVAL_RESULT:
       return <FileText className="h-4 w-4" />
@@ -33,6 +35,8 @@ function getNotificationIconBg(type: string) {
   switch (type) {
     case NotificationType.LEAD_ASSIGNED:
       return 'bg-blue-100 text-blue-600'
+    case NotificationType.LEAD_ACCESS_LIMIT:
+      return 'bg-red-100 text-red-600'
     case NotificationType.ORDER_APPROVAL_PENDING:
       return 'bg-amber-100 text-amber-600'
     case NotificationType.ORDER_APPROVAL_RESULT:

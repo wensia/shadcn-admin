@@ -139,14 +139,12 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
     },
   ], [])
 
-  if (!batch) return null
-
   return (
     <Modal
       visible={open}
       title={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 24 }}>
-          <span>激活线索 - {batch.batch_name}</span>
+          <span>激活线索 - {batch?.batch_name}</span>
           <Button icon={<IconDownload />} onClick={handleDownload}>
             下载激活线索
           </Button>
@@ -158,50 +156,54 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
       style={{ maxHeight: '80vh' }}
       bodyStyle={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(80vh - 60px)', overflow: 'hidden' }}
     >
-      {/* 激活线索表格 */}
-      <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
-        <Table
-          columns={columns}
-          dataSource={leadsList}
-          rowKey="id"
-          pagination={false}
-          scroll={{ y: scrollY }}
-          loading={isLoading}
-          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无激活线索</div>}
-        />
-      </div>
-
-      {/* 分页 */}
-      <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, marginTop: 12 }}>
-        <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-          共 {totalCount} 条激活线索
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Select
-            value={pagination.pageSize}
-            onChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
-            optionList={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
-            style={{ width: 80 }}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Button
-              disabled={pagination.page <= 1}
-              onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
-            >
-              上一页
-            </Button>
-            <span style={{ padding: '0 8px', fontSize: 12 }}>
-              第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
-            </span>
-            <Button
-              disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
-              onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
-            >
-              下一页
-            </Button>
+      {batch && (
+        <>
+          {/* 激活线索表格 */}
+          <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
+            <Table
+              columns={columns}
+              dataSource={leadsList}
+              rowKey="id"
+              pagination={false}
+              scroll={{ y: scrollY }}
+              loading={isLoading}
+              empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无激活线索</div>}
+            />
           </div>
-        </div>
-      </div>
+
+          {/* 分页 */}
+          <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, marginTop: 12 }}>
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+              共 {totalCount} 条激活线索
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Select
+                value={pagination.pageSize}
+                onChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
+                optionList={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
+                style={{ width: 80 }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Button
+                  disabled={pagination.page <= 1}
+                  onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+                >
+                  上一页
+                </Button>
+                <span style={{ padding: '0 8px', fontSize: 12 }}>
+                  第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
+                </span>
+                <Button
+                  disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
+                  onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+                >
+                  下一页
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </Modal>
   )
 }

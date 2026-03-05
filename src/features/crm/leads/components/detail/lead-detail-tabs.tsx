@@ -66,7 +66,19 @@ function FollowupContentCell({ content }: { content: string }) {
       }
       position="topLeft"
     >
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', cursor: 'pointer' }}>{content}</span>
+      <span
+        style={{
+          width: '100%',
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          display: 'block',
+          cursor: 'pointer',
+        }}
+      >
+        {content}
+      </span>
     </Tooltip>
   )
 }
@@ -146,6 +158,19 @@ export function LeadDetailTabs({
 
   const statistics = useLeadStatistics(lead || null, followupsResponse?.data)
 
+  const followupTableComponents = useMemo(() => ({
+    table: (props: React.TableHTMLAttributes<HTMLTableElement>) => (
+      <table
+        {...props}
+        style={{
+          ...props.style,
+          width: '100%',
+          tableLayout: 'fixed',
+        }}
+      />
+    ),
+  }), [])
+
   // 跟进记录表格 columns
   const followupColumns: ColumnProps<LeadFollowup>[] = [
     { title: '跟进时间', dataIndex: 'followup_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{formatTime(text as string)}</span> },
@@ -153,6 +178,8 @@ export function LeadDetailTabs({
     { title: '跟进结果', dataIndex: 'result', width: 90, render: (text, _record) => text ? <FollowupResultBadge result={text as string} /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span> },
     {
       title: '跟进内容', dataIndex: 'content',
+      ellipsis: { showTooltip: false },
+      onCell: () => ({ style: { maxWidth: 0 } }),
       render: (text) => text ? <FollowupContentCell content={text as string} /> : '-',
     },
     {
@@ -225,13 +252,21 @@ export function LeadDetailTabs({
               <span style={{ fontSize: 14, fontWeight: 500 }}>跟进记录</span>
               {followupsPaginated.total > 0 && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>共 {followupsPaginated.total} 条</span>}
             </div>
-            <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16 }}>
               {isFollowupsLoading ? (
                 <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>加载中...</div>
               ) : !followupsPaginated.items.length ? (
                 <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>暂无跟进记录</div>
               ) : (
-                <Table columns={followupColumns} dataSource={followupsPaginated.items} rowKey="id" pagination={false} size="small" />
+                <Table
+                  columns={followupColumns}
+                  dataSource={followupsPaginated.items}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  style={{ width: '100%' }}
+                  components={followupTableComponents}
+                />
               )}
             </div>
             {followupsPaginated.total > 0 && (

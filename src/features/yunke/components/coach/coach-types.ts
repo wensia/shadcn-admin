@@ -10,6 +10,12 @@ export interface TrainingCatalog {
   scenes: TrainingCatalogItem[]
   personas: TrainingCatalogItem[]
   difficulties: TrainingCatalogItem[]
+  persona_groups?: Array<{
+    key: string
+    label: string
+    count: number
+  }> | null
+  scene_persona_recommendations?: Record<string, string[]> | null
 }
 
 export interface TrainingSession {
@@ -58,10 +64,17 @@ export interface TrainingReview {
     pitch: number
     objection: number
     closing: number
+    communication?: number
+    rhythm?: number
   }
   strengths: string[]
   improvements: string[]
   next_recommendation: string
+  grade?: string | null
+  highlight_quotes?: Array<{
+    quote: string
+    comment: string
+  }> | null
   review_model?: string | null
   review_prompt_version?: string | null
   created_at: string
@@ -94,13 +107,18 @@ export interface TrainingSetupForm {
   goal: string
 }
 
-export interface TrainingVoiceStartPayload {
-  session_id: string
-  voice_chat_id: string
-  rtc_app_id: string
-  rtc_room_id: string
-  rtc_user_id: string
-  rtc_token: string
-  expires_at?: string | null
+/** 实时语音 WebSocket 事件类型。 */
+export type RealtimeEventType =
+  | 'ready'
+  | 'asr'
+  | 'chat'
+  | 'tts_start'
+  | 'tts_end'
+  | 'error'
+  | 'finished'
+
+export interface RealtimeEvent {
+  type: RealtimeEventType
+  [key: string]: unknown
 }
 

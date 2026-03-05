@@ -22,6 +22,8 @@ import {
   Tag,
   Divider,
   TextArea,
+  Spin,
+  Modal,
 } from '@douyinfe/semi-ui-19'
 import { Main } from '@/components/layout/main'
 import { useSidebar } from '@/context/sidebar-context'
@@ -642,22 +644,66 @@ export function ContinuousCallPage() {
     }
   }, [rightPanelWidth])
 
-  // 键盘事件 - 空格键外呼
+  // 键盘事件 - 空格键外呼（capture 阶段，确保在 Semi 组件拦截前触发）
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'Space' && currentPhone && !callDrawerVisible && !dialing) {
-        const target = event.target as HTMLElement
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
-        event.preventDefault()
-        startCall()
+      if (event.code !== 'Space' || !currentPhone || callDrawerVisible || dialing) return
+      const target = event.target as HTMLElement
+      // 排除所有可交互元素：表单控件、按钮、contentEditable、Semi 组件内部
+      const isInteractive =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.tagName === 'BUTTON' ||
+        target.isContentEditable ||
+        target.closest(
+          '.semi-select, .semi-input-wrapper, .semi-textarea-wrapper, ' +
+          '.semi-checkbox, .semi-radio, .semi-datepicker, .semi-timepicker, ' +
+          '.semi-tag, [role="listbox"], [role="combobox"], [role="option"], [role="button"]'
+        )
+      if (isInteractive) {
+        // 交互元素内按空格：先让元素处理自身行为，然后移走焦点，下次空格就能触发外呼
+        requestAnimationFrame(() => {
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur()
+          }
+        })
+        return
       }
+      event.preventDefault()
+      startCall()
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown, true) // capture phase
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
   }, [currentPhone, callDrawerVisible, startCall, dialing])
 
   return (
     <Main fixed className="min-h-0">
+      {/* 外呼拨号全屏遮罩 */}
+      <Modal
+        visible={dialing}
+        header={null}
+        footer={null}
+        closable={false}
+        maskClosable={false}
+        centered
+        width="auto"
+        bodyStyle={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '40px 60px',
+        }}
+        style={{ boxShadow: 'none', backgroundColor: 'transparent' }}
+        maskStyle={{ backdropFilter: 'blur(4px)' }}
+        modalContentClass="dialing-overlay-content"
+      >
+        <Spin size="large" />
+        <Text strong style={{ fontSize: 16, marginTop: 20 }}>正在拨号中...</Text>
+        <Text type="tertiary" style={{ fontSize: 13, marginTop: 8 }}>
+          {currentLead?.child_name || ''} {currentPhone}
+        </Text>
+      </Modal>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
         <PageHeader
           statsData={statsData}
@@ -704,6 +750,10 @@ export function ContinuousCallPage() {
                 width: 3px !important;
                 left: 1px !important;
                 background-color: var(--semi-color-primary) !important;
+              }
+              .dialing-overlay-content {
+                background-color: transparent !important;
+                box-shadow: none !important;
               }
             `}</style>
           </div>

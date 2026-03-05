@@ -52,6 +52,10 @@ const PROVIDER_DEFAULTS: Record<AIProvider, { base_url: string; default_model: s
     base_url: '',
     default_model: 'gemini-2.5-flash',
   },
+  volcengine_voice: {
+    base_url: '',
+    default_model: 'cn-beijing',
+  },
 }
 
 export function AIConfigContent() {
@@ -365,25 +369,42 @@ export function AIConfigContent() {
 
   const handleSearch = () => { setPage(1); refetch() }
 
-  const providerDescription = selectedProvider === 'doubao'
-    ? '火山引擎方舟平台 API Key'
-    : selectedProvider === 'deepseek'
-      ? 'DeepSeek 平台 API Key'
+  const isVoiceProvider = selectedProvider === 'volcengine_voice'
+
+  const apiKeyLabel = isVoiceProvider ? 'Access Key (AK)' : 'API Key'
+  const baseUrlLabel = isVoiceProvider ? 'Secret Key (SK)' : 'Base URL'
+  const modelLabel = isVoiceProvider ? '地域 (Region)' : '默认模型'
+  const endpointLabel = isVoiceProvider ? '语音互动 App ID' : '端点 ID（可选）'
+
+  const providerDescription = isVoiceProvider
+    ? '火山引擎 Access Key'
+    : selectedProvider === 'doubao'
+      ? '火山引擎方舟平台 API Key'
+      : selectedProvider === 'deepseek'
+        ? 'DeepSeek 平台 API Key'
+        : selectedProvider === 'openai'
+          ? 'OpenAI 兼容 API Key（如 Antigravity Manager）'
+          : 'Moonshot 平台 API Key'
+
+  const baseUrlDescription = isVoiceProvider
+    ? '火山引擎 Secret Key'
+    : `默认: ${PROVIDER_DEFAULTS[selectedProvider]?.base_url || ''}`
+
+  const modelPlaceholder = isVoiceProvider
+    ? '例如: cn-beijing'
+    : selectedProvider === 'doubao'
+      ? '例如: doubao-seed-1-8-251228'
       : selectedProvider === 'openai'
-        ? 'OpenAI 兼容 API Key（如 Antigravity Manager）'
-        : 'Moonshot 平台 API Key'
+        ? '例如: gemini-2.5-flash'
+        : '模型名称'
 
-  const modelPlaceholder = selectedProvider === 'doubao'
-    ? '例如: doubao-seed-1-8-251228'
-    : selectedProvider === 'openai'
-      ? '例如: gemini-2.5-flash'
-      : '模型名称'
-
-  const modelDescription = selectedProvider === 'doubao'
-    ? '可直接使用模型名称（如 doubao-seed-1-8-251228），也可使用端点 ID'
-    : selectedProvider === 'openai'
-      ? '反向代理中配置的模型名称（如 gemini-2.5-flash）'
-      : '调用时使用的模型名称'
+  const modelDescription = isVoiceProvider
+    ? '火山引擎服务地域，默认 cn-beijing'
+    : selectedProvider === 'doubao'
+      ? '可直接使用模型名称（如 doubao-seed-1-8-251228），也可使用端点 ID'
+      : selectedProvider === 'openai'
+        ? '反向代理中配置的模型名称（如 gemini-2.5-flash）'
+        : '调用时使用的模型名称'
 
   return (
     <>
@@ -474,33 +495,35 @@ export function AIConfigContent() {
 
           <Form.Input
             field="api_key"
-            label="API Key"
-            placeholder="请输入 API Key"
+            label={apiKeyLabel}
+            placeholder={isVoiceProvider ? '请输入 Access Key' : '请输入 API Key'}
             mode="password"
-            rules={[{ required: true, message: '请输入 API 密钥' }]}
+            rules={[{ required: true, message: isVoiceProvider ? '请输入 Access Key' : '请输入 API 密钥' }]}
             extraText={providerDescription}
           />
 
           <Form.Input
             field="base_url"
-            label="Base URL"
-            placeholder="API 基础地址"
-            extraText={`默认: ${PROVIDER_DEFAULTS[selectedProvider]?.base_url || ''}`}
+            label={baseUrlLabel}
+            placeholder={isVoiceProvider ? '请输入 Secret Key' : 'API 基础地址'}
+            mode={isVoiceProvider ? 'password' : undefined}
+            extraText={baseUrlDescription}
           />
 
           <Form.Input
             field="default_model"
-            label="默认模型"
+            label={modelLabel}
             placeholder={modelPlaceholder}
             extraText={modelDescription}
           />
 
-          {selectedProvider === 'doubao' && (
+          {(selectedProvider === 'doubao' || isVoiceProvider) && (
             <Form.Input
               field="endpoint_id"
-              label="端点 ID（可选）"
-              placeholder="ep-xxxxxx"
-              extraText="火山方舟端点 ID，如已填写默认模型名称则可留空"
+              label={endpointLabel}
+              placeholder={isVoiceProvider ? '语音互动应用 App ID' : 'ep-xxxxxx'}
+              extraText={isVoiceProvider ? '火山引擎语音互动 RTC 应用 ID' : '火山方舟端点 ID，如已填写默认模型名称则可留空'}
+              rules={isVoiceProvider ? [{ required: true, message: '请输入语音互动 App ID' }] : undefined}
             />
           )}
 

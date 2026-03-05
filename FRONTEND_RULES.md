@@ -251,14 +251,15 @@ if (statusFilter.length > 0) {
 ### 工具栏布局
 
 ```
-标题行:  页面标题 共N条                     [操作按钮] [🔄刷新]
-工具栏:  [搜索框] [搜索] [筛选下拉...]           [批量操作]
+标题行:  页面标题 共N条                          [操作按钮]
+工具栏:  [搜索框] [搜索] [筛选下拉...] [批量操作]    [🔄刷新]
 标签栏:  筛选条件: [状态: 待分配 ×] [意向: 高 ×]   清除全部
 ```
 
-- 刷新按钮放在 DataTableLayout 的 `onRefresh`（标题行右侧）
+- 刷新按钮由 `DataTableLayout` 的 `onRefresh` 自动渲染在**工具栏行最右侧**（`theme="light"` 浅色底）
 - 搜索和筛选放在 toolbar slot
-- 批量操作按钮放在工具栏右侧
+- 批量操作按钮放在工具栏内
+- `headerActions` 仅放新建等操作按钮，不含刷新
 
 ## Semi Table 防无限循环
 
@@ -414,16 +415,20 @@ try { ... } catch (error) {
 - **禁止**在页面/组件中定义本地 `createSkeletonData` / `isSkeletonRow` / `SKELETON_PREFIX` → 必须用 `@/lib/table-utils`
 - **禁止**手动编写 `ResizeObserver` 来计算表格高度 → `SemiDataTable` 内部的 `useTableScroll` 已封装
 - **禁止**手动计算 `displayData`（`isLoading ? createSkeletonData(...) : data`） → `SemiDataTable` 内部管理
-- **禁止**使用 `<Main fixed>` 包裹数据表页面
+- **禁止**使用 `<Main fixed>` 包裹数据表页面 → 必须用 `DataTableLayout`（`DataTableLayout` 已内置完整的高度链）
 - **禁止**手动定义 `pagination` useMemo 配置对象
+- **禁止**在 toolbar 或页面中自建刷新按钮（`<Button icon={<IconRefresh />} />`）→ 必须用 `DataTableLayout` 的 `onRefresh` prop
+- **禁止**自行拼凑标题行（`<Title>` + 总数 + 操作按钮）→ 必须用 `DataTableLayout` 的 `title` / `total` / `headerActions` prop
 
 ### 自查清单（新增/修改数据表时）
 
 1. 是否使用了 `SemiDataTable` 而非直接 `<Table>`？
 2. 是否从 `@/lib/table-utils` 导入 `isSkeletonRow` / `SemiSkeletonCell`（而非本地定义）？
 3. 是否用 `useMemo` 稳定了 `data?.items ?? []` 的引用？
-4. 独立页面是否用 `DataTableLayout` 包裹？
+4. 独立页面是否用 `DataTableLayout` 包裹（而非 `<Main fixed>`）？
 5. 弹窗/SideSheet 是否放在 `DataTableLayout` 外面？
+6. 刷新是否通过 `DataTableLayout` 的 `onRefresh` prop（而非 toolbar 内自建按钮）？
+7. 标题/总数/操作按钮是否通过 `DataTableLayout` 的 props（而非自行拼凑）？
 
 ### 标准页面结构（简化版）
 
@@ -487,7 +492,7 @@ export function MyPage() {
 ### 注意事项
 
 - SemiDataTable 自动计算 `scroll.y`，无需手动设置表格高度
-- DataTableLayout 自带刷新按钮（`onRefresh` prop），toolbar 中不需要额外的刷新按钮
+- DataTableLayout 自带刷新按钮（`onRefresh` prop），自动渲染在工具栏行最右侧（`theme="light"`），toolbar 中不需要额外的刷新按钮
 - 骨架屏使用 `isSkeletonRow(record.id)` + `<SemiSkeletonCell width={N} />`
 - 所有弹窗（Modal / SideSheet）放在 `<DataTableLayout>` 外面
 

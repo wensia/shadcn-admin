@@ -51,6 +51,7 @@ export function ThemeSwitch() {
     <Dropdown
       trigger='click'
       position='bottomRight'
+      clickToHide
       render={menu}
     >
       <Button

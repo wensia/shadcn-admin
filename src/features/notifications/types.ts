@@ -5,6 +5,7 @@
 // 通知类型枚举
 export enum NotificationType {
   LEAD_ASSIGNED = 'lead_assigned',
+  LEAD_ACCESS_LIMIT = 'lead_access_limit',
   ORDER_APPROVAL_PENDING = 'order_approval_pending',
   ORDER_APPROVAL_RESULT = 'order_approval_result',
   SYSTEM = 'system',
@@ -13,6 +14,7 @@ export enum NotificationType {
 // 通知类型标签
 export const notificationTypeLabels: Record<NotificationType, string> = {
   [NotificationType.LEAD_ASSIGNED]: '线索分配',
+  [NotificationType.LEAD_ACCESS_LIMIT]: '线索访问提醒',
   [NotificationType.ORDER_APPROVAL_PENDING]: '待审批订单',
   [NotificationType.ORDER_APPROVAL_RESULT]: '审批结果',
   [NotificationType.SYSTEM]: '系统通知',

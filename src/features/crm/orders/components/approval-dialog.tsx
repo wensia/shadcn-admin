@@ -124,8 +124,6 @@ export function ApprovalDialog({
 
   const isLoading = leaderApproveMutation.isPending || financeApproveMutation.isPending
 
-  if (!order) return null
-
   return (
     <Modal
       title={
@@ -180,33 +178,33 @@ export function ApprovalDialog({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
             <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>订单编号</Text>
-            <Text style={{ fontFamily: 'monospace', fontWeight: 500 }}>{order.order_no}</Text>
+            <Text style={{ fontFamily: 'monospace', fontWeight: 500 }}>{order?.order_no}</Text>
           </div>
           <div>
             <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>学员姓名</Text>
-            <Text strong>{order.child_name || '-'}</Text>
+            <Text strong>{order?.child_name || '-'}</Text>
           </div>
           <div>
             <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>订单金额</Text>
             <Text strong style={{ color: 'var(--semi-color-success)' }}>
-              ¥{order.actual_amount.toLocaleString()}
+              ¥{(order?.actual_amount ?? 0).toLocaleString()}
             </Text>
           </div>
           <div>
             <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>当前状态</Text>
-            <Tag color={approvalStatusColorMap[order.approval_status] || 'grey'} shape="circle">
-              {order.approval_status_display}
+            <Tag color={approvalStatusColorMap[order?.approval_status ?? ''] || 'grey'} shape="circle">
+              {order?.approval_status_display}
             </Tag>
           </div>
           <div>
             <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>支付状态</Text>
-            <Text>{order.payment_status_display}</Text>
+            <Text>{order?.payment_status_display}</Text>
           </div>
           <div>
             <Text type="tertiary" style={{ fontSize: 13, display: 'block' }}>创建时间</Text>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <Clock size={12} style={{ color: 'var(--semi-color-text-2)' }} />
-              <Text type="tertiary">{formatTime(order.created_at)}</Text>
+              <Text type="tertiary">{order?.created_at ? formatTime(order.created_at) : '-'}</Text>
             </div>
           </div>
         </div>
@@ -265,8 +263,6 @@ export function SubmitApprovalDialog({
     submitMutation.mutate(order.id)
   }
 
-  if (!order) return null
-
   return (
     <Modal
       title={
@@ -306,16 +302,16 @@ export function SubmitApprovalDialog({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
           <div>
             <Text type="tertiary">订单编号：</Text>
-            <Text style={{ fontFamily: 'monospace' }}>{order.order_no}</Text>
+            <Text style={{ fontFamily: 'monospace' }}>{order?.order_no}</Text>
           </div>
           <div>
             <Text type="tertiary">学员：</Text>
-            <Text>{order.child_name || '-'}</Text>
+            <Text>{order?.child_name || '-'}</Text>
           </div>
           <div>
             <Text type="tertiary">金额：</Text>
             <Text strong style={{ color: 'var(--semi-color-success)' }}>
-              ¥{order.actual_amount.toLocaleString()}
+              ¥{(order?.actual_amount ?? 0).toLocaleString()}
             </Text>
           </div>
         </div>
@@ -360,8 +356,6 @@ export function CancelOrderDialog({
     cancelMutation.mutate(order.id)
   }
 
-  if (!order) return null
-
   return (
     <Modal
       title={
@@ -403,16 +397,16 @@ export function CancelOrderDialog({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
           <div>
             <Text type="tertiary">订单编号：</Text>
-            <Text style={{ fontFamily: 'monospace' }}>{order.order_no}</Text>
+            <Text style={{ fontFamily: 'monospace' }}>{order?.order_no}</Text>
           </div>
           <div>
             <Text type="tertiary">学员：</Text>
-            <Text>{order.child_name || '-'}</Text>
+            <Text>{order?.child_name || '-'}</Text>
           </div>
           <div>
             <Text type="tertiary">金额：</Text>
             <Text strong style={{ color: 'var(--semi-color-success)' }}>
-              ¥{order.actual_amount.toLocaleString()}
+              ¥{(order?.actual_amount ?? 0).toLocaleString()}
             </Text>
           </div>
         </div>

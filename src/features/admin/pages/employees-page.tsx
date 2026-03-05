@@ -12,6 +12,7 @@ import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
+import type { FilterTag } from '@/components/semi/filter-tags-bar'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi, apiKeysApi } from '../api'
@@ -38,6 +39,8 @@ const SCOPE_TYPE_LABELS: Record<ScopeType, string> = {
   area: '片区',
   campus: '校区',
 }
+
+const DIALOG_SELECT_STYLE = { width: '100%' } as const
 
 // 员工身份数据类型
 interface IdentityFormData {
@@ -67,6 +70,15 @@ interface ApiKeyFormValues {
   expires_in_days: number
 }
 
+function normalizeDateInputValue(value?: string | null): string {
+  if (!value) return ''
+  const matched = /^(\d{4}-\d{2}-\d{2})/.exec(value)
+  if (matched?.[1]) return matched[1]
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toISOString().slice(0, 10)
+}
+
 
 export function EmployeesPage() {
   useDocumentTitle('员工管理')
@@ -76,6 +88,7 @@ export function EmployeesPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
+  const [committedSearch, setCommittedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
@@ -112,14 +125,14 @@ export function EmployeesPage() {
 
   // 获取员工列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-employees', page, pageSize, searchValue, statusFilter, apiKeyFilter],
+    queryKey: ['admin-employees', page, pageSize, committedSearch, statusFilter, apiKeyFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = {
         page,
         size: pageSize,
       }
-      if (searchValue) {
-        params.search = searchValue
+      if (committedSearch) {
+        params.search = committedSearch
       }
       if (statusFilter !== 'all') {
         params.is_active = statusFilter === 'active'
@@ -713,6 +726,7 @@ export function EmployeesPage() {
             <Dropdown
               trigger="click"
               position="bottomRight"
+              clickToHide
               render={
                 <Dropdown.Menu>
                   <Dropdown.Item onClick={() => handleEdit(record)}>
@@ -782,12 +796,14 @@ export function EmployeesPage() {
                 </Dropdown.Menu>
               }
             >
-              <Button
-                theme="borderless"
-                type="tertiary"
-                icon={<MoreHorizontal className="h-4 w-4" />}
-                size="small"
-              />
+              <span data-stop-row-click style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<MoreHorizontal className="h-4 w-4" />}
+                  size="small"
+                />
+              </span>
             </Dropdown>
           )
         },
@@ -827,7 +843,7 @@ export function EmployeesPage() {
         phone: item.phone || '',
         is_active: item.is_active,
         is_superuser: item.is_superuser,
-        joined_at: item.joined_at || '',
+        joined_at: normalizeDateInputValue(item.joined_at),
       })
     }, 0)
 
@@ -1057,67 +1073,134 @@ export function EmployeesPage() {
   }
 
   const handleSearch = () => {
+    setCommittedSearch(searchValue.trim())
     setPage(1)
-    refetch()
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value)
+    if (!value) {
+      setCommittedSearch('')
+      setPage(1)
+    }
+  }
+
+  const handleClearAllFilters = () => {
+    setSearchValue('')
+    setCommittedSearch('')
+    setStatusFilter('all')
+    setApiKeyFilter('all')
+    setPage(1)
+  }
+
+  const filterTags: FilterTag[] = []
+
+  if (committedSearch) {
+    filterTags.push({
+      key: 'search',
+      label: '搜索',
+      value: committedSearch,
+      onClose: () => {
+        setSearchValue('')
+        setCommittedSearch('')
+        setPage(1)
+      },
+    })
+  }
+
+  if (statusFilter !== 'all') {
+    filterTags.push({
+      key: 'status',
+      label: '状态',
+      value: statusFilter === 'active' ? '在职' : '离职',
+      onClose: () => {
+        setStatusFilter('all')
+        setPage(1)
+      },
+    })
+  }
+
+  if (apiKeyFilter !== 'all') {
+    filterTags.push({
+      key: 'api-key',
+      label: 'API Key',
+      value: apiKeyFilter === 'yes' ? '已创建' : '未创建',
+      onClose: () => {
+        setApiKeyFilter('all')
+        setPage(1)
+      },
+    })
   }
 
   return (
     <>
-      <DataTableLayout
-        title="员工管理"
-        total={data?.total}
-        headerActions={
-          <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
-            新建员工
-          </Button>
-        }
-        onRefresh={() => refetch()}
-        isRefreshing={isLoading}
-        toolbar={
-          <div className="flex items-center gap-2">
-            <Input
-              prefix={<IconSearch />}
-              placeholder="搜索用户名、姓名、手机号..."
-              value={searchValue}
-              onChange={setSearchValue}
-              onEnterPress={handleSearch}
-              style={{ minWidth: 200, maxWidth: 360 }}
-            />
-            <Select
-              value={statusFilter}
-              onChange={(value) => { setStatusFilter(value as string); setPage(1) }}
-              style={{ width: 140 }}
-              optionList={[
-                { label: '全部状态', value: 'all' },
-                { label: '在职', value: 'active' },
-                { label: '离职', value: 'inactive' },
-              ]}
-            />
-            <Select
-              value={apiKeyFilter}
-              onChange={(value) => { setApiKeyFilter(value as string); setPage(1) }}
-              style={{ width: 170 }}
-              optionList={[
-                { label: '全部API Key状态', value: 'all' },
-                { label: '已创建API Key', value: 'yes' },
-                { label: '未创建API Key', value: 'no' },
-              ]}
-            />
-            <Button theme="outline" onClick={handleSearch}>搜索</Button>
-          </div>
-        }
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
       >
-        <SemiDataTable
-          columns={columns}
-          data={items}
-          total={data?.total ?? 0}
-          page={page}
-          pageSize={pageSize}
-          isLoading={isLoading}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
-        />
-      </DataTableLayout>
+        <DataTableLayout
+          title="员工管理"
+          total={data?.total}
+          headerActions={
+            <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
+              新建员工
+            </Button>
+          }
+          onRefresh={() => refetch()}
+          isRefreshing={isLoading}
+          toolbar={
+            <div className="flex items-center gap-2">
+              <Input
+                prefix={<IconSearch />}
+                placeholder="搜索用户名、姓名、手机号..."
+                value={searchValue}
+                onChange={handleSearchChange}
+                onEnterPress={handleSearch}
+                style={{ minWidth: 200, maxWidth: 360 }}
+              />
+              <Select
+                value={statusFilter}
+                onChange={(value) => { setStatusFilter(value as string); setPage(1) }}
+                style={{ width: 140 }}
+                optionList={[
+                  { label: '全部状态', value: 'all' },
+                  { label: '在职', value: 'active' },
+                  { label: '离职', value: 'inactive' },
+                ]}
+              />
+              <Select
+                value={apiKeyFilter}
+                onChange={(value) => { setApiKeyFilter(value as string); setPage(1) }}
+                style={{ width: 170 }}
+                optionList={[
+                  { label: '全部API Key状态', value: 'all' },
+                  { label: '已创建API Key', value: 'yes' },
+                  { label: '未创建API Key', value: 'no' },
+                ]}
+              />
+              <Button theme="outline" onClick={handleSearch}>搜索</Button>
+            </div>
+          }
+          filterTags={filterTags}
+          onClearAllFilters={handleClearAllFilters}
+        >
+          <SemiDataTable
+            columns={columns}
+            data={items}
+            total={data?.total ?? 0}
+            page={page}
+            pageSize={pageSize}
+            isLoading={isLoading}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+          />
+        </DataTableLayout>
+      </div>
 
       {/* 创建/编辑对话框 */}
       <Modal
@@ -1167,9 +1250,9 @@ export function EmployeesPage() {
           {/* 身份管理区域 */}
           <div style={{ borderTop: '1px solid var(--semi-color-border)', marginTop: 16, paddingTop: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text strong size="small">组织身份配置</Text>
+              <Text strong>组织身份配置</Text>
               {editingItem && (
-                <Button size="small" theme="outline" icon={<Plus className="h-3 w-3" />} onClick={addIdentity}>
+                <Button theme="outline" icon={<Plus className="h-4 w-4" />} onClick={addIdentity}>
                   添加身份
                 </Button>
               )}
@@ -1191,16 +1274,16 @@ export function EmployeesPage() {
                   {editingItem && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Text type="tertiary" size="small">身份 {index + 1}</Text>
+                        <Text type="tertiary">身份 {index + 1}</Text>
                         {isIdentityComplete(identity) ? (
-                          <Tag size="small" color="green">
+                          <Tag color="green">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                               <CheckCircle className="h-3 w-3" />
                               完整
                             </span>
                           </Tag>
                         ) : (
-                          <Tag size="small" color="orange">
+                          <Tag color="orange">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                               <AlertCircle className="h-3 w-3" />
                               未完成
@@ -1209,17 +1292,13 @@ export function EmployeesPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Text type="tertiary" size="small">启用</Text>
+                        <Text type="tertiary">启用</Text>
                         <Switch
-                          size="small"
                           checked={identity.is_active}
                           onChange={(checked) => handleIdentityActiveChange(index, checked)}
                         />
                         <Button
-                          theme="borderless"
-                          type="tertiary"
                           icon={<X className="h-3 w-3" />}
-                          size="small"
                           onClick={() => removeIdentity(index)}
                           disabled={identities.length <= 1}
                         />
@@ -1232,7 +1311,7 @@ export function EmployeesPage() {
                       <Select
                         value={identity.scope_type}
                         onChange={(value) => handleIdentityScopeChange(index, value as ScopeType)}
-                        size="small"
+                        style={DIALOG_SELECT_STYLE}
                         optionList={(Object.entries(SCOPE_TYPE_LABELS) as [ScopeType, string][]).map(([value, label]) => ({
                           label, value,
                         }))}
@@ -1244,7 +1323,7 @@ export function EmployeesPage() {
                             value={identity.campus_id || undefined}
                             onChange={(value) => handleIdentityCampusChange(index, value as string)}
                             placeholder="选择校区"
-                            size="small"
+                            style={DIALOG_SELECT_STYLE}
                             optionList={campuses.map(c => ({ label: c.name, value: c.id }))}
                           />
                         </div>
@@ -1256,7 +1335,7 @@ export function EmployeesPage() {
                             value={identity.region_id || undefined}
                             onChange={(value) => handleIdentityRegionChange(index, value as string)}
                             placeholder="选择大区"
-                            size="small"
+                            style={DIALOG_SELECT_STYLE}
                             optionList={regions.map(r => ({ label: r.name, value: r.id }))}
                           />
                         </div>
@@ -1268,7 +1347,7 @@ export function EmployeesPage() {
                             value={identity.region_id || undefined}
                             onChange={(value) => handleIdentityRegionChange(index, value as string)}
                             placeholder="选择大区"
-                            size="small"
+                            style={DIALOG_SELECT_STYLE}
                             optionList={regions.map(r => ({ label: r.name, value: r.id }))}
                           />
                           <div style={{ gridColumn: 'span 2' }}>
@@ -1276,7 +1355,7 @@ export function EmployeesPage() {
                               value={identity.district_id || undefined}
                               onChange={(value) => handleIdentityDistrictChange(index, value as string)}
                               placeholder="选择地区"
-                              size="small"
+                              style={DIALOG_SELECT_STYLE}
                               disabled={!identity.region_id}
                               optionList={(districtOptionsMap[identity.region_id] || []).map(d => ({ label: d.name, value: d.id }))}
                             />
@@ -1290,14 +1369,14 @@ export function EmployeesPage() {
                             value={identity.region_id || undefined}
                             onChange={(value) => handleIdentityRegionChange(index, value as string)}
                             placeholder="大区"
-                            size="small"
+                            style={DIALOG_SELECT_STYLE}
                             optionList={regions.map(r => ({ label: r.name, value: r.id }))}
                           />
                           <Select
                             value={identity.district_id || undefined}
                             onChange={(value) => handleIdentityDistrictChange(index, value as string)}
                             placeholder="地区"
-                            size="small"
+                            style={DIALOG_SELECT_STYLE}
                             disabled={!identity.region_id}
                             optionList={(districtOptionsMap[identity.region_id] || []).map(d => ({ label: d.name, value: d.id }))}
                           />
@@ -1305,7 +1384,7 @@ export function EmployeesPage() {
                             value={identity.area_id || undefined}
                             onChange={(value) => handleIdentityAreaChange(index, value as string)}
                             placeholder="片区"
-                            size="small"
+                            style={DIALOG_SELECT_STYLE}
                             disabled={!identity.district_id}
                             optionList={(areaOptionsMap[identity.district_id] || []).map(a => ({ label: a.name, value: a.id }))}
                           />
@@ -1320,7 +1399,7 @@ export function EmployeesPage() {
                           value={identity.department_id || undefined}
                           onChange={(value) => handleIdentityDepartmentChange(index, value as string)}
                           placeholder="选择部门"
-                          size="small"
+                          style={DIALOG_SELECT_STYLE}
                           disabled={!identity.campus_id}
                           optionList={(departmentOptionsMap[identity.campus_id] || []).map(d => ({ label: d.name, value: d.id }))}
                         />
@@ -1335,7 +1414,7 @@ export function EmployeesPage() {
                             })
                           }}
                           placeholder="选择部门"
-                          size="small"
+                          style={DIALOG_SELECT_STYLE}
                           optionList={globalDepartments.map(d => ({ label: d.name, value: d.id }))}
                         />
                       )}
@@ -1345,7 +1424,7 @@ export function EmployeesPage() {
                           value={identity.position_id || undefined}
                           onChange={(value) => handleIdentityPositionChange(index, value as string)}
                           placeholder="选择职位"
-                          size="small"
+                          style={DIALOG_SELECT_STYLE}
                           disabled={!identity.department_id}
                           optionList={(positionOptionsMap[identity.department_id] || []).map(p => ({
                             label: `${p.name} (${p.level_display})`, value: p.id,
@@ -1356,7 +1435,7 @@ export function EmployeesPage() {
                           value={identity.position_id || undefined}
                           onChange={(value) => handleIdentityPositionChange(index, value as string)}
                           placeholder="选择职位"
-                          size="small"
+                          style={DIALOG_SELECT_STYLE}
                           disabled={!identity.department_id}
                           optionList={globalPositions.map(p => ({ label: p.name, value: p.id }))}
                         />

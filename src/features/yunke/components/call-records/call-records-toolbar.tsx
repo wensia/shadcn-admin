@@ -16,7 +16,6 @@ import {
 import {
   IconSearch,
   IconClose,
-  IconRefresh,
   IconClock,
   IconStar,
   IconTick,
@@ -34,7 +33,6 @@ interface CallRecordsToolbarProps {
   filters: CallRecordListParams
   onFilterChange: <K extends keyof CallRecordListParams>(key: K, value: CallRecordListParams[K]) => void
   onReset: () => void
-  onRefresh: () => void
   isLoading?: boolean
 }
 
@@ -47,7 +45,6 @@ export function CallRecordsToolbar({
   filters,
   onFilterChange,
   onReset,
-  onRefresh,
   isLoading,
 }: CallRecordsToolbarProps) {
   const [searchInput, setSearchInput] = useState(filters.search || '')
@@ -388,14 +385,6 @@ export function CallRecordsToolbar({
           onClick={() => setCorrectionDialogOpen(true)}
         >
           文本纠错
-        </Button>
-        <Button
-          theme="light"
-          icon={<IconRefresh spin={isLoading} />}
-          onClick={onRefresh}
-          disabled={isLoading}
-        >
-          刷新
         </Button>
       </div>
 

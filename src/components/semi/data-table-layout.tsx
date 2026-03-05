@@ -72,22 +72,29 @@ export function DataTableLayout({
               </Text>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {headerActions}
+          {headerActions && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {headerActions}
+            </div>
+          )}
+        </div>
+
+        {/* 工具栏 + 刷新按钮 */}
+        {(toolbar || onRefresh) && (
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: toolbar ? 0 : 8 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>{toolbar}</div>
             {onRefresh && (
               <Button
                 icon={<IconRefresh />}
-                theme="borderless"
+                theme="light"
                 onClick={onRefresh}
                 loading={isRefreshing}
                 title="刷新数据"
+                style={{ flexShrink: 0, marginTop: 1 }}
               />
             )}
           </div>
-        </div>
-
-        {/* 工具栏 */}
-        {toolbar}
+        )}
 
         {/* 筛选标签栏 */}
         {filterTags && onClearAllFilters && (

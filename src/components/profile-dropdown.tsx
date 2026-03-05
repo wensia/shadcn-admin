@@ -70,6 +70,7 @@ export function ProfileDropdown() {
       <Dropdown
         trigger='click'
         position='bottomRight'
+        clickToHide
         render={menu}
       >
         <Avatar

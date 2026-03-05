@@ -66,13 +66,11 @@ export function DailyNoticeDialog() {
     setOpen(false)
   }
 
-  if (!noticeData) return null
-
   return (
     <Modal
-      visible={open}
+      visible={open && !!noticeData}
       onCancel={handleDismiss}
-      title={noticeData.title}
+      title={noticeData?.title}
       footer={
         <Button theme="solid" onClick={handleDismiss}>
           已知晓
@@ -83,7 +81,7 @@ export function DailyNoticeDialog() {
       bodyStyle={{ overflow: 'auto', maxHeight: 'calc(80vh - 120px)' }}
     >
       <div className="prose prose-sm dark:prose-invert" style={{ maxWidth: 'none' }}>
-        <ReactMarkdown>{noticeData.content}</ReactMarkdown>
+        <ReactMarkdown>{noticeData?.content ?? ''}</ReactMarkdown>
       </div>
     </Modal>
   )

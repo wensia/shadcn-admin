@@ -102,22 +102,10 @@ export function AppSidebar() {
     [navGroups]
   )
 
-  const activeGroupKey = useMemo(() => {
-    const activeGroup = navGroups.find((group) =>
-      group.items.some((item) => item.url === location.pathname)
-    )
-    return activeGroup ? `group-${activeGroup.title}` : null
-  }, [location.pathname, navGroups])
-
   const resolvedOpenKeys = useMemo(() => {
     if (isCollapsed) return []
-
-    const validKeys = openKeys.filter((key) => availableOpenKeys.includes(key))
-    if (!activeGroupKey || validKeys.includes(activeGroupKey)) {
-      return validKeys
-    }
-    return [...validKeys, activeGroupKey]
-  }, [activeGroupKey, availableOpenKeys, isCollapsed, openKeys])
+    return openKeys.filter((key) => availableOpenKeys.includes(key))
+  }, [availableOpenKeys, isCollapsed, openKeys])
 
   const handleOpenChange = useCallback(
     ({ openKeys: newKeys }: { openKeys: string[] }) => {

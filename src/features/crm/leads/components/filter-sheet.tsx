@@ -68,7 +68,6 @@ interface FilterSheetProps {
   onOpenChange: (open: boolean) => void
   filters: LeadListParams
   onApplyFilters: (filters: LeadListParams) => void
-  onClearQuickFilters?: () => void
 }
 
 export function FilterSheet({
@@ -76,7 +75,6 @@ export function FilterSheet({
   onOpenChange,
   filters,
   onApplyFilters,
-  onClearQuickFilters,
 }: FilterSheetProps) {
   const [localFilters, setLocalFilters] = useState<LeadListParams>(filters)
 
@@ -173,9 +171,6 @@ export function FilterSheet({
       collection_location: collection_location || undefined,
       source_extra_filters: Object.keys(otherExtraFilters).length > 0 ? otherExtraFilters : undefined,
     }
-    if (filtersToApply.status?.length || filtersToApply.intention_level?.length) {
-      onClearQuickFilters?.()
-    }
     onApplyFilters(filtersToApply)
     onOpenChange(false)
   }
@@ -185,7 +180,6 @@ export function FilterSheet({
     setLocalFilters(emptyFilters)
     setSourceExtraFilters({})
     setEnableActivatedFilter(false)
-    onClearQuickFilters?.()
     onApplyFilters(emptyFilters)
   }
 

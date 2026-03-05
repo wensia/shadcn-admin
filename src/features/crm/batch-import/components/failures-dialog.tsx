@@ -162,14 +162,12 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
     { title: '上次回访时间', dataIndex: 'existing_lead_last_followup_at', width: 150, render: (t: string) => formatDateTime(t) },
   ], [])
 
-  if (!batch) return null
-
   return (
     <Modal
       visible={open}
       title={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 24 }}>
-          <span>失败记录 - {batch.batch_name}</span>
+          <span>失败记录 - {batch?.batch_name}</span>
           <Button icon={<IconDownload />} onClick={handleDownload}>
             下载失败记录
           </Button>
@@ -181,66 +179,70 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
       style={{ maxHeight: '80vh' }}
       bodyStyle={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(80vh - 60px)', overflow: 'hidden' }}
     >
-      {/* 失败类型统计 */}
-      {Object.keys(typeCounts).length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 12, borderBottom: '1px solid var(--semi-color-border)', marginBottom: 12, flexShrink: 0 }}>
-          {Object.entries(typeCounts).map(([type, count]) => (
-            <Tag
-              key={type}
-              color={failureTypeColorMap[type as FailureType] || 'grey'}
-              type="light"
-            >
-              {failureTypeLabels[type as FailureType] || type}
-              <span style={{ fontWeight: 700, marginLeft: 4 }}>{count}</span>
-            </Tag>
-          ))}
-        </div>
-      )}
+      {batch && (
+        <>
+          {/* 失败类型统计 */}
+          {Object.keys(typeCounts).length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 12, borderBottom: '1px solid var(--semi-color-border)', marginBottom: 12, flexShrink: 0 }}>
+              {Object.entries(typeCounts).map(([type, count]) => (
+                <Tag
+                  key={type}
+                  color={failureTypeColorMap[type as FailureType] || 'grey'}
+                  type="light"
+                >
+                  {failureTypeLabels[type as FailureType] || type}
+                  <span style={{ fontWeight: 700, marginLeft: 4 }}>{count}</span>
+                </Tag>
+              ))}
+            </div>
+          )}
 
-      {/* 失败记录表格 */}
-      <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
-        <Table
-          columns={columns}
-          dataSource={failureList}
-          rowKey="id"
-          pagination={false}
-          scroll={{ y: scrollY }}
-          loading={loadingFailures}
-          empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无失败记录</div>}
-        />
-      </div>
-
-      {/* 分页 */}
-      <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, marginTop: 12 }}>
-        <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-          共 {totalCount} 条失败记录
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Select
-            value={pagination.pageSize}
-            onChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
-            optionList={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
-            style={{ width: 80 }}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Button
-              disabled={pagination.page <= 1}
-              onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
-            >
-              上一页
-            </Button>
-            <span style={{ padding: '0 8px', fontSize: 12 }}>
-              第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
-            </span>
-            <Button
-              disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
-              onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
-            >
-              下一页
-            </Button>
+          {/* 失败记录表格 */}
+          <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
+            <Table
+              columns={columns}
+              dataSource={failureList}
+              rowKey="id"
+              pagination={false}
+              scroll={{ y: scrollY }}
+              loading={loadingFailures}
+              empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无失败记录</div>}
+            />
           </div>
-        </div>
-      </div>
+
+          {/* 分页 */}
+          <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, marginTop: 12 }}>
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+              共 {totalCount} 条失败记录
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Select
+                value={pagination.pageSize}
+                onChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), page: 1 }))}
+                optionList={[10, 20, 50, 100].map((size) => ({ value: size, label: String(size) }))}
+                style={{ width: 80 }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Button
+                  disabled={pagination.page <= 1}
+                  onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+                >
+                  上一页
+                </Button>
+                <span style={{ padding: '0 8px', fontSize: 12 }}>
+                  第 {pagination.page} 页 / 共 {Math.ceil(totalCount / pagination.pageSize) || 1} 页
+                </span>
+                <Button
+                  disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
+                  onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+                >
+                  下一页
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </Modal>
   )
 }

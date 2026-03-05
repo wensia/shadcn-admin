@@ -1379,7 +1379,7 @@ export const ASR_PROVIDER_OPTIONS = [
 // ============================================================================
 
 /** AI 提供商 */
-export type AIProvider = 'doubao' | 'deepseek' | 'kimi' | 'openai'
+export type AIProvider = 'doubao' | 'deepseek' | 'kimi' | 'openai' | 'volcengine_voice'
 
 /** AI 配置 */
 export interface AIConfigItem {
@@ -1407,6 +1407,7 @@ export const AI_PROVIDER_OPTIONS = [
   { label: 'DeepSeek', value: 'deepseek' },
   { label: 'Kimi (月之暗面)', value: 'kimi' },
   { label: 'OpenAI 兼容 (Antigravity等)', value: 'openai' },
+  { label: '火山语音互动', value: 'volcengine_voice' },
 ] as const
 
 // ============================================================================
@@ -1417,6 +1418,7 @@ export const AI_PROVIDER_OPTIONS = [
 export const AI_SCENES = [
   { key: 'ai_chat', label: 'AI 数据助手', description: '对话式AI助手，支持Function Calling', needsPrompt: false },
   { key: 'advisor_training', label: '课程顾问陪练', description: '课程顾问文字/语音陪练与会后评分', needsPrompt: true },
+  { key: 'advisor_training_voice', label: '顾问陪练-语音通话', description: '豆包 Realtime API 凭证 (endpoint_id=App ID, api_key=Access Key, base_url=App Key)', needsPrompt: false },
   { key: 'call_analysis', label: '通话分析', description: '通话录音AI质检分析', needsPrompt: true },
   { key: 'disc_analysis', label: 'DISC 测评分析', description: 'DISC性格测试AI深度分析报告', needsPrompt: true },
 ] as const

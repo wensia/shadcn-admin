@@ -164,8 +164,6 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
     }
   }, [detail, hasAI, cachedAI, onDetailUpdate, onReanalyzeStart])
 
-  if (!open) return null
-
   const result = detail?.result
   const filename = `DISC报告_${detail?.name || '未知'}_${new Date().toISOString().slice(0, 10)}.png`
 

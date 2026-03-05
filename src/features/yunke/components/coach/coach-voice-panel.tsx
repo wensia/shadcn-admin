@@ -1,16 +1,16 @@
-import { Mic, MicOff, PanelLeft, PhoneCall, PhoneOff, Star } from 'lucide-react'
-import { Button, Tag, Typography } from '@douyinfe/semi-ui-19'
+import { Mic, MicOff, PanelLeft, Phone, PhoneOff, Star } from 'lucide-react'
+import { Avatar, Button, Tag, Typography } from '@douyinfe/semi-ui-19'
 import type { TrainingSession, TrainingVoiceStatus } from './coach-types'
 
 const { Text } = Typography
 
 const PHASE_LABELS: Record<string, string> = {
-  connecting: '连接中',
-  listening: '正在倾听',
-  agent_speaking: 'AI 回复中',
-  closing: '结束中',
-  completed: '已完成',
-  failed: '异常结束',
+  connecting: '呼叫中...',
+  listening: '通话中',
+  agent_speaking: '对方说话中',
+  closing: '挂断中...',
+  completed: '通话结束',
+  failed: '通话异常',
 }
 
 function formatElapsed(seconds: number) {
@@ -50,133 +50,128 @@ export function CoachVoicePanel({
   onOpenReview,
   hasReview,
 }: CoachVoicePanelProps) {
-  const phaseLabel = PHASE_LABELS[voiceStatus?.phase || 'connecting'] || '待开始'
   const isActive = ['active', 'ending'].includes(voiceStatus?.status || '')
+  const phaseLabel = PHASE_LABELS[voiceStatus?.phase || ''] || '待拨号'
 
   return (
-    <section
-      className="relative flex h-full min-h-[520px] flex-col overflow-hidden rounded-[28px] border"
-      style={{
-        borderColor: 'rgba(148, 163, 184, 0.18)',
-        background:
-          'radial-gradient(circle at top, rgba(251,113,133,0.14), transparent 28%), linear-gradient(180deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94))',
-        color: 'white',
-      }}
-    >
-      <div className="flex items-center justify-between gap-3 border-b px-4 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            {onOpenSidebar ? (
-              <Button
-                theme="borderless"
-                type="tertiary"
-                icon={<PanelLeft className="h-4 w-4" />}
-                onClick={onOpenSidebar}
-              />
-            ) : null}
-            <div className="truncate text-sm font-semibold text-white">
-              {session ? session.title : '先创建一场语音陪练'}
-            </div>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Tag color="red">电话式语音</Tag>
-            <Tag type="solid">{phaseLabel}</Tag>
-          </div>
+    <section className="flex h-full min-h-[520px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      {/* 顶栏 */}
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <div className="flex items-center gap-2">
+          {onOpenSidebar ? (
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<PanelLeft className="h-4 w-4" />}
+              onClick={onOpenSidebar}
+            />
+          ) : null}
+          <span className="text-sm font-medium text-slate-700">
+            {session ? session.title : '语音陪练'}
+          </span>
+          {session ? <Tag color="blue">语音</Tag> : null}
         </div>
         <div className="flex items-center gap-2">
           {onOpenReview ? (
             <Button theme="borderless" type="tertiary" icon={<Star className="h-4 w-4" />} onClick={onOpenReview}>
-              {hasReview ? '查看评分' : '评分区'}
+              {hasReview ? '查看评分' : '评分'}
             </Button>
           ) : null}
           <Button theme="light" onClick={onSwitchToText}>切到文字</Button>
         </div>
       </div>
 
-      {!session ? (
-        <div className="flex flex-1 items-center justify-center px-6">
-          <div className="max-w-md text-center">
-            <div className="text-2xl font-semibold">先建一场语音陪练</div>
-            <Text className="mt-3 block text-slate-300">
-              建议从 L1 开始，先练清晰开场和基础摸底，再逐步切到忙碌型或价格敏感型家长。
+      {/* 主体 - 电话界面 */}
+      <div className="flex flex-1 flex-col items-center justify-center">
+        {!session ? (
+          <div className="max-w-sm px-6 text-center">
+            <Avatar size="large" style={{ backgroundColor: '#e2e8f0', color: '#64748b' }}>
+              <Phone className="h-5 w-5" />
+            </Avatar>
+            <div className="mt-4 text-lg font-medium text-slate-800">先创建一场语音陪练</div>
+            <Text type="tertiary" className="mt-2 block">
+              建议从 L1 开始，先练清晰开场和基础摸底，再逐步切到更高难度。
             </Text>
           </div>
-        </div>
-      ) : (
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-8">
-          <div className="relative flex h-56 w-56 items-center justify-center">
-            <div className={`absolute h-56 w-56 rounded-full border ${isActive ? 'animate-pulse' : ''}`} style={{ borderColor: 'rgba(255,255,255,0.12)' }} />
-            <div className={`absolute h-44 w-44 rounded-full border ${isActive ? 'animate-pulse' : ''}`} style={{ borderColor: 'rgba(251,113,133,0.34)' }} />
-            <div
-              className="relative flex h-32 w-32 items-center justify-center rounded-full"
+        ) : (
+          <>
+            {/* 头像 + 身份 */}
+            <Avatar
+              size="large"
               style={{
-                background: 'linear-gradient(145deg, rgba(251,113,133,0.94), rgba(244,114,182,0.84))',
-                boxShadow: '0 24px 60px rgba(244, 63, 94, 0.32)',
+                backgroundColor: isActive ? '#dcfce7' : '#f1f5f9',
+                color: isActive ? '#16a34a' : '#64748b',
               }}
             >
-              <PhoneCall className="h-10 w-10" />
-            </div>
-          </div>
+              <Phone className="h-5 w-5" />
+            </Avatar>
+            <div className="mt-3 text-base font-medium text-slate-800">模拟家长</div>
+            <Tag className="mt-1.5" color={isActive ? 'green' : 'grey'}>{phaseLabel}</Tag>
 
-          <div className="mt-8 text-center">
-            <div className="text-xs font-medium uppercase tracking-[0.22em] text-slate-400">通话状态</div>
-            <div className="mt-3 text-4xl font-semibold">{phaseLabel}</div>
-            <div className="mt-3 text-sm text-slate-300">
-              {voiceStatus?.elapsed_seconds ? `已通话 ${formatElapsed(voiceStatus.elapsed_seconds)}` : '准备开始一场 3-5 分钟的顾问电话陪练'}
+            {/* 计时 */}
+            <div className="mt-4 font-mono text-3xl tabular-nums text-slate-700">
+              {formatElapsed(voiceStatus?.elapsed_seconds || 0)}
             </div>
+
+            {/* 错误提示 */}
             {rtcError || voiceStatus?.last_error ? (
-              <div className="mt-4 text-sm text-rose-200">{rtcError || voiceStatus?.last_error}</div>
+              <div className="mt-3 max-w-sm rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">
+                {rtcError || voiceStatus?.last_error}
+              </div>
             ) : null}
-          </div>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Button
-              theme="light"
-              icon={isMuted ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-              disabled={!isActive}
-              onClick={onToggleMute}
-            >
-              {isMuted ? '恢复麦克风' : '静音'}
-            </Button>
-            {!isActive ? (
-              <Button
-                type="primary"
-                icon={<PhoneCall className="h-4 w-4" />}
-                loading={isStarting}
-                onClick={onStart}
-                style={{ background: '#FB7185', borderColor: '#FB7185' }}
+            {/* 操作按钮 */}
+            <div className="mt-8 flex items-center gap-5">
+              {/* 静音 */}
+              <button
+                type="button"
+                disabled={!isActive}
+                onClick={onToggleMute}
+                className="flex h-14 w-14 items-center justify-center rounded-full border transition-colors disabled:opacity-40"
+                style={{
+                  borderColor: isMuted ? '#fca5a5' : '#e2e8f0',
+                  backgroundColor: isMuted ? '#fef2f2' : '#f8fafc',
+                }}
               >
-                开始通话
-              </Button>
-            ) : (
-              <Button
-                type="danger"
-                icon={<PhoneOff className="h-4 w-4" />}
-                loading={isStopping}
-                onClick={onStop}
-              >
-                挂断
-              </Button>
-            )}
-          </div>
+                {isMuted
+                  ? <MicOff className="h-5 w-5 text-red-500" />
+                  : <Mic className="h-5 w-5 text-slate-600" />}
+              </button>
 
-          <div className="mt-10 grid gap-3 text-sm text-slate-300 md:grid-cols-3">
-            <div className="rounded-2xl border px-4 py-3" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              开场要短
-              <div className="mt-1 text-xs text-slate-400">先确认身份和孩子情况，不要一上来就讲课程。</div>
+              {/* 拨通 / 挂断 */}
+              {!isActive ? (
+                <button
+                  type="button"
+                  disabled={isStarting}
+                  onClick={onStart}
+                  className="flex h-16 w-16 items-center justify-center rounded-full text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ backgroundColor: '#22c55e' }}
+                >
+                  <Phone className="h-6 w-6" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isStopping}
+                  onClick={onStop}
+                  className="flex h-16 w-16 items-center justify-center rounded-full text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ backgroundColor: '#ef4444' }}
+                >
+                  <PhoneOff className="h-6 w-6" />
+                </button>
+              )}
+
+              {/* 占位，保持居中 */}
+              <div className="h-14 w-14" />
             </div>
-            <div className="rounded-2xl border px-4 py-3" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              多追问细节
-              <div className="mt-1 text-xs text-slate-400">学习困扰、时间安排、决策人和预算都要问到。</div>
-            </div>
-            <div className="rounded-2xl border px-4 py-3" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              结尾要收口
-              <div className="mt-1 text-xs text-slate-400">试听、到访、加微信或回访，至少推进一个明确动作。</div>
-            </div>
-          </div>
-        </div>
-      )}
+
+            {/* 底部提示 */}
+            <Text type="tertiary" size="small" className="mt-6 block">
+              {isActive ? 'Shift + M 切换静音' : '点击绿色按钮开始通话'}
+            </Text>
+          </>
+        )}
+      </div>
     </section>
   )
 }
-

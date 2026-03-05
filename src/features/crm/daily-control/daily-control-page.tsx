@@ -8,7 +8,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { Main } from '@/components/layout/main'
-import { Select, DatePicker } from '@douyinfe/semi-ui-19'
+import { Select, DatePicker, Button } from '@douyinfe/semi-ui-19'
 import {
   IconUserGroup,
   IconCalendarClock,
@@ -26,7 +26,6 @@ import { getVisitSchedules, getPayments } from './api'
 import { brandColors, type TabType } from './theme'
 import { apiClient } from '@/lib/api/client'
 
-const { RangePicker } = DatePicker
 
 // 获取本月第一天
 const getMonthStartStr = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
@@ -234,7 +233,8 @@ export function DailyControlPage() {
                   optionList={campusOptions}
                   style={{ width: 140 }}
                 />
-                <RangePicker
+                <DatePicker
+                  type="dateRange"
                   value={dateRangeValue}
                   onChange={(_date, dateStrings) => handleDateRangeChange(dateStrings as string[])}
                   style={{ width: 260 }}

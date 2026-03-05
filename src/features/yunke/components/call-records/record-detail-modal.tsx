@@ -377,6 +377,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               <Dropdown
                 trigger="click"
                 position="bottomRight"
+                clickToHide
                 render={
                   <Dropdown.Menu>
                     <Dropdown.Item
