@@ -3,12 +3,19 @@
  * 状态: visited
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button, Card, Skeleton, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
 import { IconPlus, IconRefresh, IconMore, IconEdit, IconCreditCard } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
+  approveVisitSchedule,
+  approvalStatusLabels,
+  confirmVisitSchedule,
+  dailyControlQueryKeys,
   getVisitSchedules,
+  withdrawVisitSchedule,
+  type ApprovalStatus,
   type VisitScheduleItem,
   type VisitScheduleQueryParams,
 } from '../api'
@@ -18,8 +25,19 @@ import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow } from '@/lib/table-utils'
 
-// 星期映射
 const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+const approvalStatusColorMap: Record<ApprovalStatus, 'grey' | 'yellow' | 'green' | 'red'> = {
+  draft: 'grey',
+  pending: 'yellow',
+  approved: 'green',
+  rejected: 'red',
+}
+
+type VisitApprovalAction =
+  | { type: 'confirmApproval'; id: string }
+  | { type: 'withdrawApproval'; id: string }
+  | { type: 'approve'; id: string; action: 'approve' | 'reject' }
 
 function formatDateWithWeekday(dateStr: string | undefined): string {
   if (!dateStr) return '-'
@@ -39,38 +57,68 @@ interface ActualVisitTabProps {
 }
 
 export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisitTabProps) {
-  const [data, setData] = useState<VisitScheduleItem[]>([])
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<VisitScheduleItem | null>(null)
+  const queryClient = useQueryClient()
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const params: VisitScheduleQueryParams = { page, size: pageSize, status: 'visited' }
-      if (dateFrom) params.visit_date_from = dateFrom
-      if (dateTo) params.visit_date_to = dateTo
-      if (creatorCampusId) params.creator_campus_id = creatorCampusId
-      const result = await getVisitSchedules(params)
-      setData(result.data?.items ?? [])
-      setTotal(result.data?.total ?? 0)
-    } catch (error) {
-      showApiErrorToast(error, '获取到访列表失败')
-    } finally {
-      setIsLoading(false)
+  const queryParams = useMemo<VisitScheduleQueryParams>(() => {
+    const params: VisitScheduleQueryParams = {
+      page,
+      size: pageSize,
+      status: 'visited',
     }
+    if (dateFrom) params.visit_date_from = dateFrom
+    if (dateTo) params.visit_date_to = dateTo
+    if (creatorCampusId) params.creator_campus_id = creatorCampusId
+    return params
   }, [creatorCampusId, dateFrom, dateTo, page, pageSize])
 
-  useEffect(() => {
-    void fetchData()
-  }, [fetchData])
+  const listQuery = useQuery({
+    queryKey: dailyControlQueryKeys.visitScheduleList(queryParams),
+    queryFn: () => getVisitSchedules(queryParams),
+  })
 
-  const handleEdit = (item: VisitScheduleItem) => { setEditData(item); setDialogOpen(true) }
-  const handleCreate = () => { setEditData(null); setDialogOpen(true) }
-  const handleRegisterPayment = (_item: VisitScheduleItem) => { Toast.info('缴费登记功能开发中') }
+  const items = listQuery.data?.items
+  const data = useMemo(() => items ?? [], [items])
+  const total = listQuery.data?.total ?? 0
+  const isLoading = listQuery.isLoading || listQuery.isFetching
+
+  const actionMutation = useMutation({
+    mutationFn: async (action: VisitApprovalAction) => {
+      switch (action.type) {
+        case 'confirmApproval':
+          await confirmVisitSchedule(action.id)
+          return { successMessage: '已提交审批' }
+        case 'withdrawApproval':
+          await withdrawVisitSchedule(action.id)
+          return { successMessage: '已撤回审批' }
+        case 'approve':
+          await approveVisitSchedule(action.id, action.action)
+          return {
+            successMessage: action.action === 'approve' ? '审批已通过' : '已驳回审批',
+          }
+      }
+    },
+    onSuccess: async ({ successMessage }) => {
+      Toast.success(successMessage)
+      await queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all })
+    },
+    onError: (error: unknown) => {
+      showApiErrorToast(error, '操作失败')
+    },
+  })
+
+  const handleEdit = (item: VisitScheduleItem) => {
+    setEditData(item)
+    setDialogOpen(true)
+  }
+
+  const handleCreate = () => {
+    setEditData(null)
+    setDialogOpen(true)
+  }
 
   const columns: ColumnProps<VisitScheduleItem>[] = [
     {
@@ -129,6 +177,18 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
       },
     },
     {
+      title: '审批状态', dataIndex: 'approval_status', width: 90,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+        const approvalStatus = record.approval_status || 'draft'
+        return (
+          <Tag size="small" color={approvalStatusColorMap[approvalStatus]}>
+            {record.approval_status_display || approvalStatusLabels[approvalStatus]}
+          </Tag>
+        )
+      },
+    },
+    {
       title: '导入状态', dataIndex: 'is_counted', width: 80,
       render: (_text, record) => {
         if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
@@ -136,9 +196,11 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
       },
     },
     {
-      title: '操作', dataIndex: 'actions', width: 60, fixed: 'right' as const,
+      title: '操作', dataIndex: 'actions', width: 140, fixed: 'right' as const,
       render: (_text, record) => {
         if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+        const hasApprovalActions = Boolean(record.can_confirm || record.can_withdraw || record.can_approve)
+
         return (
           <Dropdown
             trigger="click"
@@ -148,11 +210,39 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
               <Dropdown.Menu>
                 <Dropdown.Item icon={<IconEdit />} onClick={() => handleEdit(record)}>编辑</Dropdown.Item>
                 <Dropdown.Divider />
-                <Dropdown.Item icon={<IconCreditCard style={{ color: 'var(--semi-color-success)' }} />} onClick={() => handleRegisterPayment(record)}>登记缴费</Dropdown.Item>
+                <Dropdown.Item
+                  icon={<IconCreditCard style={{ color: 'var(--semi-color-text-2)' }} />}
+                  disabled
+                >
+                  登记缴费（待开发）
+                </Dropdown.Item>
+                {hasApprovalActions && <Dropdown.Divider />}
+                {record.can_confirm && (
+                  <Dropdown.Item onClick={() => actionMutation.mutate({ type: 'confirmApproval', id: record.id })}>
+                    提交审批
+                  </Dropdown.Item>
+                )}
+                {record.can_withdraw && (
+                  <Dropdown.Item onClick={() => actionMutation.mutate({ type: 'withdrawApproval', id: record.id })}>
+                    撤回审批
+                  </Dropdown.Item>
+                )}
+                {record.can_approve && (
+                  <Dropdown.Item onClick={() => actionMutation.mutate({ type: 'approve', id: record.id, action: 'approve' })}>
+                    审批通过
+                  </Dropdown.Item>
+                )}
+                {record.can_approve && (
+                  <Dropdown.Item type="danger" onClick={() => actionMutation.mutate({ type: 'approve', id: record.id, action: 'reject' })}>
+                    审批驳回
+                  </Dropdown.Item>
+                )}
               </Dropdown.Menu>
             }
           >
-            <Button theme="borderless" icon={<IconMore />} size="small" />
+            <span style={{ display: 'inline-flex' }}>
+              <Button theme="borderless" icon={<IconMore />} size="small" />
+            </span>
           </Dropdown>
         )
       },
@@ -162,13 +252,13 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
   return (
     <Card
       style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
-      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 16px' }}
+      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 0' }}
       header={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
           <span style={{ fontSize: 16, fontWeight: 500 }}>到访列表</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>新建到访</Button>
-            <Button icon={<IconRefresh spin={isLoading} />} onClick={() => void fetchData()} />
+            <Button icon={<IconRefresh spin={isLoading} />} onClick={() => void listQuery.refetch()} />
           </div>
         </div>
       }
@@ -186,8 +276,11 @@ export function ActualVisitTab({ dateFrom, dateTo, creatorCampusId }: ActualVisi
         emptyText="暂无到访记录"
       />
       <VisitScheduleDialog
-        open={dialogOpen} onOpenChange={setDialogOpen}
-        defaultStatus="visited" onSuccess={() => void fetchData()} editData={editData}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        defaultStatus="visited"
+        onSuccess={() => { void queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all }) }}
+        editData={editData}
       />
     </Card>
   )

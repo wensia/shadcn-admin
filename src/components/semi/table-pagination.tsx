@@ -24,7 +24,7 @@ export function SemiTablePagination({
   onPageChange,
   onPageSizeChange,
   selectedCount,
-  pageSizeOptions = [10, 20, 50, 100],
+  pageSizeOptions = [10, 20, 50, 100, 300, 500],
 }: SemiTablePaginationProps) {
   return (
     <div

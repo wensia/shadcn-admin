@@ -3,16 +3,32 @@
  * 状态: scheduled
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button, Card, Skeleton, Dropdown, Tag, Toast } from '@douyinfe/semi-ui-19'
-import { IconPlus, IconRefresh, IconMore, IconEdit, IconTickCircle, IconCrossCircleStroked, IconUpload, IconDelete } from '@douyinfe/semi-icons'
+import {
+  IconPlus,
+  IconRefresh,
+  IconMore,
+  IconEdit,
+  IconTickCircle,
+  IconCrossCircleStroked,
+  IconUpload,
+  IconDelete,
+} from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { useAuthStore } from '@/stores/auth-store'
 import {
+  approveVisitSchedule,
+  approvalStatusLabels,
+  batchCancelImportVisitSchedules,
+  batchImportVisitSchedules,
+  confirmVisitSchedule,
+  dailyControlQueryKeys,
   getVisitSchedules,
   updateVisitScheduleStatus,
-  batchImportVisitSchedules,
-  batchCancelImportVisitSchedules,
+  withdrawVisitSchedule,
+  type ApprovalStatus,
   type VisitScheduleItem,
   type VisitScheduleQueryParams,
 } from '../api'
@@ -22,8 +38,22 @@ import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow } from '@/lib/table-utils'
 
-// 星期映射
 const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+const approvalStatusColorMap: Record<ApprovalStatus, 'grey' | 'yellow' | 'green' | 'red'> = {
+  draft: 'grey',
+  pending: 'yellow',
+  approved: 'green',
+  rejected: 'red',
+}
+
+type VisitAction =
+  | { type: 'updateStatus'; id: string; status: 'visited' | 'noshow' | 'cancelled'; successMessage: string }
+  | { type: 'confirmApproval'; id: string }
+  | { type: 'withdrawApproval'; id: string }
+  | { type: 'approve'; id: string; action: 'approve' | 'reject' }
+  | { type: 'batchImport'; recordIds: string[] }
+  | { type: 'batchCancelImport'; recordIds: string[] }
 
 function formatDateWithWeekday(dateStr: string | undefined): string {
   if (!dateStr) return '-'
@@ -43,92 +73,111 @@ interface PromisedVisitTabProps {
 }
 
 export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: PromisedVisitTabProps) {
-  const [data, setData] = useState<VisitScheduleItem[]>([])
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<VisitScheduleItem | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
-  const [isImporting, setIsImporting] = useState(false)
+  const queryClient = useQueryClient()
 
   const user = useAuthStore((state) => state.user)
   const isSuperUser = user?.is_superuser ?? false
 
+  const queryParams = useMemo<VisitScheduleQueryParams>(() => {
+    const params: VisitScheduleQueryParams = {
+      page,
+      size: pageSize,
+      status: 'scheduled',
+    }
+    if (dateFrom) params.visit_date_from = dateFrom
+    if (dateTo) params.visit_date_to = dateTo
+    if (creatorCampusId) params.creator_campus_id = creatorCampusId
+    return params
+  }, [creatorCampusId, dateFrom, dateTo, page, pageSize])
+
+  const listQuery = useQuery({
+    queryKey: dailyControlQueryKeys.visitScheduleList(queryParams),
+    queryFn: () => getVisitSchedules(queryParams),
+  })
+
+  const items = listQuery.data?.items
+  const data = useMemo(() => items ?? [], [items])
+  const total = listQuery.data?.total ?? 0
+  const isLoading = listQuery.isLoading || listQuery.isFetching
+
   const canBatchOperate = useMemo(() => {
     if (isSuperUser) return true
-    return data.some(item => item.can_approve)
-  }, [isSuperUser, data])
+    return data.some((item) => item.can_approve)
+  }, [data, isSuperUser])
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true)
-    setSelectedRowKeys([])
-    try {
-      const params: VisitScheduleQueryParams = { page, size: pageSize, status: 'scheduled' }
-      if (dateFrom) params.visit_date_from = dateFrom
-      if (dateTo) params.visit_date_to = dateTo
-      if (creatorCampusId) params.creator_campus_id = creatorCampusId
-      const result = await getVisitSchedules(params)
-      setData(result.data?.items ?? [])
-      setTotal(result.data?.total ?? 0)
-    } catch (error) {
-      showApiErrorToast(error, '获取诺到列表失败')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
+  const visibleSelectedRowKeys = useMemo(() => {
+    const visibleIds = new Set(data.map((item) => item.id))
+    return selectedRowKeys.filter((id) => visibleIds.has(id))
+  }, [data, selectedRowKeys])
 
-  useEffect(() => { void fetchData() }, [fetchData])
-
-  // 选中的未导入/已导入记录
   const selectedNotImportedIds = useMemo(() => {
-    return data.filter(item => selectedRowKeys.includes(item.id) && !item.is_counted).map(item => item.id)
-  }, [selectedRowKeys, data])
+    return data.filter((item) => visibleSelectedRowKeys.includes(item.id) && !item.is_counted).map((item) => item.id)
+  }, [visibleSelectedRowKeys, data])
 
   const selectedImportedIds = useMemo(() => {
-    return data.filter(item => selectedRowKeys.includes(item.id) && item.is_counted).map(item => item.id)
-  }, [selectedRowKeys, data])
+    return data.filter((item) => visibleSelectedRowKeys.includes(item.id) && item.is_counted).map((item) => item.id)
+  }, [visibleSelectedRowKeys, data])
 
-  const handleBatchImport = async () => {
-    if (selectedNotImportedIds.length === 0) { Toast.warning('请选择未导入的记录'); return }
-    setIsImporting(true)
-    try {
-      const result = await batchImportVisitSchedules(selectedNotImportedIds)
-      if (result.success_count > 0) Toast.success(`成功导入 ${result.success_count} 条记录`)
-      if (result.failed_records.length > 0) Toast.warning(`${result.failed_records.length} 条记录导入失败`)
-      fetchData()
-    } catch { Toast.error('批量导入失败') } finally { setIsImporting(false) }
+  const actionMutation = useMutation({
+    mutationFn: async (action: VisitAction) => {
+      switch (action.type) {
+        case 'updateStatus':
+          await updateVisitScheduleStatus(action.id, action.status)
+          return { successMessage: action.successMessage }
+        case 'confirmApproval':
+          await confirmVisitSchedule(action.id)
+          return { successMessage: '已提交审批' }
+        case 'withdrawApproval':
+          await withdrawVisitSchedule(action.id)
+          return { successMessage: '已撤回审批' }
+        case 'approve':
+          await approveVisitSchedule(action.id, action.action)
+          return {
+            successMessage: action.action === 'approve' ? '审批已通过' : '已驳回审批',
+          }
+        case 'batchImport': {
+          const result = await batchImportVisitSchedules(action.recordIds)
+          return {
+            successMessage: `成功通过并导入 ${result.success_count} 条记录`,
+            warningMessage: result.failed_records.length > 0 ? `${result.failed_records.length} 条记录导入失败` : undefined,
+          }
+        }
+        case 'batchCancelImport': {
+          const result = await batchCancelImportVisitSchedules(action.recordIds)
+          return {
+            successMessage: `成功取消导入 ${result.success_count} 条记录`,
+            warningMessage: result.failed_records.length > 0 ? `${result.failed_records.length} 条记录取消失败` : undefined,
+          }
+        }
+      }
+    },
+    onSuccess: async ({ successMessage, warningMessage }) => {
+      Toast.success(successMessage)
+      if (warningMessage) {
+        Toast.warning(warningMessage)
+      }
+      setSelectedRowKeys([])
+      await queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all })
+    },
+    onError: (error: unknown) => {
+      showApiErrorToast(error, '操作失败')
+    },
+  })
+
+  const handleEdit = (item: VisitScheduleItem) => {
+    setEditData(item)
+    setDialogOpen(true)
   }
 
-  const handleBatchCancelImport = async () => {
-    if (selectedImportedIds.length === 0) { Toast.warning('请选择已导入的记录'); return }
-    setIsImporting(true)
-    try {
-      const result = await batchCancelImportVisitSchedules(selectedImportedIds)
-      if (result.success_count > 0) Toast.success(`成功取消导入 ${result.success_count} 条记录`)
-      if (result.failed_records.length > 0) Toast.warning(`${result.failed_records.length} 条记录取消失败`)
-      fetchData()
-    } catch { Toast.error('批量取消导入失败') } finally { setIsImporting(false) }
+  const handleCreate = () => {
+    setEditData(null)
+    setDialogOpen(true)
   }
-
-  const handleConfirmVisit = async (item: VisitScheduleItem) => {
-    try { await updateVisitScheduleStatus(item.id, 'visited'); Toast.success('已确认到访'); fetchData() }
-    catch { Toast.error('操作失败') }
-  }
-
-  const handleMarkNoShow = async (item: VisitScheduleItem) => {
-    try { await updateVisitScheduleStatus(item.id, 'noshow'); Toast.success('已标记为未到访'); fetchData() }
-    catch { Toast.error('操作失败') }
-  }
-
-  const handleCancel = async (item: VisitScheduleItem) => {
-    try { await updateVisitScheduleStatus(item.id, 'cancelled'); Toast.success('已取消预约'); fetchData() }
-    catch { Toast.error('操作失败') }
-  }
-
-  const handleEdit = (item: VisitScheduleItem) => { setEditData(item); setDialogOpen(true) }
-  const handleCreate = () => { setEditData(null); setDialogOpen(true) }
 
   const columns: ColumnProps<VisitScheduleItem>[] = [
     {
@@ -203,6 +252,18 @@ export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: Promised
       },
     },
     {
+      title: '审批状态', dataIndex: 'approval_status', width: 90,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 60 }} />
+        const approvalStatus = record.approval_status || 'draft'
+        return (
+          <Tag size="small" color={approvalStatusColorMap[approvalStatus]}>
+            {record.approval_status_display || approvalStatusLabels[approvalStatus]}
+          </Tag>
+        )
+      },
+    },
+    {
       title: '导入状态', dataIndex: 'is_counted', width: 80,
       render: (_text, record) => {
         if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
@@ -210,9 +271,11 @@ export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: Promised
       },
     },
     {
-      title: '操作', dataIndex: 'actions', width: 60, fixed: 'right' as const,
+      title: '操作', dataIndex: 'actions', width: 120, fixed: 'right' as const,
       render: (_text, record) => {
         if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+        const hasApprovalActions = Boolean(record.can_confirm || record.can_withdraw || record.can_approve)
+
         return (
           <Dropdown
             trigger="click"
@@ -222,14 +285,51 @@ export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: Promised
               <Dropdown.Menu>
                 <Dropdown.Item icon={<IconEdit />} onClick={() => handleEdit(record)}>编辑</Dropdown.Item>
                 <Dropdown.Divider />
-                <Dropdown.Item icon={<IconTickCircle style={{ color: 'var(--semi-color-success)' }} />} onClick={() => handleConfirmVisit(record)}>确认到访</Dropdown.Item>
-                <Dropdown.Item icon={<IconCrossCircleStroked style={{ color: 'var(--semi-color-danger)' }} />} onClick={() => handleMarkNoShow(record)}>标记未到</Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Item type="danger" onClick={() => handleCancel(record)}>取消预约</Dropdown.Item>
+                <Dropdown.Item
+                  icon={<IconTickCircle style={{ color: 'var(--semi-color-success)' }} />}
+                  onClick={() => actionMutation.mutate({ type: 'updateStatus', id: record.id, status: 'visited', successMessage: '已确认到访' })}
+                >
+                  确认到访
+                </Dropdown.Item>
+                <Dropdown.Item
+                  icon={<IconCrossCircleStroked style={{ color: 'var(--semi-color-danger)' }} />}
+                  onClick={() => actionMutation.mutate({ type: 'updateStatus', id: record.id, status: 'noshow', successMessage: '已标记为未到访' })}
+                >
+                  标记未到
+                </Dropdown.Item>
+                <Dropdown.Item
+                  type="danger"
+                  onClick={() => actionMutation.mutate({ type: 'updateStatus', id: record.id, status: 'cancelled', successMessage: '已取消预约' })}
+                >
+                  取消预约
+                </Dropdown.Item>
+                {hasApprovalActions && <Dropdown.Divider />}
+                {record.can_confirm && (
+                  <Dropdown.Item onClick={() => actionMutation.mutate({ type: 'confirmApproval', id: record.id })}>
+                    提交审批
+                  </Dropdown.Item>
+                )}
+                {record.can_withdraw && (
+                  <Dropdown.Item onClick={() => actionMutation.mutate({ type: 'withdrawApproval', id: record.id })}>
+                    撤回审批
+                  </Dropdown.Item>
+                )}
+                {record.can_approve && (
+                  <Dropdown.Item onClick={() => actionMutation.mutate({ type: 'approve', id: record.id, action: 'approve' })}>
+                    审批通过
+                  </Dropdown.Item>
+                )}
+                {record.can_approve && (
+                  <Dropdown.Item type="danger" onClick={() => actionMutation.mutate({ type: 'approve', id: record.id, action: 'reject' })}>
+                    审批驳回
+                  </Dropdown.Item>
+                )}
               </Dropdown.Menu>
             }
           >
-            <Button theme="borderless" icon={<IconMore />} size="small" />
+            <span style={{ display: 'inline-flex' }}>
+              <Button theme="borderless" icon={<IconMore />} size="small" />
+            </span>
           </Dropdown>
         )
       },
@@ -239,28 +339,38 @@ export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: Promised
   return (
     <Card
       style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
-      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 16px' }}
+      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 0' }}
       header={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 16, fontWeight: 500 }}>诺到列表</span>
-            {selectedRowKeys.length > 0 && (
-              <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>已选择 {selectedRowKeys.length} 条</span>
+            {visibleSelectedRowKeys.length > 0 && (
+              <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>已选择 {visibleSelectedRowKeys.length} 条</span>
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {canBatchOperate && selectedNotImportedIds.length > 0 && (
-              <Button icon={<IconUpload />} theme="solid" style={{ background: 'var(--semi-color-success)' }} onClick={handleBatchImport} disabled={isImporting}>
-                导入日控表 ({selectedNotImportedIds.length})
+              <Button
+                icon={<IconUpload />}
+                theme="solid"
+                style={{ background: 'var(--semi-color-success)' }}
+                onClick={() => actionMutation.mutate({ type: 'batchImport', recordIds: selectedNotImportedIds })}
+                disabled={actionMutation.isPending}
+              >
+                批量通过并导入 ({selectedNotImportedIds.length})
               </Button>
             )}
             {canBatchOperate && selectedImportedIds.length > 0 && (
-              <Button icon={<IconDelete />} onClick={handleBatchCancelImport} disabled={isImporting}>
-                取消导入 ({selectedImportedIds.length})
+              <Button
+                icon={<IconDelete />}
+                onClick={() => actionMutation.mutate({ type: 'batchCancelImport', recordIds: selectedImportedIds })}
+                disabled={actionMutation.isPending}
+              >
+                批量取消导入 ({selectedImportedIds.length})
               </Button>
             )}
             <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>新建诺到</Button>
-            <Button icon={<IconRefresh spin={isLoading} />} onClick={fetchData} />
+            <Button icon={<IconRefresh spin={isLoading} />} onClick={() => void listQuery.refetch()} />
           </div>
         </div>
       }
@@ -272,10 +382,17 @@ export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: Promised
         page={page}
         pageSize={pageSize}
         isLoading={isLoading}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        onPageChange={(nextPage) => {
+          setSelectedRowKeys([])
+          setPage(nextPage)
+        }}
+        onPageSizeChange={(size) => {
+          setSelectedRowKeys([])
+          setPageSize(size)
+          setPage(1)
+        }}
         rowSelection={{
-          selectedRowKeys,
+          selectedRowKeys: visibleSelectedRowKeys,
           onChange: (keys) => setSelectedRowKeys(keys as string[]),
         }}
         rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
@@ -285,7 +402,7 @@ export function PromisedVisitTab({ dateFrom, dateTo, creatorCampusId }: Promised
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultStatus="scheduled"
-        onSuccess={fetchData}
+        onSuccess={() => { void queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all }) }}
         editData={editData}
       />
     </Card>

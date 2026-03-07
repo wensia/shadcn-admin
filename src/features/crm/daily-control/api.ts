@@ -144,6 +144,20 @@ export interface PaymentQueryParams {
   creator_campus_id?: string
 }
 
+export interface VisitScheduleMutationData {
+  visit_at?: string
+  course_ids?: string[]
+  remark?: string
+  status?: VisitScheduleStatus
+}
+
+export interface VisitScheduleCreateData extends Required<Pick<VisitScheduleMutationData, 'visit_at'>> {
+  lead_id: string
+  course_ids?: string[]
+  remark?: string
+  status?: VisitScheduleStatus
+}
+
 // ==================== 状态标签配置 ====================
 
 export const visitScheduleStatusLabels: Record<VisitScheduleStatus, string> = {
@@ -207,6 +221,44 @@ export const paymentTypeLabels: Record<PaymentType, string> = {
   other: '其他'
 }
 
+function compactQueryParams<T extends Record<string, unknown>>(params: T) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
+  ) as Partial<T>
+}
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, '0')
+}
+
+function splitVisitAt(visitAt: string) {
+  const date = new Date(visitAt)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`无效的到访时间: ${visitAt}`)
+  }
+
+  return {
+    visit_date: `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`,
+    visit_time: `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}:${padDatePart(date.getSeconds())}`,
+  }
+}
+
+export const dailyControlQueryKeys = {
+  all: ['daily-control'] as const,
+  visitSchedules: () => [...dailyControlQueryKeys.all, 'visit-schedules'] as const,
+  visitScheduleList: (params: VisitScheduleQueryParams) =>
+    [...dailyControlQueryKeys.visitSchedules(), compactQueryParams(params)] as const,
+  visitScheduleStats: () => [...dailyControlQueryKeys.all, 'visit-schedule-stats'] as const,
+  visitScheduleStat: (params: Omit<VisitScheduleQueryParams, 'page' | 'size'>) =>
+    [...dailyControlQueryKeys.visitScheduleStats(), compactQueryParams(params)] as const,
+  payments: () => [...dailyControlQueryKeys.all, 'payments'] as const,
+  paymentList: (params: PaymentQueryParams) =>
+    [...dailyControlQueryKeys.payments(), compactQueryParams(params)] as const,
+  paymentStats: () => [...dailyControlQueryKeys.all, 'payment-stats'] as const,
+  paymentStat: (params: PaymentQueryParams) =>
+    [...dailyControlQueryKeys.paymentStats(), compactQueryParams(params)] as const,
+} as const
+
 // ==================== API 函数 ====================
 
 /** 获取到访预约列表 */
@@ -214,6 +266,21 @@ export async function getVisitSchedules(params: VisitScheduleQueryParams = {}) {
   const response = await apiClient.get<ApiResponse<PaginatedResponse<VisitScheduleItem>>>(
     '/visit-schedules',
     { params }
+  )
+  return response.data
+}
+
+/** 创建到访预约 */
+export async function createVisitSchedule(data: VisitScheduleCreateData) {
+  const response = await apiClient.post<ApiResponse<VisitScheduleItem>>(
+    '/visit-schedules',
+    {
+      lead_id: data.lead_id,
+      ...splitVisitAt(data.visit_at),
+      course_ids: data.course_ids ?? [],
+      remark: data.remark,
+      status: data.status ?? 'scheduled',
+    }
   )
   return response.data
 }
@@ -226,25 +293,17 @@ export function updateVisitScheduleStatus(id: string, status: VisitScheduleStatu
   )
 }
 
-/**
- * 更新到访预约信息
- */
-export interface VisitScheduleUpdateData {
-  scheduled_at?: string
-  trial_course?: string
-  trial_teacher?: string
-  remark?: string
-  status?: VisitScheduleStatus
-}
-
-export function updateVisitSchedule(id: string, data: VisitScheduleUpdateData) {
+/** 更新到访预约信息 */
+export function updateVisitSchedule(id: string, data: VisitScheduleMutationData) {
   // 转换数据格式以匹配后端 API
   const apiData: Record<string, unknown> = {}
 
-  if (data.scheduled_at) {
-    const dateTime = new Date(data.scheduled_at)
-    apiData.visit_date = dateTime.toISOString().split('T')[0]
-    apiData.visit_time = dateTime.toTimeString().split(' ')[0]
+  if (data.visit_at) {
+    Object.assign(apiData, splitVisitAt(data.visit_at))
+  }
+
+  if (data.course_ids !== undefined) {
+    apiData.course_ids = data.course_ids
   }
 
   if (data.remark !== undefined) {

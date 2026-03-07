@@ -13,6 +13,7 @@ import {
   Toast,
   Popover,
   Skeleton,
+  Empty,
 } from '@douyinfe/semi-ui-19'
 import {
   IconEdit,
@@ -115,7 +116,7 @@ export function LeadDetailSheet({
   }, [currentCallId, stopCallTimer])
 
   // 获取线索详情
-  const { data: lead, isLoading } = useQuery({
+  const { data: lead, isLoading, error: leadError } = useQuery({
     queryKey: ['lead', leadId],
     queryFn: async () => {
       if (!leadId) return null
@@ -123,6 +124,12 @@ export function LeadDetailSheet({
       return response.data
     },
     enabled: !!leadId && open,
+    retry: (failureCount, error) => {
+      // 业务错误（如访问限制）不重试
+      const err = error as { isBusinessError?: boolean }
+      if (err?.isBusinessError) return false
+      return failureCount < 2
+    },
   })
 
   // 快捷编辑字段
@@ -335,6 +342,17 @@ export function LeadDetailSheet({
                 <Skeleton.Paragraph rows={2} style={{ width: '100%' }} />
               </div>
             </Skeleton>
+          </div>
+        ) : leadError ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+            <Empty
+              title="无法加载线索详情"
+              description={leadError.message || '请稍后重试'}
+            >
+              <Button theme="solid" onClick={() => queryClient.invalidateQueries({ queryKey: ['lead', leadId] })}>
+                重试
+              </Button>
+            </Empty>
           </div>
         ) : leadId ? (
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>

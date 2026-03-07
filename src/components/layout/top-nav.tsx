@@ -36,11 +36,13 @@ export function TopNav({ className, links, ...props }: TopNavProps) {
             </Dropdown.Menu>
           }
         >
-          <Button
-            theme='outline'
-            icon={<Menu className='h-4 w-4' />}
-            className='md:size-7'
-          />
+          <span style={{ display: 'inline-flex' }}>
+            <Button
+              theme='outline'
+              icon={<Menu className='h-4 w-4' />}
+              className='md:size-7'
+            />
+          </span>
         </Dropdown>
       </div>
 

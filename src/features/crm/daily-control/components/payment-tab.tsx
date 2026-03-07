@@ -246,7 +246,9 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
               </Dropdown.Menu>
             }
           >
-            <Button theme="borderless" icon={<IconMore />} size="small" />
+            <span style={{ display: 'inline-flex' }}>
+              <Button theme="borderless" icon={<IconMore />} size="small" />
+            </span>
           </Dropdown>
         )
       },
@@ -256,7 +258,7 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
   return (
     <Card
       style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
-      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 16px' }}
+      bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', padding: '0 16px 0' }}
       header={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

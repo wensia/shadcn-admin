@@ -3,8 +3,7 @@
  */
 
 import { apiClient } from '@/lib/api/client'
-import { unwrapData } from '@/lib/api/types'
-import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
+import { unwrapData, type ApiResponse, type PaginatedResponse } from '@/lib/api/types'
 import type {
   YunkeAdminStatus,
   YunkeAdminLoginResponse,
@@ -413,6 +412,7 @@ export const callRecordsApi = {
     department_id: string
     flag?: 'department' | 'user'
     period?: number
+    /** 云客原始 type 参数。0 返回总电话量/通话时长，1 返回联系人数。 */
     stat_type?: number
     user_id?: string
     start_date?: string
@@ -498,6 +498,18 @@ export const callRecordsApi = {
 
 /** 通话统计数据类型 */
 export interface CallStatisticsData {
+  /** 总电话量姓名列表（stat_type=0） */
+  chart2Names1?: string[]
+  /** 联系人数姓名列表（stat_type=1） */
+  chart2Names2?: string[]
+  /** 通话时长姓名列表（stat_type=0） */
+  chart2Names3?: string[]
+  /** 总电话量数据（stat_type=0） */
+  chart2Counts1?: Array<{ name: string; value: number; url?: string }>
+  /** 联系人数数据（stat_type=1） */
+  chart2Counts2?: Array<{ name: string; value: number; url?: string }>
+  /** 通话时长数据（stat_type=0） */
+  chart2Counts3?: Array<{ name: string; value: number; url?: string }>
   /** 总通话次数 */
   totalCallCount?: number
   /** 外呼次数 */
@@ -541,4 +553,3 @@ export interface EmployeeCampusMapping {
     campus_name: string
   }>
 }
-

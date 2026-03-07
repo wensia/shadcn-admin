@@ -82,6 +82,11 @@ export const crmNavGroups: NavGroup[] = [
         icon: Users,
       },
       {
+        title: '分配任务',
+        url: '/crm/leads/assignment-tasks',
+        icon: Activity,
+      },
+      {
         title: '公海线索',
         url: '/crm/leads/pool',
         icon: Home,

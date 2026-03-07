@@ -1,28 +1,28 @@
 /**
  * 线索管理主页面 - 使用 DataTableLayout 通用布局
  */
-
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearch } from '@tanstack/react-router'
-import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Button, Toast } from '@douyinfe/semi-ui-19'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { IconPlus } from '@douyinfe/semi-icons'
+import { Button, Toast } from '@douyinfe/semi-ui-19'
+import { apiClient } from '@/lib/api/client'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { FilterTag } from '@/components/semi/filter-tags-bar'
-import { LeadsTable } from './components/leads-table'
-import { LeadsToolbar } from './components/leads-toolbar'
-import { LeadDetailSheet } from './components/lead-detail-sheet'
-import { LeadFormDialog } from './components/lead-form-dialog'
-import { FilterSheet } from './components/filter-sheet'
+import { CreateAssignmentTaskDialog } from '@/features/crm/lead-assignment-tasks'
+import { leadsApi } from './api'
 import {
   BatchAssignDialog,
   BatchReleaseDialog,
   BatchUpdateStatusDialog,
   BatchDeleteDialog,
 } from './components/batch-dialogs'
-import { leadsApi } from './api'
-import { apiClient } from '@/lib/api/client'
+import { FilterSheet } from './components/filter-sheet'
+import { LeadDetailSheet } from './components/lead-detail-sheet'
+import { LeadFormDialog } from './components/lead-form-dialog'
+import { LeadsTable } from './components/leads-table'
+import { LeadsToolbar } from './components/leads-toolbar'
 import {
   leadStatusLabels,
   intentionLevelLabels,
@@ -39,6 +39,7 @@ import {
 export function LeadsPage() {
   useDocumentTitle('线索管理')
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   // URL 搜索参数
   const searchParams = useSearch({ from: '/_authenticated/crm/leads/' })
@@ -59,10 +60,14 @@ export function LeadsPage() {
   useEffect(() => {
     const urlFilters: Partial<LeadListParams> = {}
     if (searchParams.grade) urlFilters.grade = [searchParams.grade as Grade]
-    if (searchParams.status) setStatusFilter([searchParams.status as LeadStatus])
-    if (searchParams.intention_level) setIntentionFilter([searchParams.intention_level as IntentionLevel])
-    if (searchParams.source_channel_id) urlFilters.source_channel_id = [searchParams.source_channel_id]
-    if (searchParams.campus_id) urlFilters.owner_campus_id = [searchParams.campus_id]
+    if (searchParams.status)
+      setStatusFilter([searchParams.status as LeadStatus])
+    if (searchParams.intention_level)
+      setIntentionFilter([searchParams.intention_level as IntentionLevel])
+    if (searchParams.source_channel_id)
+      urlFilters.source_channel_id = [searchParams.source_channel_id]
+    if (searchParams.campus_id)
+      urlFilters.owner_campus_id = [searchParams.campus_id]
     if (searchParams.search) setSearchValue(searchParams.search)
     if (searchParams.detail) {
       setCurrentLeadId(searchParams.detail)
@@ -82,8 +87,11 @@ export function LeadsPage() {
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [batchAssignDialogOpen, setBatchAssignDialogOpen] = useState(false)
+  const [createAssignmentTaskDialogOpen, setCreateAssignmentTaskDialogOpen] =
+    useState(false)
   const [batchReleaseDialogOpen, setBatchReleaseDialogOpen] = useState(false)
-  const [batchUpdateStatusDialogOpen, setBatchUpdateStatusDialogOpen] = useState(false)
+  const [batchUpdateStatusDialogOpen, setBatchUpdateStatusDialogOpen] =
+    useState(false)
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
 
   // 当前选中/编辑线索
@@ -107,7 +115,9 @@ export function LeadsPage() {
       const response = await apiClient.get<{
         code: number
         data: { items: Array<{ id: string; name: string; category: string }> }
-      }>('/source-channels', { params: { page: 1, size: 100, is_active: true } })
+      }>('/source-channels', {
+        params: { page: 1, size: 100, is_active: true },
+      })
       return response.data?.items || []
     },
     staleTime: 5 * 60 * 1000,
@@ -117,7 +127,9 @@ export function LeadsPage() {
   const filterMaps = useMemo(() => {
     return {
       channels: new Map(sourceChannels?.map((c) => [c.id, c.name]) || []),
-      campuses: new Map(filterOptions?.campuses?.map((c) => [c.id, c.name]) || []),
+      campuses: new Map(
+        filterOptions?.campuses?.map((c) => [c.id, c.name]) || []
+      ),
       followupResults: new Map(
         filterOptions?.followup_results?.map((r) => [r.value, r.label]) || []
       ),
@@ -157,13 +169,21 @@ export function LeadsPage() {
 
   // 获取线索列表
   const { data, isLoading } = useQuery({
-    queryKey: ['leads', pagination, filters, committedSearch, statusFilter, intentionFilter],
+    queryKey: [
+      'leads',
+      pagination,
+      filters,
+      committedSearch,
+      statusFilter,
+      intentionFilter,
+    ],
     queryFn: async () => {
       const response = await leadsApi.getLeads({
         ...filters,
         search: committedSearch || undefined,
         status: statusFilter.length > 0 ? statusFilter : undefined,
-        intention_level: intentionFilter.length > 0 ? intentionFilter : undefined,
+        intention_level:
+          intentionFilter.length > 0 ? intentionFilter : undefined,
         page: pagination.page,
         size: pagination.size,
         include_styles: true,
@@ -257,10 +277,16 @@ export function LeadsPage() {
     action()
   }
 
-  const handleBatchAssign = () => requireSelection(() => setBatchAssignDialogOpen(true))
-  const handleBatchRelease = () => requireSelection(() => setBatchReleaseDialogOpen(true))
-  const handleBatchUpdateStatus = () => requireSelection(() => setBatchUpdateStatusDialogOpen(true))
-  const handleBatchDelete = () => requireSelection(() => setBatchDeleteDialogOpen(true))
+  const handleBatchAssign = () =>
+    requireSelection(() => setBatchAssignDialogOpen(true))
+  const handleCreateAssignmentTask = () =>
+    requireSelection(() => setCreateAssignmentTaskDialogOpen(true))
+  const handleBatchRelease = () =>
+    requireSelection(() => setBatchReleaseDialogOpen(true))
+  const handleBatchUpdateStatus = () =>
+    requireSelection(() => setBatchUpdateStatusDialogOpen(true))
+  const handleBatchDelete = () =>
+    requireSelection(() => setBatchDeleteDialogOpen(true))
 
   const handleRowClick = (lead: LeadListItem) => {
     setCurrentLeadId(lead.id)
@@ -284,7 +310,11 @@ export function LeadsPage() {
       key: 'search',
       label: '搜索',
       value: committedSearch,
-      onClose: () => { setSearchValue(''); setCommittedSearch(''); resetToFirstPage() },
+      onClose: () => {
+        setSearchValue('')
+        setCommittedSearch('')
+        resetToFirstPage()
+      },
     })
   }
 
@@ -293,7 +323,10 @@ export function LeadsPage() {
       key: 'status',
       label: '状态',
       value: statusFilter.map((s) => leadStatusLabels[s]).join(', '),
-      onClose: () => { setStatusFilter([]); resetToFirstPage() },
+      onClose: () => {
+        setStatusFilter([])
+        resetToFirstPage()
+      },
     })
   }
 
@@ -302,7 +335,10 @@ export function LeadsPage() {
       key: 'intention',
       label: '意向',
       value: intentionFilter.map((l) => intentionLevelLabels[l]).join(', '),
-      onClose: () => { setIntentionFilter([]); resetToFirstPage() },
+      onClose: () => {
+        setIntentionFilter([])
+        resetToFirstPage()
+      },
     })
   }
 
@@ -311,19 +347,28 @@ export function LeadsPage() {
       key: 'grade',
       label: '年级',
       value: filters.grade.map((g) => gradeLabels[g]).join(', '),
-      onClose: () => setFilters((prev) => { const { grade, ...rest } = prev; return rest }),
+      onClose: () =>
+        setFilters((prev) => {
+          const { grade, ...rest } = prev
+          return rest
+        }),
     })
   }
 
-  if (filters.followup_results && filters.followup_results.length > 0 && filters.followup_result_mode) {
+  if (
+    filters.followup_results &&
+    filters.followup_results.length > 0 &&
+    filters.followup_result_mode
+  ) {
     filterTags.push({
       key: 'followup',
       label: '回访',
       value: `${followupModeLabels[filters.followup_result_mode] || filters.followup_result_mode} ${getFollowupResultLabel(filters.followup_results)}`,
-      onClose: () => setFilters((prev) => {
-        const { followup_results, followup_result_mode, ...rest } = prev
-        return rest
-      }),
+      onClose: () =>
+        setFilters((prev) => {
+          const { followup_results, followup_result_mode, ...rest } = prev
+          return rest
+        }),
     })
   }
 
@@ -331,8 +376,17 @@ export function LeadsPage() {
     filterTags.push({
       key: 'channel',
       label: '渠道',
-      value: getFilterLabel(filters.source_channel_id, filterMaps?.channels, '来源渠道') || '',
-      onClose: () => setFilters((prev) => { const { source_channel_id, ...rest } = prev; return rest }),
+      value:
+        getFilterLabel(
+          filters.source_channel_id,
+          filterMaps?.channels,
+          '来源渠道'
+        ) || '',
+      onClose: () =>
+        setFilters((prev) => {
+          const { source_channel_id, ...rest } = prev
+          return rest
+        }),
     })
   }
 
@@ -341,7 +395,11 @@ export function LeadsPage() {
       key: 'advisor',
       label: '顾问',
       value: filters.advisor_name,
-      onClose: () => setFilters((prev) => { const { advisor_name, ...rest } = prev; return rest }),
+      onClose: () =>
+        setFilters((prev) => {
+          const { advisor_name, ...rest } = prev
+          return rest
+        }),
     })
   }
 
@@ -350,7 +408,11 @@ export function LeadsPage() {
       key: 'creator',
       label: '创建人',
       value: filters.created_by_name,
-      onClose: () => setFilters((prev) => { const { created_by_name, ...rest } = prev; return rest }),
+      onClose: () =>
+        setFilters((prev) => {
+          const { created_by_name, ...rest } = prev
+          return rest
+        }),
     })
   }
 
@@ -358,8 +420,17 @@ export function LeadsPage() {
     filterTags.push({
       key: 'campus',
       label: '校区',
-      value: getFilterLabel(filters.owner_campus_id, filterMaps?.campuses, '归属校区') || '',
-      onClose: () => setFilters((prev) => { const { owner_campus_id, ...rest } = prev; return rest }),
+      value:
+        getFilterLabel(
+          filters.owner_campus_id,
+          filterMaps?.campuses,
+          '归属校区'
+        ) || '',
+      onClose: () =>
+        setFilters((prev) => {
+          const { owner_campus_id, ...rest } = prev
+          return rest
+        }),
     })
   }
 
@@ -368,7 +439,11 @@ export function LeadsPage() {
       key: 'time',
       label: '时间',
       value: `${filters.created_from || '...'} ~ ${filters.created_to || '...'}`,
-      onClose: () => setFilters((prev) => { const { created_from, created_to, ...rest } = prev; return rest }),
+      onClose: () =>
+        setFilters((prev) => {
+          const { created_from, created_to, ...rest } = prev
+          return rest
+        }),
     })
   }
 
@@ -377,7 +452,11 @@ export function LeadsPage() {
       key: 'tag',
       label: '标签',
       value: filters.tag,
-      onClose: () => setFilters((prev) => { const { tag, ...rest } = prev; return rest }),
+      onClose: () =>
+        setFilters((prev) => {
+          const { tag, ...rest } = prev
+          return rest
+        }),
     })
   }
 
@@ -386,17 +465,21 @@ export function LeadsPage() {
       key: 'inactive',
       label: '无活动',
       value: `${filters.days_without_activity}天`,
-      onClose: () => setFilters((prev) => { const { days_without_activity, ...rest } = prev; return rest }),
+      onClose: () =>
+        setFilters((prev) => {
+          const { days_without_activity, ...rest } = prev
+          return rest
+        }),
     })
   }
 
   return (
     <>
       <DataTableLayout
-        title="线索管理"
+        title='线索管理'
         total={total}
         headerActions={
-          <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>
+          <Button icon={<IconPlus />} theme='solid' onClick={handleCreate}>
             新建线索
           </Button>
         }
@@ -413,6 +496,7 @@ export function LeadsPage() {
             onStatusFilterChange={handleStatusFilterChange}
             onIntentionFilterChange={handleIntentionFilterChange}
             onFilterClick={handleFilter}
+            onCreateAssignmentTask={handleCreateAssignmentTask}
             onBatchAssign={handleBatchAssign}
             onBatchRelease={handleBatchRelease}
             onBatchUpdateStatus={handleBatchUpdateStatus}
@@ -460,7 +544,9 @@ export function LeadsPage() {
         filters={{
           ...filters,
           ...(statusFilter.length > 0 ? { status: statusFilter } : {}),
-          ...(intentionFilter.length > 0 ? { intention_level: intentionFilter } : {}),
+          ...(intentionFilter.length > 0
+            ? { intention_level: intentionFilter }
+            : {}),
         }}
         onApplyFilters={handleApplyFilters}
       />
@@ -471,6 +557,20 @@ export function LeadsPage() {
         onOpenChange={setBatchAssignDialogOpen}
         selectedLeadIds={selectedRows.map((row) => row.id)}
         onSuccess={handleBatchSuccess}
+      />
+      <CreateAssignmentTaskDialog
+        open={createAssignmentTaskDialogOpen}
+        onOpenChange={setCreateAssignmentTaskDialogOpen}
+        selectedLeads={selectedRows}
+        onSuccess={(taskId) => {
+          handleBatchSuccess()
+          queryClient.invalidateQueries({ queryKey: ['lead-assignment-tasks'] })
+          Toast.success({ content: '分配任务创建成功' })
+          navigate({
+            to: '/crm/leads/assignment-tasks/$taskId',
+            params: { taskId },
+          })
+        }}
       />
       <BatchReleaseDialog
         open={batchReleaseDialogOpen}

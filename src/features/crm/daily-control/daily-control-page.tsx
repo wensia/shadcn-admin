@@ -22,7 +22,7 @@ import { ActualVisitTab } from './components/actual-visit-tab'
 import { PaymentTab } from './components/payment-tab'
 import { CalendarTab } from './components/calendar-tab'
 import { ReportTab } from './components/report-tab'
-import { getVisitSchedules, getPayments } from './api'
+import { dailyControlQueryKeys, getVisitSchedules, getPayments } from './api'
 import { brandColors, type TabType } from './theme'
 import { apiClient } from '@/lib/api/client'
 
@@ -57,7 +57,12 @@ export function DailyControlPage() {
 
   // 获取统计数据
   const { data: promisedStats } = useQuery({
-    queryKey: ['daily-control-stats-promised', dateRange.from, dateRange.to, creatorCampusId],
+    queryKey: dailyControlQueryKeys.visitScheduleStat({
+      status: 'scheduled',
+      visit_date_from: dateRange.from,
+      visit_date_to: dateRange.to,
+      creator_campus_id: creatorCampusId,
+    }),
     queryFn: async () => {
       const result = await getVisitSchedules({
         page: 1,
@@ -67,12 +72,17 @@ export function DailyControlPage() {
         visit_date_to: dateRange.to,
         creator_campus_id: creatorCampusId,
       })
-      return result.data?.total ?? 0
+      return result.total ?? 0
     },
   })
 
   const { data: visitedStats } = useQuery({
-    queryKey: ['daily-control-stats-visited', dateRange.from, dateRange.to, creatorCampusId],
+    queryKey: dailyControlQueryKeys.visitScheduleStat({
+      status: 'visited',
+      visit_date_from: dateRange.from,
+      visit_date_to: dateRange.to,
+      creator_campus_id: creatorCampusId,
+    }),
     queryFn: async () => {
       const result = await getVisitSchedules({
         page: 1,
@@ -82,12 +92,19 @@ export function DailyControlPage() {
         visit_date_to: dateRange.to,
         creator_campus_id: creatorCampusId,
       })
-      return result.data?.total ?? 0
+      return result.total ?? 0
     },
   })
 
   const { data: paymentStats } = useQuery({
-    queryKey: ['daily-control-stats-payment', dateRange.from, dateRange.to, creatorCampusId],
+    queryKey: dailyControlQueryKeys.paymentStat({
+      page: 1,
+      size: 1,
+      status: 'confirmed',
+      date_from: dateRange.from,
+      date_to: dateRange.to,
+      creator_campus_id: creatorCampusId,
+    }),
     queryFn: async () => {
       const result = await getPayments({
         page: 1,
@@ -97,7 +114,7 @@ export function DailyControlPage() {
         date_to: dateRange.to,
         creator_campus_id: creatorCampusId,
       })
-      return result.data?.total ?? 0
+      return result.total ?? 0
     },
   })
 
@@ -245,7 +262,16 @@ export function DailyControlPage() {
           </div>
 
           {/* Tab 内容区域 */}
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', paddingTop: 16 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden',
+              paddingTop: 16,
+            }}
+          >
             {activeTab === 'promised' && (
               <PromisedVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
             )}

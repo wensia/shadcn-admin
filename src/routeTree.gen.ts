@@ -102,6 +102,8 @@ import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
 import { Route as AuthenticatedCrmDataStatisticsMarketingRouteImport } from './routes/_authenticated/crm/data-statistics/marketing'
 import { Route as AuthenticatedCrmDataStatisticsConsultingRouteImport } from './routes/_authenticated/crm/data-statistics/consulting'
+import { Route as AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/index'
+import { Route as AuthenticatedCrmLeadsAssignmentTasksTaskIdRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/$taskId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -620,6 +622,18 @@ const AuthenticatedCrmDataStatisticsConsultingRoute =
     path: '/data-statistics/consulting',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmLeadsAssignmentTasksIndexRoute =
+  AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport.update({
+    id: '/leads/assignment-tasks/',
+    path: '/leads/assignment-tasks/',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute =
+  AuthenticatedCrmLeadsAssignmentTasksTaskIdRouteImport.update({
+    id: '/leads/assignment-tasks/$taskId',
+    path: '/leads/assignment-tasks/$taskId',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -711,6 +725,8 @@ export interface FileRoutesByFullPath {
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
+  '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
+  '/crm/leads/assignment-tasks/': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
@@ -798,6 +814,8 @@ export interface FileRoutesByTo {
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
+  '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
+  '/crm/leads/assignment-tasks': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -894,6 +912,8 @@ export interface FileRoutesById {
   '/_authenticated/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/_authenticated/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/_authenticated/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
+  '/_authenticated/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
+  '/_authenticated/crm/leads/assignment-tasks/': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -987,6 +1007,8 @@ export interface FileRouteTypes {
     | '/crm/data-statistics/marketing'
     | '/crm/leads/pool'
     | '/crm/leads/'
+    | '/crm/leads/assignment-tasks/$taskId'
+    | '/crm/leads/assignment-tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1074,6 +1096,8 @@ export interface FileRouteTypes {
     | '/crm/data-statistics/marketing'
     | '/crm/leads/pool'
     | '/crm/leads'
+    | '/crm/leads/assignment-tasks/$taskId'
+    | '/crm/leads/assignment-tasks'
   id:
     | '__root__'
     | '/_authenticated'
@@ -1169,6 +1193,8 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/data-statistics/marketing'
     | '/_authenticated/crm/leads/pool'
     | '/_authenticated/crm/leads/'
+    | '/_authenticated/crm/leads/assignment-tasks/$taskId'
+    | '/_authenticated/crm/leads/assignment-tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1844,6 +1870,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmDataStatisticsConsultingRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/leads/assignment-tasks/': {
+      id: '/_authenticated/crm/leads/assignment-tasks/'
+      path: '/leads/assignment-tasks'
+      fullPath: '/crm/leads/assignment-tasks/'
+      preLoaderRoute: typeof AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/leads/assignment-tasks/$taskId': {
+      id: '/_authenticated/crm/leads/assignment-tasks/$taskId'
+      path: '/leads/assignment-tasks/$taskId'
+      fullPath: '/crm/leads/assignment-tasks/$taskId'
+      preLoaderRoute: typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
   }
 }
 
@@ -1938,6 +1978,8 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmDataStatisticsMarketingRoute: typeof AuthenticatedCrmDataStatisticsMarketingRoute
   AuthenticatedCrmLeadsPoolRoute: typeof AuthenticatedCrmLeadsPoolRoute
   AuthenticatedCrmLeadsIndexRoute: typeof AuthenticatedCrmLeadsIndexRoute
+  AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute: typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
+  AuthenticatedCrmLeadsAssignmentTasksIndexRoute: typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
 }
 
 const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
@@ -1958,6 +2000,10 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
     AuthenticatedCrmDataStatisticsMarketingRoute,
   AuthenticatedCrmLeadsPoolRoute: AuthenticatedCrmLeadsPoolRoute,
   AuthenticatedCrmLeadsIndexRoute: AuthenticatedCrmLeadsIndexRoute,
+  AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute:
+    AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute,
+  AuthenticatedCrmLeadsAssignmentTasksIndexRoute:
+    AuthenticatedCrmLeadsAssignmentTasksIndexRoute,
 }
 
 const AuthenticatedCrmRouteRouteWithChildren =

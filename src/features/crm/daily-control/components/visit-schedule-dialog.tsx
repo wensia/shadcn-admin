@@ -8,11 +8,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal, Button, Toast, Form } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconUserAdd, IconClose } from '@douyinfe/semi-icons'
-import { visitScheduleApi } from '@/features/crm/lead-conversion/api'
 import { coursesApi } from '@/features/admin/api'
-import type { VisitScheduleCreate } from '@/features/crm/lead-conversion/types'
 import { LeadSelectDialog, type SelectedLead } from './lead-select-dialog'
-import { updateVisitSchedule, type VisitScheduleItem, type VisitScheduleUpdateData } from '../api'
+import {
+  createVisitSchedule,
+  dailyControlQueryKeys,
+  updateVisitSchedule,
+  type VisitScheduleItem,
+  type VisitScheduleMutationData,
+  type VisitScheduleCreateData,
+} from '../api'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 interface VisitScheduleDialogProps {
@@ -24,20 +29,15 @@ interface VisitScheduleDialogProps {
 }
 
 interface CourseOptionItem {
+  id: string
   is_active: boolean
   name: string
 }
 
 interface VisitScheduleFormValues {
-  scheduled_at?: Date | string
-  trial_course?: string
-  trial_teacher?: string
+  visit_at?: Date | string
+  course_id?: string
   remark?: string
-}
-
-type VisitScheduleCreatePayload = VisitScheduleCreate & {
-  actual_visit_at?: string
-  status?: 'visited'
 }
 
 export function VisitScheduleDialog({
@@ -66,7 +66,7 @@ export function VisitScheduleDialog({
   })
   const activeCourses = (courses as CourseOptionItem[]).filter((course) => course.is_active)
 
-  const getDefaultScheduledAt = () => {
+  const getDefaultVisitAt = () => {
     const date = new Date()
     date.setHours(10, 0, 0, 0)
     return date
@@ -79,25 +79,23 @@ export function VisitScheduleDialog({
     const nextSelectedLead = editData
       ? {
           id: editData.lead_id,
-          child_name: editData.child_name,
-          parent_phone: editData.parent_phone || '',
+          child_name: editData.student_name || editData.child_name || '',
+          parent_phone: editData.phone || editData.parent_phone || '',
         }
       : null
     const nextValues: VisitScheduleFormValues = editData
       ? {
-          scheduled_at: editData.visit_date && editData.visit_time
+          visit_at: editData.visit_date && editData.visit_time
             ? new Date(`${editData.visit_date}T${editData.visit_time}`)
             : editData.visit_date
               ? new Date(`${editData.visit_date}T10:00:00`)
-              : getDefaultScheduledAt(),
-          trial_course: editData.course_names?.[0] || '',
-          trial_teacher: '',
+              : getDefaultVisitAt(),
+          course_id: editData.course_ids?.[0] || '',
           remark: editData.remark || '',
         }
       : {
-          scheduled_at: getDefaultScheduledAt(),
-          trial_course: '',
-          trial_teacher: '',
+          visit_at: getDefaultVisitAt(),
+          course_id: '',
           remark: '',
         }
 
@@ -111,10 +109,10 @@ export function VisitScheduleDialog({
 
   // 创建
   const createMutation = useMutation({
-    mutationFn: (data: VisitScheduleCreatePayload) => visitScheduleApi.createVisitSchedule(data),
-    onSuccess: () => {
+    mutationFn: (data: VisitScheduleCreateData) => createVisitSchedule(data),
+    onSuccess: async () => {
       Toast.success(isScheduled ? '诺到记录创建成功' : '到访记录创建成功')
-      queryClient.invalidateQueries({ queryKey: ['visit-schedules'] })
+      await queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all })
       onOpenChange(false)
       onSuccess?.()
     },
@@ -123,10 +121,10 @@ export function VisitScheduleDialog({
 
   // 更新
   const updateMutation = useMutation({
-    mutationFn: (data: VisitScheduleUpdateData) => updateVisitSchedule(editData!.id, data),
-    onSuccess: () => {
+    mutationFn: (data: VisitScheduleMutationData) => updateVisitSchedule(editData!.id, data),
+    onSuccess: async () => {
       Toast.success(isScheduled ? '诺到记录更新成功' : '到访记录更新成功')
-      queryClient.invalidateQueries({ queryKey: ['visit-schedules'] })
+      await queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all })
       onOpenChange(false)
       onSuccess?.()
     },
@@ -150,35 +148,29 @@ export function VisitScheduleDialog({
       return
     }
 
-    if (!values.scheduled_at) {
+    if (!values.visit_at) {
       Toast.warning(isScheduled ? '请选择预约时间' : '请选择到访时间')
       return
     }
 
-    const scheduledAtStr = values.scheduled_at instanceof Date
-      ? values.scheduled_at.toISOString()
-      : values.scheduled_at
+    const visitAtStr = values.visit_at instanceof Date
+      ? values.visit_at.toISOString()
+      : values.visit_at
 
     if (isEditMode) {
-      const updateData: VisitScheduleUpdateData = {
-        scheduled_at: scheduledAtStr,
-        trial_course: values.trial_course || undefined,
-        trial_teacher: values.trial_teacher || undefined,
+      const updateData: VisitScheduleMutationData = {
+        visit_at: visitAtStr,
+        course_ids: values.course_id ? [values.course_id] : [],
         remark: values.remark || undefined,
       }
       updateMutation.mutate(updateData)
     } else {
-      const data: VisitScheduleCreatePayload = {
+      const data: VisitScheduleCreateData = {
         lead_id: selectedLead!.id,
-        scheduled_at: scheduledAtStr,
-        trial_course: values.trial_course || undefined,
-        trial_teacher: values.trial_teacher || undefined,
+        visit_at: visitAtStr,
+        course_ids: values.course_id ? [values.course_id] : [],
         remark: values.remark || undefined,
-      }
-
-      if (!isScheduled) {
-        data.actual_visit_at = scheduledAtStr
-        data.status = 'visited'
+        status: isScheduled ? 'scheduled' : 'visited',
       }
 
       createMutation.mutate(data)
@@ -188,7 +180,7 @@ export function VisitScheduleDialog({
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   const courseOptions = activeCourses.map((course) => ({
-    value: course.name,
+    value: course.id,
     label: course.name,
   }))
 
@@ -246,28 +238,20 @@ export function VisitScheduleDialog({
 
           {/* 预约时间 */}
           <Form.DatePicker
-            field="scheduled_at"
+            field="visit_at"
             label={<span>{isScheduled ? '预约时间' : '到访时间'} <span style={{ color: 'var(--semi-color-danger)' }}>*</span></span>}
             type="dateTime"
             style={{ width: '100%' }}
             placeholder={isScheduled ? '选择预约时间' : '选择到访时间'}
           />
 
-          {/* 体验课程和讲师 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <Form.Select
-              field="trial_course"
-              label="体验课程"
-              optionList={courseOptions}
-              placeholder="选择体验课程"
-              style={{ width: '100%' }}
-            />
-            <Form.Input
-              field="trial_teacher"
-              label="体验课讲师"
-              placeholder="讲师姓名"
-            />
-          </div>
+          <Form.Select
+            field="course_id"
+            label="体验课程"
+            optionList={courseOptions}
+            placeholder="选择体验课程"
+            style={{ width: '100%' }}
+          />
 
           {/* 备注 */}
           <Form.TextArea
