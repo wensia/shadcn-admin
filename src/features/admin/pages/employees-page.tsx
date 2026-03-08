@@ -184,7 +184,13 @@ export function EmployeesPage() {
       return response.data?.items || []
     },
   })
-  const globalPositions = globalPositionsData || []
+  const globalPositions = useMemo(() => globalPositionsData || [], [globalPositionsData])
+
+  const getScopedGlobalPositions = useCallback((departmentId: string) => {
+    if (!departmentId) return globalPositions
+    const scopedPositions = globalPositions.filter((position) => position.department_ids?.includes(departmentId))
+    return scopedPositions.length > 0 ? scopedPositions : globalPositions
+  }, [globalPositions])
 
   // 地区列表映射（按大区ID）
   const [districtOptionsMap, setDistrictOptionsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({})
@@ -1437,7 +1443,10 @@ export function EmployeesPage() {
                           placeholder="选择职位"
                           style={DIALOG_SELECT_STYLE}
                           disabled={!identity.department_id}
-                          optionList={globalPositions.map(p => ({ label: p.name, value: p.id }))}
+                          optionList={getScopedGlobalPositions(identity.department_id).map((position) => ({
+                            label: `${position.name} (${position.level_display})`,
+                            value: position.id,
+                          }))}
                         />
                       )}
                     </div>

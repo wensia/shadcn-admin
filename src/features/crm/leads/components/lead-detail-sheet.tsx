@@ -86,11 +86,11 @@ export function LeadDetailSheet({
     callStartTimeRef.current = null
   }, [])
 
-  const makeOutboundCall = useCallback(async (phone: string) => {
-    if (!phone || isInCall || outboundLoading) return false
+  const makeOutboundCall = useCallback(async (params: { phone?: string; leadId?: string }) => {
+    if ((!params.phone && !params.leadId) || isInCall || outboundLoading) return false
     setOutboundLoading(true)
     try {
-      const response = await yunkeApi.dialPhone(phone)
+      const response = await yunkeApi.dialPhone(params)
       if (response.data?.call_id) {
         setCurrentCallId(response.data.call_id)
         startCallTimer()
@@ -166,9 +166,9 @@ export function LeadDetailSheet({
     const handleKeyDown = (event: KeyboardEvent) => {
       const el = document.activeElement as HTMLElement
       const isEditable = el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable
-      if (event.code === 'Space' && !isEditable && open && !isInCall && !outboundLoading && lead?.parent_phone) {
+      if (event.code === 'Space' && !isEditable && open && !isInCall && !outboundLoading && leadId) {
         event.preventDefault()
-        makeOutboundCall(lead.parent_phone)
+        makeOutboundCall({ leadId, phone: lead?.parent_phone || undefined })
       }
       if (event.key === 'Escape' && isInCall) {
         event.preventDefault()
@@ -180,7 +180,7 @@ export function LeadDetailSheet({
       window.addEventListener('keydown', handleKeyDown, true)
       return () => window.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [open, isInCall, outboundLoading, lead?.parent_phone, makeOutboundCall, hangUpCall])
+  }, [open, isInCall, outboundLoading, leadId, lead?.parent_phone, makeOutboundCall, hangUpCall])
 
   useEffect(() => {
     return () => {
@@ -289,8 +289,11 @@ export function LeadDetailSheet({
                       icon={<IconPhone />}
                       theme={isInCall ? 'solid' : 'light'}
                       type={isInCall ? 'danger' : 'primary'}
-                      onClick={() => isInCall ? hangUpCall() : makeOutboundCall(lead.parent_phone || '')}
-                      disabled={outboundLoading || (!isInCall && !lead?.parent_phone)}
+                      onClick={() => isInCall ? hangUpCall() : makeOutboundCall({
+                        leadId: leadId || undefined,
+                        phone: lead?.parent_phone || undefined,
+                      })}
+                      disabled={outboundLoading || (!isInCall && !leadId && !lead?.parent_phone)}
                       loading={outboundLoading}
                     >
                       {isInCall ? `挂断 ${formatCallDuration(callDuration)}` : '外呼'}

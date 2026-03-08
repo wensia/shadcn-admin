@@ -239,8 +239,8 @@ function PortalLeadsView({ token }: { token: string }) {
         ),
       },
       {
-        title: '顾问',
-        dataIndex: 'advisor_name',
+        title: '创建/激活人',
+        dataIndex: 'owner_name',
         width: 90,
         render: (v: string) =>
           v ? (
@@ -493,7 +493,7 @@ function StatsTab({ token }: { token: string }) {
     loadStats()
   }, [loadStats])
 
-  const { overview, by_advisor, daily_trend } = stats || {}
+  const { overview, by_owner, daily_trend } = stats || {}
 
   return (
     <div>
@@ -553,15 +553,15 @@ function StatsTab({ token }: { token: string }) {
             />
           </div>
 
-          {/* 顾问排名 */}
-          {by_advisor && by_advisor.length > 0 && (
+          {/* 创建/激活人排名 */}
+          {by_owner && by_owner.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <Title heading={6} style={{ marginBottom: 8 }}>
-                顾问跟进排名
+                创建/激活人跟进排名
               </Title>
               <Table
                 columns={[
-                  { title: '顾问', dataIndex: 'advisor_name', width: 100 },
+                  { title: '创建/激活人', dataIndex: 'owner_name', width: 100 },
                   {
                     title: '总数',
                     dataIndex: 'total',
@@ -606,8 +606,8 @@ function StatsTab({ token }: { token: string }) {
                         : '-',
                   },
                 ]}
-                dataSource={by_advisor}
-                rowKey="advisor_name"
+                dataSource={by_owner}
+                rowKey="owner_name"
                 pagination={false}
               />
             </div>

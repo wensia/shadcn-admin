@@ -7,7 +7,7 @@ import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/lib/toast'
 import { Briefcase, Plus, Pencil, Trash2 } from 'lucide-react'
-import { Form, Button, Modal, Select, Typography, Input } from '@douyinfe/semi-ui-19'
+import { Form, Button, Modal, Select, Typography, Input, Tag } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch } from '@douyinfe/semi-icons'
@@ -58,6 +58,14 @@ export function PositionsPage() {
     },
   })
 
+  const { data: departmentsData } = useQuery({
+    queryKey: ['admin-departments-simple'],
+    queryFn: async () => {
+      const response = await adminApi.getDepartmentsSimple()
+      return response.data || []
+    },
+  })
+
   // 创建
   const createMutation = useMutation({
     mutationFn: (data: PositionCreate) => adminApi.createPosition(data),
@@ -65,6 +73,7 @@ export function PositionsPage() {
       toast.success('创建成功')
       setDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['admin-positions'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-positions-simple'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '创建失败')
@@ -80,6 +89,7 @@ export function PositionsPage() {
       setDialogOpen(false)
       setEditingItem(null)
       queryClient.invalidateQueries({ queryKey: ['admin-positions'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-positions-simple'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '更新失败')
@@ -94,6 +104,7 @@ export function PositionsPage() {
       setDeleteDialogOpen(false)
       setDeletingItem(null)
       queryClient.invalidateQueries({ queryKey: ['admin-positions'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-positions-simple'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '删除失败')
@@ -123,6 +134,26 @@ export function PositionsPage() {
       render: (_level: number, record: PositionItem) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return <PositionLevelBadge level={record.level} />
+      },
+    },
+    {
+      title: '关联部门',
+      dataIndex: 'department_names',
+      width: 260,
+      render: (_text: string[], record: PositionItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={180} />
+        if (!record.department_names?.length) {
+          return <Text type="tertiary">未关联</Text>
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {record.department_names.map((departmentName) => (
+              <Tag key={`${record.id}-${departmentName}`} color="light-blue" size="small">
+                {departmentName}
+              </Tag>
+            ))}
+          </div>
+        )
       },
     },
     {
@@ -194,6 +225,10 @@ export function PositionsPage() {
     { value: 'active', label: '启用' },
     { value: 'inactive', label: '停用' },
   ]
+  const departmentOptions = useMemo(
+    () => (departmentsData || []).map((department) => ({ label: department.name, value: department.id })),
+    [departmentsData]
+  )
 
   const levelFormOptions = useMemo(() =>
     POSITION_LEVELS.map((l) => ({ value: l.value, label: l.label })),
@@ -217,6 +252,7 @@ export function PositionsPage() {
         description: item.description || '',
         sort_order: item.sort_order,
         is_active: item.is_active,
+        department_ids: item.department_ids || [],
       })
     }, 0)
   }
@@ -337,6 +373,17 @@ export function PositionsPage() {
             label="描述"
             placeholder="请输入描述信息"
             rows={3}
+          />
+          <Form.Select
+            field="department_ids"
+            label="关联部门"
+            placeholder="可选，限制哪些部门可使用该职位"
+            optionList={departmentOptions}
+            multiple
+            filter
+            showClear
+            maxTagCount={3}
+            style={{ width: '100%' }}
           />
           <Form.InputNumber
             field="sort_order"

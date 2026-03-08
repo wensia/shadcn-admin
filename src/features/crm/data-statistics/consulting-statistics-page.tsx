@@ -4,7 +4,6 @@
  */
 
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
   Button,
@@ -26,7 +25,14 @@ import {
 } from 'lucide-react'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { useTableScroll } from '@/components/semi/use-table-scroll'
-import { callRecordsApi, yunkeCredentialsApi } from '@/features/yunke/api'
+import {
+  formatDuration,
+  formatDurationShort,
+  getAdvisorCallMetricValue,
+  type AdvisorCallMetric,
+  type AdvisorCallRow,
+} from './utils/advisor-call-stats'
+import { useAdvisorCallData } from './hooks/use-advisor-call-data'
 
 const { Text } = Typography
 
@@ -36,53 +42,7 @@ const periodOptions = [
   { value: '2', label: '本月' },
 ]
 
-type MetricView = 'callCount' | 'contactCount' | 'duration'
-
-const DEFAULT_DEPT_ID = '50EDD867A7C04917B53FA277EE706D08'
-
-function formatDuration(seconds?: number): string {
-  if (!seconds || seconds === 0) return '0秒'
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-  if (hours > 0) return `${hours}时${minutes}分${secs}秒`
-  if (minutes > 0) return `${minutes}分${secs}秒`
-  return `${secs}秒`
-}
-
-function formatDurationShort(seconds?: number): string {
-  if (!seconds || seconds === 0) return '0:00'
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-  if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  return `${minutes}:${secs.toString().padStart(2, '0')}`
-}
-
-interface ChartCountItem {
-  name: string
-  value: number
-  url?: string
-}
-
-interface YunkeCallStatisticsData {
-  chart2Names1?: string[]
-  chart2Names2?: string[]
-  chart2Names3?: string[]
-  chart2Counts1?: ChartCountItem[]
-  chart2Counts2?: ChartCountItem[]
-  chart2Counts3?: ChartCountItem[]
-}
-
-interface MergedUser {
-  name: string
-  campusNames: string
-  callCount: number
-  contactCount: number
-  duration: number
-  avgDuration: number
-  contactRate: number
-}
+type MetricView = AdvisorCallMetric
 
 const metricConfig: Record<MetricView, {
   label: string
@@ -126,12 +86,6 @@ const metricConfig: Record<MetricView, {
   },
 }
 
-function getMetricValue(user: MergedUser, metric: MetricView): number {
-  if (metric === 'callCount') return user.callCount
-  if (metric === 'contactCount') return user.contactCount
-  return user.duration
-}
-
 export function ConsultingStatisticsPage() {
   useDocumentTitle('咨询数据统计')
 
@@ -142,163 +96,39 @@ export function ConsultingStatisticsPage() {
 
   const { wrapperRef, scrollY } = useTableScroll()
 
-  const { data: accountsData } = useQuery({
-    queryKey: ['yunke-accounts-for-statistics'],
-    queryFn: async () => yunkeCredentialsApi.getCredentials({ status: 1, limit: 100 }),
-    staleTime: 5 * 60 * 1000,
+  const callData = useAdvisorCallData({
+    selectedAccountId,
+    selectedCampusId,
+    period: parseInt(period, 10),
   })
 
-  const { data: employeeCampusMapping } = useQuery({
-    queryKey: ['employee-campus-mapping'],
-    queryFn: async () => callRecordsApi.getEmployeeCampusMapping(),
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const campusOptions = useMemo(() => {
-    if (!employeeCampusMapping) return []
-    const campusMap = new Map<string, string>()
-    Object.values(employeeCampusMapping).forEach((campusList) => {
-      campusList.forEach((campus) => {
-        campusMap.set(campus.campus_id, campus.campus_name)
-      })
-    })
-    return Array.from(campusMap.entries()).map(([id, name]) => ({
-      value: id,
-      label: name,
-    }))
-  }, [employeeCampusMapping])
-
-  const accountOptions = useMemo(() => {
-    const accounts = accountsData?.items || []
-    return accounts.map((account) => ({
-      value: account.id,
-      label: account.company_name || account.phone,
-      deptId: account.root_dept_id || DEFAULT_DEPT_ID,
-    }))
-  }, [accountsData])
-
-  const effectiveAccountId = selectedAccountId || accountOptions[0]?.value || ''
-
-  const departmentId = useMemo(() => {
-    if (!effectiveAccountId) return accountOptions[0]?.deptId || DEFAULT_DEPT_ID
-    const selected = accountOptions.find((option) => option.value === effectiveAccountId)
-    return selected?.deptId || DEFAULT_DEPT_ID
-  }, [accountOptions, effectiveAccountId])
-
-  const {
-    data: overviewData,
-    isLoading: isOverviewLoading,
-    isRefetching: isOverviewRefetching,
-    refetch: refetchOverview,
-  } = useQuery({
-    queryKey: ['consulting-statistics-overview', effectiveAccountId, departmentId, period],
-    queryFn: async () => callRecordsApi.getCallStatistics({
-      department_id: departmentId,
-      flag: 'department',
-      period: parseInt(period, 10),
-      account_id: effectiveAccountId || undefined,
-      stat_type: 0,
-    }) as Promise<YunkeCallStatisticsData>,
-    staleTime: 60 * 1000,
-    enabled: !!departmentId && !!effectiveAccountId,
-  })
-
-  const {
-    data: contactData,
-    isLoading: isContactLoading,
-    isRefetching: isContactRefetching,
-    refetch: refetchContact,
-  } = useQuery({
-    queryKey: ['consulting-statistics-contact', effectiveAccountId, departmentId, period],
-    queryFn: async () => callRecordsApi.getCallStatistics({
-      department_id: departmentId,
-      flag: 'department',
-      period: parseInt(period, 10),
-      account_id: effectiveAccountId || undefined,
-      stat_type: 1,
-    }) as Promise<YunkeCallStatisticsData>,
-    staleTime: 60 * 1000,
-    enabled: !!departmentId && !!effectiveAccountId,
-  })
-
-  const isLoading = isOverviewLoading || isContactLoading
-  const isRefetching = isOverviewRefetching || isContactRefetching
+  const isLoading = callData.isLoading
+  const isRefetching = callData.isRefetching
 
   const handleRefresh = async () => {
-    await Promise.all([refetchOverview(), refetchContact()])
+    await callData.refetch()
     Toast.success('已刷新')
   }
 
-  const callCountList = useMemo(() => overviewData?.chart2Counts1 || [], [overviewData])
-  const contactCountList = useMemo(() => contactData?.chart2Counts2 || [], [contactData])
-  const callDurationList = useMemo(() => overviewData?.chart2Counts3 || [], [overviewData])
-
   const mergedUserList = useMemo(() => {
-    const countMap = new Map(callCountList.map((item) => [item.name, item.value]))
-    const contactMap = new Map(contactCountList.map((item) => [item.name, item.value]))
-    const durationMap = new Map(callDurationList.map((item) => [item.name, item.value]))
-
-    const allNames = new Set([
-      ...callCountList.map((item) => item.name),
-      ...contactCountList.map((item) => item.name),
-      ...callDurationList.map((item) => item.name),
-    ])
-
-    let result = Array.from(allNames).map((name) => {
-      const callCount = countMap.get(name) || 0
-      const contactCount = contactMap.get(name) || 0
-      const duration = durationMap.get(name) || 0
-      const campuses = employeeCampusMapping?.[name] || []
-
-      return {
-        name,
-        campusNames: campuses.map((campus) => campus.campus_name).join(' / '),
-        callCount,
-        contactCount,
-        duration,
-        avgDuration: callCount > 0 ? Math.round(duration / callCount) : 0,
-        contactRate: callCount > 0 ? Number(((contactCount / callCount) * 100).toFixed(1)) : 0,
-      }
-    })
-
-    if (selectedCampusId !== 'all' && employeeCampusMapping) {
-      result = result.filter((user) => {
-        const campusList = employeeCampusMapping[user.name] || []
-        return campusList.some((campus) => campus.campus_id === selectedCampusId)
-      })
-    }
-
-    return result.sort((a, b) => {
-      const metricDiff = getMetricValue(b, activeMetric) - getMetricValue(a, activeMetric)
+    return [...callData.rows].sort((a, b) => {
+      const metricDiff = getAdvisorCallMetricValue(b, activeMetric) - getAdvisorCallMetricValue(a, activeMetric)
       if (metricDiff !== 0) return metricDiff
       const countDiff = b.callCount - a.callCount
       if (countDiff !== 0) return countDiff
       return a.name.localeCompare(b.name, 'zh-Hans-CN')
     })
-  }, [activeMetric, callCountList, callDurationList, contactCountList, employeeCampusMapping, selectedCampusId])
+  }, [activeMetric, callData.rows])
 
-  const totals = useMemo(() => {
-    const totalCallCount = mergedUserList.reduce((sum, user) => sum + user.callCount, 0)
-    const totalContactCount = mergedUserList.reduce((sum, user) => sum + user.contactCount, 0)
-    const totalDuration = mergedUserList.reduce((sum, user) => sum + user.duration, 0)
-    const advisorCount = mergedUserList.length
-    const avgDuration = totalCallCount > 0 ? Math.round(totalDuration / totalCallCount) : 0
-    return {
-      totalCallCount,
-      totalContactCount,
-      totalDuration,
-      advisorCount,
-      avgDuration,
-    }
-  }, [mergedUserList])
+  const totals = callData.totals
 
   const activeMetricMeta = metricConfig[activeMetric]
   const activeMetricTotal = useMemo(
-    () => mergedUserList.reduce((sum, user) => sum + getMetricValue(user, activeMetric), 0),
+    () => mergedUserList.reduce((sum, user) => sum + getAdvisorCallMetricValue(user, activeMetric), 0),
     [activeMetric, mergedUserList],
   )
   const activeMetricMax = useMemo(
-    () => Math.max(...mergedUserList.map((user) => getMetricValue(user, activeMetric)), 1),
+    () => Math.max(...mergedUserList.map((user) => getAdvisorCallMetricValue(user, activeMetric)), 1),
     [activeMetric, mergedUserList],
   )
 
@@ -341,13 +171,13 @@ export function ConsultingStatisticsPage() {
     },
   ]), [activeMetric, totals.advisorCount, totals.totalCallCount, totals.totalContactCount, totals.totalDuration])
 
-  const columns = useMemo<ColumnProps<MergedUser>[]>(() => [
+  const columns = useMemo<ColumnProps<AdvisorCallRow>[]>(() => [
     {
       title: '排名',
       dataIndex: 'rank',
       width: 64,
       align: 'center' as const,
-      render: (_: unknown, __: MergedUser, index: number) => {
+      render: (_: unknown, __: AdvisorCallRow, index: number) => {
         const rankStyle: React.CSSProperties = {
           display: 'inline-flex',
           width: 24,
@@ -390,7 +220,6 @@ export function ConsultingStatisticsPage() {
       dataIndex: 'callCount',
       width: 112,
       align: 'right' as const,
-      sorter: (a: MergedUser, b: MergedUser) => a.callCount - b.callCount,
       render: (value: number) => <span style={{ fontFamily: 'monospace' }}>{value.toLocaleString()}</span>,
     },
     {
@@ -402,7 +231,6 @@ export function ConsultingStatisticsPage() {
       dataIndex: 'contactCount',
       width: 112,
       align: 'right' as const,
-      sorter: (a: MergedUser, b: MergedUser) => a.contactCount - b.contactCount,
       render: (value: number) => <span style={{ fontFamily: 'monospace' }}>{value.toLocaleString()}</span>,
     },
     {
@@ -410,7 +238,6 @@ export function ConsultingStatisticsPage() {
       dataIndex: 'contactRate',
       width: 104,
       align: 'right' as const,
-      sorter: (a: MergedUser, b: MergedUser) => a.contactRate - b.contactRate,
       render: (value: number) => <span style={{ fontFamily: 'monospace' }}>{value.toFixed(1)}%</span>,
     },
     {
@@ -422,7 +249,6 @@ export function ConsultingStatisticsPage() {
       dataIndex: 'duration',
       width: 128,
       align: 'right' as const,
-      sorter: (a: MergedUser, b: MergedUser) => a.duration - b.duration,
       render: (value: number) => <span style={{ fontFamily: 'monospace' }}>{formatDurationShort(value)}</span>,
     },
     {
@@ -430,14 +256,13 @@ export function ConsultingStatisticsPage() {
       dataIndex: 'avgDuration',
       width: 120,
       align: 'right' as const,
-      sorter: (a: MergedUser, b: MergedUser) => a.avgDuration - b.avgDuration,
       render: (value: number) => <span style={{ fontFamily: 'monospace' }}>{formatDurationShort(value)}</span>,
     },
     {
       title: activeMetricMeta.distributionLabel,
       dataIndex: 'distribution',
-      render: (_: unknown, record: MergedUser) => {
-        const value = getMetricValue(record, activeMetric)
+      render: (_: unknown, record: AdvisorCallRow) => {
+        const value = getAdvisorCallMetricValue(record, activeMetric)
         const percentOfMax = activeMetricMax > 0 ? (value / activeMetricMax) * 100 : 0
         const percentOfTotal = activeMetricTotal > 0 ? ((value / activeMetricTotal) * 100).toFixed(1) : '0.0'
 
@@ -490,55 +315,60 @@ export function ConsultingStatisticsPage() {
                 const Icon = card.icon
                 const isClickable = card.key === 'callCount' || card.key === 'contactCount' || card.key === 'duration'
                 return (
-                  <Card
+                  <div
                     key={card.key}
-                    onClick={isClickable ? () => setActiveMetric(card.key) : undefined}
-                    bodyStyle={{ padding: 14 }}
+                    onClick={isClickable ? () => setActiveMetric(card.key as MetricView) : undefined}
                     style={{
                       cursor: isClickable ? 'pointer' : 'default',
-                      borderColor: card.active ? card.color : undefined,
-                      background: card.active ? card.backgroundColor : 'var(--semi-color-bg-0)',
-                      transition: 'background-color 0.2s ease, border-color 0.2s ease',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div>
-                        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 6 }}>
-                          {card.label}
-                        </Text>
-                        <div style={{ fontSize: 24, lineHeight: 1.2, fontWeight: 700, color: 'var(--semi-color-text-0)' }}>
-                          {card.value}
+                    <Card
+                      bodyStyle={{ padding: 14 }}
+                      style={{
+                        borderColor: card.active ? card.color : undefined,
+                        background: card.active ? card.backgroundColor : 'var(--semi-color-bg-0)',
+                        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <div>
+                          <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 6 }}>
+                            {card.label}
+                          </Text>
+                          <div style={{ fontSize: 24, lineHeight: 1.2, fontWeight: 700, color: 'var(--semi-color-text-0)' }}>
+                            {card.value}
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 12,
+                            background: card.backgroundColor,
+                            color: card.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Icon size={18} />
                         </div>
                       </div>
-                      <div
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 12,
-                          background: card.backgroundColor,
-                          color: card.color,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Icon size={18} />
-                      </div>
-                    </div>
-                    {isClickable && (
-                      <Text
-                        size="small"
-                        style={{
-                          display: 'block',
-                          marginTop: 10,
-                          color: card.active ? card.color : 'var(--semi-color-text-2)',
-                        }}
-                      >
-                        {card.active ? '当前主指标' : '点击设为主指标'}
-                      </Text>
-                    )}
-                  </Card>
+                      {isClickable && (
+                        <Text
+                          size="small"
+                          style={{
+                            display: 'block',
+                            marginTop: 10,
+                            color: card.active ? card.color : 'var(--semi-color-text-2)',
+                          }}
+                        >
+                          {card.active ? '当前主指标' : '点击设为主指标'}
+                        </Text>
+                      )}
+                    </Card>
+                  </div>
                 )
               })
             )}
@@ -596,16 +426,17 @@ export function ConsultingStatisticsPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <Select
-                value={effectiveAccountId || undefined}
+                value={callData.effectiveAccountId || undefined}
                 onChange={(value) => setSelectedAccountId(value as string)}
-                optionList={accountOptions}
+                optionList={callData.accountOptions}
                 placeholder="选择云客账号"
                 style={{ width: 180 }}
+                disabled={!callData.hasAccounts}
               />
               <Select
                 value={selectedCampusId}
                 onChange={(value) => setSelectedCampusId(value as string)}
-                optionList={[{ value: 'all', label: '全部校区' }, ...campusOptions]}
+                optionList={[{ value: 'all', label: '全部校区' }, ...callData.campusOptions]}
                 style={{ width: 140 }}
               />
               <Select
@@ -665,11 +496,15 @@ export function ConsultingStatisticsPage() {
         <Table
           columns={columns}
           dataSource={mergedUserList}
-          rowKey="name"
+          rowKey="id"
           pagination={false}
           scroll={{ y: scrollY }}
           loading={isLoading}
-          empty={<div style={{ padding: 64, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无统计数据</div>}
+          empty={(
+            <div style={{ padding: 64, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>
+              {callData.hasAccounts ? '暂无统计数据' : '未配置云客账号'}
+            </div>
+          )}
         />
       </div>
     </DataTableLayout>

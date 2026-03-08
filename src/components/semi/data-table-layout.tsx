@@ -29,6 +29,10 @@ interface DataTableLayoutProps {
   onClearAllFilters?: () => void
   /** 表格区域（children） */
   children: ReactNode
+  /** 允许页面纵向滚动，适合仪表盘类页面 */
+  allowPageScroll?: boolean
+  /** 内容区域的最小高度，仅在 allowPageScroll=true 时生效 */
+  contentMinHeight?: number | string
 }
 
 export function DataTableLayout({
@@ -41,6 +45,8 @@ export function DataTableLayout({
   filterTags,
   onClearAllFilters,
   children,
+  allowPageScroll = false,
+  contentMinHeight = 560,
 }: DataTableLayoutProps) {
   return (
     <div
@@ -48,7 +54,8 @@ export function DataTableLayout({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        overflow: 'hidden',
+        overflowX: 'hidden',
+        overflowY: allowPageScroll ? 'auto' : 'hidden',
       }}
     >
       {/* 头部区域 */}
@@ -106,7 +113,7 @@ export function DataTableLayout({
       <div
         style={{
           flex: 1,
-          minHeight: 0,
+          minHeight: allowPageScroll ? contentMinHeight : 0,
           overflow: 'hidden',
           padding: '10px 20px 0',
           display: 'flex',

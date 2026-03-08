@@ -161,6 +161,8 @@ export interface PositionItem {
   description?: string
   sort_order: number
   is_active: boolean
+  department_ids?: string[]
+  department_names?: string[]
   created_at?: string
   updated_at?: string
 }
@@ -492,6 +494,8 @@ export interface PositionCreate {
   description?: string
   sort_order?: number
   is_active?: boolean
+  department_ids?: string[]
+  required_count?: number
 }
 
 /** 更新职位 */
@@ -502,6 +506,8 @@ export interface PositionUpdate {
   description?: string
   sort_order?: number
   is_active?: boolean
+  department_ids?: string[]
+  required_count?: number
 }
 
 /** 创建员工 */

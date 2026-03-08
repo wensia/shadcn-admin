@@ -116,6 +116,11 @@ export const crmNavGroups: NavGroup[] = [
         url: '/crm/data-statistics/consulting',
         icon: TrendingUp,
       },
+      {
+        title: '顾问看板',
+        url: '/crm/data-statistics/advisor',
+        icon: UsersRound,
+      },
     ],
   },
   {

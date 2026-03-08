@@ -102,6 +102,7 @@ import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
 import { Route as AuthenticatedCrmDataStatisticsMarketingRouteImport } from './routes/_authenticated/crm/data-statistics/marketing'
 import { Route as AuthenticatedCrmDataStatisticsConsultingRouteImport } from './routes/_authenticated/crm/data-statistics/consulting'
+import { Route as AuthenticatedCrmDataStatisticsAdvisorRouteImport } from './routes/_authenticated/crm/data-statistics/advisor'
 import { Route as AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/index'
 import { Route as AuthenticatedCrmLeadsAssignmentTasksTaskIdRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/$taskId'
 
@@ -622,6 +623,12 @@ const AuthenticatedCrmDataStatisticsConsultingRoute =
     path: '/data-statistics/consulting',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmDataStatisticsAdvisorRoute =
+  AuthenticatedCrmDataStatisticsAdvisorRouteImport.update({
+    id: '/data-statistics/advisor',
+    path: '/data-statistics/advisor',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmLeadsAssignmentTasksIndexRoute =
   AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport.update({
     id: '/leads/assignment-tasks/',
@@ -721,6 +728,7 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/yunke/': typeof AuthenticatedYunkeIndexRoute
+  '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
@@ -810,6 +818,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/yunke': typeof AuthenticatedYunkeIndexRoute
+  '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
@@ -908,6 +917,7 @@ export interface FileRoutesById {
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/yunke/': typeof AuthenticatedYunkeIndexRoute
+  '/_authenticated/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/_authenticated/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/_authenticated/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/_authenticated/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
@@ -1003,6 +1013,7 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/users/'
     | '/yunke/'
+    | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
     | '/crm/data-statistics/marketing'
     | '/crm/leads/pool'
@@ -1092,6 +1103,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/users'
     | '/yunke'
+    | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
     | '/crm/data-statistics/marketing'
     | '/crm/leads/pool'
@@ -1189,6 +1201,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
     | '/_authenticated/yunke/'
+    | '/_authenticated/crm/data-statistics/advisor'
     | '/_authenticated/crm/data-statistics/consulting'
     | '/_authenticated/crm/data-statistics/marketing'
     | '/_authenticated/crm/leads/pool'
@@ -1870,6 +1883,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmDataStatisticsConsultingRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/data-statistics/advisor': {
+      id: '/_authenticated/crm/data-statistics/advisor'
+      path: '/data-statistics/advisor'
+      fullPath: '/crm/data-statistics/advisor'
+      preLoaderRoute: typeof AuthenticatedCrmDataStatisticsAdvisorRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/leads/assignment-tasks/': {
       id: '/_authenticated/crm/leads/assignment-tasks/'
       path: '/leads/assignment-tasks'
@@ -1974,6 +1994,7 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
   AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
   AuthenticatedCrmIndexRoute: typeof AuthenticatedCrmIndexRoute
+  AuthenticatedCrmDataStatisticsAdvisorRoute: typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   AuthenticatedCrmDataStatisticsConsultingRoute: typeof AuthenticatedCrmDataStatisticsConsultingRoute
   AuthenticatedCrmDataStatisticsMarketingRoute: typeof AuthenticatedCrmDataStatisticsMarketingRoute
   AuthenticatedCrmLeadsPoolRoute: typeof AuthenticatedCrmLeadsPoolRoute
@@ -1994,6 +2015,8 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
   AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
   AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
   AuthenticatedCrmIndexRoute: AuthenticatedCrmIndexRoute,
+  AuthenticatedCrmDataStatisticsAdvisorRoute:
+    AuthenticatedCrmDataStatisticsAdvisorRoute,
   AuthenticatedCrmDataStatisticsConsultingRoute:
     AuthenticatedCrmDataStatisticsConsultingRoute,
   AuthenticatedCrmDataStatisticsMarketingRoute:

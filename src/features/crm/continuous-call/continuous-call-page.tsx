@@ -339,6 +339,7 @@ export function ContinuousCallPage() {
 
   const leads = useMemo(() => leadsData?.items || [], [leadsData?.items])
   const currentPhone = currentLead?.parent_phone || currentLead?.phone
+  const canDialCurrentLead = Boolean(currentLead?.id || currentPhone)
 
   // 进入页面时自动收缩侧边栏，离开时恢复
   useEffect(() => {
@@ -364,13 +365,16 @@ export function ContinuousCallPage() {
   }, [leads, currentLead, selectLead])
 
   const startCall = useCallback(async () => {
-    if (!currentPhone) {
+    if (!currentLead?.id && !currentPhone) {
       Toast.error({ content: '当前线索没有手机号，无法外呼' })
       return
     }
     try {
       setDialing(true)
-      const res = await yunkeApi.dialPhone(currentPhone)
+      const res = await yunkeApi.dialPhone({
+        leadId: currentLead?.id,
+        phone: currentPhone,
+      })
       if (res.success && res.data) {
         setCurrentCallId(res.data.call_id)
         setCallStartTime(Date.now())
@@ -384,7 +388,7 @@ export function ContinuousCallPage() {
     } finally {
       setDialing(false)
     }
-  }, [currentPhone])
+  }, [currentLead?.id, currentPhone])
 
   const closeCallDrawer = useCallback(() => {
     setCallDrawerVisible(false)
@@ -647,7 +651,7 @@ export function ContinuousCallPage() {
   // 键盘事件 - 空格键外呼（capture 阶段，确保在 Semi 组件拦截前触发）
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || !currentPhone || callDrawerVisible || dialing) return
+      if (event.code !== 'Space' || !canDialCurrentLead || callDrawerVisible || dialing) return
       const target = event.target as HTMLElement
       // 排除所有可交互元素：表单控件、按钮、contentEditable、Semi 组件内部
       const isInteractive =
@@ -675,7 +679,7 @@ export function ContinuousCallPage() {
     }
     document.addEventListener('keydown', handleKeyDown, true) // capture phase
     return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [currentPhone, callDrawerVisible, startCall, dialing])
+  }, [canDialCurrentLead, callDrawerVisible, startCall, dialing])
 
   return (
     <Main fixed className="min-h-0">
@@ -916,7 +920,7 @@ export function ContinuousCallPage() {
                   ) : (
                     <Button
                       onClick={startCall}
-                      disabled={!currentPhone || dialing}
+                      disabled={!canDialCurrentLead || dialing}
                       icon={dialing
                         ? <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
                         : <Phone style={{ width: 16, height: 16 }} />

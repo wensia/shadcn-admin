@@ -427,6 +427,19 @@ export const callRecordsApi = {
     return unwrapData(response)
   },
 
+  /** 获取手机统计页“使用状态分析”数据 */
+  async getAppCallAndMsgStatistics(params: {
+    department_id: string
+    time: string
+    account_id?: string
+  }): Promise<AppCallAndMsgStatisticsData> {
+    const response = await apiClient.get<ApiResponse<AppCallAndMsgStatisticsData>>(
+      '/yunke/call-records/app-statistics/call-and-msg',
+      { params }
+    )
+    return unwrapData(response)
+  },
+
   /** 获取员工-校区映射关系 */
   async getEmployeeCampusMapping(): Promise<EmployeeCampusMapping> {
     const response = await apiClient.get<ApiResponse<EmployeeCampusMapping>>(
@@ -544,6 +557,25 @@ export interface CallStatisticsUserItem {
   totalDuration?: number
   avgDuration?: number
   [key: string]: unknown
+}
+
+/** 手机统计页“使用状态分析”响应 */
+export interface AppCallAndMsgStatisticsData {
+  companyCode?: string
+  startTime?: string
+  endTime?: string
+  time?: string
+  data?: AppCallAndMsgStatisticsRow[]
+}
+
+export interface AppCallAndMsgStatisticsRow {
+  id: string
+  nm: string
+  hc: number
+  hr: number
+  hcsc: number
+  hrsc: number
+  wjld: number
 }
 
 /** 员工-校区映射关系 */

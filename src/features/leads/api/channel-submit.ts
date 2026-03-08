@@ -129,6 +129,7 @@ export interface PortalLeadItem {
   validity: 'valid' | 'invalid' | 'pending'
   campus_name: string
   advisor_name: string
+  owner_name: string
   followup_count: number
   latest_followup_result: string
   latest_followup_at: string
@@ -166,8 +167,8 @@ export interface PortalStatsOverview {
   followed_up: number
 }
 
-export interface PortalAdvisorStat {
-  advisor_name: string
+export interface PortalOwnerStat {
+  owner_name: string
   total: number
   valid: number
   invalid: number
@@ -186,7 +187,7 @@ export interface PortalDailyTrend {
 export interface PortalStatsResponse {
   channel_name: string
   overview: PortalStatsOverview
-  by_advisor: PortalAdvisorStat[]
+  by_owner: PortalOwnerStat[]
   daily_trend: PortalDailyTrend[]
 }
 
