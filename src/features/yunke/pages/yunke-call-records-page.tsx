@@ -4,6 +4,8 @@
  */
 
 import { useState, useCallback } from 'react'
+import { Button } from '@douyinfe/semi-ui-19'
+import { IconRefresh } from '@douyinfe/semi-icons'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import {
@@ -44,16 +46,25 @@ function CallRecordsContent() {
       <DataTableLayout
         title="通话记录"
         total={total}
-        onRefresh={refetch}
-        isRefreshing={isLoading}
         toolbar={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* 统计面板 */}
             <StatsCards stats={stats} isLoading={isStatsLoading} />
+            {/* 筛选区 */}
             <CallRecordsToolbar
               filters={filters}
               onFilterChange={updateFilter}
               onReset={resetFilters}
               isLoading={isLoading}
+              extraActions={
+                <Button
+                  icon={<IconRefresh />}
+                  theme="light"
+                  onClick={refetch}
+                  loading={isLoading}
+                  title="刷新数据"
+                />
+              }
             />
           </div>
         }

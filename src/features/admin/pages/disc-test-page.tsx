@@ -15,6 +15,12 @@ import {
   Typography,
   Skeleton,
   Dropdown,
+  Tabs,
+  TabPane,
+  Popconfirm,
+  Popover,
+  InputNumber,
+  Table,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
@@ -24,8 +30,11 @@ import {
   IconMore,
   IconEdit,
   IconEyeOpened,
+  IconDelete,
+  IconPlus,
+  IconRefresh,
 } from '@douyinfe/semi-icons'
-import { QrCode, Brain, Clock, AlertCircle, Loader2, Sparkles, X } from 'lucide-react'
+import { QrCode, Brain, Clock, AlertCircle, Loader2, Sparkles, X, Link2, Users, Download } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
@@ -37,22 +46,32 @@ import {
   getTempDiscRecordDetail,
   updateTempDiscRecord,
   triggerDiscAIAnalysis,
+  getDiscTestLinks,
+  createDiscTestLink,
+  deleteDiscTestLink,
+  getDiscChannels,
 } from '@/features/disc/api'
 import {
   DISC_TYPE_CONFIG,
   type TempDISCRecordListItem,
   type TempDISCRecordDetail,
   type DISCDimension,
+  type DiscTestLinkItem,
 } from '@/features/disc/types'
 import { DiscDetailDrawer } from '@/features/disc/components/disc-detail-drawer'
+import { DiscAccessGrantModal } from '@/features/disc/components/disc-access-grant-modal'
 import { cn, copyToClipboard } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
 const { Text } = Typography
 
-/** 固定测试 URL（带有当前用户标识） */
-function getFixedTestUrl(username: string): string {
-  return `${window.location.origin}/disc-test?ref=${encodeURIComponent(username)}`
+/** 固定测试 URL（带有当前用户标识和可选渠道） */
+function getFixedTestUrl(username: string, channel?: string): string {
+  let url = `${window.location.origin}/disc-test?ref=${encodeURIComponent(username)}`
+  if (channel) {
+    url += `&channel=${encodeURIComponent(channel)}`
+  }
+  return url
 }
 
 // DISC 类型 Tag 组件
@@ -96,94 +115,307 @@ function AIStatusTag({ status }: { status?: string | null }) {
   )
 }
 
-// 固定测试链接弹窗（二维码 + 复制链接）
-function FixedLinkModal({
-  visible,
-  onClose,
-  url,
-}: {
-  visible: boolean
-  onClose: () => void
-  url: string
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => {
-    if (!visible || !url) return
-    const timer = setTimeout(() => {
-      if (canvasRef.current) {
-        QRCode.toCanvas(
-          canvasRef.current,
-          url,
-          {
-            width: 180,
-            margin: 2,
-            color: { dark: '#141413', light: '#ffffff' },
-          },
-          () => {}
-        )
-      }
-    }, 50)
-    return () => clearTimeout(timer)
-  }, [visible, url])
+// 二维码悬浮卡片：hover 展示二维码，可复制链接 / 下载二维码图片
+function QrHoverPopover({
+  url,
+  children,
+}: {
+  url: string
+  children: React.ReactNode
+}) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+
+  const generateQr = useCallback(() => {
+    if (!url) return
+    QRCode.toDataURL(url, {
+      width: 180,
+      margin: 2,
+      color: { dark: '#141413', light: '#ffffff' },
+    }).then(setQrDataUrl).catch(() => {})
+  }, [url])
 
   const handleCopy = async () => {
     const ok = await copyToClipboard(url)
-    if (ok) {
-      toast.success('链接已复制到剪贴板')
-    } else {
-      toast.error('复制失败')
-    }
+    toast[ok ? 'success' : 'error'](ok ? '链接已复制' : '复制失败')
+  }
+
+  const handleDownload = () => {
+    if (!qrDataUrl) return
+    const a = document.createElement('a')
+    a.href = qrDataUrl
+    a.download = 'qrcode.png'
+    a.click()
   }
 
   return (
-    <Modal
-      title={
-        <span className="flex items-center gap-2">
-          <QrCode className="h-5 w-5 text-primary" />
-          DISC 测试链接
-        </span>
-      }
-      visible={visible}
-      onCancel={onClose}
-      footer={
-        <Button theme="solid" type="primary" block onClick={handleCopy} icon={<IconCopy />}>
-          复制链接
-        </Button>
-      }
-      width={380}
-      closeOnEsc
-    >
-      <div className="flex flex-col items-center gap-4">
-        {/* 二维码区域 */}
-        <div className="flex items-center justify-center rounded-lg border bg-white p-3">
-          <canvas
-            ref={canvasRef}
-            width={180}
-            height={180}
-            style={{ width: 180, height: 180, display: 'block' }}
-          />
-        </div>
-
-        <p className="text-xs text-muted-foreground text-center">
-          扫描二维码或复制链接，可打印放在公司前台
-        </p>
-
-        {/* 链接复制区 */}
-        <div className="flex w-full items-center gap-2 rounded-md border bg-muted/50 px-3 py-2.5">
-          <p className="min-w-0 flex-1 break-all text-xs font-mono leading-relaxed text-foreground/80">
+    <Popover
+      trigger="hover"
+      position="left"
+      showArrow
+      getPopupContainer={() => document.body}
+      onVisibleChange={(visible) => { if (visible) generateQr() }}
+      content={
+        <div className="flex flex-col items-center gap-2 p-2" style={{ width: 220 }}>
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt="QR Code" width={160} height={160} className="rounded border bg-white" />
+          ) : (
+            <div className="flex items-center justify-center" style={{ width: 160, height: 160 }}>
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          <p className="w-full break-all text-center text-xs font-mono leading-relaxed text-foreground/60" style={{ maxHeight: 48, overflow: 'hidden' }}>
             {url}
           </p>
-          <Button
-            theme="borderless"
-            type="tertiary"
-            icon={<IconCopy />}
-            onClick={handleCopy}
+          <div className="flex w-full gap-2">
+            <Button size="small" theme="outline" icon={<IconCopy />} onClick={handleCopy} style={{ flex: 1 }}>
+              复制链接
+            </Button>
+            <Button size="small" theme="outline" icon={<Download className="h-3.5 w-3.5" />} onClick={handleDownload} style={{ flex: 1 }}>
+              下载
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <span style={{ display: 'inline-flex' }}>{children}</span>
+    </Popover>
+  )
+}
+
+// 渠道数据行类型
+interface ChannelRow {
+  key: string
+  name: string
+  url: string
+  /** 'default' = 默认行, 'source' = 来源渠道(后端), 'custom' = 用户自建 */
+  type: 'default' | 'source' | 'custom'
+  disabled?: boolean
+}
+
+// 固定测试链接弹窗（宽 Dialog + 数据表展示渠道）
+function FixedLinkModal({
+  visible,
+  onClose,
+  username,
+  sourceChannels,
+}: {
+  visible: boolean
+  onClose: () => void
+  username: string
+  sourceChannels: string[]
+}) {
+  const [newChannel, setNewChannel] = useState('')
+  const [channels, setChannels] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('disc-channels')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  // 被禁用的来源渠道
+  const [disabledSourceChannels, setDisabledSourceChannels] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('disc-disabled-source-channels')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+
+  // 保存渠道列表到 localStorage
+  const saveChannels = (list: string[]) => {
+    setChannels(list)
+    localStorage.setItem('disc-channels', JSON.stringify(list))
+  }
+
+  const saveDisabledSourceChannels = (list: string[]) => {
+    setDisabledSourceChannels(list)
+    localStorage.setItem('disc-disabled-source-channels', JSON.stringify(list))
+  }
+
+  const toggleSourceChannel = (ch: string) => {
+    const isDisabled = disabledSourceChannels.includes(ch)
+    saveDisabledSourceChannels(
+      isDisabled
+        ? disabledSourceChannels.filter((c) => c !== ch)
+        : [...disabledSourceChannels, ch]
+    )
+  }
+
+  const handleAddChannel = () => {
+    const ch = newChannel.trim()
+    if (!ch) return
+    if (channels.includes(ch) || sourceChannels.includes(ch)) {
+      toast.warning('该渠道已存在')
+      return
+    }
+    saveChannels([...channels, ch])
+    setNewChannel('')
+  }
+
+  const handleCopyUrl = async (url: string) => {
+    const ok = await copyToClipboard(url)
+    toast[ok ? 'success' : 'error'](ok ? '链接已复制' : '复制失败')
+  }
+
+  // 构建表格数据：默认链接 + 来源渠道 + 自建渠道
+  const tableData: ChannelRow[] = [
+    { key: '__default__', name: '默认（无渠道）', url: getFixedTestUrl(username), type: 'default' },
+    ...sourceChannels.map((ch) => ({
+      key: `__source__${ch}`,
+      name: ch,
+      url: getFixedTestUrl(username, ch),
+      type: 'source' as const,
+      disabled: disabledSourceChannels.includes(ch),
+    })),
+    ...channels
+      .filter((ch) => !sourceChannels.includes(ch))
+      .map((ch) => ({
+        key: ch,
+        name: ch,
+        url: getFixedTestUrl(username, ch),
+        type: 'custom' as const,
+      })),
+  ]
+
+  const columns: ColumnProps<ChannelRow>[] = [
+    {
+      title: '渠道名称',
+      dataIndex: 'name',
+      width: 200,
+      render: (_: string, record: ChannelRow) => {
+        if (record.type === 'default') {
+          return <Text type="tertiary" style={{ fontSize: 13 }}>{record.name}</Text>
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <Text strong style={{ fontSize: 13, opacity: record.disabled ? 0.4 : 1 }}>{record.name}</Text>
+            {record.type === 'source' && (
+              <Tag size="small" color="blue" style={{ fontSize: 11 }}>来源</Tag>
+            )}
+            {record.disabled && (
+              <Tag size="small" color="grey" style={{ fontSize: 11 }}>已禁用</Tag>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      title: '操作',
+      dataIndex: 'key',
+      width: 130,
+      align: 'center' as const,
+      render: (_: string, record: ChannelRow) => (
+        <div className="flex items-center justify-center gap-1">
+          {!record.disabled && (
+            <>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<IconCopy />}
+                size="small"
+                onClick={() => handleCopyUrl(record.url)}
+                title="复制链接"
+              />
+              <QrHoverPopover url={record.url}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<QrCode className="h-3.5 w-3.5" />}
+                  size="small"
+                  title="查看二维码"
+                />
+              </QrHoverPopover>
+            </>
+          )}
+          {record.type === 'source' && (
+            <Button
+              theme="borderless"
+              type={record.disabled ? 'primary' : 'warning'}
+              size="small"
+              onClick={() => toggleSourceChannel(record.name)}
+              style={{ fontSize: 12 }}
+            >
+              {record.disabled ? '启用' : '禁用'}
+            </Button>
+          )}
+          {record.type === 'custom' && (
+            <Popconfirm
+              title={`删除渠道「${record.name}」？`}
+              onConfirm={() => saveChannels(channels.filter((c) => c !== record.name))}
+            >
+              <Button
+                theme="borderless"
+                type="danger"
+                icon={<IconDelete />}
+                size="small"
+                title="删除渠道"
+              />
+            </Popconfirm>
+          )}
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <Modal
+        title={
+          <span className="flex items-center gap-2">
+            <QrCode className="h-5 w-5 text-primary" />
+            DISC 测试链接
+          </span>
+        }
+        visible={visible}
+        onCancel={onClose}
+        width={780}
+        bodyStyle={{ padding: 0 }}
+        closeOnEsc
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px' }}>
+            <Button onClick={onClose}>关闭</Button>
+          </div>
+        }
+      >
+        <div style={{ padding: 16 }}>
+          <Text type="tertiary" style={{ fontSize: 13, marginBottom: 12, display: 'block' }}>
+            每个渠道生成独立链接，测试记录中会记录来源渠道，方便按渠道筛选统计。
+          </Text>
+
+          {/* 添加新渠道 */}
+          <div className="flex items-center gap-2" style={{ marginBottom: 16 }}>
+            <Input
+              value={newChannel}
+              onChange={(v) => setNewChannel(v)}
+              placeholder="输入渠道名称，如：北京朝阳校区、天津南开区"
+              onEnterPress={handleAddChannel}
+              style={{ width: 320 }}
+            />
+            <Button
+              icon={<IconPlus />}
+              onClick={handleAddChannel}
+              disabled={!newChannel.trim()}
+            >
+              添加渠道
+            </Button>
+          </div>
+
+          {/* 渠道表格 */}
+          <Table<ChannelRow>
+            columns={columns}
+            dataSource={tableData}
+            rowKey="key"
+            pagination={false}
             size="small"
+            empty={
+              <div style={{ padding: '32px 0', textAlign: 'center' }}>
+                <Text type="tertiary">暂无渠道</Text>
+              </div>
+            }
           />
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+    </>
   )
 }
 
@@ -367,6 +599,412 @@ const aiStatusOptions = [
   { value: 'none', label: '未触发' },
 ]
 
+// ============================================================================
+// 创建链接弹窗
+// ============================================================================
+function CreateLinkModal({
+  visible,
+  onClose,
+  onSuccess,
+}: {
+  visible: boolean
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [expiresDays, setExpiresDays] = useState<number>(7)
+  const [notes, setNotes] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    if (visible) {
+      setName('')
+      setPhone('')
+      setExpiresDays(7)
+      setNotes('')
+    }
+  }, [visible])
+
+  const handleCreate = async () => {
+    if (!name.trim()) {
+      toast.error('请输入候选人姓名')
+      return
+    }
+    setCreating(true)
+    try {
+      const res = await createDiscTestLink({
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+        expires_days: expiresDays,
+        notes: notes.trim() || undefined,
+      })
+      if (res.success) {
+        toast.success('测试链接创建成功')
+        onSuccess()
+        onClose()
+      } else {
+        toast.error(res.message || '创建失败')
+      }
+    } catch {
+      toast.error('创建失败，请稍后重试')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  return (
+    <Modal
+      title={
+        <span className="flex items-center gap-2">
+          <Link2 className="h-5 w-5 text-primary" />
+          创建专属测试链接
+        </span>
+      }
+      visible={visible}
+      onCancel={onClose}
+      onOk={handleCreate}
+      okText="创建"
+      cancelText="取消"
+      confirmLoading={creating}
+      width={440}
+      closeOnEsc
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">
+            候选人姓名 <span className="text-red-500">*</span>
+          </label>
+          <Input
+            value={name}
+            onChange={(v) => setName(v)}
+            placeholder="请输入候选人姓名"
+            showClear
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">手机号（选填）</label>
+          <Input
+            value={phone}
+            onChange={(v) => setPhone(v)}
+            placeholder="可预填候选人手机号"
+            showClear
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">有效天数</label>
+          <InputNumber
+            value={expiresDays}
+            onChange={(v) => setExpiresDays(typeof v === 'number' ? v : 7)}
+            min={1}
+            max={90}
+            suffix="天"
+            style={{ width: '100%' }}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">备注（选填）</label>
+          <Input
+            value={notes}
+            onChange={(v) => setNotes(v)}
+            placeholder="备注信息"
+            showClear
+          />
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+// ============================================================================
+// 测试链接管理 Tab
+// ============================================================================
+
+const LINK_STATUS_META: Record<string, { label: string; color: string }> = {
+  PENDING: { label: '待填写', color: 'blue' },
+  COMPLETED: { label: '已完成', color: 'green' },
+  EXPIRED: { label: '已过期', color: 'grey' },
+}
+
+function LinksTab() {
+  const queryClient = useQueryClient()
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [searchName, setSearchName] = useState('')
+  const [createModalVisible, setCreateModalVisible] = useState(false)
+
+  const { data: linksData, isLoading } = useQuery({
+    queryKey: ['disc-test-links', page, pageSize, statusFilter, searchName],
+    queryFn: async () => {
+      const params: Record<string, unknown> = { page, size: pageSize }
+      if (statusFilter !== 'all') params.status = statusFilter
+      if (searchName) params.name = searchName
+      const res = await getDiscTestLinks(params as Parameters<typeof getDiscTestLinks>[0])
+      return res.data
+    },
+    refetchInterval: 30000,
+  })
+
+  const links = useMemo<DiscTestLinkItem[]>(() => linksData?.items ?? [], [linksData?.items])
+  const total = linksData?.total ?? 0
+
+
+  const getFullUrl = (testUrl: string) =>
+    testUrl.startsWith('http') ? testUrl : `${window.location.origin}${testUrl}`
+
+  const handleCopyLink = async (testUrl: string) => {
+    const ok = await copyToClipboard(getFullUrl(testUrl))
+    if (ok) toast.success('链接已复制')
+    else toast.error('复制失败')
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await deleteDiscTestLink(id)
+      if (res.success) {
+        toast.success('链接已删除')
+        queryClient.invalidateQueries({ queryKey: ['disc-test-links'] })
+      } else {
+        toast.error(res.message || '删除失败')
+      }
+    } catch {
+      toast.error('删除失败')
+    }
+  }
+
+  const columns: ColumnProps<DiscTestLinkItem>[] = useMemo(() => [
+    {
+      title: '候选人',
+      dataIndex: 'name',
+      width: 100,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return <Text strong>{record.name}</Text>
+      },
+    },
+    {
+      title: '手机号',
+      dataIndex: 'phone',
+      width: 120,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
+        return <Text>{record.phone || '-'}</Text>
+      },
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 90,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        const meta = LINK_STATUS_META[record.status]
+        return <Tag color={meta?.color || 'grey'}>{meta?.label || record.status}</Tag>
+      },
+    },
+    {
+      title: '创建者',
+      dataIndex: 'created_by_name',
+      width: 90,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={56} />
+        return <Text>{record.created_by_name || '-'}</Text>
+      },
+    },
+    {
+      title: '过期时间',
+      dataIndex: 'expires_at',
+      width: 150,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+        return (
+          <Text type="tertiary" style={{ fontSize: 13 }}>
+            {record.expires_at ? formatTime(record.expires_at) : '-'}
+          </Text>
+        )
+      },
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      width: 150,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+        return (
+          <Text type="tertiary" style={{ fontSize: 13 }}>
+            {formatTime(record.created_at)}
+          </Text>
+        )
+      },
+    },
+    {
+      title: '备注',
+      dataIndex: 'notes',
+      width: 120,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
+        return <Text type="tertiary" ellipsis={{ showTooltip: true }}>{record.notes || '-'}</Text>
+      },
+    },
+    {
+      title: '操作',
+      dataIndex: 'id',
+      width: 100,
+      fixed: 'right' as const,
+      render: (_: string, record: DiscTestLinkItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        return (
+          <div className="flex items-center gap-1">
+            <Button
+              theme="borderless"
+              type="tertiary"
+              icon={<IconCopy />}
+              size="small"
+              onClick={(e) => { e.stopPropagation(); handleCopyLink(record.test_url) }}
+            />
+            <QrHoverPopover url={getFullUrl(record.test_url)}>
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<QrCode className="h-3.5 w-3.5" />}
+                size="small"
+              />
+            </QrHoverPopover>
+            {record.status === 'PENDING' && (
+              <Popconfirm
+                title="确定删除此链接？"
+                onConfirm={() => handleDelete(record.id)}
+                position="left"
+              >
+                <Button
+                  theme="borderless"
+                  type="danger"
+                  icon={<IconDelete />}
+                  size="small"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Popconfirm>
+            )}
+          </div>
+        )
+      },
+    },
+  ], [])
+
+  const linkStatusOptions = [
+    { value: 'all', label: '全部状态' },
+    { value: 'PENDING', label: '待填写' },
+    { value: 'COMPLETED', label: '已完成' },
+    { value: 'EXPIRED', label: '已过期' },
+  ]
+
+  return (
+    <>
+      <div className="flex flex-col" style={{ flex: 1, minHeight: 0 }}>
+        {/* 工具栏 */}
+        <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: 10, padding: '10px 12px 0' }}>
+          <Input
+            prefix={<IconSearch />}
+            placeholder="搜索候选人"
+            value={searchName}
+            onChange={(v) => setSearchName(v)}
+            onEnterPress={() => setPage(1)}
+            showClear
+            style={{ width: 180 }}
+          />
+          <Select
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v as string); setPage(1) }}
+            optionList={linkStatusOptions}
+            style={{ width: 140 }}
+          />
+          <div className="flex-1" />
+          <Button
+            theme="solid"
+            type="primary"
+            icon={<IconPlus />}
+            onClick={() => setCreateModalVisible(true)}
+          >
+            创建链接
+          </Button>
+        </div>
+
+        {/* 表格 */}
+        <div className="hidden sm:flex" style={{ flex: 1, minHeight: 0, flexDirection: 'column', padding: '0 12px' }}>
+          <SemiDataTable<DiscTestLinkItem>
+            columns={columns}
+            data={links}
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            isLoading={isLoading}
+            scrollX={920}
+            onPageChange={(p) => setPage(p)}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+            emptyText="暂无测试链接"
+          />
+        </div>
+
+        {/* 移动端卡片 */}
+        <div className="flex-1 overflow-auto sm:hidden" style={{ padding: 12 }}>
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-lg border p-4 space-y-2 mb-3">
+                <Skeleton.Paragraph rows={2} style={{ width: '100%' }} loading />
+              </div>
+            ))
+          ) : links.length === 0 ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+              暂无测试链接
+            </div>
+          ) : (
+            links.map((link) => (
+              <div key={link.id} className="rounded-lg border bg-card p-4 space-y-2 mb-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{link.name}</span>
+                  <Tag color={LINK_STATUS_META[link.status]?.color || 'grey'} size="small">
+                    {LINK_STATUS_META[link.status]?.label || link.status}
+                  </Tag>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {link.phone || '未填手机号'} · 创建者: {link.created_by_name || '-'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  过期: {link.expires_at ? formatTime(link.expires_at) : '-'}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button size="small" theme="outline" icon={<IconCopy />} onClick={() => handleCopyLink(link.test_url)}>
+                    复制
+                  </Button>
+                  <QrHoverPopover url={getFullUrl(link.test_url)}>
+                    <Button size="small" theme="outline" icon={<QrCode className="h-3 w-3" />}>
+                      二维码
+                    </Button>
+                  </QrHoverPopover>
+                  {link.status === 'PENDING' && (
+                    <Popconfirm title="确定删除？" onConfirm={() => handleDelete(link.id)} position="top">
+                      <Button size="small" theme="outline" type="danger" icon={<IconDelete />}>删除</Button>
+                    </Popconfirm>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 创建链接弹窗 */}
+      <CreateLinkModal
+        visible={createModalVisible}
+        onClose={() => setCreateModalVisible(false)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['disc-test-links'] })}
+      />
+
+    </>
+  )
+}
+
 type ReanalyzeGuard = {
   recordId: string
   previousAnalyzedAt?: string | null
@@ -376,6 +1014,7 @@ export function DiscTestPage() {
   useDocumentTitle('DISC性格测试')
   const queryClient = useQueryClient()
   const username = useAuthStore((state) => state.user?.username ?? '')
+  const [activeTab, setActiveTab] = useState<string>('records')
 
   // 搜索筛选状态
   const [searchName, setSearchName] = useState('')
@@ -383,6 +1022,7 @@ export function DiscTestPage() {
   const [confidenceFilter, setConfidenceFilter] = useState<string>('all')
   const [mixedTypeFilter, setMixedTypeFilter] = useState<string>('all')
   const [aiStatusFilter, setAiStatusFilter] = useState<string>('all')
+  const [channelFilter, setChannelFilter] = useState<string>('all')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
@@ -390,6 +1030,8 @@ export function DiscTestPage() {
   const [filterOpen, setFilterOpen] = useState(false)
   // 固定链接二维码弹窗
   const [qrModalVisible, setQrModalVisible] = useState(false)
+  // 授权访问弹窗
+  const [grantModalVisible, setGrantModalVisible] = useState(false)
 
   // 详情抽屉
   const [detailOpen, setDetailOpen] = useState(false)
@@ -404,9 +1046,19 @@ export function DiscTestPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([])
   const [batchAnalyzing, setBatchAnalyzing] = useState(false)
 
+  // 查询可用渠道列表
+  const { data: availableChannels = [] } = useQuery({
+    queryKey: ['disc-channels'],
+    queryFn: async () => {
+      const res = await getDiscChannels()
+      return res.data ?? []
+    },
+    staleTime: 30 * 1000,
+  })
+
   // 查询已完成记录
   const { data: recordsData, isLoading: loadingRecords } = useQuery({
-    queryKey: ['disc-records', page, pageSize, searchName, searchPhone, confidenceFilter, mixedTypeFilter, aiStatusFilter],
+    queryKey: ['disc-records', page, pageSize, searchName, searchPhone, confidenceFilter, mixedTypeFilter, aiStatusFilter, channelFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = { page, size: pageSize }
       if (searchName) params.name = searchName
@@ -414,6 +1066,7 @@ export function DiscTestPage() {
       if (confidenceFilter !== 'all') params.confidence_level = confidenceFilter
       if (mixedTypeFilter !== 'all') params.has_mixed_type = mixedTypeFilter === 'yes'
       if (aiStatusFilter !== 'all') params.ai_analysis_status = aiStatusFilter
+      if (channelFilter !== 'all') params.source_channel = channelFilter
       const res = await getTempDiscRecords(params as Parameters<typeof getTempDiscRecords>[0])
       return res.data
     },
@@ -613,6 +1266,17 @@ export function DiscTestPage() {
       },
     },
     {
+      title: '来源渠道',
+      dataIndex: 'source_channel',
+      width: 100,
+      render: (_text: string, record: TempDISCRecordListItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+        const channel = record.source_channel
+        if (!channel) return <Text type="tertiary">-</Text>
+        return <Tag size="small">{channel}</Tag>
+      },
+    },
+    {
       title: '提交时间',
       dataIndex: 'submitted_at',
       width: 150,
@@ -675,6 +1339,7 @@ export function DiscTestPage() {
     setConfidenceFilter('all')
     setMixedTypeFilter('all')
     setAiStatusFilter('all')
+    setChannelFilter('all')
     setPage(1)
     setSelectedRowKeys([])
   }
@@ -728,21 +1393,40 @@ export function DiscTestPage() {
     <>
       <DataTableLayout
         title="DISC性格测试"
-        total={total}
+        total={activeTab === 'records' ? total : undefined}
         headerActions={
-          <Button
-            theme="solid"
-            type="primary"
-            icon={<QrCode className="h-4 w-4" />}
-            onClick={() => setQrModalVisible(true)}
-          >
-            <span className="hidden sm:inline">测试链接</span>
-            <span className="sm:hidden">链接</span>
-          </Button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Button
+              icon={<Users className="h-4 w-4" />}
+              onClick={() => setGrantModalVisible(true)}
+            >
+              <span className="hidden sm:inline">授权访问</span>
+              <span className="sm:hidden">授权</span>
+            </Button>
+            <Button
+              theme="solid"
+              type="primary"
+              icon={<QrCode className="h-4 w-4" />}
+              onClick={() => setQrModalVisible(true)}
+            >
+              <span className="hidden sm:inline">固定链接</span>
+              <span className="sm:hidden">链接</span>
+            </Button>
+          </div>
         }
-        onRefresh={handleRefresh}
-        isRefreshing={loadingRecords}
         toolbar={
+          <>
+            <Tabs
+              activeKey={activeTab}
+              onChange={(key) => setActiveTab(key)}
+              size="small"
+              style={{ marginBottom: 8 }}
+            >
+              <TabPane tab="测试记录" itemKey="records" />
+              <TabPane tab="测试链接" itemKey="links" />
+            </Tabs>
+
+            {activeTab === 'records' && (
           <>
             {/* 搜索筛选区 - 桌面端 */}
             <div className="hidden sm:flex items-center gap-2" style={{ marginBottom: 10 }}>
@@ -781,12 +1465,31 @@ export function DiscTestPage() {
                 optionList={aiStatusOptions}
                 style={{ width: 140 }}
               />
+              {availableChannels.length > 0 && (
+                <Select
+                  value={channelFilter}
+                  onChange={(v) => { setChannelFilter(v as string); setPage(1) }}
+                  optionList={[
+                    { value: 'all', label: '全部渠道' },
+                    ...availableChannels.map((ch) => ({ value: ch, label: ch })),
+                  ]}
+                  style={{ width: 160 }}
+                />
+              )}
               <Button theme="outline" type="primary" onClick={handleSearch}>
                 搜索
               </Button>
               <Button theme="borderless" type="tertiary" onClick={handleReset}>
                 重置
               </Button>
+              <div style={{ flex: 1 }} />
+              <Button
+                icon={<IconRefresh />}
+                theme="light"
+                onClick={handleRefresh}
+                loading={loadingRecords}
+                title="刷新数据"
+              />
             </div>
 
             {/* 搜索筛选区 - 移动端（可折叠） */}
@@ -832,8 +1535,17 @@ export function DiscTestPage() {
                       value={aiStatusFilter}
                       onChange={(v) => { setAiStatusFilter(v as string); setPage(1) }}
                       optionList={aiStatusOptions}
-                      className="col-span-2"
                     />
+                    {availableChannels.length > 0 && (
+                      <Select
+                        value={channelFilter}
+                        onChange={(v) => { setChannelFilter(v as string); setPage(1) }}
+                        optionList={[
+                          { value: 'all', label: '全部渠道' },
+                          ...availableChannels.map((ch) => ({ value: ch, label: ch })),
+                        ]}
+                      />
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button theme="outline" type="primary" className="flex-1" onClick={handleSearch}>搜索</Button>
@@ -873,8 +1585,14 @@ export function DiscTestPage() {
               </div>
             )}
           </>
+            )}
+          </>
         }
       >
+        {activeTab === 'links' ? (
+          <LinksTab />
+        ) : (
+        <>
         {/* 桌面端：SemiDataTable */}
         <div className="hidden sm:flex" style={{ flex: 1, minHeight: 0, flexDirection: 'column' }}>
           <SemiDataTable<TempDISCRecordListItem>
@@ -936,13 +1654,21 @@ export function DiscTestPage() {
             ))
           )}
         </div>
+        </>
+        )}
       </DataTableLayout>
 
       {/* 弹窗/抽屉放在 DataTableLayout 外面 */}
       <FixedLinkModal
         visible={qrModalVisible}
         onClose={() => setQrModalVisible(false)}
-        url={getFixedTestUrl(username)}
+        username={username}
+        sourceChannels={availableChannels}
+      />
+
+      <DiscAccessGrantModal
+        visible={grantModalVisible}
+        onClose={() => setGrantModalVisible(false)}
       />
 
       <EditRecordModal

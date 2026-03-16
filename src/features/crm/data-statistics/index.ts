@@ -1,3 +1,5 @@
+export { AdvisorCenterPage } from './advisor-center-page'
 export { AdvisorDashboardPage } from './advisor-dashboard-page'
+export { AdvisorTaskBattlePage } from './advisor-task-battle-page'
 export { ConsultingStatisticsPage } from './consulting-statistics-page'
 export { MarketingStatisticsPage } from './marketing-statistics-page'

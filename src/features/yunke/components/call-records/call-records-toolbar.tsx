@@ -34,6 +34,7 @@ interface CallRecordsToolbarProps {
   onFilterChange: <K extends keyof CallRecordListParams>(key: K, value: CallRecordListParams[K]) => void
   onReset: () => void
   isLoading?: boolean
+  extraActions?: React.ReactNode
 }
 
 type DateRangeValue = [Date | undefined, Date | undefined] | undefined
@@ -46,6 +47,7 @@ export function CallRecordsToolbar({
   onFilterChange,
   onReset,
   isLoading,
+  extraActions,
 }: CallRecordsToolbarProps) {
   const [searchInput, setSearchInput] = useState(filters.search || '')
   const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false)
@@ -386,6 +388,7 @@ export function CallRecordsToolbar({
         >
           文本纠错
         </Button>
+        {extraActions}
       </div>
 
       <TranscriptCorrectionDialog

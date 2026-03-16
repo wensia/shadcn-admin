@@ -4,12 +4,12 @@ import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 
 const items = [
-  { id: 'recents', label: 'Recents' },
-  { id: 'home', label: 'Home' },
-  { id: 'applications', label: 'Applications' },
-  { id: 'desktop', label: 'Desktop' },
-  { id: 'downloads', label: 'Downloads' },
-  { id: 'documents', label: 'Documents' },
+  { id: 'recents', label: '最近' },
+  { id: 'home', label: '首页' },
+  { id: 'applications', label: '应用' },
+  { id: 'desktop', label: '桌面' },
+  { id: 'downloads', label: '下载' },
+  { id: 'documents', label: '文档' },
 ] as const
 
 export function DisplayForm() {
@@ -31,7 +31,7 @@ export function DisplayForm() {
     >
       <Form.CheckboxGroup
         field='items'
-        label='Sidebar'
+        label='侧边栏'
         direction='vertical'
         rules={[
           {
@@ -41,10 +41,10 @@ export function DisplayForm() {
               }
               return true
             },
-            message: 'You have to select at least one item.',
+            message: '至少选择一个选项。',
           },
         ]}
-        extraText='Select the items you want to display in the sidebar.'
+        extraText='选择要在侧边栏中显示的项目。'
       >
         {items.map((item) => (
           <Checkbox key={item.id} value={item.id}>
@@ -53,7 +53,7 @@ export function DisplayForm() {
         ))}
       </Form.CheckboxGroup>
 
-      <Button htmlType='submit' theme='solid'>Update display</Button>
+      <Button htmlType='submit' theme='solid'>更新显示设置</Button>
     </Form>
   )
 }

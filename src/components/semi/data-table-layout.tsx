@@ -33,6 +33,8 @@ interface DataTableLayoutProps {
   allowPageScroll?: boolean
   /** 内容区域的最小高度，仅在 allowPageScroll=true 时生效 */
   contentMinHeight?: number | string
+  /** 允许内容区域随内容自然撑开，适合仪表盘类长页面 */
+  contentOverflowVisible?: boolean
 }
 
 export function DataTableLayout({
@@ -47,7 +49,10 @@ export function DataTableLayout({
   children,
   allowPageScroll = false,
   contentMinHeight = 560,
+  contentOverflowVisible = false,
 }: DataTableLayoutProps) {
+  const shouldExpandContent = allowPageScroll && contentOverflowVisible
+
   return (
     <div
       style={{
@@ -88,7 +93,7 @@ export function DataTableLayout({
 
         {/* 工具栏 + 刷新按钮 */}
         {(toolbar || onRefresh) && (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: toolbar ? 0 : 8 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 8 }}>
             <div style={{ flex: 1, minWidth: 0 }}>{toolbar}</div>
             {onRefresh && (
               <Button
@@ -112,9 +117,9 @@ export function DataTableLayout({
       {/* 表格区域 */}
       <div
         style={{
-          flex: 1,
+          flex: shouldExpandContent ? '0 0 auto' : 1,
           minHeight: allowPageScroll ? contentMinHeight : 0,
-          overflow: 'hidden',
+          overflow: shouldExpandContent ? 'visible' : 'hidden',
           padding: '10px 20px 0',
           display: 'flex',
           flexDirection: 'column',
@@ -122,9 +127,9 @@ export function DataTableLayout({
       >
         <div
           style={{
-            flex: 1,
-            minHeight: 0,
-            overflow: 'hidden',
+            flex: shouldExpandContent ? '0 0 auto' : 1,
+            minHeight: shouldExpandContent ? 'auto' : 0,
+            overflow: shouldExpandContent ? 'visible' : 'hidden',
             borderRadius: 8,
             border: '1px solid var(--semi-color-border)',
             display: 'flex',

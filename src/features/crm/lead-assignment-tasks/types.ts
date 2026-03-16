@@ -13,6 +13,11 @@ export interface TaskPerson {
   name: string
 }
 
+export interface LeadAssignmentTaskFollowupResultStat {
+  result: FollowupResult
+  count: number
+}
+
 export interface LeadAssignmentTask {
   id: string
   name: string
@@ -23,6 +28,8 @@ export interface LeadAssignmentTask {
   completion_rate: number
   latest_followup_at?: string | null
   completed_at?: string | null
+  completed_duration_seconds?: number | null
+  followup_result_stats?: LeadAssignmentTaskFollowupResultStat[]
   created_at: string
   advisor: TaskPerson
   created_by: TaskPerson

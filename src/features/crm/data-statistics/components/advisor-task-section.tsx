@@ -246,10 +246,10 @@ export function AdvisorTaskSection({
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
-                顾问任务考核表
+                顾问任务矩阵
               </div>
               <Text type="tertiary" size="small">
-                自动规则与手工候选项拆开展示，区间汇总场景只读，单日场景支持补录与主管审核。
+                每位顾问一行，横向展示 A/B/C/D 自动规则、人工候选项热力状态、最终结果与主管操作入口。
               </Text>
             </div>
             <div

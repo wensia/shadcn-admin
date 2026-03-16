@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef, type Ref } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
   Phone, RotateCcw, Loader2, Send, RefreshCw, PhoneOff,
 } from 'lucide-react'
-import { format, setHours, setMinutes } from 'date-fns'
+import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -18,7 +18,6 @@ import {
   Skeleton,
   Typography,
   DatePicker,
-  TimePicker,
   Tag,
   Divider,
   TextArea,
@@ -37,9 +36,8 @@ import {
   FollowupResult,
   type LeadFollowupCreate,
 } from '../leads/types'
-import type { ContinuousCallLead } from './types'
+import type { ContinuousCallLead, TaskBriefItem } from './types'
 import { LeadDetailTabs } from '../leads/components/detail/lead-detail-tabs'
-import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { CallTimer } from './components/call-timer'
 import { followupResultOptions } from './components/followup-options'
 
@@ -101,11 +99,19 @@ function PageHeader({
   statsData,
   selectedChannelId,
   onChannelChange,
+  selectedTaskId,
+  onTaskChange,
   onRefresh,
 }: {
-  statsData: { total_leads: number; channels: { channel_id: string; channel_name: string; lead_count: number }[] } | undefined
+  statsData: {
+    total_leads: number
+    channels: { channel_id: string; channel_name: string; lead_count: number }[]
+    tasks: TaskBriefItem[]
+  } | undefined
   selectedChannelId: string | null
   onChannelChange: (id: string | null) => void
+  selectedTaskId: string | null
+  onTaskChange: (id: string | null) => void
   onRefresh: () => void
 }) {
   return (
@@ -118,11 +124,26 @@ function PageHeader({
     }}>
       <Text strong style={{ fontSize: 16 }}>连续外呼</Text>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Select
+          value={selectedTaskId || 'all'}
+          onChange={(value) => onTaskChange(value === 'all' ? null : value as string)}
+          style={{ width: 200, textAlign: 'center' }}
+          placeholder="选择任务"
+          emptyContent="暂无分配任务"
+        >
+          <Select.Option value="all">全部任务</Select.Option>
+          {statsData?.tasks?.map((task) => (
+            <Select.Option key={task.id} value={task.id}>
+              {task.name} ({task.lead_count})
+            </Select.Option>
+          ))}
+        </Select>
         {statsData && (
           <Select
             value={selectedChannelId || 'all'}
             onChange={(value) => onChannelChange(value === 'all' ? null : value as string)}
-            style={{ width: 200 }}
+            style={{ width: 200, textAlign: 'center' }}
+            placeholder="选择渠道"
           >
             <Select.Option value="all">
               全部渠道 ({statsData.total_leads})
@@ -246,19 +267,6 @@ function LeadDetailPanel({
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '12px 16px', flexShrink: 0,
-        borderBottom: '1px solid var(--semi-color-border)',
-      }}>
-        <Text strong style={{ fontSize: 15 }}>{currentLead.child_name || '未填写'}</Text>
-        {currentLead.intention_level && (
-          <IntentionLevelBadge level={currentLead.intention_level as IntentionLevel} />
-        )}
-        {currentLead.source_channel_name && (
-          <Text type="tertiary" style={{ fontSize: 12 }}>{currentLead.source_channel_name}</Text>
-        )}
-      </div>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <LeadDetailTabs
           leadId={currentLead.id}
@@ -279,9 +287,6 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 6, display: 'block',
 }
 
-type TriggerRenderProps = {
-  ref: Ref<HTMLSpanElement>
-}
 
 export function ContinuousCallPage() {
   useDocumentTitle('连续外呼')
@@ -290,6 +295,7 @@ export function ContinuousCallPage() {
 
   // 页面状态
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [currentLead, setCurrentLead] = useState<ContinuousCallLead | null>(null)
   const [callDrawerVisible, setCallDrawerVisible] = useState(false)
   const [currentCallId, setCurrentCallId] = useState('')
@@ -306,15 +312,16 @@ export function ContinuousCallPage() {
   const [nextFollowupAt, setNextFollowupAt] = useState<Date | undefined>(undefined)
   const [sendToDingding, setSendToDingding] = useState(false)
   const [releaseToPool, setReleaseToPool] = useState(false)
-  const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined)
-  const [appointmentTime, setAppointmentTime] = useState<string>('10:00')
+  const [appointmentAt, setAppointmentAt] = useState<Date | undefined>(undefined)
   const [appointmentReason, setAppointmentReason] = useState<string>('')
 
   // 数据查询
-  const { data: statsData } = useQuery({
-    queryKey: ['continuous-call-stats'],
+  const { data: statsData, refetch: refetchStats } = useQuery({
+    queryKey: ['continuous-call-stats', selectedTaskId],
     queryFn: async () => {
-      const res = await continuousCallApi.getStats()
+      const res = await continuousCallApi.getStats({
+        task_id: selectedTaskId || undefined,
+      })
       if (res.success) return res.data
       throw new Error(res.message || '获取统计数据失败')
     },
@@ -325,10 +332,11 @@ export function ContinuousCallPage() {
     isLoading,
     refetch: refetchLeads,
   } = useQuery({
-    queryKey: ['continuous-call-leads', selectedChannelId],
+    queryKey: ['continuous-call-leads', selectedChannelId, selectedTaskId],
     queryFn: async () => {
       const res = await continuousCallApi.getLeads({
         channel_id: selectedChannelId || undefined,
+        task_id: selectedTaskId || undefined,
         page: 1,
         page_size: 50,
       })
@@ -424,8 +432,7 @@ export function ContinuousCallPage() {
     setNextFollowupAt(undefined)
     setSendToDingding(false)
     setReleaseToPool(false)
-    setAppointmentDate(undefined)
-    setAppointmentTime('10:00')
+    setAppointmentAt(undefined)
     setAppointmentReason('')
     if (currentLead) {
       setIntentionLevel(
@@ -447,7 +454,7 @@ export function ContinuousCallPage() {
       return
     }
     if (followupResult === 'appointment_scheduled') {
-      if (!appointmentDate) {
+      if (!appointmentAt) {
         Toast.warning({ content: '请选择预约到访时间' })
         return
       }
@@ -477,14 +484,12 @@ export function ContinuousCallPage() {
       const currentLeadId = currentLead.id
 
       // 下次回访时间
-      const nextFollowupAtIso = nextFollowupAt ? nextFollowupAt.toISOString() : undefined
+      const nextFollowupAtIso = nextFollowupAt?.toISOString()
 
       // 组合预约到访时间内容
       let finalFollowupContent = followupContent || ''
-      if (followupResult === 'appointment_scheduled' && appointmentDate) {
-        const [aHours, aMinutes] = appointmentTime.split(':').map(Number)
-        const appointmentDateTime = setMinutes(setHours(appointmentDate, aHours), aMinutes)
-        const appointmentStr = format(appointmentDateTime, 'yyyy-MM-dd HH:mm', { locale: zhCN })
+      if (followupResult === 'appointment_scheduled' && appointmentAt) {
+        const appointmentStr = format(appointmentAt, 'yyyy-MM-dd HH:mm', { locale: zhCN })
         const appointmentInfo = `预约到访时间：${appointmentStr}\n诺到理由：${appointmentReason.trim()}`
         finalFollowupContent = finalFollowupContent
           ? `${finalFollowupContent}\n${appointmentInfo}`
@@ -515,11 +520,10 @@ export function ContinuousCallPage() {
         }
 
         // 创建预约到访记录
-        if (followupResult === 'appointment_scheduled' && appointmentDate) {
+        if (followupResult === 'appointment_scheduled' && appointmentAt) {
           try {
-            const [aHours, aMinutes] = appointmentTime.split(':').map(Number)
-            const visitDate = format(appointmentDate, 'yyyy-MM-dd')
-            const visitTime = `${String(aHours).padStart(2, '0')}:${String(aMinutes).padStart(2, '0')}:00`
+            const visitDate = format(appointmentAt, 'yyyy-MM-dd')
+            const visitTime = format(appointmentAt, 'HH:mm:ss')
             await visitScheduleApi.createVisitSchedule({
               lead_id: currentLeadId,
               visit_date: visitDate,
@@ -565,7 +569,7 @@ export function ContinuousCallPage() {
   }, [
     followupResult, currentLead, currentCallId, callDrawerVisible,
     followupContent, nextFollowupAt, releaseToPool,
-    appointmentDate, appointmentTime, appointmentReason,
+    appointmentAt, appointmentReason,
     closeCallDrawer, refetchLeads, intentionLevel, sendToDingding, resetForm,
   ])
 
@@ -713,7 +717,13 @@ export function ContinuousCallPage() {
           statsData={statsData}
           selectedChannelId={selectedChannelId}
           onChannelChange={setSelectedChannelId}
-          onRefresh={() => refetchLeads()}
+          selectedTaskId={selectedTaskId}
+          onTaskChange={(id) => {
+            setSelectedTaskId(id)
+            setSelectedChannelId(null)
+            setCurrentLead(null)
+          }}
+          onRefresh={() => { refetchStats(); refetchLeads() }}
         />
         <div ref={containerRef} style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           {/* 左侧：线索详情 */}
@@ -798,15 +808,11 @@ export function ContinuousCallPage() {
                     <DatePicker
                       type="dateTime"
                       value={nextFollowupAt}
-                      onChange={(date: Date | Date[] | undefined) => {
-                        setNextFollowupAt(date instanceof Date ? date : undefined)
-                      }}
+                      onChange={(date) => setNextFollowupAt(date as Date || undefined)}
                       disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      placeholder="选择日期时间"
                       format="MM月dd日 HH:mm"
-                      placeholder="选择回访时间"
-                      density="compact"
-                      insetInput
-                      style={{ width: '100%' }}
+                      style={{ width: 200 }}
                     />
                   </div>
 
@@ -817,35 +823,15 @@ export function ContinuousCallPage() {
                       border: `1px solid ${BRAND.green}30`,
                     }}>
                       <label style={{ ...labelStyle, color: 'var(--semi-color-danger)', fontWeight: 600 }}>预约到访</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <div style={{ marginBottom: 8 }}>
                         <DatePicker
-                          type="date"
-                          value={appointmentDate}
-                          onChange={(date: Date | Date[] | undefined) => {
-                            setAppointmentDate(date instanceof Date ? date : undefined)
-                          }}
+                          type="dateTime"
+                          value={appointmentAt}
+                          onChange={(date) => setAppointmentAt(date as Date || undefined)}
                           disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          triggerRender={({ ref }: TriggerRenderProps) => (
-                            <span ref={ref} style={{ display: 'inline-flex' }}>
-                              <Button size="small" style={{ fontSize: 12, color: appointmentDate ? undefined : 'var(--semi-color-text-2)' }}>
-                                {appointmentDate ? format(appointmentDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
-                              </Button>
-                            </span>
-                          )}
-                        />
-                        <TimePicker
-                          value={appointmentTime}
-                          onChange={(_time: Date | Date[] | undefined, timeStr: string | string[]) => {
-                            setAppointmentTime(Array.isArray(timeStr) ? timeStr[0] || '10:00' : timeStr)
-                          }}
-                          format="HH:mm"
-                          triggerRender={({ ref }: TriggerRenderProps) => (
-                            <span ref={ref} style={{ display: 'inline-flex' }}>
-                              <Button size="small" style={{ fontSize: 12, color: appointmentDate ? undefined : 'var(--semi-color-text-2)' }}>
-                                {appointmentDate ? appointmentTime : '时间'}
-                              </Button>
-                            </span>
-                          )}
+                          placeholder="选择预约日期时间"
+                          format="MM月dd日 HH:mm"
+                          style={{ width: 200 }}
                         />
                       </div>
                       <label style={{ ...labelStyle, color: 'var(--semi-color-danger)' }}>诺到理由</label>

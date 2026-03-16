@@ -206,14 +206,13 @@ export function EmployeeSelectorDialog({
       style={{ maxHeight: '85vh' }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <Button onClick={() => onOpenChange(false)} size="small">
+          <Button onClick={() => onOpenChange(false)}>
             取消
           </Button>
           <Button
             theme="solid"
             type="primary"
             onClick={handleConfirm}
-            size="small"
             disabled={!selectedEmployee}
           >
             {selectedEmployee ? `${confirmText} ${selectedEmployee.name}` : '请先选择员工'}
@@ -224,7 +223,7 @@ export function EmployeeSelectorDialog({
       {/* 搜索栏 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Text type="tertiary" size="small">搜索</Text>
+          <Text type="tertiary">搜索</Text>
           <Input
             prefix={<IconSearch />}
             value={searchText}
@@ -233,13 +232,12 @@ export function EmployeeSelectorDialog({
               setPage(1)
             }}
             placeholder="输入姓名或用户名搜索"
-            size="small"
             showClear
             style={{ width: 200 }}
           />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Text type="tertiary" size="small">校区</Text>
+          <Text type="tertiary">校区</Text>
           <Select
             value={selectedCampus}
             onChange={(v) => {
@@ -247,7 +245,6 @@ export function EmployeeSelectorDialog({
               setPage(1)
             }}
             optionList={campusOptions}
-            size="small"
             style={{ width: 140 }}
           />
         </div>
@@ -256,7 +253,6 @@ export function EmployeeSelectorDialog({
           type="tertiary"
           icon={<IconRefresh />}
           onClick={handleRefresh}
-          size="small"
         />
       </div>
 
@@ -266,7 +262,6 @@ export function EmployeeSelectorDialog({
         dataSource={filteredItems}
         rowKey="id"
         loading={isLoading}
-        size="small"
         pagination={{
           currentPage: page,
           pageSize,

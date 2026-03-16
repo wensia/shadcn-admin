@@ -3,8 +3,8 @@
  * 用于连续外呼页面和线索详情抽屉
  */
 
-import { useState, useCallback, useEffect, useRef, type Ref } from 'react'
-import { format, addDays, setHours, setMinutes } from 'date-fns'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import {
   Phone, RotateCcw, Loader2, Send,
@@ -22,7 +22,6 @@ import {
   Toast,
   Divider,
   DatePicker,
-  TimePicker,
   TextArea,
 } from '@douyinfe/semi-ui-19'
 
@@ -77,14 +76,6 @@ interface SelectOptionNode {
   value?: string
 }
 
-interface DateTriggerRenderProps {
-  value?: Date
-  ref?: Ref<HTMLSpanElement>
-}
-
-interface TimeTriggerRenderProps {
-  ref?: Ref<HTMLSpanElement>
-}
 
 export function FollowupResultSelect({ value, onChange }: FollowupResultSelectProps) {
   const [open, setOpen] = useState(false)
@@ -215,13 +206,11 @@ export function FollowupForm({
   const [intentionLevel, setIntentionLevel] = useState<IntentionLevel>(initialIntentionLevel)
   const [wechatAdded, setWechatAdded] = useState(false)
   const [followupContent, setFollowupContent] = useState('')
-  const [nextFollowupDate, setNextFollowupDate] = useState<Date | undefined>(undefined)
-  const [nextFollowupTime, setNextFollowupTime] = useState<string>('10:00')
+  const [nextFollowupAt, setNextFollowupAt] = useState<Date | undefined>(undefined)
   const [sendToDingding, setSendToDingding] = useState(false)
   const [releaseToPool, setReleaseToPool] = useState(false)
   // 预约到访
-  const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined)
-  const [appointmentTime, setAppointmentTime] = useState<string>('10:00')
+  const [appointmentAt, setAppointmentAt] = useState<Date | undefined>(undefined)
   const [appointmentReason, setAppointmentReason] = useState<string>('')
   // AI 建议 + 流水线状态
   const [aiSuggestion, setAiSuggestion] = useState<FollowupSuggestion | null>(null)
@@ -230,19 +219,17 @@ export function FollowupForm({
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | 'idle'>('idle')
   const [hasAiFollowup, setHasAiFollowup] = useState(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // (日期选择使用 Semi DatePicker/TimePicker 内置弹出)
+  // (日期时间选择使用 Semi DatePicker type="dateTime")
 
   // 重置表单
   const resetForm = useCallback(() => {
     setFollowupResult('')
     setFollowupContent('')
     setWechatAdded(false)
-    setNextFollowupDate(undefined)
-    setNextFollowupTime('10:00')
+    setNextFollowupAt(undefined)
     setSendToDingding(false)
     setReleaseToPool(false)
-    setAppointmentDate(undefined)
-    setAppointmentTime('10:00')
+    setAppointmentAt(undefined)
     setAppointmentReason('')
     setIntentionLevel(initialIntentionLevel)
     setAiSuggestion(null)
@@ -255,7 +242,9 @@ export function FollowupForm({
   const applyAiSuggestion = useCallback((suggestion: FollowupSuggestion) => {
     if (suggestion.followup_result) {
       setFollowupResult(suggestion.followup_result)
-      if (suggestion.followup_result === 'can_continue' || suggestion.followup_result === 'appointment_scheduled') {
+      // 只有 AI 建议同时提供了跟进内容时才自动勾选钉钉
+      const hasContent = !!suggestion.followup_content?.trim()
+      if ((suggestion.followup_result === 'can_continue' || suggestion.followup_result === 'appointment_scheduled') && hasContent) {
         setSendToDingding(true)
       }
     }
@@ -268,8 +257,7 @@ export function FollowupForm({
     if (suggestion.next_followup_at) {
       const dt = new Date(suggestion.next_followup_at)
       if (!isNaN(dt.getTime())) {
-        setNextFollowupDate(dt)
-        setNextFollowupTime(format(dt, 'HH:mm'))
+        setNextFollowupAt(dt)
       }
     }
     setAiApplied(true)
@@ -356,7 +344,7 @@ export function FollowupForm({
     }
 
     if (followupResult === 'appointment_scheduled') {
-      if (!appointmentDate) {
+      if (!appointmentAt) {
         Toast.warning({ content: '请选择预约到访时间' })
         return
       }
@@ -369,18 +357,11 @@ export function FollowupForm({
     try {
       setSaving(true)
 
-      let nextFollowupAtIso: string | undefined = undefined
-      if (nextFollowupDate) {
-        const [hours, minutes] = nextFollowupTime.split(':').map(Number)
-        const combinedDate = setMinutes(setHours(nextFollowupDate, hours), minutes)
-        nextFollowupAtIso = combinedDate.toISOString()
-      }
+      const nextFollowupAtIso = nextFollowupAt?.toISOString()
 
       let finalFollowupContent = followupContent || ''
-      if (followupResult === 'appointment_scheduled' && appointmentDate) {
-        const [aHours, aMinutes] = appointmentTime.split(':').map(Number)
-        const appointmentDateTime = setMinutes(setHours(appointmentDate, aHours), aMinutes)
-        const appointmentStr = format(appointmentDateTime, 'yyyy-MM-dd HH:mm', { locale: zhCN })
+      if (followupResult === 'appointment_scheduled' && appointmentAt) {
+        const appointmentStr = format(appointmentAt, 'yyyy-MM-dd HH:mm', { locale: zhCN })
         const appointmentInfo = `预约到访时间：${appointmentStr}\n诺到理由：${appointmentReason.trim()}`
         finalFollowupContent = finalFollowupContent
           ? `${finalFollowupContent}\n${appointmentInfo}`
@@ -400,11 +381,10 @@ export function FollowupForm({
       const res = await leadsApi.addLeadFollowup(leadId, data)
 
       if (res.success) {
-        if (followupResult === 'appointment_scheduled' && appointmentDate) {
+        if (followupResult === 'appointment_scheduled' && appointmentAt) {
           try {
-            const [aHours, aMinutes] = appointmentTime.split(':').map(Number)
-            const visitDate = format(appointmentDate, 'yyyy-MM-dd')
-            const visitTime = `${String(aHours).padStart(2, '0')}:${String(aMinutes).padStart(2, '0')}:00`
+            const visitDate = format(appointmentAt, 'yyyy-MM-dd')
+            const visitTime = format(appointmentAt, 'HH:mm:ss')
 
             await visitScheduleApi.createVisitSchedule({
               lead_id: leadId,
@@ -451,12 +431,10 @@ export function FollowupForm({
     advisorId,
     followupResult,
     followupContent,
-    nextFollowupDate,
-    nextFollowupTime,
+    nextFollowupAt,
     sendToDingding,
     releaseToPool,
-    appointmentDate,
-    appointmentTime,
+    appointmentAt,
     appointmentReason,
     resetForm,
     onSuccess,
@@ -536,7 +514,7 @@ export function FollowupForm({
             value={followupResult}
             onChange={(value) => {
               setFollowupResult(value)
-              if (value === 'can_continue' || value === 'appointment_scheduled') {
+              if ((value === 'can_continue' || value === 'appointment_scheduled') && followupContent.trim()) {
                 setSendToDingding(true)
               }
             }}
@@ -579,61 +557,15 @@ export function FollowupForm({
       {/* 下次回访时间 */}
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap', width: 64, flexShrink: 0 }}>下次回访</label>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <DatePicker
-            type="date"
-            value={nextFollowupDate}
-            onChange={(date: Date | null) => setNextFollowupDate(date || undefined)}
-            disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-            triggerRender={({ ref }: DateTriggerRenderProps) => (
-              <span ref={ref} style={{ display: 'inline-flex' }}>
-                <Button
-                  style={{
-                    height: 28, padding: '0 8px', fontSize: 12, minWidth: 90,
-                    color: nextFollowupDate ? undefined : 'var(--semi-color-text-2)',
-                  }}
-                >
-                  {nextFollowupDate ? format(nextFollowupDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
-                </Button>
-              </span>
-            )}
-          />
-          <TimePicker
-            value={nextFollowupTime}
-            onChange={(_time: unknown, timeStr: string) => setNextFollowupTime(timeStr)}
-            format="HH:mm"
-            triggerRender={({ ref }: TimeTriggerRenderProps) => (
-              <span ref={ref} style={{ display: 'inline-flex' }}>
-                <Button
-                  style={{
-                    height: 28, padding: '0 8px', fontSize: 12, minWidth: 70,
-                    color: nextFollowupDate ? undefined : 'var(--semi-color-text-2)',
-                  }}
-                >
-                  {nextFollowupDate ? nextFollowupTime : '选择时间'}
-                </Button>
-              </span>
-            )}
-          />
-          <Button
-            style={{ height: 28, padding: '0 8px', fontSize: 12 }}
-            onClick={() => {
-              setNextFollowupDate(new Date())
-              setNextFollowupTime('18:00')
-            }}
-          >
-            今天
-          </Button>
-          <Button
-            style={{ height: 28, padding: '0 8px', fontSize: 12 }}
-            onClick={() => {
-              setNextFollowupDate(addDays(new Date(), 1))
-              setNextFollowupTime('10:00')
-            }}
-          >
-            明天
-          </Button>
-        </div>
+        <DatePicker
+          type="dateTime"
+          value={nextFollowupAt}
+          onChange={(date) => setNextFollowupAt(date as Date || undefined)}
+          disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
+          placeholder="选择日期时间"
+          format="MM月dd日 HH:mm"
+          style={{ width: 200 }}
+        />
       </div>
 
       {/* 预约到访时间 */}
@@ -644,41 +576,15 @@ export function FollowupForm({
             <label style={{ fontSize: 12, fontWeight: 500, color: '#ef4444', whiteSpace: 'nowrap', width: 64, flexShrink: 0 }}>
               预约时间
             </label>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1 }}>
               <DatePicker
-                type="date"
-                value={appointmentDate}
-                onChange={(date: Date | null) => setAppointmentDate(date || undefined)}
+                type="dateTime"
+                value={appointmentAt}
+                onChange={(date) => setAppointmentAt(date as Date || undefined)}
                 disabledDate={(date?: Date) => !!date && date < new Date(new Date().setHours(0, 0, 0, 0))}
-                triggerRender={({ ref }: DateTriggerRenderProps) => (
-                  <span ref={ref} style={{ display: 'inline-flex' }}>
-                    <Button
-                      style={{
-                        height: 28, padding: '0 8px', fontSize: 12, minWidth: 90,
-                        color: appointmentDate ? undefined : 'var(--semi-color-text-2)',
-                      }}
-                    >
-                      {appointmentDate ? format(appointmentDate, 'MM月dd日', { locale: zhCN }) : '选择日期'}
-                    </Button>
-                  </span>
-                )}
-              />
-              <TimePicker
-                value={appointmentTime}
-                onChange={(_time: unknown, timeStr: string) => setAppointmentTime(timeStr)}
-                format="HH:mm"
-                triggerRender={({ ref }: TimeTriggerRenderProps) => (
-                  <span ref={ref} style={{ display: 'inline-flex' }}>
-                    <Button
-                      style={{
-                        height: 28, padding: '0 8px', fontSize: 12, minWidth: 70,
-                        color: appointmentDate ? undefined : 'var(--semi-color-text-2)',
-                      }}
-                    >
-                      {appointmentDate ? appointmentTime : '选择时间'}
-                    </Button>
-                  </span>
-                )}
+                placeholder="选择预约日期时间"
+                format="MM月dd日 HH:mm"
+                style={{ width: 200 }}
               />
             </div>
           </div>
@@ -723,9 +629,10 @@ export function FollowupForm({
         <span style={{ '--semi-color-primary': '#00b42a', '--semi-color-primary-hover': '#00b42a' } as React.CSSProperties}>
           <Checkbox
             checked={sendToDingding}
+            disabled={!followupContent.trim()}
             onChange={(e) => setSendToDingding(e.target.checked)}
           >
-            <span style={{ color: '#00b42a', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ color: !followupContent.trim() ? 'var(--semi-color-text-2)' : '#00b42a', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Send style={{ width: 12, height: 12 }} />
               发钉钉
             </span>
@@ -741,7 +648,14 @@ export function FollowupForm({
         <TextArea
           placeholder="输入跟进内容..."
           value={followupContent}
-          onChange={(value) => setFollowupContent(value)}
+          onChange={(value) => {
+            setFollowupContent(value)
+            if (!value.trim()) {
+              setSendToDingding(false)
+            } else if (followupResult === 'can_continue' || followupResult === 'appointment_scheduled') {
+              setSendToDingding(true)
+            }
+          }}
           maxCount={500}
           autosize={{ minRows: 2, maxRows: 6 }}
           style={{ flex: 1 }}
@@ -792,7 +706,7 @@ export function FollowupForm({
       <div style={{ flex: 1, overflow: 'auto' }}>
         {formContent}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid var(--semi-color-border)', marginTop: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '16px 0', borderTop: '1px solid var(--semi-color-border)', marginTop: 16 }}>
         {actionButtons}
       </div>
     </div>

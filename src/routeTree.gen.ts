@@ -63,14 +63,18 @@ import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDemoTdesignLeadsRouteImport } from './routes/_authenticated/demo/tdesign-leads'
 import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authenticated/crm/workbench'
 import { Route as AuthenticatedCrmVisitScheduleRouteImport } from './routes/_authenticated/crm/visit-schedule'
+import { Route as AuthenticatedCrmPerformanceEventsRouteImport } from './routes/_authenticated/crm/performance-events'
 import { Route as AuthenticatedCrmPendingApprovalsRouteImport } from './routes/_authenticated/crm/pending-approvals'
 import { Route as AuthenticatedCrmOrdersRouteImport } from './routes/_authenticated/crm/orders'
 import { Route as AuthenticatedCrmLeadCreationLogsRouteImport } from './routes/_authenticated/crm/lead-creation-logs'
 import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
+import { Route as AuthenticatedCrmChannelLedgerRouteImport } from './routes/_authenticated/crm/channel-ledger'
 import { Route as AuthenticatedCrmCallRecordsRouteImport } from './routes/_authenticated/crm/call-records'
 import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
 import { Route as AuthenticatedCrmAiAssistantRouteImport } from './routes/_authenticated/crm/ai-assistant'
+import { Route as AuthenticatedCrmAdvisorTasksRouteImport } from './routes/_authenticated/crm/advisor-tasks'
+import { Route as AuthenticatedCrmAdvisorCenterRouteImport } from './routes/_authenticated/crm/advisor-center'
 import { Route as AuthenticatedAdminYunkeAccountsRouteImport } from './routes/_authenticated/admin/yunke-accounts'
 import { Route as AuthenticatedAdminWebhookHooksRouteImport } from './routes/_authenticated/admin/webhook-hooks'
 import { Route as AuthenticatedAdminSourceChannelsRouteImport } from './routes/_authenticated/admin/source-channels'
@@ -391,6 +395,12 @@ const AuthenticatedCrmVisitScheduleRoute =
     path: '/visit-schedule',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmPerformanceEventsRoute =
+  AuthenticatedCrmPerformanceEventsRouteImport.update({
+    id: '/performance-events',
+    path: '/performance-events',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmPendingApprovalsRoute =
   AuthenticatedCrmPendingApprovalsRouteImport.update({
     id: '/pending-approvals',
@@ -420,6 +430,12 @@ const AuthenticatedCrmContinuousCallRoute =
     path: '/continuous-call',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmChannelLedgerRoute =
+  AuthenticatedCrmChannelLedgerRouteImport.update({
+    id: '/channel-ledger',
+    path: '/channel-ledger',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmCallRecordsRoute =
   AuthenticatedCrmCallRecordsRouteImport.update({
     id: '/call-records',
@@ -436,6 +452,18 @@ const AuthenticatedCrmAiAssistantRoute =
   AuthenticatedCrmAiAssistantRouteImport.update({
     id: '/ai-assistant',
     path: '/ai-assistant',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmAdvisorTasksRoute =
+  AuthenticatedCrmAdvisorTasksRouteImport.update({
+    id: '/advisor-tasks',
+    path: '/advisor-tasks',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmAdvisorCenterRoute =
+  AuthenticatedCrmAdvisorCenterRouteImport.update({
+    id: '/advisor-center',
+    path: '/advisor-center',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedAdminYunkeAccountsRoute =
@@ -692,14 +720,18 @@ export interface FileRoutesByFullPath {
   '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
   '/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
   '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
+  '/crm/advisor-center': typeof AuthenticatedCrmAdvisorCenterRoute
+  '/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
+  '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
+  '/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
@@ -782,14 +814,18 @@ export interface FileRoutesByTo {
   '/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
   '/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
   '/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
+  '/crm/advisor-center': typeof AuthenticatedCrmAdvisorCenterRoute
+  '/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
+  '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
+  '/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
@@ -881,14 +917,18 @@ export interface FileRoutesById {
   '/_authenticated/admin/source-channels': typeof AuthenticatedAdminSourceChannelsRoute
   '/_authenticated/admin/webhook-hooks': typeof AuthenticatedAdminWebhookHooksRoute
   '/_authenticated/admin/yunke-accounts': typeof AuthenticatedAdminYunkeAccountsRoute
+  '/_authenticated/crm/advisor-center': typeof AuthenticatedCrmAdvisorCenterRoute
+  '/_authenticated/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/_authenticated/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/_authenticated/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
+  '/_authenticated/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/_authenticated/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
   '/_authenticated/crm/orders': typeof AuthenticatedCrmOrdersRoute
   '/_authenticated/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
+  '/_authenticated/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
   '/_authenticated/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/_authenticated/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/_authenticated/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
@@ -977,14 +1017,18 @@ export interface FileRouteTypes {
     | '/admin/source-channels'
     | '/admin/webhook-hooks'
     | '/admin/yunke-accounts'
+    | '/crm/advisor-center'
+    | '/crm/advisor-tasks'
     | '/crm/ai-assistant'
     | '/crm/batch-import'
     | '/crm/call-records'
+    | '/crm/channel-ledger'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
     | '/crm/lead-creation-logs'
     | '/crm/orders'
     | '/crm/pending-approvals'
+    | '/crm/performance-events'
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/demo/tdesign-leads'
@@ -1067,14 +1111,18 @@ export interface FileRouteTypes {
     | '/admin/source-channels'
     | '/admin/webhook-hooks'
     | '/admin/yunke-accounts'
+    | '/crm/advisor-center'
+    | '/crm/advisor-tasks'
     | '/crm/ai-assistant'
     | '/crm/batch-import'
     | '/crm/call-records'
+    | '/crm/channel-ledger'
     | '/crm/continuous-call'
     | '/crm/lead-conversion'
     | '/crm/lead-creation-logs'
     | '/crm/orders'
     | '/crm/pending-approvals'
+    | '/crm/performance-events'
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/demo/tdesign-leads'
@@ -1165,14 +1213,18 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/source-channels'
     | '/_authenticated/admin/webhook-hooks'
     | '/_authenticated/admin/yunke-accounts'
+    | '/_authenticated/crm/advisor-center'
+    | '/_authenticated/crm/advisor-tasks'
     | '/_authenticated/crm/ai-assistant'
     | '/_authenticated/crm/batch-import'
     | '/_authenticated/crm/call-records'
+    | '/_authenticated/crm/channel-ledger'
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/crm/lead-conversion'
     | '/_authenticated/crm/lead-creation-logs'
     | '/_authenticated/crm/orders'
     | '/_authenticated/crm/pending-approvals'
+    | '/_authenticated/crm/performance-events'
     | '/_authenticated/crm/visit-schedule'
     | '/_authenticated/crm/workbench'
     | '/_authenticated/demo/tdesign-leads'
@@ -1610,6 +1662,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmVisitScheduleRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/performance-events': {
+      id: '/_authenticated/crm/performance-events'
+      path: '/performance-events'
+      fullPath: '/crm/performance-events'
+      preLoaderRoute: typeof AuthenticatedCrmPerformanceEventsRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/pending-approvals': {
       id: '/_authenticated/crm/pending-approvals'
       path: '/pending-approvals'
@@ -1645,6 +1704,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmContinuousCallRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/channel-ledger': {
+      id: '/_authenticated/crm/channel-ledger'
+      path: '/channel-ledger'
+      fullPath: '/crm/channel-ledger'
+      preLoaderRoute: typeof AuthenticatedCrmChannelLedgerRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/call-records': {
       id: '/_authenticated/crm/call-records'
       path: '/call-records'
@@ -1664,6 +1730,20 @@ declare module '@tanstack/react-router' {
       path: '/ai-assistant'
       fullPath: '/crm/ai-assistant'
       preLoaderRoute: typeof AuthenticatedCrmAiAssistantRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/advisor-tasks': {
+      id: '/_authenticated/crm/advisor-tasks'
+      path: '/advisor-tasks'
+      fullPath: '/crm/advisor-tasks'
+      preLoaderRoute: typeof AuthenticatedCrmAdvisorTasksRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/advisor-center': {
+      id: '/_authenticated/crm/advisor-center'
+      path: '/advisor-center'
+      fullPath: '/crm/advisor-center'
+      preLoaderRoute: typeof AuthenticatedCrmAdvisorCenterRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/admin/yunke-accounts': {
@@ -1983,14 +2063,18 @@ const AuthenticatedAdminRouteRouteWithChildren =
   )
 
 interface AuthenticatedCrmRouteRouteChildren {
+  AuthenticatedCrmAdvisorCenterRoute: typeof AuthenticatedCrmAdvisorCenterRoute
+  AuthenticatedCrmAdvisorTasksRoute: typeof AuthenticatedCrmAdvisorTasksRoute
   AuthenticatedCrmAiAssistantRoute: typeof AuthenticatedCrmAiAssistantRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
+  AuthenticatedCrmChannelLedgerRoute: typeof AuthenticatedCrmChannelLedgerRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
   AuthenticatedCrmLeadCreationLogsRoute: typeof AuthenticatedCrmLeadCreationLogsRoute
   AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
   AuthenticatedCrmPendingApprovalsRoute: typeof AuthenticatedCrmPendingApprovalsRoute
+  AuthenticatedCrmPerformanceEventsRoute: typeof AuthenticatedCrmPerformanceEventsRoute
   AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
   AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
   AuthenticatedCrmIndexRoute: typeof AuthenticatedCrmIndexRoute
@@ -2004,14 +2088,19 @@ interface AuthenticatedCrmRouteRouteChildren {
 }
 
 const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
+  AuthenticatedCrmAdvisorCenterRoute: AuthenticatedCrmAdvisorCenterRoute,
+  AuthenticatedCrmAdvisorTasksRoute: AuthenticatedCrmAdvisorTasksRoute,
   AuthenticatedCrmAiAssistantRoute: AuthenticatedCrmAiAssistantRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
+  AuthenticatedCrmChannelLedgerRoute: AuthenticatedCrmChannelLedgerRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
   AuthenticatedCrmLeadCreationLogsRoute: AuthenticatedCrmLeadCreationLogsRoute,
   AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
   AuthenticatedCrmPendingApprovalsRoute: AuthenticatedCrmPendingApprovalsRoute,
+  AuthenticatedCrmPerformanceEventsRoute:
+    AuthenticatedCrmPerformanceEventsRoute,
   AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
   AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
   AuthenticatedCrmIndexRoute: AuthenticatedCrmIndexRoute,

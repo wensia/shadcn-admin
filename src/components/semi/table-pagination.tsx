@@ -60,7 +60,6 @@ export function SemiTablePagination({
           onChange={(val) => onPageSizeChange(val as number)}
           position="topLeft"
           style={{ width: 100 }}
-          size="small"
         >
           {pageSizeOptions.map((size) => (
             <Select.Option key={size} value={size}>

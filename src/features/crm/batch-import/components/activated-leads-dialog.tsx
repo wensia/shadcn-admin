@@ -172,7 +172,7 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
           </div>
 
           {/* 分页 */}
-          <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, marginTop: 12 }}>
+          <div style={{ borderTop: '1px solid var(--semi-color-border)', padding: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, marginTop: 12 }}>
             <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
               共 {totalCount} 条激活线索
             </span>

@@ -6,7 +6,6 @@
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { ConfigDrawer } from '@/components/config-drawer'
-import { ProfileDropdown } from '@/components/profile-dropdown'
 import { NotificationBell } from '@/features/notifications'
 
 interface HeaderActionsProps {
@@ -14,7 +13,6 @@ interface HeaderActionsProps {
   showNotification?: boolean
   showThemeSwitch?: boolean
   showConfig?: boolean
-  showProfile?: boolean
 }
 
 export function HeaderActions({
@@ -22,7 +20,6 @@ export function HeaderActions({
   showNotification = true,
   showThemeSwitch = true,
   showConfig = true,
-  showProfile = true,
 }: HeaderActionsProps) {
   return (
     <div className="ms-auto flex items-center space-x-4">
@@ -30,7 +27,6 @@ export function HeaderActions({
       {showNotification && <NotificationBell />}
       {showThemeSwitch && <ThemeSwitch />}
       {showConfig && <ConfigDrawer />}
-      {showProfile && <ProfileDropdown />}
     </div>
   )
 }

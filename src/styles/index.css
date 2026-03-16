@@ -673,6 +673,29 @@
   background-color: color-mix(in srgb, #D4FF00 20%, transparent) !important;
 }
 
+.advisor-task-table .semi-table-tbody>tr>td {
+  background: var(--advisor-task-row-bg, #ffffff) !important;
+}
+
+.advisor-task-table .semi-table-tbody>tr:hover>td {
+  background: var(--advisor-task-row-hover-bg, #f8fafc) !important;
+}
+
+.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-left,
+.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-left-last,
+.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-right,
+.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-right-first {
+  background: var(--advisor-task-row-bg, #ffffff) !important;
+  background-clip: padding-box;
+}
+
+.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-left,
+.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-left-last,
+.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-right,
+.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-right-first {
+  background: var(--advisor-task-row-hover-bg, #f8fafc) !important;
+}
+
 .neo-context .semi-tabs-bar {
   border-bottom: 2px solid var(--foreground) !important;
 }

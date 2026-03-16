@@ -1,7 +1,6 @@
 import {
   Users,
   FileUp,
-  Calendar,
   BarChart3,
   Home,
   GraduationCap,
@@ -32,7 +31,6 @@ import {
   Settings2,
   ArrowLeft,
   Shield,
-  ShoppingCart,
   Cloud,
   History,
   Key,
@@ -41,6 +39,8 @@ import {
   Bot,
   BrainCircuit,
   Bell,
+  HandCoins,
+  ShoppingCart,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -82,6 +82,11 @@ export const crmNavGroups: NavGroup[] = [
         icon: Users,
       },
       {
+        title: '渠道台账',
+        url: '/crm/channel-ledger',
+        icon: Library,
+      },
+      {
         title: '分配任务',
         url: '/crm/leads/assignment-tasks',
         icon: Activity,
@@ -102,24 +107,24 @@ export const crmNavGroups: NavGroup[] = [
         icon: Headphones,
       },
       {
-        title: '日控表',
-        url: '/crm/visit-schedule',
-        icon: Calendar,
-      },
-      {
         title: 'AI 数据助手',
         url: '/crm/ai-assistant',
         icon: Bot,
       },
       {
-        title: '数据统计',
-        url: '/crm/data-statistics/consulting',
-        icon: TrendingUp,
+        title: '业绩结果',
+        url: '/crm/performance-events',
+        icon: HandCoins,
       },
       {
-        title: '顾问看板',
-        url: '/crm/data-statistics/advisor',
-        icon: UsersRound,
+        title: '订单管理',
+        url: '/crm/orders',
+        icon: ShoppingCart,
+      },
+      {
+        title: '顾问数据中心',
+        url: '/crm/advisor-center',
+        icon: BarChart3,
       },
     ],
   },
@@ -147,16 +152,6 @@ export const crmNavGroups: NavGroup[] = [
         title: '人事管理',
         url: '/hr/disc-test',
         icon: UserCog,
-      },
-      {
-        title: '订单管理',
-        url: '/crm/orders',
-        icon: ShoppingCart,
-      },
-      {
-        title: '待审批订单',
-        url: '/crm/pending-approvals',
-        icon: ClipboardList,
       },
       {
         title: '财务管理',

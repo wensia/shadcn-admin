@@ -6,6 +6,8 @@ const searchSchema = z.object({
   name: z.string().optional(),
   phone: z.string().optional(),
   ref: z.string().optional(),
+  id: z.string().optional(),
+  channel: z.string().optional(),
 })
 
 export const Route = createFileRoute('/disc-test')({

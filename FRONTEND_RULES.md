@@ -21,13 +21,66 @@ shadcn-admin (React 19 + Semi Design) 前端开发的核心规范。
 
 ## Semi Design 使用规范
 
-### 调用 Semi Skills 和 MCP
+### Semi Skills 和 MCP 辅助开发（强制）
 
-当需要查询 Semi Design 组件用法、解决组件问题、或生成组件代码时：
+**核心原则：开发 Semi Design 相关功能时，必须优先使用 Semi Skills 和 MCP 工具查询组件用法，禁止凭记忆或猜测编写 Semi 组件代码。**
 
-1. **调用 `semi-ui-skills`** — 查询组件 API、使用模式、最佳实践
-2. **调用 `semi-mcp` 工具** — 获取组件源码和示例（`get_semi_document`、`get_semi_code_block`）
-3. **调用 `semi-datepicker-datetime-presets`** — DatePicker dateTime 模式下 presets 不触发 onChange 的修复方案
+#### 触发时机
+
+以下场景**必须**先查询再编码：
+
+| 场景 | 操作 |
+|------|------|
+| 使用不熟悉的 Semi 组件 | 先查文档，再写代码 |
+| 组件 props/API 不确定 | 查询组件 API 确认 |
+| 组件行为异常或不符合预期 | 查源码定位问题 |
+| 需要组件的高级用法（虚拟化、自定义渲染等） | 查文档示例 |
+| 新建数据表、表单、弹窗等页面 | 查询相关组件的最佳实践 |
+
+#### 工具优先级
+
+按以下顺序使用，逐步深入：
+
+**1. `/semi-ui-skills`（Skill）— 首选入口**
+- 查询组件 API、使用模式、最佳实践
+- 获取常见问题的解决方案
+- 适合快速了解组件用法
+
+**2. `/semi-design-guide`（Skill）— 深度指南**
+- Semi MCP 工具完整工作流
+- React 19 兼容性、Tailwind 集成、主题定制
+- 扩展组件实践
+
+**3. Semi MCP 工具 — 获取源码和示例**
+
+| MCP 工具 | 用途 | 示例 |
+|----------|------|------|
+| `get_semi_document` | 获取组件官方文档 | `get_semi_document("Table")` |
+| `get_semi_code_block` | 获取组件代码示例 | `get_semi_code_block("Table", "basic usage")` |
+| `get_component_file_list` | 查看组件源码文件列表 | `get_component_file_list("Table")` |
+| `get_file_code` | 读取组件源码文件 | 定位 bug 或理解内部实现 |
+| `get_function_code` | 读取指定函数源码 | 理解特定函数逻辑 |
+
+**4. `/semi-datepicker-datetime-presets`（Skill）— 专项修复**
+- DatePicker `type="dateTime"` 模式下 presets 不触发 onChange 的修复方案
+- 使用 `topSlot/bottomSlot` + 受控 `open` 状态替代内置 `presets` prop
+
+#### 标准工作流示例
+
+```
+需求：使用 Semi Table 实现虚拟化长列表
+
+步骤 1: 调用 /semi-ui-skills 查询 "Table 虚拟化"
+步骤 2: 调用 get_semi_document("Table") 查看完整 API
+步骤 3: 调用 get_semi_code_block("Table", "virtualized") 获取示例代码
+步骤 4: 基于示例和项目规范（SemiDataTable）编写代码
+```
+
+#### 禁止的做法
+
+- **禁止**不查文档直接凭记忆写 Semi 组件代码（API 可能已变更）
+- **禁止**从外部网页复制 Semi 代码而不通过 MCP 验证版本兼容性
+- **禁止**遇到 Semi 组件问题时直接 hack 绕过，应先查源码定位根因
 
 ### 组件导入
 
@@ -664,6 +717,207 @@ if (!data && !isLoading) return null  // 抽屉无法展示
 2. 是否使用了 `<button>`？→ 替换为 Semi `Button`
 3. 是否使用了 `<input>` / `<select>` / `<textarea>`？→ 替换为 Semi `Input` / `Select` / `Input.TextArea`
 4. `<form>` 是否必要？→ 仅在需要原生表单提交语义时使用，否则用 `<div>` 或 Semi `Form`
+
+## cn() 工具函数说明
+
+项目保留了 `clsx` + `tailwind-merge` 依赖，用于 Tailwind CSS 类名合并。这是 **Tailwind 生态通用工具**，与 shadcn-ui 无关。
+
+```tsx
+import { cn } from '@/lib/utils'
+
+// 用途：条件性 Tailwind 类名合并 + 冲突解决
+<div className={cn('flex items-center gap-2', isActive && 'bg-blue-50', className)} />
+```
+
+### 使用场景
+
+| 场景 | 使用方式 |
+|------|---------|
+| Semi 组件样式 | `style={{ ... }}` 内联样式（**不用 cn**） |
+| 自定义布局容器 | `cn()` 合并 Tailwind 类名 |
+| 组件接受外部 className | `cn(baseClasses, props.className)` |
+| craft-renderer 渲染库 | 独立的 `cn()` 实现（`lib/craft-renderer/utils.ts`） |
+
+### 禁止的做法
+
+- **禁止**对 Semi 组件使用 `className={cn(...)}`（用 `style` prop）
+- **禁止**在新文件中重新定义 `cn()` 函数 → 统一从 `@/lib/utils` 导入
+
+## Semi Form 表单开发规范
+
+**所有表单必须使用 Semi Design `<Form>` 组件**，通过 `useRef<FormApi>()` + `getFormApi` 管理表单状态。
+
+### 核心模式
+
+```tsx
+import { Form } from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+
+export function MyFormDialog({ visible, onClose, onSuccess, editData }) {
+  const formRef = useRef<FormApi>()
+
+  // 编辑模式：填充表单
+  useEffect(() => {
+    if (visible && editData) {
+      formRef.current?.setValues(editData)
+    }
+    if (visible && !editData) {
+      formRef.current?.reset()
+    }
+  }, [visible, editData])
+
+  const mutation = useMutation({
+    mutationFn: (values) => editData ? api.update(editData.id, values) : api.create(values),
+    onSuccess: () => {
+      toast.success(editData ? '更新成功' : '创建成功')
+      onSuccess()
+      onClose()
+    },
+  })
+
+  const handleSubmit = (values: Record<string, any>) => {
+    mutation.mutate(values)
+  }
+
+  return (
+    <Modal
+      title={editData ? '编辑' : '新建'}
+      visible={visible}
+      onCancel={onClose}
+      footer={
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button onClick={onClose}>取消</Button>
+          <Button
+            theme="solid"
+            loading={mutation.isPending}
+            onClick={() => formRef.current?.submitForm()}
+          >
+            确定
+          </Button>
+        </div>
+      }
+    >
+      <Form
+        getFormApi={(api) => (formRef.current = api)}
+        onSubmit={handleSubmit}
+        labelPosition="left"
+        labelWidth={80}
+      >
+        <Form.Input
+          field="name"
+          label="名称"
+          rules={[{ required: true, message: '请输入名称' }]}
+        />
+        <Form.Select
+          field="status"
+          label="状态"
+          optionList={statusOptions}
+          rules={[{ required: true, message: '请选择状态' }]}
+        />
+        <Form.TextArea field="remark" label="备注" />
+      </Form>
+    </Modal>
+  )
+}
+```
+
+### 表单验证
+
+使用 `rules` 属性进行声明式验证：
+
+```tsx
+// 必填
+rules={[{ required: true, message: '请输入' }]}
+
+// 长度限制
+rules={[{ min: 2, message: '至少2个字符' }, { max: 30, message: '最多30个字符' }]}
+
+// 类型验证
+rules={[{ type: 'email', message: '请输入有效邮箱' }]}
+
+// 自定义验证
+rules={[{
+  validator: (_rule, value) => {
+    if (!value || value.length < 8) return '密码至少8个字符'
+    return ''
+  }
+}]}
+```
+
+### 多步骤表单
+
+使用 `display: none` 隐藏非当前步骤（保持字段挂载），按步骤验证指定字段：
+
+```tsx
+const [step, setStep] = useState(1)
+
+const handleNext = async () => {
+  try {
+    await formRef.current?.validate(['name', 'phone'])  // 验证当前步骤字段
+    setStep(2)
+  } catch { /* 验证失败 */ }
+}
+
+<div style={{ display: step === 1 ? 'block' : 'none' }}>
+  <Form.Input field="name" ... />
+  <Form.Input field="phone" ... />
+</div>
+<div style={{ display: step === 2 ? 'block' : 'none' }}>
+  <Form.Select field="source" ... />
+</div>
+```
+
+### FormApi 常用方法
+
+| 方法 | 用途 |
+|------|------|
+| `submitForm()` | 触发验证 + 提交 |
+| `validate(fields?)` | 验证全部或指定字段 |
+| `setValues(data)` | 批量设置字段值（编辑回填） |
+| `reset()` | 重置所有字段 |
+| `getValue(field)` | 获取单个字段值 |
+| `setValue(field, value)` | 设置单个字段值 |
+
+### 动态字段处理
+
+Semi Form 字段需在挂载时注册。**动态添加/删除的字段**（如 URL 列表）使用 `useState` 单独管理：
+
+```tsx
+const [urls, setUrls] = useState<string[]>([''])
+
+// 动态字段在 Form 外部管理，提交时手动合并
+const handleSubmit = (values) => {
+  mutation.mutate({ ...values, urls: urls.filter(Boolean) })
+}
+```
+
+### 禁止的做法
+
+- **禁止**对标准表单字段使用 `useState` 受控模式 → 必须用 `<Form.Input field="...">`
+- **禁止**手动调用 `e.preventDefault()` → Semi Form 的 `onSubmit` 已处理
+- **禁止**在 Modal `onOk` 中直接提交 → 必须通过 `formRef.current.submitForm()` 触发验证
+- **禁止**使用 `<Form.Label>` 独立标签 → 用 `Form.Input/Select` 的 `label` prop
+
+### 参考实现
+
+| 场景 | 文件 |
+|------|------|
+| 基础登录表单 | `features/auth/sign-in/components/user-auth-form.tsx` |
+| Modal 新建/编辑 | `features/users/components/users-action-dialog.tsx` |
+| 多步骤表单 | `features/crm/leads/components/lead-form-dialog.tsx` |
+| 混合模式（Form + useState） | `features/settings/profile/profile-form.tsx` |
+
+## 已清理的历史遗留
+
+以下 shadcn-ui 相关内容已完全清除，**禁止重新引入**：
+
+| 已清除项 | 说明 |
+|---------|------|
+| `@/components/ui/*` | 原 shadcn-ui 组件目录，已清空（空目录待删除） |
+| `@radix-ui/*` | shadcn-ui 底层依赖 |
+| `class-variance-authority` | cva 变体工具 |
+| `components.json` | shadcn-ui 配置文件 |
+| `sonner` / `react-hot-toast` | 旧通知库（已替换为 Semi Toast） |
 
 ## 开发命令
 

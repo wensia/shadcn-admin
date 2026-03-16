@@ -561,7 +561,7 @@ export function BatchImportPage() {
             )}
 
             {/* 筛选栏 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Input
                   prefix={<IconSearch />}

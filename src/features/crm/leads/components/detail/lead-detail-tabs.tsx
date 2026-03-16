@@ -1,6 +1,6 @@
 /**
  * 线索详情 Tabs 组件 - Semi Design 版本
- * 包含：概览、跟进记录、订单记录、统计图表、变更历史 五个 Tab
+ * 包含：概览、跟进记录、统计图表、变更历史 四个 Tab
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react'
@@ -8,19 +8,14 @@ import { useQuery } from '@tanstack/react-query'
 import { Tabs, TabPane, Table, Tag, Tooltip, Button, Select, Card, Toast } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconCopy, IconTick } from '@douyinfe/semi-icons'
-import { Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { copyToClipboard } from '@/lib/utils'
 import { formatTime } from '@/lib/utils/time'
 
 import { leadsApi } from '../../api'
-import { followupMethodLabels, type Lead, type LeadFollowup } from '../../types'
+import { followupMethodLabels, FollowupResult, type Lead, type LeadFollowup } from '../../types'
 import { useLeadStatistics } from '../../hooks/use-lead-statistics'
 import { FollowupResultBadge } from '../status-badges'
-
-// 订单相关
-import { orderApi } from '@/features/crm/orders/api'
-import type { Order } from '@/features/crm/orders/types'
-
 // 详情组件
 import { LeadInfoDisplay } from './lead-info-display'
 import { ChangeHistoryTimeline } from './change-history-timeline'
@@ -34,7 +29,7 @@ import { FollowupResultPie } from './charts/followup-result-pie'
 /** 跟进内容单元格 - 支持悬浮展示完整内容和复制 */
 function FollowupContentCell({ content }: { content: string }) {
   const [copied, setCopied] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
@@ -87,7 +82,7 @@ interface LeadDetailTabsProps {
   leadId: string
   lead?: Lead | null
   isLoading?: boolean
-  defaultTab?: 'overview' | 'followups' | 'orders' | 'statistics' | 'history'
+  defaultTab?: 'overview' | 'followups' | 'statistics' | 'history'
   className?: string
   useScrollArea?: boolean
   height?: string
@@ -149,13 +144,6 @@ export function LeadDetailTabs({
     enabled: !!leadId && activeTab === 'history',
   })
 
-  // 获取订单记录
-  const { data: ordersResponse, isLoading: isOrdersLoading } = useQuery({
-    queryKey: ['lead-orders', leadId],
-    queryFn: async () => await orderApi.getLeadOrders(leadId),
-    enabled: !!leadId && activeTab === 'orders',
-  })
-
   const statistics = useLeadStatistics(lead || null, followupsResponse?.data)
 
   const followupTableComponents = useMemo(() => ({
@@ -175,10 +163,10 @@ export function LeadDetailTabs({
   const followupColumns: ColumnProps<LeadFollowup>[] = [
     { title: '跟进时间', dataIndex: 'followup_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{formatTime(text as string)}</span> },
     { title: '跟进方式', dataIndex: 'method', width: 80, render: (text) => <span style={{ fontSize: 13 }}>{followupMethodLabels[text as keyof typeof followupMethodLabels] || text}</span> },
-    { title: '跟进结果', dataIndex: 'result', width: 90, render: (text, _record) => text ? <FollowupResultBadge result={text as string} /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span> },
+    { title: '跟进结果', dataIndex: 'result', width: 90, render: (text, _record) => text ? <FollowupResultBadge result={text as FollowupResult} /> : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span> },
     {
       title: '跟进内容', dataIndex: 'content',
-      ellipsis: { showTooltip: false },
+      ellipsis: { showTitle: false },
       onCell: () => ({ style: { maxWidth: 0 } }),
       render: (text) => text ? <FollowupContentCell content={text as string} /> : '-',
     },
@@ -196,15 +184,6 @@ export function LeadDetailTabs({
         </span>
       ),
     },
-  ]
-
-  // 订单表格 columns
-  const orderColumns: ColumnProps<Order>[] = [
-    { title: '订单编号', dataIndex: 'order_no', width: 120, render: (text) => <span style={{ fontSize: 13, fontWeight: 500 }}>{text as string}</span> },
-    { title: '实付金额', dataIndex: 'actual_amount', width: 80, render: (text) => <span style={{ fontSize: 13, fontWeight: 500, color: '#ea580c', textAlign: 'right', display: 'block' }}>¥{Number(text).toFixed(2)}</span> },
-    { title: '支付状态', dataIndex: 'payment_status', width: 80, render: (text, record) => <Tag size="small" color={text === 'paid' ? 'green' : undefined}>{record?.payment_status_display}</Tag> },
-    { title: '支付时间', dataIndex: 'payment_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{text ? formatTime(text as string) : '-'}</span> },
-    { title: '创建时间', dataIndex: 'created_at', width: 140, render: (text) => <span style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>{formatTime(text as string)}</span> },
   ]
 
   const wrapperStyle: React.CSSProperties = useScrollArea
@@ -287,36 +266,9 @@ export function LeadDetailTabs({
           {/* 通话记录 - 可折叠 */}
           {leadId && (
             <div style={{ flexShrink: 0, borderTop: '1px solid var(--semi-color-border)' }}>
-              <LeadCallRecords leadId={leadId} showHeader collapsible defaultCollapsed />
+              <LeadCallRecords leadId={leadId} showHeader collapsible defaultCollapsed active={activeTab === 'followups'} />
             </div>
           )}
-        </div>
-      </TabPane>
-
-      {/* ===== 订单记录 Tab ===== */}
-      <TabPane
-        tab={
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            订单记录
-            {ordersResponse?.data && ordersResponse.data.length > 0 && <Tag size="small">{ordersResponse.data.length}</Tag>}
-          </span>
-        }
-        itemKey="orders"
-      >
-        <div style={wrapperStyle}>
-          <div style={{ padding: 16 }}>
-            {isOrdersLoading ? (
-              <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '32px 0' }}>加载中...</div>
-            ) : !ordersResponse?.data?.length ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', textAlign: 'center' }}>
-                <Receipt style={{ width: 48, height: 48, color: 'var(--semi-color-text-3)', marginBottom: 16 }} />
-                <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>暂无订单记录</p>
-                <p style={{ fontSize: 12, color: 'var(--semi-color-text-3)', marginTop: 4 }}>该线索还没有关联的缴费订单</p>
-              </div>
-            ) : (
-              <Table columns={orderColumns} dataSource={ordersResponse.data} rowKey="id" pagination={false} size="small" />
-            )}
-          </div>
         </div>
       </TabPane>
 

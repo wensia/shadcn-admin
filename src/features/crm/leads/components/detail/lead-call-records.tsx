@@ -3,7 +3,7 @@
  * 复用通话记录页的 RecordDetailModal 全屏详情抽屉
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Table, Tag, Button, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
@@ -27,6 +27,8 @@ interface LeadCallRecordsProps {
   showHeader?: boolean
   collapsible?: boolean
   defaultCollapsed?: boolean
+  /** tab 激活时提前加载数据（即使折叠状态） */
+  active?: boolean
 }
 
 function formatDuration(seconds: number | null): string {
@@ -69,6 +71,16 @@ function ScoreBadge({ score }: { score: number | null }) {
   return <Tag size="small" style={{ background: bg, color: '#fff', fontSize: 10, height: 18, padding: '0 4px' }}>{score}分</Tag>
 }
 
+/** 统计数字项 */
+function StatItem({ label, value, color }: { label: string; value: string | number; color?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontSize: 11, color: 'var(--semi-color-text-2)' }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: color || 'var(--semi-color-text-0)' }}>{value}</span>
+    </div>
+  )
+}
+
 /** 将 LeadCallRecord 转为 RecordDetailModal 所需的 CallRecord 最小字段 */
 function toCallRecord(item: LeadCallRecord): CallRecord {
   // 从 recording_url 提取 record_id（voiceId）
@@ -98,30 +110,59 @@ function toCallRecord(item: LeadCallRecord): CallRecord {
   }
 }
 
+/** 格式化总时长：秒 → "X小时Y分Z秒" */
+function formatTotalDuration(seconds: number): string {
+  if (seconds <= 0) return '0秒'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return [h > 0 ? `${h}小时` : '', m > 0 ? `${m}分` : '', s > 0 ? `${s}秒` : ''].filter(Boolean).join('')
+}
+
+interface CallStats {
+  total: number
+  connected: number
+  notConnected: number
+  totalDuration: number
+}
+
 export function LeadCallRecords({
   leadId,
   className,
   showHeader = true,
   collapsible = false,
   defaultCollapsed = false,
+  active = false,
 }: LeadCallRecordsProps) {
   const [isOpen, setIsOpen] = useState(!defaultCollapsed)
   const [page, setPage] = useState(1)
   const pageSize = 10
   const [detailRecord, setDetailRecord] = useState<CallRecord | null>(null)
 
+  // 获取全量记录（用于统计 + 表格分页）
   const { data, isLoading } = useQuery({
-    queryKey: ['lead-call-records', leadId, page, pageSize],
+    queryKey: ['lead-call-records-all', leadId],
     queryFn: async () => {
-      const response = await getLeadCallRecords(leadId, { page, size: pageSize })
+      const response = await getLeadCallRecords(leadId, { page: 1, size: 1000 })
       return response.data
     },
-    enabled: !!leadId && isOpen,
+    enabled: !!leadId && (isOpen || active),
   })
 
-  const records = data?.items || []
-  const total = data?.total || 0
-  const totalPages = data?.pages || Math.ceil(total / pageSize)
+  const allRecords = data?.items || []
+  const total = allRecords.length
+  const totalPages = Math.ceil(total / pageSize)
+  const records = allRecords.slice((page - 1) * pageSize, page * pageSize)
+
+  const stats: CallStats = useMemo(() => {
+    const connected = allRecords.filter(r => (r.duration || 0) > 0)
+    return {
+      total,
+      connected: connected.length,
+      notConnected: total - connected.length,
+      totalDuration: allRecords.reduce((sum, r) => sum + (r.duration || 0), 0),
+    }
+  }, [allRecords, total])
 
   const columns: ColumnProps<LeadCallRecord>[] = [
     {
@@ -206,6 +247,16 @@ export function LeadCallRecords({
     },
   ]
 
+  const statsInline = stats.total > 0 && (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 4 }}>
+      <span style={{ width: 1, height: 12, background: 'var(--semi-color-border)', flexShrink: 0 }} />
+      <StatItem label="通话" value={stats.total} />
+      <StatItem label="接通" value={stats.connected} color="#00b42a" />
+      <StatItem label="未接" value={stats.notConnected} color="#f97316" />
+      <StatItem label="时长" value={formatTotalDuration(stats.totalDuration)} />
+    </div>
+  )
+
   const content = (
     <div className={className} style={{ display: 'flex', flexDirection: 'column' }}>
       {isLoading ? (
@@ -252,7 +303,7 @@ export function LeadCallRecords({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Phone style={{ width: 14, height: 14, color: 'var(--semi-color-text-2)' }} />
             <span style={{ fontSize: 14, fontWeight: 500 }}>通话记录</span>
-            {total > 0 && <Tag size="small">{total}</Tag>}
+            {statsInline}
           </div>
           <IconChevronDown style={{ fontSize: 16, color: 'var(--semi-color-text-2)', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
         </div>

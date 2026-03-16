@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { callRecordsApi, yunkeCredentialsApi } from '@/features/yunke/api'
+import { useIsSuperUser } from '@/stores/auth-store'
 import {
   buildAdvisorCallRows,
   summarizeAdvisorCallRows,
@@ -51,6 +52,7 @@ export function useAdvisorCallData({
   endDate,
 }: UseAdvisorCallDataOptions): UseAdvisorCallDataResult {
   const hasCustomDateRange = Boolean(startDate && endDate)
+  const isSuperUser = useIsSuperUser()
 
   const {
     data: accountsData,
@@ -61,6 +63,7 @@ export function useAdvisorCallData({
     queryKey: ['advisor-dashboard-yunke-accounts'],
     queryFn: async () => yunkeCredentialsApi.getCredentials({ status: 1, limit: 100 }),
     staleTime: 5 * 60 * 1000,
+    enabled: isSuperUser,
   })
 
   const {
@@ -72,6 +75,7 @@ export function useAdvisorCallData({
     queryKey: ['advisor-dashboard-employee-campus-mapping'],
     queryFn: async () => callRecordsApi.getEmployeeCampusMapping(),
     staleTime: 5 * 60 * 1000,
+    retry: false,
   })
 
   const accountOptions = useMemo<AccountOption[]>(() => {
@@ -98,7 +102,7 @@ export function useAdvisorCallData({
       .sort((a, b) => a.label.localeCompare(b.label, 'zh-Hans-CN'))
   }, [employeeCampusMapping])
 
-  const effectiveAccountId = selectedAccountId || accountOptions[0]?.value || ''
+  const effectiveAccountId = isSuperUser ? (selectedAccountId || accountOptions[0]?.value || '') : ''
   const departmentId = useMemo(() => {
     const selectedOption = accountOptions.find((option) => option.value === effectiveAccountId)
     return selectedOption?.deptId || DEFAULT_DEPT_ID
@@ -139,7 +143,7 @@ export function useAdvisorCallData({
           }
     ),
     staleTime: 60 * 1000,
-    enabled: !!effectiveAccountId && !!departmentId,
+    enabled: !!departmentId,
   })
 
   const {
@@ -177,7 +181,7 @@ export function useAdvisorCallData({
           }
     ),
     staleTime: 60 * 1000,
-    enabled: !!effectiveAccountId && !!departmentId,
+    enabled: !!departmentId,
   })
 
   const rows = useMemo(
@@ -202,16 +206,22 @@ export function useAdvisorCallData({
     campusOptions,
     effectiveAccountId,
     effectiveDepartmentId: departmentId,
-    hasAccounts: accountOptions.length > 0,
+    hasAccounts: isSuperUser ? accountOptions.length > 0 : true,
     isLoading: isAccountsLoading || isCampusMappingLoading || isOverviewLoading || isContactLoading,
     isRefetching:
       isAccountsRefetching || isCampusMappingRefetching || isOverviewRefetching || isContactRefetching,
-    refetch: async () =>
-      Promise.all([
-        refetchAccounts(),
+    refetch: async () => {
+      const tasks: Array<Promise<unknown>> = [
         refetchCampusMapping(),
         refetchOverview(),
         refetchContact(),
-      ]),
+      ]
+
+      if (isSuperUser) {
+        tasks.unshift(refetchAccounts())
+      }
+
+      return Promise.all(tasks)
+    },
   }
 }

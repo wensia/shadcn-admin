@@ -12,8 +12,8 @@ import type {
 
 export const continuousCallApi = {
   /** 获取快捷外呼统计 */
-  getStats(): Promise<ApiResponse<ContinuousCallStats>> {
-    return apiClient.get('/crm/continuous-call/stats')
+  getStats(params?: { task_id?: string }): Promise<ApiResponse<ContinuousCallStats>> {
+    return apiClient.get('/crm/continuous-call/stats', { params })
   },
 
   /** 获取快捷外呼线索列表 */

@@ -343,7 +343,7 @@ export function CampusDepartmentsPage() {
         onRefresh={() => refetch()}
         isRefreshing={isLoading}
         toolbar={
-          <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
+          <div className="flex items-center gap-2">
             <Input
               prefix={<IconSearch />}
               placeholder="搜索..."

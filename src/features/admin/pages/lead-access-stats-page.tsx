@@ -417,7 +417,7 @@ export function LeadAccessStatsPage() {
         onRefresh={() => refetch()}
         isRefreshing={isLoading}
         toolbar={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* 统计卡片 */}
             <div className="grid grid-cols-4 gap-4">
               <div className="rounded-lg border bg-card p-6">

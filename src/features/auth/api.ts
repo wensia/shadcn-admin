@@ -49,5 +49,14 @@ export const authApi = {
   /** 获取当前用户信息 */
   getCurrentUser(): Promise<ApiResponse<UserInfo>> {
     return apiClient.get<ApiResponse<UserInfo>>('/auth/me')
+  },
+
+  /** 修改密码 */
+  changePassword(data: {
+    current_password: string
+    new_password: string
+    confirm_password: string
+  }): Promise<ApiResponse<void>> {
+    return apiClient.post<ApiResponse<void>>('/auth/change-password', data)
   }
 }

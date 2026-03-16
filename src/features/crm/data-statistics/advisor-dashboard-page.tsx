@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from 'date-fns'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
   Button,
@@ -28,7 +28,6 @@ import {
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { useTableScroll } from '@/components/semi/use-table-scroll'
 import { adminApi } from '@/features/admin/api'
-import { AdvisorTaskSection } from './components/advisor-task-section'
 import {
   useAdvisorAppCallRankingData,
   type AdvisorAppCallRankingRow,
@@ -40,7 +39,7 @@ import { formatDurationShort, type AdvisorCallRow } from './utils/advisor-call-s
 
 const { Text, Title } = Typography
 
-type DateMode = 'today' | 'single' | 'range'
+type DateMode = 'today' | 'week' | 'month' | 'single' | 'range'
 type ConversionMetric = 'promisedCount' | 'visitedCount' | 'visitRate' | 'paymentAmount'
 type CallMetric = 'callCount' | 'contactCount' | 'duration'
 type AppCallMetric = 'outboundCallCount' | 'inboundCallCount' | 'totalDuration'
@@ -91,6 +90,17 @@ function formatMoney(value?: number | null) {
 
 function getTodayDate() {
   return new Date()
+}
+
+function getCurrentWeekRange(baseDate: Date): [Date, Date] {
+  return [
+    startOfWeek(baseDate, { weekStartsOn: 1 }),
+    endOfWeek(baseDate, { weekStartsOn: 1 }),
+  ]
+}
+
+function getCurrentMonthRange(baseDate: Date): [Date, Date] {
+  return [startOfMonth(baseDate), endOfMonth(baseDate)]
 }
 
 function getConversionMetricValue(row: ConversionDetailRow, metric: ConversionMetric) {
@@ -487,45 +497,84 @@ function RankingPanel({
   )
 }
 
-export function AdvisorDashboardPage() {
+export interface AdvisorOverviewExternalFilter {
+  dateMode: DateMode
+  selectedDate: Date
+  selectedRange: [Date, Date]
+  selectedCampusId: string
+  selectedAccountId: string
+  dateFrom: string
+  dateTo: string
+}
+
+export interface AdvisorDashboardPageProps {
+  externalFilter?: AdvisorOverviewExternalFilter
+}
+
+export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPageProps = {}) {
   useDocumentTitle('顾问领导看板')
 
   const today = useMemo(() => getTodayDate(), [])
-  const [selectedCampusId, setSelectedCampusId] = useState('all')
-  const [dateMode, setDateMode] = useState<DateMode>('today')
-  const [selectedDate, setSelectedDate] = useState<Date>(today)
-  const [selectedRange, setSelectedRange] = useState<[Date, Date]>([today, today])
-  const [selectedCallAccountId, setSelectedCallAccountId] = useState('')
+  // 内部状态（无外部 filter 时使用）
+  const [internalCampusId, setInternalCampusId] = useState('all')
+  const [internalDateMode, setInternalDateMode] = useState<DateMode>('today')
+  const [internalSelectedDate, setInternalSelectedDate] = useState<Date>(today)
+  const [internalSelectedRange, setInternalSelectedRange] = useState<[Date, Date]>([today, today])
+  const [internalCallAccountId, setInternalCallAccountId] = useState('')
+
   const [conversionMetric, setConversionMetric] = useState<ConversionMetric>('visitedCount')
   const [callMetric, setCallMetric] = useState<CallMetric>('callCount')
   const [appCallMetric, setAppCallMetric] = useState<AppCallMetric>('outboundCallCount')
   const [detailTab, setDetailTab] = useState<DetailTab>('conversion')
 
+  // 优先使用外部 filter
+  const selectedCampusId = externalFilter?.selectedCampusId ?? internalCampusId
+  const setSelectedCampusId = (v: string) => { if (!externalFilter) setInternalCampusId(v) }
+  const dateMode = externalFilter?.dateMode ?? internalDateMode
+  const setDateMode = (v: DateMode) => { if (!externalFilter) setInternalDateMode(v) }
+  const selectedDate = externalFilter?.selectedDate ?? internalSelectedDate
+  const setSelectedDate = (v: Date) => { if (!externalFilter) setInternalSelectedDate(v) }
+  const selectedRange = externalFilter?.selectedRange ?? internalSelectedRange
+  const setSelectedRange = (v: [Date, Date]) => { if (!externalFilter) setInternalSelectedRange(v) }
+  const selectedCallAccountId = externalFilter?.selectedAccountId ?? internalCallAccountId
+  const setSelectedCallAccountId = (v: string) => { if (!externalFilter) setInternalCallAccountId(v) }
+
   const { data: campusesData } = useQuery({
     queryKey: ['campuses-simple'],
     queryFn: () => adminApi.getCampusesSimple(),
     staleTime: 5 * 60 * 1000,
+    enabled: !externalFilter,
   })
 
   const campusOptions = useMemo(() => {
+    if (externalFilter) return []
     const items = campusesData?.data || []
     return [
       { value: 'all', label: '全部校区' },
       ...items.map((item) => ({ value: item.id, label: item.name })),
     ]
-  }, [campusesData])
+  }, [externalFilter, campusesData])
 
-  const dateFrom = useMemo(() => {
+  const computedDateFrom = useMemo(() => {
+    if (externalFilter) return externalFilter.dateFrom
     if (dateMode === 'today') return formatDate(today)
+    if (dateMode === 'week') return formatDate(getCurrentWeekRange(today)[0])
+    if (dateMode === 'month') return formatDate(getCurrentMonthRange(today)[0])
     if (dateMode === 'single') return formatDate(selectedDate)
     return formatDate(selectedRange[0])
-  }, [dateMode, selectedDate, selectedRange, today])
+  }, [externalFilter, dateMode, selectedDate, selectedRange, today])
 
-  const dateTo = useMemo(() => {
+  const computedDateTo = useMemo(() => {
+    if (externalFilter) return externalFilter.dateTo
     if (dateMode === 'today') return formatDate(today)
+    if (dateMode === 'week') return formatDate(getCurrentWeekRange(today)[1])
+    if (dateMode === 'month') return formatDate(getCurrentMonthRange(today)[1])
     if (dateMode === 'single') return formatDate(selectedDate)
     return formatDate(selectedRange[1])
-  }, [dateMode, selectedDate, selectedRange, today])
+  }, [externalFilter, dateMode, selectedDate, selectedRange, today])
+
+  const dateFrom = computedDateFrom
+  const dateTo = computedDateTo
 
   const dateDisplayText = dateFrom === dateTo ? dateFrom : `${dateFrom} 至 ${dateTo}`
 
@@ -640,7 +689,7 @@ export function AdvisorDashboardPage() {
 
   const selectedAccountLabel = useMemo(() => {
     const matched = callData.accountOptions.find((option) => option.value === callData.effectiveAccountId)
-    return matched?.label || '全部云客账号'
+    return matched?.label || '默认云客账号'
   }, [callData.accountOptions, callData.effectiveAccountId])
 
   const conversionRankingItems = useMemo<RankingItem[]>(() => {
@@ -693,13 +742,13 @@ export function AdvisorDashboardPage() {
       render: (value: number) => formatPercent(value),
     },
     {
-      title: '缴费笔数',
+      title: '业绩笔数',
       dataIndex: 'paymentCount',
       width: 100,
       align: 'right' as const,
     },
     {
-      title: '缴费金额',
+      title: '净业绩额',
       dataIndex: 'paymentAmount',
       width: 140,
       align: 'right' as const,
@@ -1027,6 +1076,8 @@ export function AdvisorDashboardPage() {
       )}
       toolbar={(
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* 独立使用时展示筛选控制台 */}
+          {!externalFilter && (
           <Card
             style={{
               borderRadius: 18,
@@ -1144,6 +1195,8 @@ export function AdvisorDashboardPage() {
                     onChange={(value) => setDateMode(value as DateMode)}
                     optionList={[
                       { value: 'today', label: '今天' },
+                      { value: 'week', label: '本周' },
+                      { value: 'month', label: '本月' },
                       { value: 'single', label: '指定单日' },
                       { value: 'range', label: '日期区间' },
                     ]}
@@ -1181,16 +1234,7 @@ export function AdvisorDashboardPage() {
               </div>
             </div>
           </Card>
-
-          <AdvisorTaskSection
-            campusId={selectedCampusId}
-            accountId={callData.effectiveAccountId || undefined}
-            accountLabel={selectedAccountLabel}
-            accountLoading={callData.isLoading}
-            dateMode={dateMode}
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-          />
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
             <MetricCard
@@ -1284,10 +1328,10 @@ export function AdvisorDashboardPage() {
                   次级结果
                 </div>
                 <Title heading={6} style={{ margin: 0, marginBottom: 8 }}>
-                  缴费结果与库存口径说明
+                  业绩结果与库存口径说明
                 </Title>
                 <Text type="secondary" size="small" style={{ lineHeight: 1.8 }}>
-                  缴费结果保留为次级指标，用于辅助判断转化结果质量；线索数与待回访数保持实时口径，帮助领导同步查看库存压力。
+                  业绩结果按报名、续费、退费净额口径汇总，用于辅助判断转化结果质量；线索数与待回访数保持实时口径，帮助领导同步查看库存压力。
                 </Text>
               </div>
 
@@ -1309,7 +1353,7 @@ export function AdvisorDashboardPage() {
                   }}
                 >
                   <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 8 }}>
-                    缴费笔数
+                    业绩笔数
                   </Text>
                   {conversionData.isLoading ? (
                     <Skeleton.Title style={{ width: 60, marginBottom: 0 }} />
@@ -1328,7 +1372,7 @@ export function AdvisorDashboardPage() {
                   }}
                 >
                   <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 8 }}>
-                    缴费金额
+                    净业绩额
                   </Text>
                   {conversionData.isLoading ? (
                     <Skeleton.Title style={{ width: 110, marginBottom: 0 }} />
@@ -1345,12 +1389,12 @@ export function AdvisorDashboardPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <RankingPanel
               title="转化结果排行"
-              subtitle="按顾问展示诺到、到访与缴费结果"
+              subtitle="按顾问展示诺到、到访与业绩结果"
               metricOptions={[
                 { key: 'promisedCount', label: '诺到数' },
                 { key: 'visitedCount', label: '到访数' },
                 { key: 'visitRate', label: '到访率' },
-                { key: 'paymentAmount', label: '缴费金额' },
+                { key: 'paymentAmount', label: '净业绩额' },
               ]}
               activeMetric={conversionMetric}
               onMetricChange={(metric) => setConversionMetric(metric as ConversionMetric)}

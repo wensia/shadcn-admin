@@ -38,7 +38,7 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
           navigate(`/crm/leads/${notification.entity_id}`)
           break
         case 'order':
-          navigate(`/crm/orders?highlight=${notification.entity_id}`)
+          navigate('/crm/performance-events')
           break
         default:
           break

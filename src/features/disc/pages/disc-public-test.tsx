@@ -166,6 +166,8 @@ function CompletionAnimation() {
 export function DiscPublicTest() {
   const search = useSearch({ from: '/disc-test' })
   const ref = search.ref ?? ''
+  const linkId = search.id ?? ''
+  const channel = search.channel ?? ''
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [name, setName] = useState(search.name ?? '')
@@ -178,13 +180,21 @@ export function DiscPublicTest() {
   const [dir, setDir] = useState(1)
   const [startTime, setStartTime] = useState<string | null>(null)
 
-  /* ref 验证 */
+  /* 链接验证：支持 ref 和 id 两种模式 */
   useEffect(() => {
-    if (!ref) { setPhase('invalid'); return }
-    validateDiscTestRef(ref)
-      .then((r) => setPhase(r.success === false ? 'invalid' : 'start'))
+    if (!ref && !linkId) { setPhase('invalid'); return }
+    validateDiscTestRef(ref, linkId)
+      .then((r) => {
+        if (r.success === false) { setPhase('invalid'); return }
+        // 专属链接模式：自动预填姓名和手机号
+        if (r.data?.mode === 'link') {
+          if (r.data.name) setName(r.data.name)
+          if (r.data.phone) setPhone(r.data.phone)
+        }
+        setPhase('start')
+      })
       .catch(() => setPhase('invalid'))
-  }, [ref])
+  }, [ref, linkId])
 
   const validateStart = useCallback(() => {
     let ok = true
@@ -217,6 +227,8 @@ export function DiscPublicTest() {
       const res = await submitDiscTest({
         name: name.trim(), phone: phone.trim(), answers,
         start_time: startTime, ref: ref || undefined,
+        link_id: linkId || undefined,
+        channel: channel || undefined,
       })
       if (res.success === false) { toast.error(res.message || '提交失败'); return }
       setPhase('done')

@@ -1,6 +1,6 @@
 /**
  * 订单弹窗组件
- * Semi Design 重构版 - Modal + Semi Form
+ * Semi Design 重构版 - Modal + Semi Form + Form.Section
  * 支持新建和编辑订单，包含多个课程明细
  */
 
@@ -26,18 +26,7 @@ import {
   IconSearch,
   IconClose,
 } from '@douyinfe/semi-icons'
-import {
-  User,
-  BookOpen,
-  CreditCard,
-  FileText,
-  Receipt,
-  Wallet,
-  Clock,
-  UserCheck,
-  Tag as TagIcon,
-  CheckCircle2,
-} from 'lucide-react'
+import { BookOpen } from 'lucide-react'
 import { orderApi } from '../api'
 import { leadsApi } from '../../leads/api'
 import { employeeApi, type Employee } from '../../lead-conversion/api'
@@ -74,7 +63,7 @@ type CourseFormValues = {
 type OrderFormValues = {
   payment_method?: string
   payment_status?: string
-  payment_at?: string
+  payment_at?: Date | string
   collector_id?: string
   discount_amount?: number | string
   receipt_no?: string
@@ -105,44 +94,6 @@ interface OrderDialogProps {
   onSuccess?: () => void
 }
 
-// 区块标题组件
-function SectionHeader({
-  icon: Icon,
-  title,
-  action
-}: {
-  icon: React.ElementType
-  title: string
-  action?: React.ReactNode
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{
-          padding: 6, borderRadius: 6,
-          backgroundColor: 'var(--semi-color-primary-light-default)',
-        }}>
-          <Icon size={16} style={{ color: 'var(--semi-color-primary)' }} />
-        </div>
-        <Text strong style={{ fontSize: 14 }}>{title}</Text>
-      </div>
-      {action}
-    </div>
-  )
-}
-
-// 表单区块容器
-function SectionCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      borderRadius: 12, border: '1px solid var(--semi-color-border)',
-      backgroundColor: 'var(--semi-color-bg-2)', padding: 16,
-    }}>
-      {children}
-    </div>
-  )
-}
-
 // ==================== 课程编辑弹框组件 ====================
 interface CourseEditDialogProps {
   open: boolean
@@ -161,7 +112,7 @@ function CourseEditDialog({
   coursesData,
   isEdit
 }: CourseEditDialogProps) {
-  const courseFormRef = useRef<FormApi>()
+  const courseFormRef = useRef<FormApi>(null)
   const [computedAmount, setComputedAmount] = useState(0)
 
   const closeCourseDialog = () => {
@@ -183,8 +134,7 @@ function CourseEditDialog({
   const handleFieldChange = (values: CourseFormValues) => {
     const hours = Number(values.course_hours) || 0
     const price = Number(values.unit_price) || 0
-    const amt = hours * price
-    setComputedAmount(amt)
+    setComputedAmount(hours * price)
   }
 
   const handleSave = () => {
@@ -207,12 +157,7 @@ function CourseEditDialog({
 
   return (
     <Modal
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <BookOpen size={20} style={{ color: 'var(--semi-color-primary)' }} />
-          {isEdit ? '编辑课程' : '添加课程'}
-        </div>
-      }
+      title={isEdit ? '编辑课程' : '添加课程'}
       visible={open}
       onCancel={closeCourseDialog}
       footer={
@@ -253,8 +198,7 @@ function CourseEditDialog({
             style={{ width: '100%' }}
           />
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <Text style={{ fontSize: 14, fontWeight: 500, display: 'block', marginBottom: 4 }}>小计金额</Text>
+        <Form.Slot label="小计金额">
           <div style={{
             height: 36, padding: '0 12px', borderRadius: 6,
             border: '1px solid var(--semi-color-border)',
@@ -266,10 +210,10 @@ function CourseEditDialog({
             </Text>
             <Text type="tertiary" style={{ marginLeft: 8, fontSize: 12 }}>（自动计算）</Text>
           </div>
-        </div>
+        </Form.Slot>
         <Form.Input
           field="remark"
-          label="备注（可选）"
+          label={{ text: '备注', optional: true }}
           placeholder="课程备注信息"
         />
       </Form>
@@ -288,7 +232,7 @@ export function OrderDialog({
   onSuccess
 }: OrderDialogProps) {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi>(null)
   const isEdit = !!order?.id
   const [searchPhone, setSearchPhone] = useState('')
   const [selectedLead, setSelectedLead] = useState<{
@@ -343,7 +287,7 @@ export function OrderDialog({
         formRef.current?.setValues({
           payment_method: order.payment_method || OrderPaymentMethod.WECHAT,
           payment_status: order.payment_status,
-          payment_at: order.payment_at?.slice(0, 16) || '',
+          payment_at: order.payment_at ? new Date(order.payment_at) : undefined,
           collector_id: order.collector_id || '',
           discount_amount: order.discount_amount,
           receipt_no: order.receipt_no || '',
@@ -371,7 +315,7 @@ export function OrderDialog({
       formRef.current?.setValues({
         payment_method: OrderPaymentMethod.WECHAT,
         payment_status: OrderPaymentStatus.PAID,
-        payment_at: new Date().toISOString().slice(0, 16),
+        payment_at: new Date(),
         collector_id: '',
         discount_amount: 0,
         receipt_no: '',
@@ -472,11 +416,17 @@ export function OrderDialog({
 
     formRef.current?.validate().then((rawValues) => {
       const values = rawValues as OrderFormValues
+      const paymentAt = values.payment_at instanceof Date
+        ? values.payment_at.toISOString()
+        : values.payment_at
+          ? new Date(values.payment_at).toISOString()
+          : undefined
+
       const data = {
         lead_id: selectedLead.id,
         payment_method: values.payment_method || undefined,
         payment_status: values.payment_status,
-        payment_at: values.payment_at ? new Date(values.payment_at).toISOString() : undefined,
+        payment_at: paymentAt,
         collector_id: values.collector_id || undefined,
         discount_amount: Number(values.discount_amount) || 0,
         receipt_no: values.receipt_no || undefined,
@@ -521,21 +471,21 @@ export function OrderDialog({
     {
       title: '课时',
       dataIndex: 'course_hours',
-      width: 80,
+      width: 70,
       align: 'center' as const,
       render: (text: number) => <Text style={{ fontSize: 13 }}>{text || 0}</Text>
     },
     {
       title: '单价',
       dataIndex: 'unit_price',
-      width: 100,
+      width: 90,
       align: 'right' as const,
       render: (text: number) => <Text style={{ fontSize: 13 }}>¥{Number(text || 0).toFixed(2)}</Text>
     },
     {
       title: '小计',
       dataIndex: 'amount',
-      width: 110,
+      width: 100,
       align: 'right' as const,
       render: (text: number) => (
         <Text strong style={{ fontSize: 13, color: 'var(--semi-color-success)' }}>
@@ -579,16 +529,15 @@ export function OrderDialog({
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Receipt size={20} style={{ color: 'var(--semi-color-primary)' }} />
             {isEdit ? '编辑订单' : '新建订单'}
             {isEdit && order?.order_no && (
-              <Tag style={{ marginLeft: 8 }}>{order.order_no}</Tag>
+              <Tag size="small" style={{ marginLeft: 4 }}>{order.order_no}</Tag>
             )}
           </div>
         }
         visible={open}
         onCancel={() => onOpenChange(false)}
-        width={1040}
+        width={1060}
         style={{ maxHeight: '92vh' }}
         bodyStyle={{ overflow: 'auto', maxHeight: 'calc(92vh - 120px)', padding: '16px 24px' }}
         footer={
@@ -607,12 +556,10 @@ export function OrderDialog({
           </div>
         }
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '7fr 5fr', gap: 20 }}>
-          {/* 左侧列 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* 学员信息 */}
-            <SectionCard>
-              <SectionHeader icon={User} title="学员信息" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          {/* ===== 左侧：学员 + 课程明细 ===== */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Form.Section text="学员信息">
               {selectedLead ? (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 8,
@@ -620,15 +567,15 @@ export function OrderDialog({
                   border: '1px solid var(--semi-color-primary-light-active)',
                 }}>
                   <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
+                    width: 36, height: 36, borderRadius: '50%',
                     background: 'var(--semi-color-primary)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontWeight: 500,
+                    color: '#fff', fontWeight: 500, fontSize: 14,
                   }}>
                     {selectedLead.child_name?.charAt(0) || '?'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text strong style={{ fontSize: 14 }}>{selectedLead.child_name}</Text>
+                    <Text strong>{selectedLead.child_name}</Text>
                     <div>
                       <Text type="tertiary" style={{ fontFamily: 'monospace', fontSize: 12 }}>
                         {selectedLead.parent_phone}
@@ -697,141 +644,105 @@ export function OrderDialog({
                   )}
                 </div>
               )}
-            </SectionCard>
+            </Form.Section>
 
-            {/* 课程明细 */}
-            <SectionCard>
-              <SectionHeader
-                icon={BookOpen}
-                title="课程明细"
-                action={
-                  <Button
-                    icon={<IconPlus />}
-                    size="small"
-                    onClick={handleAddCourse}
-                  >
+            <Form.Section
+              text={
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span>课程明细</span>
+                  <Button icon={<IconPlus />} size="small" onClick={handleAddCourse}>
                     添加课程
                   </Button>
-                }
-              />
-
+                </div>
+              }
+            >
               {courseItems.length > 0 ? (
                 <Table
                   columns={courseColumns}
                   dataSource={courseItems}
-                  rowKey={(_, index) => String(index)}
+                  rowKey={(record?: CourseItem) => String(courseItems.indexOf(record!))}
                   pagination={false}
                   size="small"
                 />
               ) : (
                 <div style={{
-                  textAlign: 'center', padding: '32px 0',
+                  textAlign: 'center', padding: '24px 0',
                   color: 'var(--semi-color-text-2)',
                   border: '1px dashed var(--semi-color-border)', borderRadius: 8,
                 }}>
-                  <BookOpen size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
-                  <div style={{ fontSize: 14 }}>暂无课程</div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>点击上方"添加课程"按钮</div>
+                  <BookOpen size={28} style={{ opacity: 0.4, marginBottom: 6, display: 'block', margin: '0 auto 6px' }} />
+                  <div style={{ fontSize: 13 }}>暂无课程，点击上方"添加课程"</div>
                 </div>
               )}
 
               {/* 金额汇总 */}
               <div style={{
-                marginTop: 16, padding: 16, borderRadius: 8,
+                marginTop: 12, padding: '10px 16px', borderRadius: 8,
                 background: 'var(--semi-color-fill-0)',
                 border: '1px solid var(--semi-color-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 20, fontSize: 13,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 24, fontSize: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Text type="tertiary">订单总额</Text>
-                    <Text strong style={{ fontSize: 16 }}>¥{Number(totalAmount || 0).toFixed(2)}</Text>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <TagIcon size={14} style={{ color: 'var(--semi-color-warning)' }} />
-                    <Text type="tertiary">优惠</Text>
-                    <Text strong style={{ color: 'var(--semi-color-warning)' }}>
-                      -¥{Number(discountAmount || 0).toFixed(2)}
-                    </Text>
-                  </div>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    paddingLeft: 16, borderLeft: '1px solid var(--semi-color-border)',
-                  }}>
-                    <CheckCircle2 size={16} style={{ color: 'var(--semi-color-success)' }} />
-                    <Text type="tertiary">实付</Text>
-                    <Text strong style={{ fontSize: 18, color: 'var(--semi-color-success)' }}>
-                      ¥{Number(actualAmount || 0).toFixed(2)}
-                    </Text>
-                  </div>
+                <div>
+                  <Text type="tertiary">总额 </Text>
+                  <Text strong>¥{Number(totalAmount || 0).toFixed(2)}</Text>
+                </div>
+                <div>
+                  <Text type="tertiary">优惠 </Text>
+                  <Text strong style={{ color: 'var(--semi-color-warning)' }}>
+                    -¥{Number(discountAmount || 0).toFixed(2)}
+                  </Text>
+                </div>
+                <div style={{ paddingLeft: 12, borderLeft: '1px solid var(--semi-color-border)' }}>
+                  <Text type="tertiary">实付 </Text>
+                  <Text strong style={{ fontSize: 16, color: 'var(--semi-color-success)' }}>
+                    ¥{Number(actualAmount || 0).toFixed(2)}
+                  </Text>
                 </div>
               </div>
-            </SectionCard>
+            </Form.Section>
           </div>
 
-          {/* 右侧列 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* 支付信息 + 其他信息（共用一个 Form） */}
-            <Form
-              getFormApi={(api) => { formRef.current = api }}
-              labelPosition="top"
-              onValueChange={(values) => {
-                setDiscountAmount(Number(values.discount_amount) || 0)
-              }}
-            >
-              <SectionCard>
-                <SectionHeader icon={CreditCard} title="支付信息" />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <Form.Select
-                    field="payment_method"
-                    label={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                        <Wallet size={12} /> 支付方式
-                      </span>
-                    }
-                    optionList={orderPaymentMethodOptions}
-                    style={{ width: '100%' }}
-                  />
-                  <Form.Select
-                    field="payment_status"
-                    label={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                        <CheckCircle2 size={12} /> 状态 *
-                      </span>
-                    }
-                    rules={[{ required: true, message: '请选择支付状态' }]}
-                    optionList={orderPaymentStatusOptions}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-
-                <Form.Input
-                  field="payment_at"
-                  label={
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                      <Clock size={12} /> 支付时间
-                    </span>
-                  }
-                  type="datetime-local"
+          {/* ===== 右侧：支付信息 + 其他信息（2列网格） ===== */}
+          <Form
+            getFormApi={(api) => { formRef.current = api }}
+            labelPosition="top"
+            onValueChange={(values) => {
+              setDiscountAmount(Number(values.discount_amount) || 0)
+            }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+          >
+            <Form.Section text="支付信息">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                <Form.Select
+                  field="payment_method"
+                  label="支付方式"
+                  optionList={orderPaymentMethodOptions}
+                  style={{ width: '100%' }}
                 />
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <Form.Select
-                    field="collector_id"
-                    label={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                        <UserCheck size={12} /> 收款人
-                      </span>
-                    }
-                    optionList={collectorOptions}
-                    style={{ width: '100%' }}
-                  />
+                <Form.Select
+                  field="payment_status"
+                  label={{ text: '支付状态', required: true }}
+                  rules={[{ required: true, message: '请选择支付状态' }]}
+                  optionList={orderPaymentStatusOptions}
+                  style={{ width: '100%' }}
+                />
+                <Form.DatePicker
+                  field="payment_at"
+                  label="支付时间"
+                  type="dateTime"
+                  style={{ width: '100%' }}
+                  format="yyyy-MM-dd HH:mm"
+                />
+                <Form.Select
+                  field="collector_id"
+                  label="收款人"
+                  optionList={collectorOptions}
+                  style={{ width: '100%' }}
+                />
+                <div style={{ gridColumn: '1 / -1' }}>
                   <Form.InputNumber
                     field="discount_amount"
-                    label={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                        <TagIcon size={12} /> 优惠金额
-                      </span>
-                    }
+                    label="优惠金额"
                     min={0}
                     precision={2}
                     prefix="¥"
@@ -839,35 +750,33 @@ export function OrderDialog({
                     style={{ width: '100%' }}
                   />
                 </div>
-              </SectionCard>
+              </div>
+            </Form.Section>
 
-              {/* 其他信息 */}
-              <div style={{ marginTop: 20 }}>
-                <SectionCard>
-                  <SectionHeader icon={FileText} title="其他信息" />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <Form.Input
-                      field="receipt_no"
-                      label={<span style={{ fontSize: 12 }}>收据编号</span>}
-                      placeholder="可选"
-                    />
-                    <Form.Input
-                      field="contract_no"
-                      label={<span style={{ fontSize: 12 }}>合同编号</span>}
-                      placeholder="可选"
-                    />
-                  </div>
+            <Form.Section text="其他信息">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                <Form.Input
+                  field="receipt_no"
+                  label={{ text: '收据编号', optional: true }}
+                  placeholder="收据编号"
+                />
+                <Form.Input
+                  field="contract_no"
+                  label={{ text: '合同编号', optional: true }}
+                  placeholder="合同编号"
+                />
+                <div style={{ gridColumn: '1 / -1' }}>
                   <Form.TextArea
                     field="remark"
-                    label={<span style={{ fontSize: 12 }}>订单备注</span>}
-                    placeholder="订单备注信息（可选）"
+                    label={{ text: '订单备注', optional: true }}
+                    placeholder="订单备注信息"
                     rows={3}
                     autosize={false}
                   />
-                </SectionCard>
+                </div>
               </div>
-            </Form>
-          </div>
+            </Form.Section>
+          </Form>
         </div>
       </Modal>
 

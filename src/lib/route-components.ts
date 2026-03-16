@@ -57,47 +57,47 @@ const sidebarTitleMap = buildSidebarTitleMap()
 export const routeComponents: Record<string, RouteConfig> = {
   '/': {
     component: lazy(() => import('@/features/dashboard').then(m => ({ default: m.Dashboard }))),
-    title: 'Dashboard',
+    title: '仪表盘',
   },
   '/tasks': {
     component: lazy(() => import('@/features/tasks').then(m => ({ default: m.Tasks }))),
-    title: 'Tasks',
+    title: '任务',
   },
   '/apps': {
     component: lazy(() => import('@/features/apps').then(m => ({ default: m.Apps }))),
-    title: 'Apps',
+    title: '应用',
   },
   '/chats': {
     component: lazy(() => import('@/features/chats').then(m => ({ default: m.Chats }))),
-    title: 'Chats',
+    title: '聊天',
   },
   '/users': {
     component: lazy(() => import('@/features/users').then(m => ({ default: m.Users }))),
-    title: 'Users',
+    title: '用户',
   },
   '/settings': {
     component: lazy(() => import('@/features/settings/profile').then(m => ({ default: m.SettingsProfile }))),
-    title: 'Profile',
+    title: '个人资料',
   },
   '/settings/account': {
     component: lazy(() => import('@/features/settings/account').then(m => ({ default: m.SettingsAccount }))),
-    title: 'Account',
+    title: '账户设置',
   },
   '/settings/appearance': {
     component: lazy(() => import('@/features/settings/appearance').then(m => ({ default: m.SettingsAppearance }))),
-    title: 'Appearance',
+    title: '外观',
   },
   '/settings/notifications': {
     component: lazy(() => import('@/features/settings/notifications').then(m => ({ default: m.SettingsNotifications }))),
-    title: 'Notifications',
+    title: '通知',
   },
   '/settings/display': {
     component: lazy(() => import('@/features/settings/display').then(m => ({ default: m.SettingsDisplay }))),
-    title: 'Display',
+    title: '显示',
   },
   '/help-center': {
     component: lazy(() => import('@/components/coming-soon').then(m => ({ default: m.ComingSoon }))),
-    title: 'Help Center',
+    title: '帮助中心',
   },
 }
 

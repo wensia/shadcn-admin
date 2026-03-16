@@ -40,16 +40,16 @@ export function AppearanceForm() {
     >
       <Form.Select
         field='font'
-        label='Font'
+        label='字体'
         optionList={fontOptions}
         style={{ width: 200 }}
-        extraText='Set the font you want to use in the dashboard.'
+        extraText='设置系统界面使用的字体。'
       />
 
       <div>
-        <label className='text-sm font-medium'>Theme</label>
+        <label className='text-sm font-medium'>主题</label>
         <p className='text-sm mb-2' style={{ color: 'var(--semi-color-text-2)' }}>
-          Select the theme for the dashboard.
+          选择系统界面的主题。
         </p>
         <Form.RadioGroup field='theme' noLabel>
           <div className='grid max-w-md grid-cols-2 gap-8 pt-2'>
@@ -77,7 +77,7 @@ export function AppearanceForm() {
                 </div>
               </div>
               <span className='block w-full p-2 text-center font-normal'>
-                Light
+                浅色
               </span>
             </label>
             <label className='cursor-pointer'>
@@ -104,14 +104,14 @@ export function AppearanceForm() {
                 </div>
               </div>
               <span className='block w-full p-2 text-center font-normal'>
-                Dark
+                深色
               </span>
             </label>
           </div>
         </Form.RadioGroup>
       </div>
 
-      <Button htmlType='submit' theme='solid'>Update preferences</Button>
+      <Button htmlType='submit' theme='solid'>更新偏好</Button>
     </Form>
   )
 }

@@ -1,11 +1,12 @@
 /**
- * 咨询数据统计页面路由
- * 路径: /crm/data-statistics/consulting
+ * 咨询数据统计旧路由（已合并到顾问数据中心）
+ * 路径: /crm/data-statistics/consulting → redirect → /crm/advisor-center?tab=call-stats
  */
 
-import { createFileRoute } from '@tanstack/react-router'
-import { ConsultingStatisticsPage } from '@/features/crm/data-statistics/consulting-statistics-page'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/crm/data-statistics/consulting')({
-  component: ConsultingStatisticsPage
+  beforeLoad: () => {
+    throw redirect({ to: '/crm/advisor-center', search: { tab: 'call-stats' } })
+  },
 })

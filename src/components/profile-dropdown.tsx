@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Dropdown, Avatar } from '@douyinfe/semi-ui-19'
 import useDialogState from '@/hooks/use-dialog-state'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { ChangePasswordDialog } from '@/components/change-password-dialog'
 import { useCurrentUser } from '@/stores/auth-store'
 
 /**
@@ -17,6 +18,7 @@ function getAvatarFallback(name?: string): string {
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
+  const [pwdOpen, setPwdOpen] = useDialogState()
   const currentUser = useCurrentUser()
 
   const displayName = currentUser?.name || currentUser?.username || '未登录'
@@ -52,6 +54,9 @@ export function ProfileDropdown() {
           <span className='text-xs text-[var(--semi-color-text-2)]'>⌘S</span>
         </Link>
       </Dropdown.Item>
+      <Dropdown.Item onClick={() => setPwdOpen(true)}>
+        修改密码
+      </Dropdown.Item>
       <Dropdown.Divider />
       <Dropdown.Item
         type='danger'
@@ -83,6 +88,7 @@ export function ProfileDropdown() {
       </Dropdown>
 
       <SignOutDialog open={!!open} onOpenChange={setOpen} />
+      <ChangePasswordDialog open={!!pwdOpen} onOpenChange={setPwdOpen} />
     </>
   )
 }

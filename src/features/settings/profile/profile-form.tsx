@@ -41,50 +41,49 @@ export function ProfileForm() {
     >
       <Form.Input
         field='username'
-        label='Username'
-        placeholder='ruimf-user'
+        label='用户名'
+        placeholder='请输入用户名'
         rules={[
-          { required: true, message: 'Please enter your username.' },
-          { min: 2, message: 'Username must be at least 2 characters.' },
-          { max: 30, message: 'Username must not be longer than 30 characters.' },
+          { required: true, message: '请输入用户名' },
+          { min: 2, message: '用户名至少2个字符' },
+          { max: 30, message: '用户名不能超过30个字符' },
         ]}
-        extraText='This is your public display name. It can be your real name or a pseudonym. You can only change this once every 30 days.'
+        extraText='这是您的公开显示名称，可以是真实姓名或昵称。每30天只能修改一次。'
       />
 
       <Form.Select
         field='email'
-        label='Email'
-        placeholder='Select a verified email to display'
+        label='邮箱'
+        placeholder='请选择要显示的已验证邮箱'
         optionList={emailOptions}
-        rules={[{ required: true, message: 'Please select an email to display.' }]}
+        rules={[{ required: true, message: '请选择要显示的邮箱' }]}
         extraText={
           <span>
-            You can manage verified email addresses in your{' '}
-            <Link to='/' style={{ textDecoration: 'underline' }}>email settings</Link>.
+            您可以在<Link to='/' style={{ textDecoration: 'underline' }}>邮箱设置</Link>中管理已验证的邮箱地址。
           </span>
         }
       />
 
       <Form.TextArea
         field='bio'
-        label='Bio'
-        placeholder='Tell us a little bit about yourself'
+        label='个人简介'
+        placeholder='简单介绍一下自己'
         autosize={{ minRows: 3 }}
         rules={[
-          { min: 4, message: 'Bio must be at least 4 characters.' },
-          { max: 160, message: 'Bio must not be longer than 160 characters.' },
+          { min: 4, message: '个人简介至少4个字符' },
+          { max: 160, message: '个人简介不能超过160个字符' },
         ]}
         extraText={
           <span>
-            You can <span>@mention</span> other users and organizations to link to them.
+            您可以使用 <span>@提及</span> 来链接其他用户和组织。
           </span>
         }
       />
 
       <div>
-        <label className='text-sm font-medium'>URLs</label>
+        <label className='text-sm font-medium'>链接</label>
         <p className='text-sm mb-2' style={{ color: 'var(--semi-color-text-2)' }}>
-          Add links to your website, blog, or social media profiles.
+          添加您的网站、博客或社交媒体链接。
         </p>
         {urls.map((url, index) => (
           <div key={index} className='mb-2'>
@@ -106,11 +105,11 @@ export function ProfileForm() {
           className='mt-2'
           onClick={() => setUrls([...urls, { value: '' }])}
         >
-          Add URL
+          添加链接
         </Button>
       </div>
 
-      <Button htmlType='submit' theme='solid'>Update profile</Button>
+      <Button htmlType='submit' theme='solid'>更新资料</Button>
     </Form>
   )
 }

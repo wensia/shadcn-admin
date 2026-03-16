@@ -33,6 +33,32 @@ export interface DISCTestSubmitData {
   test_code?: string
   start_time?: string | null
   ref?: string
+  link_id?: string
+  channel?: string
+}
+
+// DISC 测试链接
+export interface DiscTestLinkItem {
+  id: string
+  appointment_id: string
+  name: string
+  phone?: string | null
+  test_url: string
+  status: 'PENDING' | 'COMPLETED' | 'EXPIRED'
+  expires_at?: string | null
+  completed_at?: string | null
+  created_by_name?: string | null
+  test_record_id?: string | null
+  notes?: string | null
+  created_at: string
+}
+
+// 创建测试链接请求
+export interface DiscTestLinkCreateData {
+  name: string
+  phone?: string
+  expires_days?: number
+  notes?: string
 }
 
 // DISC 类型信息
@@ -178,6 +204,7 @@ export interface TempDISCRecordListItem {
   has_mixed_type?: boolean
   ai_analysis_status?: 'pending' | 'processing' | 'completed' | 'failed' | string | null
   best_match_job?: string | null
+  source_channel?: string | null
   submitted_at: string
   is_migrated: boolean
   created_at: string

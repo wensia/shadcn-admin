@@ -68,7 +68,7 @@ export function useAdvisorAppCallRankingData({
   time = '0',
   enabled = true,
 }: UseAdvisorAppCallRankingDataOptions): UseAdvisorAppCallRankingDataResult {
-  const isQueryEnabled = enabled && Boolean(selectedAccountId && departmentId)
+  const isQueryEnabled = enabled && Boolean(departmentId)
 
   const {
     data: statisticsData,
@@ -92,10 +92,11 @@ export function useAdvisorAppCallRankingData({
     isRefetching: isCampusMappingRefetching,
     refetch: refetchCampusMapping,
   } = useQuery({
-    queryKey: ['advisor-dashboard-app-call-campus-mapping'],
+    queryKey: ['advisor-dashboard-employee-campus-mapping'],
     queryFn: async () => callRecordsApi.getEmployeeCampusMapping(),
     staleTime: 5 * 60 * 1000,
     enabled,
+    retry: false,
   })
 
   const rows: AdvisorAppCallRankingRow[] = !statisticsData?.data || !employeeCampusMapping

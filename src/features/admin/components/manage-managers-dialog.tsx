@@ -179,7 +179,7 @@ export function ManageManagersDialog({
             : '管理部门负责人'}
         </Text>
 
-        <div className="space-y-6" style={{ maxHeight: 'calc(85vh - 160px)', overflowY: 'auto' }}>
+        <div className="space-y-6" style={{ maxHeight: 'calc(85vh - 160px)', overflowY: 'auto', paddingBottom: 16 }}>
           {/* 当前负责人列表 */}
           <div>
             <h4 className="text-sm font-medium mb-3">当前负责人</h4>

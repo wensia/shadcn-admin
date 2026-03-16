@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Button,
-  Card,
   Modal,
   Select,
   Tag,
@@ -11,13 +10,8 @@ import {
   Typography,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ListTodo,
-  TimerReset,
-  UserRound,
-} from 'lucide-react'
+import { ArrowLeft, Users, UserCheck, UserX, Percent, Info, User, UserPlus, Calendar, CalendarCheck, FileText } from 'lucide-react'
+import { StatsBar, type StatsBarItem } from '@/components/semi/stats-bar'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { formatTime } from '@/lib/utils/time'
@@ -37,7 +31,7 @@ import {
   type TaskCompletionStatus,
 } from './types'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 const taskStatusColors = {
   active: 'blue',
@@ -298,86 +292,36 @@ export function AssignmentTaskDetailPage({
         >
           <div
             style={{
-              padding: 16,
+              padding: '12px 16px',
               borderBottom: '1px solid var(--semi-color-border)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 16,
+              gap: 8,
             }}
           >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: 12,
-              }}
-            >
-              <SummaryCard
-                title='总线索'
-                value={task?.total_leads ?? 0}
-                helper='本次纳入任务的线索量'
-                icon={<ListTodo size={18} />}
-              />
-              <SummaryCard
-                title='已回访'
-                value={task?.completed_count ?? 0}
-                helper='任务创建后由负责人完成'
-                icon={<CheckCircle2 size={18} />}
-                accent='var(--semi-color-success)'
-              />
-              <SummaryCard
-                title='未回访'
-                value={task?.pending_count ?? 0}
-                helper='仍待处理的线索'
-                icon={<TimerReset size={18} />}
-                accent='var(--semi-color-warning)'
-              />
-              <SummaryCard
-                title='回访率'
-                value={`${Number(task?.completion_rate ?? 0).toFixed(2)}%`}
-                helper={
-                  task?.latest_followup_at
-                    ? `最近回访：${formatTime(task.latest_followup_at)}`
-                    : '暂无线索完成'
-                }
-                icon={<UserRound size={18} />}
-                accent='var(--semi-color-primary)'
-              />
-            </div>
-
-            <Card bodyStyle={{ padding: 16 }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: 12,
-                }}
-              >
-                <InfoItem label='状态'>
-                  {task?.status ? (
-                    <Tag color={taskStatusColors[task.status]} shape='circle'>
-                      {taskStatusLabels[task.status]}
-                    </Tag>
-                  ) : (
-                    '-'
-                  )}
-                </InfoItem>
-                <InfoItem label='负责人'>{task?.advisor.name || '-'}</InfoItem>
-                <InfoItem label='创建人'>
-                  {task?.created_by.name || '-'}
-                </InfoItem>
-                <InfoItem label='创建时间'>
-                  {task?.created_at ? formatTime(task.created_at) : '-'}
-                </InfoItem>
-                <InfoItem label='完成时间'>
-                  {task?.completed_at ? formatTime(task.completed_at) : '-'}
-                </InfoItem>
-                <InfoItem label='备注'>{task?.remark || '无'}</InfoItem>
-              </div>
-            </Card>
+            <StatsBar
+              items={[
+                { label: '总线索', value: `${task?.total_leads ?? 0}条`, icon: Users, color: 'var(--semi-color-primary)' },
+                { label: '已回访', value: `${task?.completed_count ?? 0}条`, icon: UserCheck, color: 'var(--semi-color-success)' },
+                { label: '未回访', value: `${task?.pending_count ?? 0}条`, icon: UserX, color: 'var(--semi-color-warning)' },
+                { label: '回访率', value: `${Number(task?.completion_rate ?? 0).toFixed(1)}%`, icon: Percent, color: 'var(--semi-color-primary)' },
+              ] satisfies StatsBarItem[]}
+              isLoading={taskLoading}
+            />
+            <StatsBar
+              items={[
+                { label: '状态', value: task?.status ? taskStatusLabels[task.status] : '-', icon: Info, color: task?.status ? `var(--semi-color-${taskStatusColors[task.status] === 'grey' ? 'text-2' : taskStatusColors[task.status] === 'blue' ? 'primary' : 'success'})` : undefined },
+                { label: '负责人', value: task?.advisor.name || '-', icon: User, color: 'var(--semi-color-primary)' },
+                { label: '创建人', value: task?.created_by.name || '-', icon: UserPlus, color: 'var(--semi-color-text-2)' },
+                { label: '创建时间', value: task?.created_at ? formatTime(task.created_at) : '-', icon: Calendar, color: 'var(--semi-color-text-2)' },
+                { label: '完成时间', value: task?.completed_at ? formatTime(task.completed_at) : '-', icon: CalendarCheck, color: 'var(--semi-color-success)' },
+                { label: '备注', value: task?.remark || '无', icon: FileText, color: 'var(--semi-color-text-2)' },
+              ] satisfies StatsBarItem[]}
+              isLoading={taskLoading}
+            />
           </div>
 
-          <div style={{ flex: 1, minHeight: 0 }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <SemiDataTable<LeadAssignmentTaskItem>
               columns={columns}
               data={items}
@@ -409,67 +353,3 @@ export function AssignmentTaskDetailPage({
   )
 }
 
-function SummaryCard({
-  title,
-  value,
-  helper,
-  icon,
-  accent = 'var(--semi-color-text-0)',
-}: {
-  title: string
-  value: string | number
-  helper: string
-  icon: React.ReactNode
-  accent?: string
-}) {
-  return (
-    <Card bodyStyle={{ padding: 16 }}>
-      <div
-        style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Text type='tertiary' size='small'>
-            {title}
-          </Text>
-          <Title heading={3} style={{ margin: 0, color: accent }}>
-            {value}
-          </Title>
-          <Text type='tertiary' size='small'>
-            {helper}
-          </Text>
-        </div>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--semi-color-fill-0)',
-            color: accent,
-          }}
-        >
-          {icon}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function InfoItem({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Text type='tertiary' size='small'>
-        {label}
-      </Text>
-      <div>{children}</div>
-    </div>
-  )
-}

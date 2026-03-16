@@ -37,23 +37,23 @@ export function NotificationsForm() {
     >
       <Form.RadioGroup
         field='type'
-        label='Notify me about...'
+        label='通知我关于...'
         direction='vertical'
-        rules={[{ required: true, message: 'Please select a notification type.' }]}
+        rules={[{ required: true, message: '请选择通知类型' }]}
       >
-        <Radio value='all'>All new messages</Radio>
-        <Radio value='mentions'>Direct messages and mentions</Radio>
-        <Radio value='none'>Nothing</Radio>
+        <Radio value='all'>所有新消息</Radio>
+        <Radio value='mentions'>私信和提及</Radio>
+        <Radio value='none'>不通知</Radio>
       </Form.RadioGroup>
 
       <div>
-        <h3 className='mb-4 text-lg font-medium'>Email Notifications</h3>
+        <h3 className='mb-4 text-lg font-medium'>邮件通知</h3>
         <div className='space-y-4'>
           <div className='flex flex-row items-center justify-between rounded-lg border p-4' style={{ borderColor: 'var(--semi-color-border)' }}>
             <div className='space-y-0.5'>
-              <div className='text-base font-medium'>Communication emails</div>
+              <div className='text-base font-medium'>通讯邮件</div>
               <div className='text-sm' style={{ color: 'var(--semi-color-text-2)' }}>
-                Receive emails about your account activity.
+                接收关于账户活动的邮件。
               </div>
             </div>
             <Form.Switch field='communication_emails' noLabel />
@@ -61,9 +61,9 @@ export function NotificationsForm() {
 
           <div className='flex flex-row items-center justify-between rounded-lg border p-4' style={{ borderColor: 'var(--semi-color-border)' }}>
             <div className='space-y-0.5'>
-              <div className='text-base font-medium'>Marketing emails</div>
+              <div className='text-base font-medium'>营销邮件</div>
               <div className='text-sm' style={{ color: 'var(--semi-color-text-2)' }}>
-                Receive emails about new products, features, and more.
+                接收关于新产品、新功能等信息的邮件。
               </div>
             </div>
             <Form.Switch field='marketing_emails' noLabel />
@@ -71,9 +71,9 @@ export function NotificationsForm() {
 
           <div className='flex flex-row items-center justify-between rounded-lg border p-4' style={{ borderColor: 'var(--semi-color-border)' }}>
             <div className='space-y-0.5'>
-              <div className='text-base font-medium'>Social emails</div>
+              <div className='text-base font-medium'>社交邮件</div>
               <div className='text-sm' style={{ color: 'var(--semi-color-text-2)' }}>
-                Receive emails for friend requests, follows, and more.
+                接收好友请求、关注等社交相关的邮件。
               </div>
             </div>
             <Form.Switch field='social_emails' noLabel />
@@ -81,9 +81,9 @@ export function NotificationsForm() {
 
           <div className='flex flex-row items-center justify-between rounded-lg border p-4' style={{ borderColor: 'var(--semi-color-border)' }}>
             <div className='space-y-0.5'>
-              <div className='text-base font-medium'>Security emails</div>
+              <div className='text-base font-medium'>安全邮件</div>
               <div className='text-sm' style={{ color: 'var(--semi-color-text-2)' }}>
-                Receive emails about your account activity and security.
+                接收关于账户活动和安全相关的邮件。
               </div>
             </div>
             <Form.Switch field='security_emails' noLabel disabled />
@@ -95,22 +95,22 @@ export function NotificationsForm() {
         <Form.Checkbox field='mobile' noLabel />
         <div className='space-y-1 leading-none'>
           <div className='text-sm font-medium'>
-            Use different settings for my mobile devices
+            在移动设备上使用不同的设置
           </div>
           <div className='text-sm' style={{ color: 'var(--semi-color-text-2)' }}>
-            You can manage your mobile notifications in the{' '}
+            您可以在
             <Link
               to='/settings'
               className='underline decoration-dashed underline-offset-4 hover:decoration-solid'
             >
-              mobile settings
-            </Link>{' '}
-            page.
+              移动设备设置
+            </Link>
+            页面管理移动端通知。
           </div>
         </div>
       </div>
 
-      <Button htmlType='submit' theme='solid'>Update notifications</Button>
+      <Button htmlType='submit' theme='solid'>更新通知设置</Button>
     </Form>
   )
 }

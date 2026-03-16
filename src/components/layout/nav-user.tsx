@@ -12,9 +12,11 @@ import {
   IconBell,
   IconCreditCard,
   IconExit,
+  IconLock,
 } from '@douyinfe/semi-icons'
 import { ChevronsUpDown } from 'lucide-react'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { ChangePasswordDialog } from '@/components/change-password-dialog'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { useCurrentUser } from '@/stores/auth-store'
 
@@ -26,6 +28,7 @@ function getAvatarFallback(name?: string): string {
 
 export function NavUser({ collapsed }: { collapsed?: boolean }) {
   const [signOutOpen, setSignOutOpen] = useState(false)
+  const [pwdOpen, setPwdOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
 
   const currentUser = useCurrentUser()
@@ -41,6 +44,7 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
         trigger='click'
         position='topLeft'
         clickToHide
+        getPopupContainer={() => document.body}
         render={
           <Dropdown.Menu>
             {/* 用户信息头 */}
@@ -114,6 +118,12 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
                 通知设置
               </Link>
             </Dropdown.Item>
+            <Dropdown.Item
+              icon={<IconLock />}
+              onClick={() => setPwdOpen(true)}
+            >
+              修改密码
+            </Dropdown.Item>
             <Dropdown.Divider />
             <Dropdown.Item
               type='danger'
@@ -133,7 +143,9 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
             padding: collapsed ? '8px 0' : '8px 16px',
             cursor: 'pointer',
             borderRadius: 6,
-            margin: '4px 8px',
+            margin: 0,
+            width: '100%',
+            boxSizing: 'border-box',
             transition: 'background-color 0.2s',
             justifyContent: collapsed ? 'center' : 'flex-start',
           }}
@@ -196,6 +208,7 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
       </Dropdown>
 
       <SignOutDialog open={signOutOpen} onOpenChange={setSignOutOpen} />
+      <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />
       <ConfigDrawer
         open={configOpen}
         onOpenChange={setConfigOpen}

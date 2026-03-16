@@ -9,6 +9,7 @@ import { formatTime } from '@/lib/utils/time'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { FollowupResultBadge } from '@/features/crm/leads/components/status-badges'
 import { leadAssignmentTasksApi } from './api'
 import {
   taskStatusLabels,
@@ -25,6 +26,25 @@ const taskStatusColors: Record<
   active: 'blue',
   completed: 'green',
   cancelled: 'grey',
+}
+
+function formatTaskDuration(seconds?: number | null) {
+  if (!seconds || seconds <= 0) return '-'
+
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+
+  if (days > 0) {
+    return `${days}天 ${hours}小时`
+  }
+  if (hours > 0) {
+    return `${hours}小时 ${minutes}分钟`
+  }
+  if (minutes > 0) {
+    return `${minutes}分钟`
+  }
+  return `${seconds}秒`
 }
 
 export function AssignmentTasksPage() {
@@ -168,6 +188,49 @@ export function AssignmentTasksPage() {
         },
       },
       {
+        title: '完成耗时',
+        dataIndex: 'completed_duration_seconds',
+        width: 140,
+        render: (value, record) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={88} />
+          const duration = value as number | null | undefined
+          if (duration == null) {
+            return <Text type='tertiary'>-</Text>
+          }
+          return <Text>{formatTaskDuration(duration)}</Text>
+        },
+      },
+      {
+        title: '分配后跟进结果',
+        dataIndex: 'followup_result_stats',
+        width: 320,
+        render: (value, record) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width='90%' />
+
+          const stats = (value as LeadAssignmentTask['followup_result_stats']) ?? []
+          if (stats.length === 0) {
+            return <Text type='tertiary'>-</Text>
+          }
+
+          return (
+            <table style={{ borderCollapse: 'collapse', fontSize: 13 }}>
+              <tbody>
+                {stats.map((item) => (
+                  <tr key={item.result}>
+                    <td style={{ paddingRight: 12, paddingTop: 2, paddingBottom: 2 }}>
+                      <FollowupResultBadge result={item.result} />
+                    </td>
+                    <td style={{ textAlign: 'right', paddingTop: 2, paddingBottom: 2 }}>
+                      <Text size='small' type='secondary'>{item.count}</Text>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
+        },
+      },
+      {
         title: '创建人',
         dataIndex: 'created_by',
         width: 120,
@@ -256,7 +319,7 @@ export function AssignmentTasksPage() {
         page={pagination.page}
         pageSize={pagination.size}
         isLoading={isLoading}
-        scrollX={1180}
+        scrollX={1640}
         onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
         onPageSizeChange={(size) => setPagination({ page: 1, size })}
         onRowClick={(record) => {

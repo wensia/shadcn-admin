@@ -21,6 +21,8 @@ import {
   Space,
   Banner,
   Toast,
+  SideSheet,
+  Divider,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconRefresh } from '@douyinfe/semi-icons'
@@ -35,7 +37,6 @@ import {
   type PortalLeadsResponse,
   type PortalStatsResponse,
 } from '../api/channel-submit'
-import { LeadDetailSheet } from '../../crm/leads/components/lead-detail-sheet'
 
 const { Title, Text } = Typography
 
@@ -100,6 +101,276 @@ const VALIDITY_OPTIONS = [
   { value: 'pending', label: '待处理' },
 ]
 
+function getExtraInfoEntries(extra: PortalLeadItem['source_extra_info']) {
+  return Object.entries(extra || {}).filter(([, value]) => {
+    if (value == null) return false
+    if (typeof value === 'string') return value.trim().length > 0
+    return true
+  })
+}
+
+function ReadonlyInfoItem({
+  label,
+  value,
+  emphasize = false,
+}: {
+  label: string
+  value?: string | number | null
+  emphasize?: boolean
+}) {
+  return (
+    <div
+      style={{
+        padding: '12px 14px',
+        borderRadius: 10,
+        border: '1px solid var(--semi-color-border)',
+        background: emphasize
+          ? 'linear-gradient(180deg, rgba(22, 93, 255, 0.06), rgba(22, 93, 255, 0.02))'
+          : 'var(--semi-color-fill-0)',
+      }}
+    >
+      <Text
+        type="tertiary"
+        size="small"
+        style={{ display: 'block', marginBottom: 6 }}
+      >
+        {label}
+      </Text>
+      <div
+        style={{
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: 'var(--semi-color-text-0)',
+          minHeight: 22,
+          wordBreak: 'break-word',
+        }}
+      >
+        {value || <Text type="quaternary">-</Text>}
+      </div>
+    </div>
+  )
+}
+
+function PortalLeadReadonlySheet({
+  lead,
+  open,
+  onOpenChange,
+}: {
+  lead: PortalLeadItem | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const validityConfig = lead
+    ? (VALIDITY_CONFIG[lead.validity] || VALIDITY_CONFIG.pending)
+    : VALIDITY_CONFIG.pending
+  const extraEntries = useMemo(
+    () => getExtraInfoEntries(lead?.source_extra_info || {}),
+    [lead?.source_extra_info]
+  )
+
+  return (
+    <SideSheet
+      visible={open}
+      onCancel={() => onOpenChange(false)}
+      title={lead ? `${lead.name_masked || '客户'} · 线索摘要` : '线索摘要'}
+      placement="right"
+      width="min(92vw, 520px)"
+      bodyStyle={{
+        padding: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        background: 'linear-gradient(180deg, var(--semi-color-bg-0), var(--semi-color-fill-0))',
+      }}
+    >
+      {!lead ? (
+        <Empty title="暂无可展示数据" description="当前行未加载到可读摘要" />
+      ) : (
+        <>
+          <Card
+            bodyStyle={{
+              padding: 18,
+              background:
+                'radial-gradient(circle at top left, rgba(22, 93, 255, 0.14), transparent 45%), var(--semi-color-bg-0)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                alignItems: 'flex-start',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+                  {lead.name_masked || '-'}
+                </div>
+                <Text
+                  type="tertiary"
+                  style={{ fontFamily: 'monospace', letterSpacing: 0.4 }}
+                >
+                  {lead.phone_masked || '-'}
+                </Text>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <Tag color={STATUS_COLOR[lead.status] || 'grey'} shape="circle">
+                  {lead.status_label}
+                </Tag>
+                <Tag color={validityConfig.color} shape="circle">
+                  {validityConfig.label}
+                </Tag>
+              </div>
+            </div>
+            <div
+              style={{
+                marginTop: 14,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: 10,
+              }}
+            >
+              <ReadonlyInfoItem label="登记日期" value={fmtDate(lead.registered_at)} />
+              <ReadonlyInfoItem label="校区" value={lead.campus_name} />
+              <ReadonlyInfoItem label="跟进次数" value={lead.followup_count} emphasize />
+            </div>
+          </Card>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: 12,
+            }}
+          >
+            <ReadonlyInfoItem label="顾问" value={lead.advisor_name} />
+            <ReadonlyInfoItem label="创建/激活人" value={lead.owner_name} />
+          </div>
+
+          <Card bodyStyle={{ padding: 16 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <Title heading={6} style={{ margin: 0 }}>
+                最近回访摘要
+              </Title>
+              {lead.followup_count > 0 && (
+                <Tag color="blue" size="small">
+                  共 {lead.followup_count} 次
+                </Tag>
+              )}
+            </div>
+
+            {lead.latest_followup_result ? (
+              <div
+                style={{
+                  borderRadius: 12,
+                  padding: 14,
+                  background:
+                    'linear-gradient(180deg, rgba(0, 180, 42, 0.08), rgba(0, 180, 42, 0.02))',
+                  border: '1px solid rgba(0, 180, 42, 0.15)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginBottom: 8,
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>
+                    {lead.latest_followup_result}
+                  </div>
+                  <Text type="tertiary" size="small">
+                    {fmtTime(lead.latest_followup_at)}
+                  </Text>
+                </div>
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    background: 'rgba(255,255,255,0.62)',
+                    border: '1px solid rgba(0, 0, 0, 0.04)',
+                  }}
+                >
+                  <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 6 }}>
+                    下步计划
+                  </Text>
+                  <div style={{ fontSize: 14, lineHeight: 1.7 }}>
+                    {lead.next_action || <Text type="quaternary">暂无计划</Text>}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: '16px 14px',
+                  borderRadius: 12,
+                  background: 'var(--semi-color-fill-0)',
+                  border: '1px dashed var(--semi-color-border)',
+                }}
+              >
+                <Text type="tertiary">当前还没有回访记录。</Text>
+              </div>
+            )}
+          </Card>
+
+          {(lead.notes || extraEntries.length > 0) && (
+            <Card bodyStyle={{ padding: 16 }}>
+              <Title heading={6} style={{ margin: '0 0 10px' }}>
+                线索补充信息
+              </Title>
+              {lead.notes && (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 10,
+                    background: 'var(--semi-color-fill-0)',
+                    lineHeight: 1.7,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {lead.notes}
+                </div>
+              )}
+
+              {lead.notes && extraEntries.length > 0 && (
+                <Divider margin="16px" />
+              )}
+
+              {extraEntries.length > 0 && (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {extraEntries.map(([key, value]) => (
+                    <ReadonlyInfoItem
+                      key={key}
+                      label={key}
+                      value={typeof value === 'string' ? value : JSON.stringify(value)}
+                    />
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
+          <Banner
+            type="info"
+            closeIcon={null}
+            description="此页面仅提供公开只读摘要，不包含内部 CRM 的完整详情与编辑能力。"
+          />
+        </>
+      )}
+    </SideSheet>
+  )
+}
+
 /* ═════════════════ 线索列表视图 ═════════════════ */
 
 function PortalLeadsView({ token }: { token: string }) {
@@ -110,7 +381,7 @@ function PortalLeadsView({ token }: { token: string }) {
   const [pageSize, setPageSize] = useState(20)
   const [validity, setValidity] = useState<string>('')
   const [dateRange, setDateRange] = useState<[string, string] | null>(null)
-  const [detailLeadId, setDetailLeadId] = useState<string | null>(null)
+  const [selectedLead, setSelectedLead] = useState<PortalLeadItem | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
 
   const loadData = useCallback(async () => {
@@ -343,7 +614,7 @@ function PortalLeadsView({ token }: { token: string }) {
   }, [loadData])
 
   const handleRowClick = useCallback((record: PortalLeadItem) => {
-    setDetailLeadId(record.id)
+    setSelectedLead(record)
     setDetailOpen(true)
   }, [])
 
@@ -398,7 +669,6 @@ function PortalLeadsView({ token }: { token: string }) {
               <Banner
                 type="danger"
                 description={error}
-                style={{ marginBottom: 8 }}
               />
             )}
             <Space align="center">
@@ -440,8 +710,8 @@ function PortalLeadsView({ token }: { token: string }) {
         />
       </DataTableLayout>
 
-      <LeadDetailSheet
-        leadId={detailLeadId}
+      <PortalLeadReadonlySheet
+        lead={selectedLead}
         open={detailOpen}
         onOpenChange={setDetailOpen}
       />
@@ -775,11 +1045,7 @@ export function ChannelPortal() {
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
-    if (!token) {
-      setPhase('invalid')
-      setErrorMsg('缺少访问令牌')
-      return
-    }
+    if (!token) return
 
     validateChannelToken(token)
       .then((res) => {
@@ -793,6 +1059,17 @@ export function ChannelPortal() {
   }, [token])
 
   if (phase === 'loading') {
+    if (!token) {
+      return (
+        <div style={centeredPageStyle}>
+          <Empty
+            title="无法访问"
+            description="缺少访问令牌"
+          />
+        </div>
+      )
+    }
+
     return (
       <div style={centeredPageStyle}>
         <Spin tip="加载中..." />

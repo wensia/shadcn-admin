@@ -51,29 +51,27 @@ function getInitialOpenKeys(
   groups: NavGroup[],
   currentPath: string
 ): string[] {
-  const allKeys = groups.map((g) => `group-${g.title}`)
-
-  if (isFirstVisit()) {
-    return allKeys.filter(
-      (key) => !DEFAULT_COLLAPSED_GROUPS.includes(key.replace('group-', ''))
-    )
-  }
-
-  const collapsed = getCollapsedGroups()
-  const openKeys = allKeys.filter(
-    (key) => !collapsed.includes(key.replace('group-', ''))
-  )
-
-  // 确保包含当前路由所在分组
+  // 手风琴模式：只展开当前路由所在的分组
   for (const group of groups) {
     const hasActive = group.items.some((item) => item.url === currentPath)
     if (hasActive) {
-      const gk = `group-${group.title}`
-      if (!openKeys.includes(gk)) openKeys.push(gk)
+      return [`group-${group.title}`]
     }
   }
 
-  return openKeys
+  // 没有匹配路由时，展开第一个非默认折叠的分组
+  if (isFirstVisit()) {
+    const first = groups.find(
+      (g) => !DEFAULT_COLLAPSED_GROUPS.includes(g.title)
+    )
+    return first ? [`group-${first.title}`] : []
+  }
+
+  const collapsed = getCollapsedGroups()
+  const firstOpen = groups.find(
+    (g) => !collapsed.includes(g.title)
+  )
+  return firstOpen ? [`group-${firstOpen.title}`] : []
 }
 
 // ─── Main Component ────────────────────────────────────────────
@@ -109,14 +107,18 @@ export function AppSidebar() {
 
   const handleOpenChange = useCallback(
     ({ openKeys: newKeys }: { openKeys: string[] }) => {
-      setOpenKeys(newKeys)
+      // 手风琴模式：找到新展开的 key，只保留它
+      const added = newKeys.filter((k) => !openKeys.includes(k))
+      const result = added.length > 0 ? added.slice(-1) : newKeys
+
+      setOpenKeys(result)
       const allKeys = navGroups.map((g) => `group-${g.title}`)
       const collapsed = allKeys
-        .filter((key) => !newKeys.includes(key))
+        .filter((key) => !result.includes(key))
         .map((key) => key.replace('group-', ''))
       saveCollapsedGroups(collapsed)
     },
-    [navGroups]
+    [navGroups, openKeys]
   )
 
   // ─── Selected keys ────────────────────────────────────────

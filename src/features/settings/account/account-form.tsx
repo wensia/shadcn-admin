@@ -4,15 +4,15 @@ import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 
 const languages = [
-  { label: 'English', value: 'en' },
-  { label: 'French', value: 'fr' },
-  { label: 'German', value: 'de' },
-  { label: 'Spanish', value: 'es' },
-  { label: 'Portuguese', value: 'pt' },
-  { label: 'Russian', value: 'ru' },
-  { label: 'Japanese', value: 'ja' },
-  { label: 'Korean', value: 'ko' },
-  { label: 'Chinese', value: 'zh' },
+  { label: '中文', value: 'zh' },
+  { label: '英语', value: 'en' },
+  { label: '法语', value: 'fr' },
+  { label: '德语', value: 'de' },
+  { label: '西班牙语', value: 'es' },
+  { label: '葡萄牙语', value: 'pt' },
+  { label: '俄语', value: 'ru' },
+  { label: '日语', value: 'ja' },
+  { label: '韩语', value: 'ko' },
 ]
 
 export function AccountForm() {
@@ -36,37 +36,37 @@ export function AccountForm() {
     >
       <Form.Input
         field='name'
-        label='Name'
-        placeholder='Your name'
+        label='姓名'
+        placeholder='请输入姓名'
         rules={[
-          { required: true, message: 'Please enter your name.' },
-          { min: 2, message: 'Name must be at least 2 characters.' },
-          { max: 30, message: 'Name must not be longer than 30 characters.' },
+          { required: true, message: '请输入姓名' },
+          { min: 2, message: '姓名至少2个字符' },
+          { max: 30, message: '姓名不能超过30个字符' },
         ]}
-        extraText='This is the name that will be displayed on your profile and in emails.'
+        extraText='此姓名将显示在您的个人资料和邮件中。'
       />
 
       <Form.DatePicker
         field='dob'
-        label='Date of birth'
-        placeholder='Select date'
-        rules={[{ required: true, message: 'Please select your date of birth.' }]}
-        extraText='Your date of birth is used to calculate your age.'
+        label='出生日期'
+        placeholder='请选择日期'
+        rules={[{ required: true, message: '请选择出生日期' }]}
+        extraText='出生日期用于计算您的年龄。'
         style={{ width: '100%' }}
       />
 
       <Form.Select
         field='language'
-        label='Language'
-        placeholder='Select language'
+        label='语言'
+        placeholder='请选择语言'
         optionList={languages}
         filter
-        rules={[{ required: true, message: 'Please select a language.' }]}
-        extraText='This is the language that will be used in the dashboard.'
+        rules={[{ required: true, message: '请选择语言' }]}
+        extraText='此语言将用于系统界面显示。'
         style={{ width: 200 }}
       />
 
-      <Button htmlType='submit' theme='solid'>Update account</Button>
+      <Button htmlType='submit' theme='solid'>更新账户</Button>
     </Form>
   )
 }

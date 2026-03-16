@@ -1,6 +1,9 @@
 /**
- * 咨询数据统计页面
+ * 咨询数据统计页面 / CallStatsTab
  * 对接云客组员电话统计接口，展示总电话量、联系人数、通话时长三类指标
+ *
+ * 可作为独立页面（ConsultingStatisticsPage）或顾问数据中心的通话统计 Tab（CallStatsTab）使用。
+ * 作为 Tab 时传入 externalFilter 以共享筛选状态；不传则使用内部状态。
  */
 
 import { useMemo, useState } from 'react'
@@ -9,7 +12,6 @@ import {
   Button,
   Card,
   Progress,
-  Select,
   Skeleton,
   Table,
   Toast,
@@ -32,15 +34,18 @@ import {
   type AdvisorCallMetric,
   type AdvisorCallRow,
 } from './utils/advisor-call-stats'
+import { dateModeToCallPeriod, type DateMode } from './utils/date-filter'
 import { useAdvisorCallData } from './hooks/use-advisor-call-data'
 
 const { Text } = Typography
 
-const periodOptions = [
-  { value: '0', label: '今天' },
-  { value: '1', label: '本周' },
-  { value: '2', label: '本月' },
-]
+export interface CallStatsExternalFilter {
+  dateMode: DateMode
+  dateFrom: string
+  dateTo: string
+  selectedCampusId: string
+  selectedAccountId: string
+}
 
 type MetricView = AdvisorCallMetric
 
@@ -86,20 +91,21 @@ const metricConfig: Record<MetricView, {
   },
 }
 
-export function ConsultingStatisticsPage() {
-  useDocumentTitle('咨询数据统计')
-
-  const [period, setPeriod] = useState('0')
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
-  const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
+/** 顾问数据中心 - 通话统计 Tab（接收共享筛选状态） */
+export function CallStatsTab({ externalFilter }: { externalFilter: CallStatsExternalFilter }) {
   const [activeMetric, setActiveMetric] = useState<MetricView>('callCount')
-
   const { wrapperRef, scrollY } = useTableScroll()
+
+  const { dateMode, dateFrom, dateTo, selectedCampusId, selectedAccountId } = externalFilter
+  const period = dateModeToCallPeriod(dateMode)
+  const hasCustomDateRange = period === undefined
 
   const callData = useAdvisorCallData({
     selectedAccountId,
     selectedCampusId,
-    period: parseInt(period, 10),
+    period: hasCustomDateRange ? undefined : period,
+    startDate: hasCustomDateRange ? dateFrom : undefined,
+    endDate: hasCustomDateRange ? dateTo : undefined,
   })
 
   const isLoading = callData.isLoading
@@ -423,29 +429,6 @@ export function ConsultingStatisticsPage() {
                 )
               })}
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <Select
-                value={callData.effectiveAccountId || undefined}
-                onChange={(value) => setSelectedAccountId(value as string)}
-                optionList={callData.accountOptions}
-                placeholder="选择云客账号"
-                style={{ width: 180 }}
-                disabled={!callData.hasAccounts}
-              />
-              <Select
-                value={selectedCampusId}
-                onChange={(value) => setSelectedCampusId(value as string)}
-                optionList={[{ value: 'all', label: '全部校区' }, ...callData.campusOptions]}
-                style={{ width: 140 }}
-              />
-              <Select
-                value={period}
-                onChange={(value) => setPeriod(value as string)}
-                optionList={periodOptions}
-                style={{ width: 112 }}
-              />
-            </div>
           </div>
 
           <div
@@ -509,6 +492,13 @@ export function ConsultingStatisticsPage() {
       </div>
     </DataTableLayout>
   )
+}
+
+/** 独立页面（旧路由兼容用），仅在 advisor-center 中使用 CallStatsTab */
+export function ConsultingStatisticsPage() {
+  useDocumentTitle('咨询数据统计')
+  // 旧路由已重定向，此组件保留只为避免 import 报错
+  return null
 }
 
 export default ConsultingStatisticsPage

@@ -1,6 +1,6 @@
 /**
  * 日控报表 Tab - Semi Design 版
- * 展示每个课程顾问的诺到、到访、缴费统计
+ * 展示每个课程顾问的诺到、到访、业绩结果统计
  */
 
 import { useState, useRef, useEffect } from 'react'
@@ -132,16 +132,22 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
       },
     },
     {
-      title: <span style={{ color: brandColors.green }}>缴费笔数</span>,
+      title: <span style={{ color: brandColors.green }}>业绩笔数</span>,
       dataIndex: 'payment_count', width: 80, align: 'center' as const,
       render: (text) => <span style={{ fontWeight: 500, color: text > 0 ? brandColors.green : undefined }}>{text}</span>,
     },
     {
-      title: '缴费金额', dataIndex: 'payment_amount', width: 120, align: 'right' as const,
+      title: '净业绩额', dataIndex: 'payment_amount', width: 120, align: 'right' as const,
       render: (text) => {
-        return text > 0
-          ? <span style={{ fontWeight: 500, color: brandColors.orange }}>¥{Number(text).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>
-          : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
+        const amount = Number(text || 0)
+        if (amount === 0) {
+          return <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
+        }
+        return (
+          <span style={{ fontWeight: 500, color: amount > 0 ? brandColors.orange : 'var(--semi-color-danger)' }}>
+            ¥{amount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+          </span>
+        )
       },
     },
   ]
@@ -175,12 +181,18 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
             <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalVisited}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: brandColors.green }}>缴费</span>
+            <span style={{ fontSize: 12, color: brandColors.green }}>业绩</span>
             <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalPaymentCount}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>金额</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: brandColors.orange }}>
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>净业绩额</span>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: Number(summary.totalPaymentAmount) >= 0 ? brandColors.orange : 'var(--semi-color-danger)',
+              }}
+            >
               ¥{Number(summary.totalPaymentAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
             </span>
           </div>

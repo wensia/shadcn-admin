@@ -4,7 +4,6 @@ import {
   type DailyControlReportResponse,
   dailyControlQueryKeys,
   getDailyControlReport,
-  getPayments,
   getVisitSchedules,
 } from '@/features/crm/daily-control/api'
 import type { ApiResponse } from '@/lib/api/types'
@@ -36,11 +35,6 @@ interface UseAdvisorConversionDataOptions {
   campusId: string
   dateFrom: string
   dateTo: string
-}
-
-interface PaymentSummary {
-  totalCount: number
-  totalAmount: number
 }
 
 function normalizeReportResponse(
@@ -131,63 +125,6 @@ export function useAdvisorConversionData({
     staleTime: 60 * 1000,
   })
 
-  const {
-    data: paymentSummaryFromVisitSchedule,
-    isLoading: isPaymentLoading,
-    isRefetching: isPaymentRefetching,
-    refetch: refetchPayment,
-  } = useQuery({
-    queryKey: [...dailyControlQueryKeys.paymentStat({
-      page: 1,
-      size: 1,
-      status: 'confirmed',
-      date_from: dateFrom,
-      date_to: dateTo,
-      creator_campus_id: creatorCampusId,
-    }), 'summary'],
-    queryFn: async () => {
-      const firstPage = await getPayments({
-        page: 1,
-        size: 100,
-        status: 'confirmed',
-        date_from: dateFrom,
-        date_to: dateTo,
-        creator_campus_id: creatorCampusId,
-      })
-
-      const sumAmount = (items: Array<{ amount: number }>) =>
-        items.reduce((total, item) => total + Number(item.amount || 0), 0)
-
-      let totalAmount = sumAmount(firstPage.items || [])
-
-      if ((firstPage.pages || 0) > 1) {
-        const restPages = await Promise.all(
-          Array.from({ length: firstPage.pages - 1 }, (_, index) =>
-            getPayments({
-              page: index + 2,
-              size: 100,
-              status: 'confirmed',
-              date_from: dateFrom,
-              date_to: dateTo,
-              creator_campus_id: creatorCampusId,
-            })
-          )
-        )
-
-        totalAmount += restPages.reduce(
-          (summary, page) => summary + sumAmount(page.items || []),
-          0
-        )
-      }
-
-      return {
-        totalCount: firstPage.total ?? 0,
-        totalAmount,
-      } satisfies PaymentSummary
-    },
-    staleTime: 60 * 1000,
-  })
-
   const reportData = useMemo(
     () => rawData ? normalizeReportResponse(rawData) : undefined,
     [rawData]
@@ -222,8 +159,8 @@ export function useAdvisorConversionData({
       totalAdvisors: reportData?.total_advisors || 0,
       totalPromised,
       totalVisited,
-      totalPaymentCount: paymentSummaryFromVisitSchedule?.totalCount ?? reportData?.total_payment_count ?? 0,
-      totalPaymentAmount: paymentSummaryFromVisitSchedule?.totalAmount ?? reportData?.total_payment_amount ?? 0,
+      totalPaymentCount: reportData?.total_payment_count ?? 0,
+      totalPaymentAmount: reportData?.total_payment_amount ?? 0,
       totalVisitRate: totalVisits > 0
         ? Number(((totalVisited / totalVisits) * 100).toFixed(1))
         : 0,
@@ -231,17 +168,16 @@ export function useAdvisorConversionData({
         ? Number(((totalVisited / totalVisits) * 100).toFixed(1))
         : 0,
     }
-  }, [paymentSummaryFromVisitSchedule, reportData, totalPromisedFromVisitSchedule, totalVisitedFromVisitSchedule])
+  }, [reportData, totalPromisedFromVisitSchedule, totalVisitedFromVisitSchedule])
 
-  const isLoading = isReportLoading || isPromisedLoading || isVisitedLoading || isPaymentLoading
-  const isRefetching = isReportRefetching || isPromisedRefetching || isVisitedRefetching || isPaymentRefetching
+  const isLoading = isReportLoading || isPromisedLoading || isVisitedLoading
+  const isRefetching = isReportRefetching || isPromisedRefetching || isVisitedRefetching
 
   const refetch = async () => {
     await Promise.all([
       refetchReport(),
       refetchPromised(),
       refetchVisited(),
-      refetchPayment(),
     ])
   }
 

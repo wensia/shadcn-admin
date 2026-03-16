@@ -14,11 +14,21 @@ export interface ChannelStats {
 }
 
 /**
+ * 分配任务简要信息
+ */
+export interface TaskBriefItem {
+  id: string
+  name: string
+  lead_count: number
+}
+
+/**
  * 快捷外呼统计响应
  */
 export interface ContinuousCallStats {
   total_leads: number
   channels: ChannelStats[]
+  tasks: TaskBriefItem[]
   advisor_id: string
   advisor_name: string
 }
@@ -66,6 +76,7 @@ export interface ContinuousCallLeadsResponse {
  */
 export interface ContinuousCallLeadsParams {
   channel_id?: string
+  task_id?: string
   page?: number
   page_size?: number
 }
