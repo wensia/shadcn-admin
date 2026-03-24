@@ -315,6 +315,9 @@ export function ContinuousCallPage() {
   const [appointmentAt, setAppointmentAt] = useState<Date | undefined>(undefined)
   const [appointmentReason, setAppointmentReason] = useState<string>('')
 
+  // IME 组合输入状态跟踪，防止中文输入被打断
+  const isComposingRef = useRef(false)
+
   // 数据查询
   const { data: statsData, refetch: refetchStats } = useQuery({
     queryKey: ['continuous-call-stats', selectedTaskId],
@@ -838,7 +841,9 @@ export function ContinuousCallPage() {
                       <TextArea
                         placeholder="请输入诺到理由..."
                         value={appointmentReason}
-                        onChange={(value) => setAppointmentReason(value)}
+                        onChange={(value) => { if (!isComposingRef.current) setAppointmentReason(value) }}
+                        onCompositionStart={() => { isComposingRef.current = true }}
+                        onCompositionEnd={(e) => { isComposingRef.current = false; setAppointmentReason((e.target as HTMLTextAreaElement).value) }}
                         autosize={{ minRows: 1, maxRows: 4 }}
                       />
                     </div>
@@ -870,7 +875,9 @@ export function ContinuousCallPage() {
                     <TextArea
                       placeholder="输入跟进内容..."
                       value={followupContent}
-                      onChange={(value) => setFollowupContent(value)}
+                      onChange={(value) => { if (!isComposingRef.current) setFollowupContent(value) }}
+                      onCompositionStart={() => { isComposingRef.current = true }}
+                      onCompositionEnd={(e) => { isComposingRef.current = false; setFollowupContent((e.target as HTMLTextAreaElement).value) }}
                       maxCount={500}
                       autosize={{ minRows: 2, maxRows: 6 }}
                     />

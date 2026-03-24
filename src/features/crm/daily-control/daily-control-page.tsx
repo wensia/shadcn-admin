@@ -16,12 +16,13 @@ import {
   IconCalendar,
   IconHistogram,
   IconArrowUp,
+  IconLink,
 } from '@douyinfe/semi-icons'
-import { PromisedVisitTab } from './components/promised-visit-tab'
-import { ActualVisitTab } from './components/actual-visit-tab'
+import { VisitScheduleTab } from './components/visit-schedule-tab'
 import { PaymentTab } from './components/payment-tab'
 import { CalendarTab } from './components/calendar-tab'
 import { ReportTab } from './components/report-tab'
+import { SourceChannelTab } from './components/source-channel-tab'
 import { dailyControlQueryKeys, getVisitSchedules, getPayments } from './api'
 import { brandColors, type TabType } from './theme'
 import { apiClient } from '@/lib/api/client'
@@ -139,6 +140,7 @@ export function DailyControlPage() {
     { id: 'promised', icon: <IconUserGroup size="small" />, label: '诺到', count: promisedStats ?? null },
     { id: 'visited', icon: <IconCalendarClock size="small" />, label: '到访', count: visitedStats ?? null },
     { id: 'payment', icon: <IconCreditCard size="small" />, label: '缴费', count: paymentStats ?? null },
+    { id: 'source', icon: <IconLink size="small" />, label: '来源渠道', count: null },
     { id: 'calendar', icon: <IconCalendar size="small" />, label: '日历', count: null },
     { id: 'report', icon: <IconHistogram size="small" />, label: '报表', count: null },
   ]
@@ -273,19 +275,22 @@ export function DailyControlPage() {
             }}
           >
             {activeTab === 'promised' && (
-              <PromisedVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
+              <VisitScheduleTab mode="promised" dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
             )}
             {activeTab === 'visited' && (
-              <ActualVisitTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
+              <VisitScheduleTab mode="visited" dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
             )}
             {activeTab === 'payment' && (
               <PaymentTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
+            )}
+            {activeTab === 'source' && (
+              <SourceChannelTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
             )}
             {activeTab === 'calendar' && (
               <CalendarTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
             )}
             {activeTab === 'report' && (
-              <ReportTab dateFrom={dateRange.from} dateTo={dateRange.to} />
+              <ReportTab dateFrom={dateRange.from} dateTo={dateRange.to} creatorCampusId={creatorCampusId} />
             )}
           </div>
         </div>

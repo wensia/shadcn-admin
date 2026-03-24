@@ -5,11 +5,11 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BrainCircuit, Plus, Pencil, Trash2, Play, Star } from 'lucide-react'
+import { BrainCircuit, Plus, Pencil, Trash2, Play, Star, Copy, MoreHorizontal, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Button, Input, Modal, Form, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
+import { Button, Input, Modal, Form, Tag, Skeleton, Typography, Dropdown } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch } from '@douyinfe/semi-icons'
@@ -252,17 +252,55 @@ export function AIConfigContent() {
       {
         title: '操作',
         dataIndex: 'actions',
-        width: 150,
+        width: 60,
         render: (_: unknown, record: AIConfigItem) => {
           if (isSkeletonRow(record.id)) {
-            return <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+            return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
           }
           return (
-            <div className="flex items-center gap-1">
-              <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} title="编辑" />
-              <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} onClick={() => testMutation.mutate(record.id)} disabled={testMutation.isPending} title="测试" />
-              <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} onClick={() => handleDeleteClick(record)} title="删除" />
-            </div>
+            <Dropdown
+              trigger="click"
+              position="bottomRight"
+              clickToHide
+              render={
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => handleEdit(record)}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Pencil className="h-4 w-4" />
+                      编辑
+                    </span>
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => handleCopy(record)}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Copy className="h-4 w-4" />
+                      复制
+                    </span>
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => testMutation.mutate(record.id)} disabled={testMutation.isPending}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Play className="h-4 w-4" />
+                      测试连接
+                    </span>
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item type="danger" onClick={() => handleDeleteClick(record)}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Trash2 className="h-4 w-4" />
+                      删除
+                    </span>
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              }
+            >
+              <span data-stop-row-click style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<MoreHorizontal className="h-4 w-4" />}
+                  size="small"
+                />
+              </span>
+            </Dropdown>
           )
         },
       },
@@ -315,6 +353,26 @@ export function AIConfigContent() {
   const handleDeleteClick = (item: AIConfigItem) => {
     setDeletingItem(item)
     setDeleteDialogOpen(true)
+  }
+
+  const handleCopy = (item: AIConfigItem) => {
+    setEditingItem(null)
+    setSelectedProvider(item.provider)
+    setTestStatus({ tested: false, success: false, message: '' })
+    setDialogOpen(true)
+    setTimeout(() => {
+      formRef.current?.setValues({
+        provider: item.provider,
+        name: `${item.name} (副本)`,
+        api_key: '',
+        base_url: item.base_url,
+        default_model: item.default_model || '',
+        endpoint_id: item.endpoint_id || '',
+        notes: item.notes || '',
+        is_default: false,
+        is_active: true,
+      })
+    }, 0)
   }
 
   const handleDeleteConfirm = () => {

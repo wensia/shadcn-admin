@@ -21,7 +21,9 @@ interface DataTableLayoutProps {
   onRefresh?: () => void
   /** 刷新中状态 */
   isRefreshing?: boolean
-  /** 工具栏区域 */
+  /** 工具栏上方的额外内容（如统计卡片），独立于 toolbar+刷新按钮 行 */
+  topContent?: ReactNode
+  /** 工具栏区域（与刷新按钮同行显示） */
   toolbar?: ReactNode
   /** 筛选标签 */
   filterTags?: FilterTag[]
@@ -43,6 +45,7 @@ export function DataTableLayout({
   headerActions,
   onRefresh,
   isRefreshing,
+  topContent,
   toolbar,
   filterTags,
   onClearAllFilters,
@@ -90,6 +93,9 @@ export function DataTableLayout({
             </div>
           )}
         </div>
+
+        {/* 工具栏上方额外内容（统计卡片等） */}
+        {topContent}
 
         {/* 工具栏 + 刷新按钮 */}
         {(toolbar || onRefresh) && (

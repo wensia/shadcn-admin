@@ -1,8 +1,10 @@
 /**
  * 缴费 Tab - Semi Design 版
+ * 使用 TanStack Query 统一数据获取风格
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button, Card, Skeleton, Dropdown, Tag, Toast, Modal } from '@douyinfe/semi-ui-19'
 import { IconPlus, IconRefresh, IconMore, IconEdit, IconTickCircle, IconDelete, IconUpload } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
@@ -13,35 +15,26 @@ import {
   deletePayment,
   batchImportPayments,
   batchCancelImportPayments,
+  dailyControlQueryKeys,
   type PaymentItem,
+  type PaymentQueryParams,
   paymentStatusLabels,
   paymentMethodLabels,
   paymentTypeLabels,
 } from '../api'
 import { PaymentDialog } from '@/features/crm/lead-conversion/components/payment-dialog'
+import type { Payment as _Payment } from '@/features/crm/lead-conversion/types'
 import { CopyableCell } from './copyable-cell'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow } from '@/lib/table-utils'
+import { formatDateWithWeekday, paymentStatusColorMap } from '../utils'
 
-// 星期映射
-const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-
-function formatDateWithWeekday(dateStr: string | undefined): string {
-  if (!dateStr) return '-'
-  try {
-    const datePart = dateStr.split('T')[0]
-    const date = new Date(datePart)
-    const weekday = weekDays[date.getDay()]
-    return `${datePart} ${weekday}`
-  } catch {
-    return dateStr
-  }
-}
-
-// 状态颜色
-const paymentStatusColor: Record<string, 'orange' | 'green' | 'red' | 'grey'> = {
-  pending: 'orange', confirmed: 'green', rejected: 'red', refunded: 'grey',
-}
+type PaymentAction =
+  | { type: 'confirm'; id: string }
+  | { type: 'delete'; item: PaymentItem }
+  | { type: 'batchImport'; recordIds: string[] }
+  | { type: 'batchCancelImport'; recordIds: string[] }
 
 interface PaymentTabProps {
   dateFrom?: string
@@ -50,80 +43,90 @@ interface PaymentTabProps {
 }
 
 export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProps) {
-  const [data, setData] = useState<PaymentItem[]>([])
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editData, setEditData] = useState<PaymentItem | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
-  const [isImporting, setIsImporting] = useState(false)
+  const queryClient = useQueryClient()
 
   const user = useAuthStore((state) => state.user)
   const isSuperUser = user?.is_superuser ?? false
+
+  const queryParams = useMemo<PaymentQueryParams>(() => {
+    const params: PaymentQueryParams = { page, size: pageSize }
+    if (dateFrom) params.date_from = dateFrom
+    if (dateTo) params.date_to = dateTo
+    if (creatorCampusId) params.creator_campus_id = creatorCampusId
+    return params
+  }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
+
+  const listQuery = useQuery({
+    queryKey: dailyControlQueryKeys.paymentList(queryParams),
+    queryFn: () => getPayments(queryParams),
+  })
+
+  const items = listQuery.data?.items
+  const data = useMemo(() => items ?? [], [items])
+  const total = listQuery.data?.total ?? 0
+  const isLoading = listQuery.isLoading || listQuery.isFetching
 
   const canBatchOperate = useMemo(() => {
     if (isSuperUser) return true
     return data.some(item => item.can_approve)
   }, [isSuperUser, data])
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true)
-    setSelectedRowKeys([])
-    try {
-      const params: Record<string, unknown> = { page, size: pageSize }
-      if (dateFrom) params.date_from = dateFrom
-      if (dateTo) params.date_to = dateTo
-      if (creatorCampusId) params.creator_campus_id = creatorCampusId
-      const result = await getPayments(params)
-      if (result) {
-        setData(result.items || [])
-        setTotal(result.total || 0)
-      }
-    } catch {
-      Toast.error('获取缴费列表失败')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [page, pageSize, dateFrom, dateTo, creatorCampusId])
-
-  useEffect(() => { fetchData() }, [fetchData])
+  const visibleSelectedRowKeys = useMemo(() => {
+    const visibleIds = new Set(data.map((item) => item.id))
+    return selectedRowKeys.filter((id) => visibleIds.has(id))
+  }, [data, selectedRowKeys])
 
   const selectedNotImportedIds = useMemo(() => {
-    return data.filter(item => selectedRowKeys.includes(item.id) && !item.is_counted).map(item => item.id)
-  }, [selectedRowKeys, data])
+    return data.filter(item => visibleSelectedRowKeys.includes(item.id) && !item.is_counted).map(item => item.id)
+  }, [visibleSelectedRowKeys, data])
 
   const selectedImportedIds = useMemo(() => {
-    return data.filter(item => selectedRowKeys.includes(item.id) && item.is_counted).map(item => item.id)
-  }, [selectedRowKeys, data])
+    return data.filter(item => visibleSelectedRowKeys.includes(item.id) && item.is_counted).map(item => item.id)
+  }, [visibleSelectedRowKeys, data])
 
-  const handleBatchImport = async () => {
-    if (selectedNotImportedIds.length === 0) { Toast.warning('请选择未导入的记录'); return }
-    setIsImporting(true)
-    try {
-      const result = await batchImportPayments(selectedNotImportedIds)
-      if (result.success_count > 0) Toast.success(`成功导入 ${result.success_count} 条记录`)
-      if (result.failed_records.length > 0) Toast.warning(`${result.failed_records.length} 条记录导入失败`)
-      fetchData()
-    } catch { Toast.error('批量导入失败') } finally { setIsImporting(false) }
-  }
-
-  const handleBatchCancelImport = async () => {
-    if (selectedImportedIds.length === 0) { Toast.warning('请选择已导入的记录'); return }
-    setIsImporting(true)
-    try {
-      const result = await batchCancelImportPayments(selectedImportedIds)
-      if (result.success_count > 0) Toast.success(`成功取消导入 ${result.success_count} 条记录`)
-      if (result.failed_records.length > 0) Toast.warning(`${result.failed_records.length} 条记录取消失败`)
-      fetchData()
-    } catch { Toast.error('批量取消导入失败') } finally { setIsImporting(false) }
-  }
-
-  const handleConfirm = async (item: PaymentItem) => {
-    try { await updatePaymentStatus(item.id, 'confirmed'); Toast.success('已确认缴费'); fetchData() }
-    catch { Toast.error('操作失败') }
-  }
+  const actionMutation = useMutation({
+    mutationFn: async (action: PaymentAction) => {
+      switch (action.type) {
+        case 'confirm':
+          await updatePaymentStatus(action.id, 'confirmed')
+          return { successMessage: '已确认缴费' }
+        case 'delete':
+          if (action.item.is_counted) {
+            throw new Error('已导入日控表的记录不可删除，请先取消导入')
+          }
+          await deletePayment(action.item.id)
+          return { successMessage: '删除成功' }
+        case 'batchImport': {
+          const result = await batchImportPayments(action.recordIds)
+          return {
+            successMessage: `成功导入 ${result?.success_count ?? 0} 条记录`,
+            warningMessage: (result?.failed_records?.length ?? 0) > 0 ? `${result!.failed_records.length} 条记录导入失败` : undefined,
+          }
+        }
+        case 'batchCancelImport': {
+          const result = await batchCancelImportPayments(action.recordIds)
+          return {
+            successMessage: `成功取消导入 ${result?.success_count ?? 0} 条记录`,
+            warningMessage: (result?.failed_records?.length ?? 0) > 0 ? `${result!.failed_records.length} 条记录取消失败` : undefined,
+          }
+        }
+      }
+    },
+    onSuccess: async ({ successMessage, warningMessage }) => {
+      Toast.success(successMessage)
+      if (warningMessage) Toast.warning(warningMessage)
+      setSelectedRowKeys([])
+      await queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all })
+    },
+    onError: (error: unknown) => {
+      showApiErrorToast(error, '操作失败')
+    },
+  })
 
   const handleEdit = (item: PaymentItem) => { setEditData(item); setDialogOpen(true) }
   const handleCreate = () => { setEditData(null); setDialogOpen(true) }
@@ -135,10 +138,7 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
       content: `确定要删除 ${item.child_name || '该学生'} 的缴费记录吗？`,
       okText: '删除',
       okButtonProps: { type: 'danger' },
-      onOk: async () => {
-        try { await deletePayment(item.id); Toast.success('删除成功'); fetchData() }
-        catch { Toast.error('删除失败') }
-      },
+      onOk: () => actionMutation.mutate({ type: 'delete', item }),
     })
   }
 
@@ -191,10 +191,19 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
       },
     },
     {
+      title: '来源渠道', dataIndex: 'source_channel_name', width: 100,
+      render: (_text, record) => {
+        if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 70 }} />
+        return record.source_channel_name
+          ? <Tag size="small" color="cyan">{record.source_channel_name}</Tag>
+          : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
+      },
+    },
+    {
       title: '状态', dataIndex: 'status', width: 80,
       render: (_text, record) => {
         if (!record || isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 50 }} />
-        return <Tag size="small" color={paymentStatusColor[record.status] || 'grey'}>{record.status_display || paymentStatusLabels[record.status]}</Tag>
+        return <Tag size="small" color={paymentStatusColorMap[record.status] || 'grey'}>{record.status_display || paymentStatusLabels[record.status]}</Tag>
       },
     },
     {
@@ -239,7 +248,12 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
                 <Dropdown.Item icon={<IconEdit />} onClick={() => handleEdit(record)}>编辑</Dropdown.Item>
                 <Dropdown.Divider />
                 {record.status === 'pending' && (
-                  <Dropdown.Item icon={<IconTickCircle style={{ color: 'var(--semi-color-success)' }} />} onClick={() => handleConfirm(record)}>确认缴费</Dropdown.Item>
+                  <Dropdown.Item
+                    icon={<IconTickCircle style={{ color: 'var(--semi-color-success)' }} />}
+                    onClick={() => actionMutation.mutate({ type: 'confirm', id: record.id })}
+                  >
+                    确认缴费
+                  </Dropdown.Item>
                 )}
                 <Dropdown.Divider />
                 <Dropdown.Item type="danger" icon={<IconDelete />} onClick={() => handleDelete(record)}>删除</Dropdown.Item>
@@ -263,23 +277,33 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 16, fontWeight: 500 }}>缴费列表</span>
-            {selectedRowKeys.length > 0 && (
-              <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>已选择 {selectedRowKeys.length} 条</span>
+            {visibleSelectedRowKeys.length > 0 && (
+              <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>已选择 {visibleSelectedRowKeys.length} 条</span>
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {canBatchOperate && selectedNotImportedIds.length > 0 && (
-              <Button icon={<IconUpload />} theme="solid" style={{ background: 'var(--semi-color-success)' }} onClick={handleBatchImport} disabled={isImporting}>
+              <Button
+                icon={<IconUpload />}
+                theme="solid"
+                style={{ background: 'var(--semi-color-success)' }}
+                onClick={() => actionMutation.mutate({ type: 'batchImport', recordIds: selectedNotImportedIds })}
+                disabled={actionMutation.isPending}
+              >
                 导入日控表 ({selectedNotImportedIds.length})
               </Button>
             )}
             {canBatchOperate && selectedImportedIds.length > 0 && (
-              <Button icon={<IconDelete />} onClick={handleBatchCancelImport} disabled={isImporting}>
+              <Button
+                icon={<IconDelete />}
+                onClick={() => actionMutation.mutate({ type: 'batchCancelImport', recordIds: selectedImportedIds })}
+                disabled={actionMutation.isPending}
+              >
                 取消导入 ({selectedImportedIds.length})
               </Button>
             )}
             <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>新建缴费</Button>
-            <Button icon={<IconRefresh spin={isLoading} />} onClick={fetchData} />
+            <Button icon={<IconRefresh spin={isLoading} />} onClick={() => void listQuery.refetch()} />
           </div>
         </div>
       }
@@ -291,24 +315,34 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
         page={page}
         pageSize={pageSize}
         isLoading={isLoading}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        onPageChange={(nextPage) => {
+          setSelectedRowKeys([])
+          setPage(nextPage)
+        }}
+        onPageSizeChange={(size) => {
+          setSelectedRowKeys([])
+          setPageSize(size)
+          setPage(1)
+        }}
         rowSelection={{
-          selectedRowKeys,
+          selectedRowKeys: visibleSelectedRowKeys,
           onChange: (keys) => setSelectedRowKeys(keys as string[]),
         }}
         rowClassName={(record) => record?.is_counted ? 'semi-row-imported' : ''}
         emptyText="暂无缴费记录"
       />
       <PaymentDialog
-        open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={fetchData}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={() => { void queryClient.invalidateQueries({ queryKey: dailyControlQueryKeys.all }) }}
         payment={editData ? {
           ...editData,
+          lead_id: editData.lead_id ?? '',
           payment_method_display: editData.payment_method_display || '',
           payment_type_display: editData.payment_type_display || '',
           status_display: editData.status_display || '',
           updated_at: editData.updated_at || editData.created_at,
-        } : null}
+        } as _Payment : null}
       />
     </Card>
   )

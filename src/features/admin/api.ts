@@ -88,7 +88,6 @@ import type {
   EmployeeApiKeyInfo,
   ApiKeyCreate,
   ApiKeyCreateResponse,
-  ApiKeyScopesUpdate,
   // ASR 配置相关
   ASRConfigItem,
   ASRConfigListResponse,
@@ -101,6 +100,8 @@ import type {
   AIPromptUpdate,
   // AI 资料库文档相关
   AIDocumentItem,
+  // AI 调用记录
+  AIUsageLogItem,
   AIDocumentCreate,
   AIDocumentUpdate,
   // 页面访问权限配置
@@ -1210,14 +1211,6 @@ export const apiKeysApi = {
     }
   },
 
-  /** 更新员工的 API 密钥权限范围 */
-  async updateScopes(employeeId: string, data: ApiKeyScopesUpdate): Promise<EmployeeApiKeyInfo> {
-    const response = await apiClient.put<ApiResponse<EmployeeApiKeyInfo>>(`/api-keys/employees/${employeeId}/scopes`, data)
-    if (!response.success || !response.data) {
-      throw new Error(response.message || '更新失败')
-    }
-    return response.data
-  },
 }
 
 // ============================================================================
@@ -1455,6 +1448,21 @@ export const aiConfigApi = {
 
   async deleteDocument(id: string): Promise<void> {
     await apiClient.delete(`/external/ai-config/documents/${id}`)
+  },
+
+  // ============ 调用记录 ============
+
+  async listUsageLogs(params?: {
+    provider?: string
+    model?: string
+    scene_key?: string
+    log_status?: string
+    start_time?: string
+    end_time?: string
+    skip?: number
+    limit?: number
+  }): Promise<{ items: AIUsageLogItem[]; total: number }> {
+    return rawResult(await apiClient.get('/external/ai-config/usage-logs', { params })) || { items: [], total: 0 }
   },
 }
 

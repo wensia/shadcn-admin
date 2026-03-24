@@ -93,5 +93,10 @@ export const orderApi = {
   /** 获取订单审批历史 */
   getApprovalLogs(orderId: string): Promise<ApiResponse<ApprovalLog[]>> {
     return apiClient.get(`/orders/${orderId}/approval-logs`)
+  },
+
+  /** 获取订单模块配置 */
+  getOrderConfig(): Promise<ApiResponse<{ finance_approval_enabled: boolean }>> {
+    return apiClient.get('/orders/config')
   }
 }

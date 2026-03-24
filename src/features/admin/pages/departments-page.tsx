@@ -1,14 +1,14 @@
 /**
- * 部门管理页面
+ * 部门管理页面（含权限配置）
  */
 
 import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Network, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Network, Plus, Pencil, Trash2, Shield } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-import { Button, Input, Modal, Form, Typography, Select } from '@douyinfe/semi-ui-19'
+import { Button, Input, Modal, Form, Typography, Select, Tag, Checkbox, Space } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch } from '@douyinfe/semi-icons'
@@ -20,12 +20,14 @@ import { adminApi } from '../api'
 import type { DepartmentItem, DepartmentCreate, DepartmentUpdate } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { formatTime } from '@/lib/utils/time'
+import { ALL_PERMISSIONS, PERMISSION_LABELS, PERMISSION_PRESETS } from '@/hooks/use-permission'
 
 const { Text } = Typography
 
 interface DepartmentFormValues extends DepartmentCreate {
   sort_order?: number
   is_active?: boolean
+  permissions?: string[]
 }
 
 // 状态筛选选项
@@ -123,25 +125,24 @@ export function DepartmentsPage() {
       },
     },
     {
-      title: '描述',
-      dataIndex: 'description',
+      title: '功能权限',
+      dataIndex: 'permissions',
       width: 300,
-      render: (text: string, record: DepartmentItem) => {
+      render: (_: unknown, record: DepartmentItem) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={160} />
+        const perms = (record as DepartmentItem & { permissions?: string[] }).permissions
+        if (!perms || perms.length === 0) {
+          return <Tag color="green" size="small">全部开放</Tag>
+        }
         return (
-          <Text type="tertiary" ellipsis={{ showTooltip: true }} style={{ maxWidth: 300 }}>
-            {text || '-'}
-          </Text>
+          <div className="flex flex-wrap gap-1">
+            {perms.map((code) => (
+              <Tag key={code} size="small" color="blue">
+                {PERMISSION_LABELS[code] || code}
+              </Tag>
+            ))}
+          </div>
         )
-      },
-    },
-    {
-      title: '排序',
-      dataIndex: 'sort_order',
-      width: 80,
-      render: (text: number, record: DepartmentItem) => {
-        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={40} />
-        return <span className="text-center block">{text}</span>
       },
     },
     {
@@ -198,6 +199,7 @@ export function DepartmentsPage() {
         description: item.description || '',
         sort_order: item.sort_order,
         is_active: item.is_active,
+        permissions: (item as DepartmentItem & { permissions?: string[] }).permissions || [],
       })
     }, 0)
   }
@@ -224,6 +226,13 @@ export function DepartmentsPage() {
   const handleSearch = () => {
     setPage(1)
     refetch()
+  }
+
+  const handleApplyPreset = (presetName: string) => {
+    const presetPerms = PERMISSION_PRESETS[presetName]
+    if (presetPerms) {
+      formRef.current?.setValue('permissions', [...presetPerms])
+    }
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -277,6 +286,7 @@ export function DepartmentsPage() {
         title={editingItem ? '编辑部门' : '新建部门'}
         visible={dialogOpen}
         onCancel={() => setDialogOpen(false)}
+        width={560}
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <Button onClick={() => setDialogOpen(false)}>取消</Button>
@@ -291,8 +301,62 @@ export function DepartmentsPage() {
         >
           <Form.Input field="name" label="部门名称" placeholder="请输入部门名称" rules={[{ required: true, message: '请输入部门名称' }, { max: 50, message: '名称最多50个字符' }]} />
           <Form.TextArea field="description" label="描述" placeholder="请输入描述信息" rules={[{ max: 200, message: '描述最多200个字符' }]} />
-          <Form.InputNumber field="sort_order" label="排序值" min={0} style={{ width: '100%' }} initValue={0} />
-          <Form.Switch field="is_active" label="启用状态" initValue={true} />
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Form.InputNumber field="sort_order" label="排序值" min={0} style={{ width: '100%' }} initValue={0} />
+            </div>
+            <div className="flex-1">
+              <Form.Switch field="is_active" label="启用状态" initValue={true} />
+            </div>
+          </div>
+
+          {/* 功能权限配置 */}
+          <div style={{ marginTop: 12 }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Shield className="h-4 w-4 text-blue-500" />
+                <Text strong style={{ fontSize: 14 }}>功能权限</Text>
+              </div>
+              <Text type="tertiary" size="small">不勾选 = 全部开放</Text>
+            </div>
+
+            {/* 预设模板按钮 */}
+            <div className="mb-3">
+              <Space>
+                {Object.keys(PERMISSION_PRESETS).map((name) => (
+                  <Button
+                    key={name}
+                    size="small"
+                    theme="borderless"
+                    onClick={() => handleApplyPreset(name)}
+                  >
+                    {name}模板
+                  </Button>
+                ))}
+                <Button
+                  size="small"
+                  theme="borderless"
+                  type="tertiary"
+                  onClick={() => formRef.current?.setValue('permissions', [])}
+                >
+                  清空
+                </Button>
+              </Space>
+            </div>
+
+            <Form.CheckboxGroup
+              field="permissions"
+              initValue={[]}
+              direction="horizontal"
+              style={{ flexWrap: 'wrap', gap: 8 }}
+            >
+              {ALL_PERMISSIONS.map((code) => (
+                <Checkbox key={code} value={code}>
+                  {PERMISSION_LABELS[code] || code}
+                </Checkbox>
+              ))}
+            </Form.CheckboxGroup>
+          </div>
         </Form>
       </Modal>
 

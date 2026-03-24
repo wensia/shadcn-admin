@@ -95,6 +95,7 @@ export interface DepartmentItem {
   description?: string
   sort_order: number
   is_active: boolean
+  permissions: string[]
   created_at?: string
   updated_at?: string
 }
@@ -108,6 +109,8 @@ export interface CampusDepartmentItem {
   department_name?: string
   sort_order?: number
   is_active: boolean
+  dingtalk_robot_id?: string | null
+  dingtalk_robot_name?: string | null
   created_at?: string
   updated_at?: string
   /** 负责人列表 */
@@ -476,6 +479,7 @@ export interface DepartmentCreate {
   description?: string
   sort_order?: number
   is_active?: boolean
+  permissions?: string[]
 }
 
 /** 更新部门 */
@@ -484,6 +488,7 @@ export interface DepartmentUpdate {
   description?: string
   sort_order?: number
   is_active?: boolean
+  permissions?: string[]
 }
 
 /** 创建职位 */
@@ -622,6 +627,7 @@ export interface CampusDepartmentUpdate {
   manager_id?: string | null
   deputy_manager_id?: string | null
   is_active?: boolean
+  dingtalk_robot_id?: string | null
 }
 
 // ============================================================================
@@ -1114,7 +1120,6 @@ export interface YunkeLoginStatusResult {
 export interface ApiKeyInfo {
   prefix: string
   name: string
-  scopes: Record<string, string[]>
   created_at: string
   expires_at?: string
   last_used_at?: string
@@ -1134,7 +1139,6 @@ export interface EmployeeApiKeyInfo {
 /** 创建 API 密钥请求 */
 export interface ApiKeyCreate {
   name: string
-  scopes?: Record<string, string[]>
   expires_in_days?: number
 }
 
@@ -1146,35 +1150,6 @@ export interface ApiKeyCreateResponse {
   api_key: string
   info: ApiKeyInfo
   warning: string
-}
-
-/** 更新权限范围请求 */
-export interface ApiKeyScopesUpdate {
-  scopes: Record<string, string[]>
-}
-
-/** 默认权限范围定义 */
-export const DEFAULT_API_SCOPES = {
-  leads: {
-    description: '线索管理',
-    permissions: ['read', 'create', 'update', 'delete'],
-  },
-  customers: {
-    description: '客户管理',
-    permissions: ['read', 'create', 'update'],
-  },
-  statistics: {
-    description: '统计数据',
-    permissions: ['read'],
-  },
-  followups: {
-    description: '跟进记录',
-    permissions: ['read', 'create', 'update'],
-  },
-  exports: {
-    description: '数据导出',
-    permissions: ['read'],
-  },
 }
 
 // ============================================================================
@@ -1507,6 +1482,35 @@ export interface AIDocumentUpdate {
   description?: string
   category?: string
   is_active?: boolean
+}
+
+// ========================================================================
+// AI 调用记录
+// ========================================================================
+
+/** AI 调用记录 */
+export interface AIUsageLogItem {
+  id: string
+  provider: string
+  model: string
+  scene_key: string | null
+  prompt_tokens: number | null
+  completion_tokens: number | null
+  total_tokens: number | null
+  duration_ms: number | null
+  status: 'success' | 'error'
+  error_message: string | null
+  employee_name: string | null
+  request_summary: string | null
+  created_at: string
+}
+
+/** AI 场景显示名映射 */
+export const AI_SCENE_LABELS: Record<string, string> = {
+  ai_chat: 'AI 对话',
+  call_analysis: '通话分析',
+  disc_analysis: 'DISC 分析',
+  advisor_training_review: '陪练评审',
 }
 
 // ========================================================================

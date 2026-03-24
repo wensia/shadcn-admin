@@ -8,6 +8,7 @@ import { IconPlus } from '@douyinfe/semi-icons'
 import { Button, Toast } from '@douyinfe/semi-ui-19'
 import { apiClient } from '@/lib/api/client'
 import { useDocumentTitle } from '@/hooks/use-document-title'
+import { usePermission, PERMISSIONS } from '@/hooks/use-permission'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { FilterTag } from '@/components/semi/filter-tags-bar'
 import { CreateAssignmentTaskDialog } from '@/features/crm/lead-assignment-tasks'
@@ -40,6 +41,8 @@ export function LeadsPage() {
   useDocumentTitle('线索管理')
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { hasPermission } = usePermission()
+  const canCreateLead = hasPermission(PERMISSIONS.LEADS_CREATE)
 
   // URL 搜索参数
   const searchParams = useSearch({ from: '/_authenticated/crm/leads/' })
@@ -479,9 +482,11 @@ export function LeadsPage() {
         title='线索管理'
         total={total}
         headerActions={
-          <Button icon={<IconPlus />} theme='solid' onClick={handleCreate}>
-            新建线索
-          </Button>
+          canCreateLead ? (
+            <Button icon={<IconPlus />} theme='solid' onClick={handleCreate}>
+              新建线索
+            </Button>
+          ) : undefined
         }
         onRefresh={handleRefresh}
         isRefreshing={isLoading}

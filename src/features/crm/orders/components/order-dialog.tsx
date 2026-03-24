@@ -15,7 +15,6 @@ import {
   Toast,
   Typography,
   Form,
-  Spin,
 } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import {
@@ -25,6 +24,7 @@ import {
   IconTick,
   IconSearch,
   IconClose,
+  IconLoading,
 } from '@douyinfe/semi-icons'
 import { BookOpen } from 'lucide-react'
 import { orderApi } from '../api'
@@ -599,7 +599,7 @@ export function OrderDialog({
                     placeholder="输入手机号搜索学员..."
                     value={searchPhone}
                     onChange={(val) => setSearchPhone(val)}
-                    suffix={isSearching ? <Spin size="small" /> : undefined}
+                    suffix={isSearching ? <IconLoading spin /> : undefined}
                   />
                   {searchResults && searchResults.length > 0 && (
                     <div style={{

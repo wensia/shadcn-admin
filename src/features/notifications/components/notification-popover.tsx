@@ -1,23 +1,41 @@
 /**
  * 通知弹出层组件
+ * 包含三个标签页：全部、未读、待办
  */
 
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Button, Divider } from '@douyinfe/semi-ui-19'
+import { Button, Divider, Tabs, TabPane, Empty } from '@douyinfe/semi-ui-19'
 import { CheckCheck, Loader2 } from 'lucide-react'
 import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks'
 import { NotificationItem } from './notification-item'
-import type { Notification } from '../types'
+import type { Notification, NotificationCategory } from '../types'
 
 interface NotificationPopoverProps {
   onClose?: () => void
 }
 
+type TabKey = 'all' | 'unread' | 'todo'
+
+// 标签页与查询参数的映射
+function getQueryParams(tab: TabKey) {
+  switch (tab) {
+    case 'unread':
+      return { page: 1, size: 10, is_read: false }
+    case 'todo':
+      return { page: 1, size: 10, category: 'todo' as NotificationCategory }
+    default:
+      return { page: 1, size: 10 }
+  }
+}
+
 export function NotificationPopover({ onClose }: NotificationPopoverProps) {
   const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<TabKey>('all')
 
-  // 获取最近的通知（只显示前10条）
-  const { data, isLoading } = useNotifications({ page: 1, size: 10 })
+  // 根据当前标签页查询
+  const params = getQueryParams(activeTab)
+  const { data, isLoading } = useNotifications(params)
   const markAsRead = useMarkAsRead()
   const markAllAsRead = useMarkAllAsRead()
 
@@ -25,20 +43,21 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
   const unreadCount = data?.unread_count ?? 0
 
   // 处理通知点击
-  const handleNotificationClick = async (notification: Notification) => {
-    // 标记为已读
+  const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
       markAsRead.mutate(notification.id)
     }
 
-    // 根据实体类型跳转
-    if (notification.entity_type && notification.entity_id) {
+    if (notification.entity_type) {
       switch (notification.entity_type) {
         case 'lead':
-          navigate(`/crm/leads/${notification.entity_id}`)
+          navigate({ to: '/crm/leads' })
           break
         case 'order':
-          navigate('/crm/performance-events')
+          navigate({ to: '/crm/performance-events' })
+          break
+        case 'task':
+          navigate({ to: '/crm/leads/assignment-tasks' })
           break
         default:
           break
@@ -53,21 +72,59 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
     markAllAsRead.mutate()
   }
 
-  // 查看全部
+  // 查看全部 - 切换到未读标签
   const handleViewAll = () => {
-    navigate('/notifications')
-    onClose?.()
+    setActiveTab('all')
+  }
+
+  // 通知列表内容
+  const renderList = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--semi-color-text-2)' }} />
+        </div>
+      )
+    }
+
+    if (notifications.length === 0) {
+      return (
+        <Empty
+          title={activeTab === 'todo' ? '暂无待办' : activeTab === 'unread' ? '全部已读' : '暂无通知'}
+          description=""
+          style={{ padding: '32px 0' }}
+        />
+      )
+    }
+
+    return (
+      <div className="divide-y">
+        {notifications.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            onClick={handleNotificationClick}
+          />
+        ))}
+      </div>
+    )
   }
 
   return (
-    <div className="w-[360px]">
+    <div className="w-[380px]">
       {/* 标题栏 */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
-          <h4 className="font-semibold">通知</h4>
+          <h4 className="font-semibold text-base">通知中心</h4>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 text-xs font-medium bg-primary text-primary-foreground rounded-full">
-              {unreadCount}
+            <span
+              className="px-1.5 py-0.5 text-xs font-medium rounded-full"
+              style={{
+                backgroundColor: 'var(--semi-color-danger)',
+                color: '#fff',
+              }}
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </div>
@@ -89,29 +146,22 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
         )}
       </div>
 
-      <Divider style={{ margin: 0 }} />
+      {/* 标签页 */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as TabKey)}
+        size="small"
+        style={{ marginTop: -4 }}
+        tabBarStyle={{ paddingLeft: 16, paddingRight: 16 }}
+      >
+        <TabPane tab="全部" itemKey="all" />
+        <TabPane tab="未读" itemKey="unread" />
+        <TabPane tab="待办" itemKey="todo" />
+      </Tabs>
 
       {/* 通知列表 */}
-      <div className="h-[400px] overflow-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--semi-color-text-2)' }} />
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32" style={{ color: 'var(--semi-color-text-2)' }}>
-            <p className="text-sm">暂无通知</p>
-          </div>
-        ) : (
-          <div className="divide-y">
-            {notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onClick={handleNotificationClick}
-              />
-            ))}
-          </div>
-        )}
+      <div className="max-h-[360px] overflow-auto">
+        {renderList()}
       </div>
 
       {/* 底部操作 */}

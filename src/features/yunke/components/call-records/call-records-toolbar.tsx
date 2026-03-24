@@ -242,9 +242,13 @@ export function CallRecordsToolbar({
         onChange={(dates) => {
           if (Array.isArray(dates) && dates.length === 2) {
             const [start, end] = dates as [Date | undefined, Date | undefined]
-            onFilterChange('start_date', start ? start.toISOString().split('T')[0] : undefined)
-            onFilterChange('end_date', end ? end.toISOString().split('T')[0] : undefined)
-          } else {
+            if (start && end) {
+              const fmt = (d: Date) =>
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+              onFilterChange('start_date', fmt(start))
+              onFilterChange('end_date', fmt(end))
+            }
+          } else if (!dates) {
             onFilterChange('start_date', undefined)
             onFilterChange('end_date', undefined)
           }

@@ -14,8 +14,8 @@ import { Form, Button, Modal, Input, Select, Typography, Tag, Tooltip } from '@d
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch } from '@douyinfe/semi-icons'
-import { adminApi } from '../api'
-import type { CampusDepartmentItem, CampusDepartmentCreate, ManagerType } from '../types'
+import { adminApi, dingtalkRobotsApi } from '../api'
+import type { CampusDepartmentItem, CampusDepartmentCreate, CampusDepartmentUpdate, ManagerType } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { ManageManagersDialog } from '../components/manage-managers-dialog'
 import { ViewDepartmentEmployeesDialog } from '../components/view-department-employees-dialog'
@@ -88,8 +88,15 @@ export function CampusDepartmentsPage() {
     },
   })
 
+  // 获取钉钉机器人列表
+  const { data: robotsData } = useQuery({
+    queryKey: ['dingtalk-robots-active'],
+    queryFn: () => dingtalkRobotsApi.getActive(),
+  })
+
   const campuses = useMemo(() => campusesData?.items ?? [], [campusesData?.items])
   const departments = useMemo(() => departmentsData?.items ?? [], [departmentsData?.items])
+  const robots = useMemo(() => robotsData ?? [], [robotsData])
   const items = useMemo(() => data?.items ?? [], [data?.items])
 
   // 创建校区部门配置
@@ -116,6 +123,19 @@ export function CampusDepartmentsPage() {
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '删除失败')
+    },
+  })
+
+  // 更新校区部门配置（钉钉机器人）
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CampusDepartmentUpdate }) =>
+      adminApi.updateCampusDepartment(id, data),
+    onSuccess: () => {
+      toast.success('更新成功')
+      refetch()
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '更新失败')
     },
   })
 
@@ -202,6 +222,31 @@ export function CampusDepartmentsPage() {
       },
     },
     {
+      title: '钉钉机器人',
+      dataIndex: 'dingtalk_robot_id',
+      width: 200,
+      render: (_, record) => {
+        if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={140} />
+        return (
+          <Select
+            size="small"
+            placeholder="选择机器人"
+            optionList={robotOptions}
+            value={record!.dingtalk_robot_id || ''}
+            onChange={(v) => {
+              const robotId = v === '' ? null : (v as string)
+              updateMutation.mutate({
+                id: record!.id,
+                data: { dingtalk_robot_id: robotId },
+              })
+            }}
+            style={{ width: '100%' }}
+            clickToHide
+          />
+        )
+      },
+    },
+    {
       title: '排序',
       dataIndex: 'sort_order',
       width: 80,
@@ -236,20 +281,24 @@ export function CampusDepartmentsPage() {
         if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={80} />
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <Button
-              theme="borderless"
-              type="tertiary"
-              icon={<Eye className="h-4 w-4" />}
-              size="small"
-              onClick={() => handleViewEmployees(record!)}
-            />
-            <Button
-              theme="borderless"
-              type="tertiary"
-              icon={<Users className="h-4 w-4" />}
-              size="small"
-              onClick={() => handleManageManagers(record!)}
-            />
+            <Tooltip content="查看员工">
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<Eye className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleViewEmployees(record!)}
+              />
+            </Tooltip>
+            <Tooltip content="管理负责人">
+              <Button
+                theme="borderless"
+                type="tertiary"
+                icon={<Users className="h-4 w-4" />}
+                size="small"
+                onClick={() => handleManageManagers(record!)}
+              />
+            </Tooltip>
             <Button
               theme="borderless"
               type="danger"
@@ -321,10 +370,15 @@ export function CampusDepartmentsPage() {
     ...departments.map((d) => ({ value: d.id, label: d.name })),
   ], [departments])
 
+  const robotOptions = useMemo(() => [
+    { value: '', label: '不关联机器人' },
+    ...robots.map((r) => ({ value: r.id, label: r.name })),
+  ], [robots])
+
   const campusFormOptions = useMemo(() =>
     campuses.map((c) => ({
       value: c.id,
-      label: c.name + (c.area ? ` (${c.area.name})` : ''),
+      label: c.name,
     })), [campuses])
 
   const departmentFormOptions = useMemo(() =>
@@ -457,6 +511,7 @@ export function CampusDepartmentsPage() {
         onOpenChange={setEmployeesDialogOpen}
         campusDepartment={viewingDepartment}
       />
+
     </>
   )
 }

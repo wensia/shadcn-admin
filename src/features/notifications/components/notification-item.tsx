@@ -5,8 +5,8 @@
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import { Bell, FileText, Users, Info, AlertTriangle } from 'lucide-react'
-import { NotificationType, type Notification } from '../types'
+import { Bell, FileText, Users, Info, AlertTriangle, ClipboardList } from 'lucide-react'
+import { NotificationType, isTodoNotification, type Notification } from '../types'
 
 interface NotificationItemProps {
   notification: Notification
@@ -23,6 +23,8 @@ function getNotificationIcon(type: string) {
     case NotificationType.ORDER_APPROVAL_PENDING:
     case NotificationType.ORDER_APPROVAL_RESULT:
       return <FileText className="h-4 w-4" />
+    case NotificationType.TASK_ASSIGNED:
+      return <ClipboardList className="h-4 w-4" />
     case NotificationType.SYSTEM:
       return <Info className="h-4 w-4" />
     default:
@@ -41,6 +43,8 @@ function getNotificationIconBg(type: string) {
       return 'bg-amber-100 text-amber-600'
     case NotificationType.ORDER_APPROVAL_RESULT:
       return 'bg-green-100 text-green-600'
+    case NotificationType.TASK_ASSIGNED:
+      return 'bg-purple-100 text-purple-600'
     case NotificationType.SYSTEM:
       return 'bg-gray-100 text-gray-600'
     default:
@@ -96,7 +100,20 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
         <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
           {notification.content}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs text-muted-foreground">{timeAgo}</span>
+          {isTodoNotification(notification.notification_type) && !notification.is_read && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              style={{
+                backgroundColor: 'var(--semi-color-warning-light-default)',
+                color: 'var(--semi-color-warning)',
+              }}
+            >
+              待办
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

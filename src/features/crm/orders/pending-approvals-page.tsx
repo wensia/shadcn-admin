@@ -25,6 +25,16 @@ export function PendingApprovalsPage() {
   useDocumentTitle('待审批订单')
   const queryClient = useQueryClient()
 
+  // 查询订单配置（财务审批开关）
+  const { data: orderConfig } = useQuery({
+    queryKey: ['order-config'],
+    queryFn: async () => {
+      const response = await orderApi.getOrderConfig()
+      return response.data
+    }
+  })
+  const financeEnabled = orderConfig?.finance_approval_enabled ?? false
+
   // 当前Tab
   const [activeTab, setActiveTab] = useState<string>('leader')
 
@@ -155,43 +165,45 @@ export function PendingApprovalsPage() {
             </div>
           </TabPane>
 
-          <TabPane
-            tab={
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <DollarSign size={14} />
-                财务确认
-                {financeTotal > 0 && (
-                  <Tag style={{ marginLeft: 4 }}>{financeTotal}</Tag>
-                )}
-              </span>
-            }
-            itemKey="finance"
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 12, paddingTop: 12 }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 4px' }}>
-                <Input
-                  prefix={<IconSearch />}
-                  placeholder="搜索学员姓名、电话、订单号..."
-                  value={financeKeyword}
-                  onChange={(val) => setFinanceKeyword(val)}
-                  onEnterPress={() => setFinancePagination(prev => ({ ...prev, page: 1 }))}
-                  style={{ flex: 1 }}
-                />
+          {financeEnabled && (
+            <TabPane
+              tab={
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <DollarSign size={14} />
+                  财务确认
+                  {financeTotal > 0 && (
+                    <Tag style={{ marginLeft: 4 }}>{financeTotal}</Tag>
+                  )}
+                </span>
+              }
+              itemKey="finance"
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 12, paddingTop: 12 }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 4px' }}>
+                  <Input
+                    prefix={<IconSearch />}
+                    placeholder="搜索学员姓名、电话、订单号..."
+                    value={financeKeyword}
+                    onChange={(val) => setFinanceKeyword(val)}
+                    onEnterPress={() => setFinancePagination(prev => ({ ...prev, page: 1 }))}
+                    style={{ flex: 1 }}
+                  />
+                </div>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <OrdersTable
+                    data={financeOrders}
+                    total={financeTotal}
+                    page={financePagination.page}
+                    pageSize={financePagination.size}
+                    isLoading={isFinanceLoading}
+                    onPageChange={(page) => setFinancePagination(prev => ({ ...prev, page }))}
+                    onPageSizeChange={(size) => setFinancePagination({ page: 1, size })}
+                    onRowClick={handleRowClick}
+                  />
+                </div>
               </div>
-              <div style={{ flex: 1, minHeight: 0 }}>
-                <OrdersTable
-                  data={financeOrders}
-                  total={financeTotal}
-                  page={financePagination.page}
-                  pageSize={financePagination.size}
-                  isLoading={isFinanceLoading}
-                  onPageChange={(page) => setFinancePagination(prev => ({ ...prev, page }))}
-                  onPageSizeChange={(size) => setFinancePagination({ page: 1, size })}
-                  onRowClick={handleRowClick}
-                />
-              </div>
-            </div>
-          </TabPane>
+            </TabPane>
+          )}
         </Tabs>
       </DataTableLayout>
 

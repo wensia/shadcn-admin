@@ -8,7 +8,28 @@ import { useLocation, Link } from '@tanstack/react-router'
 import { Nav, SideSheet } from '@douyinfe/semi-ui-19'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useSidebar } from '@/context/sidebar-context'
+import { usePermission, PERMISSIONS } from '@/hooks/use-permission'
 import { AnthropicLogo } from '@/assets/anthropic-logo'
+
+/**
+ * 路由 → 所需权限码映射
+ * 未在此映射中的路由默认显示（不需要权限控制）
+ */
+const ROUTE_PERMISSIONS: Record<string, string> = {
+  '/crm/leads': PERMISSIONS.LEADS_LIST,
+  '/crm/workbench': PERMISSIONS.LEADS_LIST,
+  '/crm/batch-import': PERMISSIONS.LEADS_CREATE,
+  '/crm/leads/pool': PERMISSIONS.LEADS_LIST,
+  '/crm/call-records': PERMISSIONS.LEADS_LIST,
+  '/crm/continuous-call': PERMISSIONS.LEADS_LIST,
+  '/crm/leads/assignment-tasks': PERMISSIONS.LEADS_LIST,
+  '/crm/lead-creation-logs': PERMISSIONS.LEADS_CREATE,
+  '/crm/channel-ledger': PERMISSIONS.LEADS_LIST,
+  '/crm/orders': PERMISSIONS.ORDERS_CREATE,
+  '/crm/performance-events': PERMISSIONS.ORDERS_CREATE,
+  '/crm/students': PERMISSIONS.STUDENTS_LIST,
+  '/crm/courses': PERMISSIONS.STUDENTS_LIST,
+}
 import {
   crmNavGroups,
   adminNavGroups,
@@ -79,14 +100,31 @@ export function AppSidebar() {
   const { open, setOpen, isMobile, openMobile, setOpenMobile } = useSidebar()
   const location = useLocation()
 
-  // 根据当前路径选择导航配置
+  const { hasPermission } = usePermission()
+
+  // 根据当前路径选择导航配置，并按权限过滤菜单项
   const { navGroups, teams } = useMemo(() => {
     const p = location.pathname
-    if (p.startsWith('/yunke')) return { navGroups: yunkeNavGroups, teams: yunkeTeams }
-    if (p.startsWith('/hr')) return { navGroups: hrNavGroups, teams: hrTeams }
-    if (p.startsWith('/admin')) return { navGroups: adminNavGroups, teams: adminTeams }
-    return { navGroups: crmNavGroups, teams: crmTeams }
-  }, [location.pathname])
+    let groups: NavGroup[], teamList
+    if (p.startsWith('/yunke')) { groups = yunkeNavGroups; teamList = yunkeTeams }
+    else if (p.startsWith('/hr')) { groups = hrNavGroups; teamList = hrTeams }
+    else if (p.startsWith('/admin')) { groups = adminNavGroups; teamList = adminTeams }
+    else { groups = crmNavGroups; teamList = crmTeams }
+
+    // 按权限过滤菜单项
+    const filtered = groups.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        const url = 'url' in item ? item.url : undefined
+        if (!url) return true
+        const requiredPerm = ROUTE_PERMISSIONS[url as string]
+        if (!requiredPerm) return true
+        return hasPermission(requiredPerm)
+      }),
+    })).filter((group) => group.items.length > 0)
+
+    return { navGroups: filtered, teams: teamList }
+  }, [location.pathname, hasPermission])
 
   const isCollapsed = !open && !isMobile
 
@@ -268,7 +306,7 @@ export function AppSidebar() {
         </Nav.Sub>
       ))}
 
-      <Nav.Footer>
+      <Nav.Footer style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 8 }}>
         <NavUser collapsed={isCollapsed} />
       </Nav.Footer>
     </Nav>

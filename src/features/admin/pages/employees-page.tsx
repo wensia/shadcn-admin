@@ -6,8 +6,8 @@ import { useState, useMemo, useRef, useCallback } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/lib/toast'
-import { Plus, Pencil, Trash2, User, KeyRound, X, CheckCircle, AlertCircle, Copy, Shield, Eye, EyeOff, AlertTriangle, Key, XCircle, MoreHorizontal, UserCheck, UserX } from 'lucide-react'
-import { Button, Input, Select, Modal, Form, Tag, Typography, Switch, Dropdown, Checkbox } from '@douyinfe/semi-ui-19'
+import { Plus, Pencil, Trash2, User, KeyRound, X, CheckCircle, AlertCircle, Copy, Eye, EyeOff, AlertTriangle, Key, XCircle, MoreHorizontal, UserCheck, UserX } from 'lucide-react'
+import { Button, Input, Select, Modal, Form, Tag, Typography, Switch, Dropdown } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
@@ -16,19 +16,11 @@ import type { FilterTag } from '@/components/semi/filter-tags-bar'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi, apiKeysApi } from '../api'
-import { DEFAULT_API_SCOPES, type EmployeeItem, type EmployeeUpdate, type EmployeeIdentityItem, type ApiKeyCreateResponse } from '../types'
+import { type EmployeeItem, type EmployeeUpdate, type EmployeeIdentityItem, type ApiKeyCreateResponse } from '../types'
 import { EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
-
-// 权限名称映射
-const PERMISSION_LABELS: Record<string, string> = {
-  read: '查看',
-  create: '创建',
-  update: '更新',
-  delete: '删除',
-}
 
 // 组织级别类型
 type ScopeType = 'campus' | 'area' | 'district' | 'region'
@@ -112,12 +104,10 @@ export function EmployeesPage() {
   const [apiKeyFilter, setApiKeyFilter] = useState<string>('all')
   const [apiKeyCreateDialogOpen, setApiKeyCreateDialogOpen] = useState(false)
   const [apiKeyResultDialogOpen, setApiKeyResultDialogOpen] = useState(false)
-  const [apiKeyScopesDialogOpen, setApiKeyScopesDialogOpen] = useState(false)
   const [apiKeyDeleteDialogOpen, setApiKeyDeleteDialogOpen] = useState(false)
   const [selectedApiKeyEmployee, setSelectedApiKeyEmployee] = useState<EmployeeItem | null>(null)
   const [createdApiKey, setCreatedApiKey] = useState<ApiKeyCreateResponse | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
-  const [selectedScopes, setSelectedScopes] = useState<Record<string, string[]>>({})
 
   // Semi Form refs
   const formRef = useRef<FormApi>()
@@ -253,10 +243,9 @@ export function EmployeesPage() {
 
   // API密钥 mutations
   const createApiKeyMutation = useMutation({
-    mutationFn: (data: { employeeId: string; name: string; expires_in_days: number; scopes: Record<string, string[]> }) =>
+    mutationFn: (data: { employeeId: string; name: string; expires_in_days: number }) =>
       apiKeysApi.create(data.employeeId, {
         name: data.name,
-        scopes: Object.keys(data.scopes).length > 0 ? data.scopes : undefined,
         expires_in_days: data.expires_in_days,
       }),
     onSuccess: (response) => {
@@ -292,20 +281,6 @@ export function EmployeesPage() {
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '删除失败')
-    },
-  })
-
-  const updateApiKeyScopesMutation = useMutation({
-    mutationFn: (data: { employeeId: string; scopes: Record<string, string[]> }) =>
-      apiKeysApi.updateScopes(data.employeeId, { scopes: data.scopes }),
-    onSuccess: () => {
-      toast.success('权限更新成功')
-      setApiKeyScopesDialogOpen(false)
-      setSelectedApiKeyEmployee(null)
-      queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
-    },
-    onError: (error: Error) => {
-      showApiErrorToast(error, '更新权限失败')
     },
   })
 
@@ -765,12 +740,6 @@ export function EmployeesPage() {
                   <Dropdown.Divider />
                   {record.has_api_key ? (
                     <>
-                      <Dropdown.Item onClick={() => handleApiKeyScopesClick(record)}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Shield className="h-4 w-4" />
-                          编辑API权限
-                        </span>
-                      </Dropdown.Item>
                       <Dropdown.Item onClick={() => handleApiKeyRegenerateClick(record)}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <IconRefresh size="small" />
@@ -1011,7 +980,6 @@ export function EmployeesPage() {
       employeeId: selectedApiKeyEmployee.id,
       name: values.name,
       expires_in_days: values.expires_in_days,
-      scopes: selectedScopes,
     })
   }
 
@@ -1028,44 +996,6 @@ export function EmployeesPage() {
   const handleApiKeyDeleteConfirm = () => {
     if (!selectedApiKeyEmployee) return
     deleteApiKeyMutation.mutate(selectedApiKeyEmployee.id)
-  }
-
-  const handleApiKeyScopesClick = async (employee: EmployeeItem) => {
-    setSelectedApiKeyEmployee(employee)
-    try {
-      const detail = await apiKeysApi.get(employee.id)
-      if (!detail.has_api_key || !detail.api_key) {
-        toast.warning('该员工尚未创建API Key')
-        return
-      }
-      setSelectedScopes(detail.api_key.scopes || {})
-      setApiKeyScopesDialogOpen(true)
-    } catch (error) {
-      showApiErrorToast(error, '获取API Key详情失败')
-    }
-  }
-
-  const handleApiKeyScopesSubmit = () => {
-    if (!selectedApiKeyEmployee) return
-    updateApiKeyScopesMutation.mutate({
-      employeeId: selectedApiKeyEmployee.id,
-      scopes: selectedScopes,
-    })
-  }
-
-  const toggleScope = (scope: string, permission: string) => {
-    setSelectedScopes((prev) => {
-      const current = prev[scope] || []
-      if (current.includes(permission)) {
-        const newPermissions = current.filter((p) => p !== permission)
-        if (newPermissions.length === 0) {
-          const { [scope]: _, ...rest } = prev
-          return rest
-        }
-        return { ...prev, [scope]: newPermissions }
-      }
-      return { ...prev, [scope]: [...current, permission] }
-    })
   }
 
   const handleCopyToClipboard = async (text: string) => {
@@ -1247,7 +1177,7 @@ export function EmployeesPage() {
             <Form.Input field="phone" label="手机号" placeholder="请输入手机号（可选）" />
             <Form.Input field="email" label="邮箱" placeholder="请输入邮箱（可选）" />
           </div>
-          <Form.Input field="joined_at" label="入职日期" placeholder="请选择入职日期" type="date" />
+          <Form.DatePicker field="joined_at" label="入职日期" placeholder="请选择入职日期" type="date" style={{ width: '100%' }} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <Form.Switch field="is_active" label="在职状态" />
             <Form.Switch field="is_superuser" label="超级管理员" />
@@ -1633,33 +1563,6 @@ export function EmployeesPage() {
             max={3650}
             extraText="最短1天，最长10年（3650天）"
           />
-          <div style={{ marginTop: 8 }}>
-            <Text strong size="small">权限范围</Text>
-            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 8 }}>
-              选择此API Key可访问的功能和权限
-            </Text>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
-                <div key={scope} style={{ border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: 12 }}>
-                  <Text strong size="small">{info.description}</Text>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
-                    {info.permissions.map((permission) => {
-                      const isChecked = selectedScopes[scope]?.includes(permission)
-                      return (
-                        <Checkbox
-                          key={permission}
-                          checked={isChecked}
-                          onChange={() => toggleScope(scope, permission)}
-                        >
-                          {PERMISSION_LABELS[permission] || permission}
-                        </Checkbox>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </Form>
       </Modal>
 
@@ -1728,54 +1631,6 @@ export function EmployeesPage() {
               </Button>
             </div>
           </div>
-        </div>
-      </Modal>
-
-      {/* API Key 权限编辑对话框 */}
-      <Modal
-        title="编辑API Key权限"
-        visible={apiKeyScopesDialogOpen}
-        onCancel={() => setApiKeyScopesDialogOpen(false)}
-        width={600}
-        style={{ maxHeight: '90vh' }}
-        bodyStyle={{ overflow: 'auto', maxHeight: 'calc(90vh - 130px)' }}
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button onClick={() => setApiKeyScopesDialogOpen(false)}>取消</Button>
-            <Button
-              theme="solid"
-              type="primary"
-              onClick={handleApiKeyScopesSubmit}
-              loading={updateApiKeyScopesMutation.isPending}
-            >
-              保存权限
-            </Button>
-          </div>
-        }
-      >
-        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 16 }}>
-          修改员工 {selectedApiKeyEmployee?.name} 的API Key权限范围
-        </Text>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
-            <div key={scope} style={{ border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: 12 }}>
-              <Text strong size="small">{info.description}</Text>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
-                {info.permissions.map((permission) => {
-                  const isChecked = selectedScopes[scope]?.includes(permission)
-                  return (
-                    <Checkbox
-                      key={permission}
-                      checked={isChecked}
-                      onChange={() => toggleScope(scope, permission)}
-                    >
-                      {PERMISSION_LABELS[permission] || permission}
-                    </Checkbox>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
         </div>
       </Modal>
 

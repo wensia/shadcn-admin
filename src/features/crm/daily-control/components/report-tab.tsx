@@ -1,24 +1,23 @@
 /**
  * 日控报表 Tab - Semi Design 版
  * 展示每个课程顾问的诺到、到访、业绩结果统计
+ * 校区筛选由主页面统一控制
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Table, Select, Skeleton } from '@douyinfe/semi-ui-19'
+import { Table, Skeleton } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { getDailyControlReport, type AdvisorDailyControlStats } from '../api'
 import { brandColors } from '../theme'
-import { apiClient } from '@/lib/api/client'
 
 interface ReportTabProps {
   dateFrom?: string
   dateTo?: string
+  creatorCampusId?: string
 }
 
-export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
-  const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
-
+export function ReportTab({ dateFrom, dateTo, creatorCampusId }: ReportTabProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [scrollY, setScrollY] = useState<number>(400)
 
@@ -36,27 +35,16 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
     return () => ro.disconnect()
   }, [])
 
-  // 获取校区列表
-  const { data: campusesData } = useQuery({
-    queryKey: ['campuses-for-report'],
-    queryFn: async () => {
-      const response = await apiClient.get('/organization/campuses/simple')
-      return response.data || []
-    },
-  })
-
-  const campuses = campusesData || []
-
   // 获取报表数据
   const { data: reportData, isLoading, isError } = useQuery({
-    queryKey: ['daily-control-report', selectedCampusId, dateFrom, dateTo],
+    queryKey: ['daily-control-report', creatorCampusId, dateFrom, dateTo],
     queryFn: async () => {
       const params: Record<string, string | undefined> = {
         date_from: dateFrom,
         date_to: dateTo,
       }
-      if (selectedCampusId && selectedCampusId !== 'all') {
-        params.campus_id = selectedCampusId
+      if (creatorCampusId) {
+        params.campus_id = creatorCampusId
       }
       return getDailyControlReport(params)
     },
@@ -76,14 +64,6 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
     if (total === 0) return '-'
     return `${Math.round((visited / total) * 100)}%`
   }
-
-  const campusOptions = [
-    { value: 'all', label: '全部校区' },
-    ...campuses.map((campus: { id: string; name: string }) => ({
-      value: campus.id,
-      label: campus.name,
-    })),
-  ]
 
   if (isLoading) {
     return (
@@ -154,48 +134,35 @@ export function ReportTab({ dateFrom, dateTo }: ReportTabProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 筛选栏 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* 汇总统计 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, color: 'var(--semi-color-text-2)' }}>校区：</span>
-          <Select
-            value={selectedCampusId}
-            onChange={(v) => setSelectedCampusId(v as string)}
-            optionList={campusOptions}
-            style={{ width: 160 }}
-          />
+          <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>顾问数</span>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalAdvisors}</span>
         </div>
-
-        {/* 汇总统计 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>顾问数</span>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalAdvisors}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: brandColors.orange }}>诺到</span>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalPromised}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: brandColors.blue }}>到访</span>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalVisited}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: brandColors.green }}>业绩</span>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalPaymentCount}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>净业绩额</span>
-            <span
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: Number(summary.totalPaymentAmount) >= 0 ? brandColors.orange : 'var(--semi-color-danger)',
-              }}
-            >
-              ¥{Number(summary.totalPaymentAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: brandColors.orange }}>诺到</span>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalPromised}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: brandColors.blue }}>到访</span>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalVisited}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: brandColors.green }}>业绩</span>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{summary.totalPaymentCount}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>净业绩额</span>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: Number(summary.totalPaymentAmount) >= 0 ? brandColors.orange : 'var(--semi-color-danger)',
+            }}
+          >
+            ¥{Number(summary.totalPaymentAmount).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+          </span>
         </div>
       </div>
 

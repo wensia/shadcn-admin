@@ -12,7 +12,6 @@ import {
   Copy,
   CheckCircle,
   XCircle,
-  Shield,
   Clock,
   AlertTriangle,
   Eye,
@@ -20,7 +19,7 @@ import {
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-import { Button, Input, Modal, Form, Typography, Tag, Banner, Checkbox, Select } from '@douyinfe/semi-ui-19'
+import { Button, Input, Modal, Form, Typography, Tag, Banner, Select } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch } from '@douyinfe/semi-icons'
@@ -29,18 +28,10 @@ import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { apiKeysApi } from '../api'
-import { DEFAULT_API_SCOPES, type EmployeeApiKeyInfo, type ApiKeyCreateResponse, type ApiKeyInfo } from '../types'
+import { type EmployeeApiKeyInfo, type ApiKeyCreateResponse, type ApiKeyInfo } from '../types'
 import { formatTime } from '@/lib/utils/time'
 
 const { Text } = Typography
-
-// 权限名称映射
-const PERMISSION_LABELS: Record<string, string> = {
-  read: '查看',
-  create: '创建',
-  update: '更新',
-  delete: '删除',
-}
 
 // 密钥状态筛选选项
 const apiKeyFilterOptions = [
@@ -67,13 +58,10 @@ export function ApiKeysPage() {
   const [hasApiKeyFilter, setHasApiKeyFilter] = useState<string>('all')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [keyResultDialogOpen, setKeyResultDialogOpen] = useState(false)
-  const [scopesDialogOpen, setScopesDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeApiKeyInfo | null>(null)
   const [createdKey, setCreatedKey] = useState<ApiKeyCreateResponse | null>(null)
   const [showKey, setShowKey] = useState(false)
-  const [selectedScopes, setSelectedScopes] = useState<Record<string, string[]>>({})
-  const [createFormScopes, setCreateFormScopes] = useState<Record<string, string[]>>({})
 
   // 查询员工列表
   const { data, isLoading, refetch } = useQuery({
@@ -97,17 +85,15 @@ export function ApiKeysPage() {
 
   // 创建密钥
   const createMutation = useMutation({
-    mutationFn: (data: { employeeId: string; name: string; expires_in_days: number; scopes: Record<string, string[]> }) =>
+    mutationFn: (data: { employeeId: string; name: string; expires_in_days: number }) =>
       apiKeysApi.create(data.employeeId, {
         name: data.name,
-        scopes: Object.keys(data.scopes).length > 0 ? data.scopes : undefined,
         expires_in_days: data.expires_in_days,
       }),
     onSuccess: (response) => {
       setCreatedKey(response)
       setCreateDialogOpen(false)
       setKeyResultDialogOpen(true)
-      setCreateFormScopes({})
       queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
     },
     onError: (error: Error) => {
@@ -141,51 +127,6 @@ export function ApiKeysPage() {
       showApiErrorToast(error, '删除失败')
     },
   })
-
-  // 更新权限
-  const updateScopesMutation = useMutation({
-    mutationFn: (data: { employeeId: string; scopes: Record<string, string[]> }) =>
-      apiKeysApi.updateScopes(data.employeeId, { scopes: data.scopes }),
-    onSuccess: () => {
-      toast.success('权限更新成功')
-      setScopesDialogOpen(false)
-      setSelectedEmployee(null)
-      queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] })
-    },
-    onError: (error: Error) => {
-      showApiErrorToast(error, '更新权限失败')
-    },
-  })
-
-  // 渲染权限标签
-  const renderScopes = (apiKey?: ApiKeyInfo) => {
-    if (!apiKey?.scopes || Object.keys(apiKey.scopes).length === 0) {
-      return <Tag type="ghost">无权限</Tag>
-    }
-
-    const scopeEntries = Object.entries(apiKey.scopes)
-    const displayScopes = scopeEntries.slice(0, 2)
-    const remainingCount = scopeEntries.length - 2
-
-    return (
-      <div className="flex flex-wrap gap-1">
-        {displayScopes.map(([scope, permissions]) => {
-          const scopeInfo = DEFAULT_API_SCOPES[scope as keyof typeof DEFAULT_API_SCOPES]
-          return (
-            <Tag key={scope} color="blue" type="light" size="small">
-              {scopeInfo?.description || scope}
-              <span style={{ marginLeft: 4, color: 'var(--semi-color-text-2)' }}>
-                ({permissions.length})
-              </span>
-            </Tag>
-          )
-        })}
-        {remainingCount > 0 && (
-          <Tag type="ghost" size="small">+{remainingCount}</Tag>
-        )}
-      </div>
-    )
-  }
 
   // 列定义
   const columns: ColumnProps<ApiKeyTableItem>[] = [
@@ -259,16 +200,6 @@ export function ApiKeysPage() {
         },
       },
       {
-        title: '权限范围',
-        dataIndex: 'scopes',
-        width: 200,
-        render: (_value: Record<string, string[]> | undefined, record: ApiKeyTableItem) => {
-          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
-          if (!record.has_api_key) return <Text type="tertiary">-</Text>
-          return renderScopes(record.api_key)
-        },
-      },
-      {
         title: '过期时间',
         dataIndex: 'expires_at',
         width: 160,
@@ -312,7 +243,6 @@ export function ApiKeysPage() {
 
           return (
             <div style={{ display: 'flex', gap: 4 }}>
-              <Button theme="borderless" type="tertiary" icon={<Shield className="h-4 w-4" />} size="small" onClick={() => handleScopesClick(record)} />
               <Button theme="borderless" type="tertiary" icon={<RefreshCw className="h-4 w-4" />} size="small" onClick={() => handleRegenerateClick(record)} />
               <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
             </div>
@@ -329,7 +259,6 @@ export function ApiKeysPage() {
 
   const handleCreateClick = (employee: EmployeeApiKeyInfo) => {
     setSelectedEmployee(employee)
-    setCreateFormScopes({})
     setCreateDialogOpen(true)
     setTimeout(() => {
       createFormRef.current?.reset()
@@ -346,7 +275,6 @@ export function ApiKeysPage() {
       employeeId: selectedEmployee.employee_id,
       name: formData.name || '',
       expires_in_days: formData.expires_in_days || 365,
-      scopes: createFormScopes,
     })
   }
 
@@ -365,35 +293,6 @@ export function ApiKeysPage() {
     deleteMutation.mutate(selectedEmployee.employee_id)
   }
 
-  const handleScopesClick = (employee: EmployeeApiKeyInfo) => {
-    setSelectedEmployee(employee)
-    setSelectedScopes(employee.api_key?.scopes || {})
-    setScopesDialogOpen(true)
-  }
-
-  const handleScopesSubmit = () => {
-    if (!selectedEmployee) return
-    updateScopesMutation.mutate({
-      employeeId: selectedEmployee.employee_id,
-      scopes: selectedScopes,
-    })
-  }
-
-  const toggleScope = (scopes: Record<string, string[]>, setScopes: (s: Record<string, string[]>) => void, scope: string, permission: string) => {
-    const current = scopes[scope] || []
-    if (current.includes(permission)) {
-      const newPermissions = current.filter((p) => p !== permission)
-      if (newPermissions.length === 0) {
-        const { [scope]: _, ...rest } = scopes
-        setScopes(rest)
-      } else {
-        setScopes({ ...scopes, [scope]: newPermissions })
-      }
-    } else {
-      setScopes({ ...scopes, [scope]: [...current, permission] })
-    }
-  }
-
   const handleCopyToClipboard = async (text: string) => {
     const { copyToClipboard } = await import('@/lib/utils')
     const success = await copyToClipboard(text)
@@ -403,31 +302,6 @@ export function ApiKeysPage() {
       toast.error('复制失败')
     }
   }
-
-  // 渲染权限选择列表
-  const renderScopeSelector = (scopes: Record<string, string[]>, setScopes: (s: Record<string, string[]>) => void) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {Object.entries(DEFAULT_API_SCOPES).map(([scope, info]) => (
-        <div key={scope} style={{ border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: 12 }}>
-          <div style={{ fontWeight: 500, marginBottom: 8 }}>{info.description}</div>
-          <div className="flex flex-wrap gap-2">
-            {info.permissions.map((permission) => {
-              const isChecked = scopes[scope]?.includes(permission)
-              return (
-                <Checkbox
-                  key={permission}
-                  checked={isChecked}
-                  onChange={() => toggleScope(scopes, setScopes, scope, permission)}
-                >
-                  {PERMISSION_LABELS[permission] || permission}
-                </Checkbox>
-              )
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
 
   return (
     <>
@@ -493,11 +367,6 @@ export function ApiKeysPage() {
           <Form.InputNumber field="expires_in_days" label="有效期（天）" min={1} max={3650} style={{ width: '100%' }} initValue={365} />
           <div style={{ color: 'var(--semi-color-text-2)', fontSize: 12, marginTop: -8, marginBottom: 12 }}>最短1天，最长10年（3650天）</div>
         </Form>
-        <div style={{ marginTop: 8 }}>
-          <div style={{ fontWeight: 500, marginBottom: 4 }}>权限范围</div>
-          <div style={{ color: 'var(--semi-color-text-2)', fontSize: 12, marginBottom: 8 }}>选择此API密钥可访问的功能和权限</div>
-          {renderScopeSelector(createFormScopes, setCreateFormScopes)}
-        </div>
       </Modal>
 
       {/* 密钥结果弹窗 */}
@@ -558,25 +427,6 @@ export function ApiKeysPage() {
             </div>
           </div>
         </div>
-      </Modal>
-
-      {/* 编辑权限弹窗 */}
-      <Modal
-        title="编辑API密钥权限"
-        visible={scopesDialogOpen}
-        onCancel={() => setScopesDialogOpen(false)}
-        style={{ maxWidth: 600 }}
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button onClick={() => setScopesDialogOpen(false)}>取消</Button>
-            <Button theme="solid" type="primary" onClick={handleScopesSubmit} loading={updateScopesMutation.isPending}>保存权限</Button>
-          </div>
-        }
-      >
-        <div style={{ marginBottom: 12, color: 'var(--semi-color-text-2)', fontSize: 14 }}>
-          修改员工 {selectedEmployee?.name} 的API密钥权限范围
-        </div>
-        {renderScopeSelector(selectedScopes, setSelectedScopes)}
       </Modal>
 
       {/* 删除确认弹窗 */}

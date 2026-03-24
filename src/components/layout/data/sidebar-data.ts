@@ -27,6 +27,7 @@ import {
   PhoneCall,
   Library,
   ClipboardList,
+  CalendarCheck,
   Settings,
   Settings2,
   ArrowLeft,
@@ -120,6 +121,11 @@ export const crmNavGroups: NavGroup[] = [
         title: '订单管理',
         url: '/crm/orders',
         icon: ShoppingCart,
+      },
+      {
+        title: '日控表',
+        url: '/crm/visit-schedule',
+        icon: CalendarCheck,
       },
       {
         title: '顾问数据中心',

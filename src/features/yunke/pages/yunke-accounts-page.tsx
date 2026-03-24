@@ -110,6 +110,7 @@ function SubAccountsTable({
       setPasswordResult(response)
       setPasswordDialogOpen(true)
       toast.success('密码重置成功')
+      queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '密码重置失败')
@@ -560,9 +561,8 @@ function SubAccountsTable({
         width={720}
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button theme="outline" size="small" onClick={() => setBindDialogOpen(false)}>取消</Button>
+            <Button theme="outline" onClick={() => setBindDialogOpen(false)}>取消</Button>
             <Button
-              size="small"
               onClick={handleBindEmployee}
               disabled={!selectedBindEmployee || bindMutation.isPending}
               loading={bindMutation.isPending}
@@ -576,7 +576,7 @@ function SubAccountsTable({
           </div>
         }
       >
-        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>
+        <Text type="tertiary" style={{ display: 'block', marginBottom: 12 }}>
           为云客账号 {selectedAccount?.real_name}（{selectedAccount?.phone}）选择要绑定的员工
         </Text>
 
@@ -590,10 +590,9 @@ function SubAccountsTable({
               setBindPage(1)
             }}
             placeholder="输入姓名或用户名搜索"
-            size="small"
             style={{ width: 224 }}
           />
-          <Text type="tertiary" size="small">
+          <Text type="tertiary">
             共 {filteredEmployees.length} 位员工
           </Text>
         </div>
@@ -604,7 +603,6 @@ function SubAccountsTable({
           dataSource={paginatedEmployees}
           rowKey="id"
           pagination={false}
-          size="small"
           onRow={(record) => ({
             onClick: () => handleSelectBindEmployee(record as YunkeAvailableEmployee),
             style: {
@@ -624,16 +622,14 @@ function SubAccountsTable({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, paddingTop: 12, borderTop: '1px solid var(--semi-color-border)', marginTop: 12 }}>
             <Button
               theme="outline"
-              size="small"
               disabled={bindPage <= 1}
               onClick={() => setBindPage((p) => p - 1)}
             >
               上一页
             </Button>
-            <Text size="small">第 {bindPage} / {totalBindPages} 页</Text>
+            <Text>第 {bindPage} / {totalBindPages} 页</Text>
             <Button
               theme="outline"
-              size="small"
               disabled={bindPage >= totalBindPages}
               onClick={() => setBindPage((p) => p + 1)}
             >

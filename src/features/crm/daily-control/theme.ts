@@ -67,6 +67,17 @@ export const tabThemes = {
     border: 'border-[#e8e6dc]',
     ring: 'ring-[#86909c]/20',
   },
+  source: {
+    name: '来源渠道',
+    color: '#0fc6c2', // 青色
+    dot: 'bg-[#0fc6c2]',
+    text: 'text-[#0fc6c2]',
+    textMuted: 'text-[#0fc6c2]/70',
+    bgSubtle: 'bg-[#0fc6c2]/5',
+    bgLight: 'bg-[#0fc6c2]/10',
+    border: 'border-[#0fc6c2]/20',
+    ring: 'ring-[#0fc6c2]/20',
+  },
   report: {
     name: '报表',
     color: '#7c3aed', // 紫色

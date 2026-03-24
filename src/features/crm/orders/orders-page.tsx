@@ -17,6 +17,7 @@ import {
 import { IconPlus, IconSearch } from '@douyinfe/semi-icons'
 import { ShoppingCart, CheckCircle, CalendarDays, TrendingUp } from 'lucide-react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
+import { usePermission, PERMISSIONS } from '@/hooks/use-permission'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { orderApi } from './api'
 import { OrderDialog } from './components/order-dialog'
@@ -25,6 +26,7 @@ import {
   orderPaymentStatusOptions,
   orderPaymentMethodOptions,
   orderApprovalStatusOptions,
+  OrderApprovalStatus,
   type Order,
   type OrderListItem,
   type OrderListParams,
@@ -33,9 +35,23 @@ import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
 
+const FINANCE_STATUSES = [OrderApprovalStatus.FINANCE_PENDING, OrderApprovalStatus.FINANCE_REJECTED]
+
 export function OrdersPage() {
   useDocumentTitle('订单管理')
   const queryClient = useQueryClient()
+  const { hasPermission } = usePermission()
+  const canCreateOrder = hasPermission(PERMISSIONS.ORDERS_CREATE)
+
+  // 查询订单配置（财务审批开关）
+  const { data: orderConfig } = useQuery({
+    queryKey: ['order-config'],
+    queryFn: async () => {
+      const response = await orderApi.getOrderConfig()
+      return response.data
+    }
+  })
+  const financeEnabled = orderConfig?.finance_approval_enabled ?? false
 
   // 状态
   const [pagination, setPagination] = useState({ page: 1, size: 20 })
@@ -148,7 +164,9 @@ export function OrdersPage() {
   ]
   const approvalStatusOpts = [
     { value: 'all', label: '全部审批' },
-    ...orderApprovalStatusOptions
+    ...(financeEnabled
+      ? orderApprovalStatusOptions
+      : orderApprovalStatusOptions.filter(o => !FINANCE_STATUSES.includes(o.value as OrderApprovalStatus)))
   ]
 
   return (
@@ -157,134 +175,133 @@ export function OrdersPage() {
         title="订单管理"
         total={total}
         headerActions={
-          <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>
-            新建订单
-          </Button>
+          canCreateOrder ? (
+            <Button icon={<IconPlus />} theme="solid" onClick={handleCreate}>
+              新建订单
+            </Button>
+          ) : undefined
         }
         onRefresh={() => refetch()}
-        toolbar={
-          <>
-            {/* 统计卡片 */}
-            {statsData && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
-                <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 8,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: 'var(--semi-color-primary-light-default)',
-                      color: 'var(--semi-color-primary)',
-                    }}>
-                      <ShoppingCart size={16} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Text type="tertiary" style={{ fontSize: 12 }}>总订单</Text>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                        <Text strong style={{ fontSize: 18 }}>{statsData.total_count}</Text>
-                        <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.total_amount?.toLocaleString()}</Text>
-                      </div>
+        topContent={
+          statsData && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
+              <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'var(--semi-color-primary-light-default)',
+                    color: 'var(--semi-color-primary)',
+                  }}>
+                    <ShoppingCart size={16} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>总订单</Text>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <Text strong style={{ fontSize: 18 }}>{statsData.total_count}</Text>
+                      <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.total_amount?.toLocaleString()}</Text>
                     </div>
                   </div>
-                </Card>
-                <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 8,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: 'var(--semi-color-success-light-default)',
-                      color: 'var(--semi-color-success)',
-                    }}>
-                      <CheckCircle size={16} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Text type="tertiary" style={{ fontSize: 12 }}>已支付</Text>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                        <Text strong style={{ fontSize: 18, color: 'var(--semi-color-success)' }}>{statsData.paid_count}</Text>
-                        <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.paid_amount?.toLocaleString()}</Text>
-                      </div>
+                </div>
+              </Card>
+              <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'var(--semi-color-success-light-default)',
+                    color: 'var(--semi-color-success)',
+                  }}>
+                    <CheckCircle size={16} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>已支付</Text>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <Text strong style={{ fontSize: 18, color: 'var(--semi-color-success)' }}>{statsData.paid_count}</Text>
+                      <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.paid_amount?.toLocaleString()}</Text>
                     </div>
                   </div>
-                </Card>
-                <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 8,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: 'var(--semi-color-warning-light-default)',
-                      color: 'var(--semi-color-warning)',
-                    }}>
-                      <CalendarDays size={16} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Text type="tertiary" style={{ fontSize: 12 }}>今日</Text>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                        <Text strong style={{ fontSize: 18 }}>{statsData.today_count}</Text>
-                        <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.today_amount?.toLocaleString()}</Text>
-                      </div>
+                </div>
+              </Card>
+              <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'var(--semi-color-warning-light-default)',
+                    color: 'var(--semi-color-warning)',
+                  }}>
+                    <CalendarDays size={16} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>今日</Text>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <Text strong style={{ fontSize: 18 }}>{statsData.today_count}</Text>
+                      <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.today_amount?.toLocaleString()}</Text>
                     </div>
                   </div>
-                </Card>
-                <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 8,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: '#f3e8ff',
-                      color: '#7c3aed',
-                    }}>
-                      <TrendingUp size={16} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Text type="tertiary" style={{ fontSize: 12 }}>本月</Text>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                        <Text strong style={{ fontSize: 18 }}>{statsData.month_count}</Text>
-                        <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.month_amount?.toLocaleString()}</Text>
-                      </div>
+                </div>
+              </Card>
+              <Card style={{ padding: '12px 16px' }} bodyStyle={{ padding: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#f3e8ff',
+                    color: '#7c3aed',
+                  }}>
+                    <TrendingUp size={16} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text type="tertiary" style={{ fontSize: 12 }}>本月</Text>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <Text strong style={{ fontSize: 18 }}>{statsData.month_count}</Text>
+                      <Text type="tertiary" style={{ fontSize: 12 }}>¥{statsData.month_amount?.toLocaleString()}</Text>
                     </div>
                   </div>
-                </Card>
-              </div>
-            )}
-
-            {/* 筛选栏 */}
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
-              <Input
-                prefix={<IconSearch />}
-                placeholder="搜索学员姓名、电话、订单号..."
-                value={searchKeyword}
-                onChange={(val) => setSearchKeyword(val)}
-                onEnterPress={handleSearch}
-                style={{ flex: 1 }}
-              />
-              <Select
-                value={filters.payment_status || 'all'}
-                onChange={(value) => {
-                  setFilters(prev => ({ ...prev, payment_status: value === 'all' ? undefined : value as string }))
-                  setPagination(prev => ({ ...prev, page: 1 }))
-                }}
-                optionList={paymentStatusOpts}
-                style={{ width: 130 }}
-              />
-              <Select
-                value={filters.payment_method || 'all'}
-                onChange={(value) => {
-                  setFilters(prev => ({ ...prev, payment_method: value === 'all' ? undefined : value as string }))
-                  setPagination(prev => ({ ...prev, page: 1 }))
-                }}
-                optionList={paymentMethodOpts}
-                style={{ width: 130 }}
-              />
-              <Select
-                value={filters.approval_status || 'all'}
-                onChange={(value) => {
-                  setFilters(prev => ({ ...prev, approval_status: value === 'all' ? undefined : value as string }))
-                  setPagination(prev => ({ ...prev, page: 1 }))
-                }}
-                optionList={approvalStatusOpts}
-                style={{ width: 140 }}
-              />
+                </div>
+              </Card>
             </div>
-          </>
+          )
+        }
+        toolbar={
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <Input
+              prefix={<IconSearch />}
+              placeholder="搜索学员姓名、电话、订单号..."
+              value={searchKeyword}
+              onChange={(val) => setSearchKeyword(val)}
+              onEnterPress={handleSearch}
+              style={{ flex: 1 }}
+            />
+            <Select
+              value={filters.payment_status || 'all'}
+              onChange={(value) => {
+                setFilters(prev => ({ ...prev, payment_status: value === 'all' ? undefined : value as string }))
+                setPagination(prev => ({ ...prev, page: 1 }))
+              }}
+              optionList={paymentStatusOpts}
+              style={{ width: 130 }}
+            />
+            <Select
+              value={filters.payment_method || 'all'}
+              onChange={(value) => {
+                setFilters(prev => ({ ...prev, payment_method: value === 'all' ? undefined : value as string }))
+                setPagination(prev => ({ ...prev, page: 1 }))
+              }}
+              optionList={paymentMethodOpts}
+              style={{ width: 130 }}
+            />
+            <Select
+              value={filters.approval_status || 'all'}
+              onChange={(value) => {
+                setFilters(prev => ({ ...prev, approval_status: value === 'all' ? undefined : value as string }))
+                setPagination(prev => ({ ...prev, page: 1 }))
+              }}
+              optionList={approvalStatusOpts}
+              style={{ width: 140 }}
+            />
+          </div>
         }
       >
         <OrdersTable

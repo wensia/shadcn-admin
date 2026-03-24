@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeadSubmitRouteImport } from './routes/lead-submit'
 import { Route as DiscTestRouteImport } from './routes/disc-test'
 import { Route as ChannelPortalRouteImport } from './routes/channel-portal'
+import { Route as AspTestRouteImport } from './routes/asp-test'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as FullscreenRouteRouteImport } from './routes/_fullscreen/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -128,6 +129,11 @@ const DiscTestRoute = DiscTestRouteImport.update({
 const ChannelPortalRoute = ChannelPortalRouteImport.update({
   id: '/channel-portal',
   path: '/channel-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AspTestRoute = AspTestRouteImport.update({
+  id: '/asp-test',
+  path: '/asp-test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
@@ -673,6 +679,7 @@ const AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -771,6 +778,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -867,6 +875,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/_fullscreen': typeof FullscreenRouteRouteWithChildren
   '/clerk': typeof ClerkRouteRouteWithChildren
+  '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -970,6 +979,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/clerk'
+    | '/asp-test'
     | '/channel-portal'
     | '/disc-test'
     | '/lead-submit'
@@ -1068,6 +1078,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/clerk'
+    | '/asp-test'
     | '/channel-portal'
     | '/disc-test'
     | '/lead-submit'
@@ -1163,6 +1174,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_fullscreen'
     | '/clerk'
+    | '/asp-test'
     | '/channel-portal'
     | '/disc-test'
     | '/lead-submit'
@@ -1266,6 +1278,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   FullscreenRouteRoute: typeof FullscreenRouteRouteWithChildren
   ClerkRouteRoute: typeof ClerkRouteRouteWithChildren
+  AspTestRoute: typeof AspTestRoute
   ChannelPortalRoute: typeof ChannelPortalRoute
   DiscTestRoute: typeof DiscTestRoute
   LeadSubmitRoute: typeof LeadSubmitRoute
@@ -1310,6 +1323,13 @@ declare module '@tanstack/react-router' {
       path: '/channel-portal'
       fullPath: '/channel-portal'
       preLoaderRoute: typeof ChannelPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/asp-test': {
+      id: '/asp-test'
+      path: '/asp-test'
+      fullPath: '/asp-test'
+      preLoaderRoute: typeof AspTestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clerk': {
@@ -2280,6 +2300,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   FullscreenRouteRoute: FullscreenRouteRouteWithChildren,
   ClerkRouteRoute: ClerkRouteRouteWithChildren,
+  AspTestRoute: AspTestRoute,
   ChannelPortalRoute: ChannelPortalRoute,
   DiscTestRoute: DiscTestRoute,
   LeadSubmitRoute: LeadSubmitRoute,

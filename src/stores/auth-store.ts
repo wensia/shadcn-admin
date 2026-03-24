@@ -36,6 +36,7 @@ export interface UserInfo {
   employee_type?: string
   roles?: string[]
   accessible_pages?: string[]
+  permissions?: string[]
   created_at: string
   updated_at: string
 }

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { Dropdown, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { useTabsStore, type TabInfo } from '@/stores/tabs-store'
 import { getRouteConfig } from '@/lib/route-components'
+import { NotificationSidebarBell } from '@/features/notifications/components'
 
 
 /**
@@ -207,8 +208,8 @@ export function TabsManager() {
   return (
     <div className='flex h-full flex-col'>
       {/* Tab栏 */}
-      <div className='shrink-0 border-b bg-muted/30'>
-        <div className='w-full overflow-x-auto'>
+      <div className='flex shrink-0 items-center border-b bg-muted/30'>
+        <div className='min-w-0 flex-1 overflow-x-auto'>
           <div
             ref={tabsContainerRef}
             className='flex h-10 items-end'
@@ -226,6 +227,9 @@ export function TabsManager() {
               </div>
             ))}
           </div>
+        </div>
+        <div className='shrink-0 px-2'>
+          <NotificationSidebarBell />
         </div>
       </div>
 
