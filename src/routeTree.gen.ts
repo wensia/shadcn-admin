@@ -27,6 +27,7 @@ import { Route as errors401RouteImport } from './routes/(errors)/401'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignIn2RouteImport } from './routes/(auth)/sign-in-2'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
+import { Route as authSelectIdentityRouteImport } from './routes/(auth)/select-identity'
 import { Route as authOtpRouteImport } from './routes/(auth)/otp'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
@@ -197,6 +198,11 @@ const authSignIn2Route = authSignIn2RouteImport.update({
 const authSignInRoute = authSignInRouteImport.update({
   id: '/(auth)/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSelectIdentityRoute = authSelectIdentityRouteImport.update({
+  id: '/(auth)/select-identity',
+  path: '/select-identity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authOtpRoute = authOtpRouteImport.update({
@@ -691,6 +697,7 @@ export interface FileRoutesByFullPath {
   '/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
+  '/select-identity': typeof authSelectIdentityRoute
   '/sign-in': typeof authSignInRoute
   '/sign-in-2': typeof authSignIn2Route
   '/sign-up': typeof authSignUpRoute
@@ -786,6 +793,7 @@ export interface FileRoutesByTo {
   '/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
+  '/select-identity': typeof authSelectIdentityRoute
   '/sign-in': typeof authSignInRoute
   '/sign-in-2': typeof authSignIn2Route
   '/sign-up': typeof authSignUpRoute
@@ -889,6 +897,7 @@ export interface FileRoutesById {
   '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/otp': typeof authOtpRoute
+  '/(auth)/select-identity': typeof authSelectIdentityRoute
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-in-2': typeof authSignIn2Route
   '/(auth)/sign-up': typeof authSignUpRoute
@@ -991,6 +1000,7 @@ export interface FileRouteTypes {
     | '/yunke'
     | '/forgot-password'
     | '/otp'
+    | '/select-identity'
     | '/sign-in'
     | '/sign-in-2'
     | '/sign-up'
@@ -1086,6 +1096,7 @@ export interface FileRouteTypes {
     | '/hr'
     | '/forgot-password'
     | '/otp'
+    | '/select-identity'
     | '/sign-in'
     | '/sign-in-2'
     | '/sign-up'
@@ -1188,6 +1199,7 @@ export interface FileRouteTypes {
     | '/clerk/_authenticated'
     | '/(auth)/forgot-password'
     | '/(auth)/otp'
+    | '/(auth)/select-identity'
     | '/(auth)/sign-in'
     | '/(auth)/sign-in-2'
     | '/(auth)/sign-up'
@@ -1285,6 +1297,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOtpRoute: typeof authOtpRoute
+  authSelectIdentityRoute: typeof authSelectIdentityRoute
   authSignInRoute: typeof authSignInRoute
   authSignIn2Route: typeof authSignIn2Route
   authSignUpRoute: typeof authSignUpRoute
@@ -1421,6 +1434,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof authSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/select-identity': {
+      id: '/(auth)/select-identity'
+      path: '/select-identity'
+      fullPath: '/select-identity'
+      preLoaderRoute: typeof authSelectIdentityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/otp': {
@@ -2307,6 +2327,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOtpRoute: authOtpRoute,
+  authSelectIdentityRoute: authSelectIdentityRoute,
   authSignInRoute: authSignInRoute,
   authSignIn2Route: authSignIn2Route,
   authSignUpRoute: authSignUpRoute,

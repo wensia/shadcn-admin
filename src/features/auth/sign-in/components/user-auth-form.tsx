@@ -1,6 +1,7 @@
 /**
  * 用户登录表单 - Semi Design 版本
  * 使用 Semi Form + Input + Button 组件
+ * 支持多身份登录：登录后检测是否需要选择身份
  */
 
 import { useState, useRef } from 'react'
@@ -25,7 +26,7 @@ type SignInFormValues = {
 export function UserAuthForm({ redirectTo }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { setAuthState } = useAuthStore()
+  const { setAuthState, setTempToken, setAvailableIdentities, setIdentityContext } = useAuthStore()
   const formApiRef = useRef<FormApi>()
 
   async function handleSubmit(values: SignInFormValues) {
@@ -37,15 +38,31 @@ export function UserAuthForm({ redirectTo }: UserAuthFormProps) {
       })
 
       if (response.success && response.data) {
-        setAuthState(
-          response.data.access_token,
-          response.data.refresh_token,
-          response.data.user
-        )
-        toast.success(
-          `欢迎回来, ${response.data.user.name || values.username}!`
-        )
-        navigate({ to: redirectTo || '/', replace: true })
+        const loginData = response.data
+
+        if (loginData.requires_identity_selection) {
+          // 多身份 → 保存临时token和身份列表，跳转身份选择页
+          setTempToken(loginData.access_token, loginData.refresh_token)
+          setAvailableIdentities(loginData.identities)
+          toast.info('请选择您的工作身份')
+          navigate({ to: '/select-identity', replace: true })
+        } else {
+          // 单身份 → 直接进入系统
+          setAuthState(
+            loginData.access_token,
+            loginData.refresh_token,
+            loginData.user
+          )
+          // 设置身份上下文（单身份自动选中）
+          if (loginData.identity) {
+            setIdentityContext(loginData.identity, loginData.user.permissions || [], [])
+            setAvailableIdentities([loginData.identity])
+          }
+          toast.success(
+            `欢迎回来, ${loginData.user.name || values.username}!`
+          )
+          navigate({ to: redirectTo || '/', replace: true })
+        }
       } else {
         toast.error(response.message || '登录失败')
       }

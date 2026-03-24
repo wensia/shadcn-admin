@@ -4,7 +4,7 @@
 
 import { apiClient } from '@/lib/api/client'
 import type { ApiResponse } from '@/lib/api/types'
-import type { UserInfo } from '@/stores/auth-store'
+import type { UserInfo, IdentityInfo } from '@/stores/auth-store'
 
 /**
  * 登录请求
@@ -15,13 +15,48 @@ export interface LoginRequest {
 }
 
 /**
- * 登录响应
+ * 登录响应（单身份 - 直接进入系统）
  */
-export interface LoginResponse {
+export interface LoginResponseSingle {
   access_token: string
   refresh_token: string
   token_type: string
   user: UserInfo
+  requires_identity_selection: false
+  identity: IdentityInfo
+}
+
+/**
+ * 登录响应（多身份 - 需要选择身份）
+ */
+export interface LoginResponseMulti {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  requires_identity_selection: true
+  identities: IdentityInfo[]
+}
+
+/**
+ * 登录响应联合类型
+ */
+export type LoginResponse = LoginResponseSingle | LoginResponseMulti
+
+/**
+ * 选择身份请求
+ */
+export interface SelectIdentityRequest {
+  identity_id: string
+}
+
+/**
+ * 选择身份响应
+ */
+export interface SelectIdentityResponse {
+  user: UserInfo
+  identity: IdentityInfo
+  permissions: string[]
+  campus_ids: string[]
 }
 
 /**
@@ -31,6 +66,11 @@ export const authApi = {
   /** 用户登录 */
   login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
     return apiClient.post<ApiResponse<LoginResponse>>('/auth/login', data)
+  },
+
+  /** 选择/切换身份 */
+  selectIdentity(data: SelectIdentityRequest): Promise<ApiResponse<SelectIdentityResponse>> {
+    return apiClient.post<ApiResponse<SelectIdentityResponse>>('/auth/select-identity', data)
   },
 
   /** 用户登出 */

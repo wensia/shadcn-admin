@@ -42,6 +42,7 @@ import {
 } from './data/sidebar-data'
 import type { NavGroup } from './types'
 import { NavUser } from './nav-user'
+import { IdentityIndicator } from './identity-indicator'
 
 // ─── Group collapse persistence ────────────────────────────────
 const COLLAPSED_GROUPS_KEY = 'sidebar_collapsed_groups'
@@ -279,6 +280,9 @@ export function AppSidebar() {
           </div>
         )}
       </Nav.Header>
+
+      {/* 身份指示器 - 显示当前工作身份 */}
+      <IdentityIndicator collapsed={isCollapsed} />
 
       {navGroups.map((group) => (
         <Nav.Sub
