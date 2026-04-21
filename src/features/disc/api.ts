@@ -27,10 +27,11 @@ const publicClient = axios.create({
 // 公开 API（测试页面使用，不需要登录）
 // ============================================================================
 
-/** 验证 DISC 测试链接（支持 ref 和 id 两种模式） */
-export async function validateDiscTestRef(ref: string, id?: string) {
+/** 验证 DISC 测试链接（支持 id、token、channel、ref 四种模式） */
+export async function validateDiscTestRef(ref: string, id?: string, channel?: string) {
   const params: Record<string, string> = {}
   if (id) params.id = id
+  else if (channel) params.channel = channel
   else if (ref) params.ref = ref
   const { data } = await publicClient.get('/public/disc-test/validate-ref', { params })
   return data
@@ -48,6 +49,34 @@ export async function verifyDiscTest(testCode: string) {
 /** 提交 DISC 测试答案 */
 export async function submitDiscTest(submitData: DISCTestSubmitData) {
   const { data } = await publicClient.post('/public/disc-test/temp-submit', submitData)
+  return data
+}
+
+// ============================================================================
+// 渠道公开查看 API（无需登录，通过 token 鉴权）
+// ============================================================================
+
+/** 公开查看 DISC 测试结果列表（支持 token 或 ref+channel 模式） */
+export async function getChannelDiscRecords(params: {
+  token?: string
+  ref?: string
+  channel?: string
+  page?: number
+  size?: number
+  name?: string
+}) {
+  const { data } = await publicClient.get('/public/disc-test/channel-records', { params })
+  return data
+}
+
+/** 公开查看单条 DISC 测试详情 */
+export async function getChannelDiscRecordDetail(params: {
+  record_id: string
+  token?: string
+  ref?: string
+  channel?: string
+}) {
+  const { data } = await publicClient.get('/public/disc-test/channel-record-detail', { params })
   return data
 }
 

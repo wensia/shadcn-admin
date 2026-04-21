@@ -70,20 +70,14 @@ export function SourceChannelCategoryBadge({ category }: { category: string }) {
   )
 }
 
-// 职位级别标签
-const levelStyles: Record<number, { style: React.CSSProperties; label: string }> = {
-  1: { style: { backgroundColor: 'rgba(176,174,165,0.1)', color: '#b0aea5', borderColor: 'rgba(176,174,165,0.3)' }, label: '普通员工' },
-  2: { style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' }, label: '主管' },
-  3: { style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' }, label: '经理' },
-  4: { style: { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }, label: '总监' },
-  5: { style: { backgroundColor: 'rgba(20,20,19,0.1)', color: '#141413', borderColor: 'rgba(20,20,19,0.3)' }, label: '高管' },
-}
-
+// 职级排序权重标签
 export function PositionLevelBadge({ level }: { level: number }) {
-  const config = levelStyles[level] || levelStyles[1]
+  const style: React.CSSProperties = level >= 4
+    ? { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }
+    : { backgroundColor: 'rgba(176,174,165,0.1)', color: '#b0aea5', borderColor: 'rgba(176,174,165,0.3)' }
   return (
-    <Tag size="small" shape="round" style={{ ...config.style, fontSize: 12, fontWeight: 500 }}>
-      {config.label}
+    <Tag size="small" shape="round" style={{ ...style, fontSize: 12, fontWeight: 500 }}>
+      L{level}
     </Tag>
   )
 }

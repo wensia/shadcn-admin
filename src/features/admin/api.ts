@@ -16,6 +16,8 @@ import type {
   AreaCreate,
   AreaUpdate,
   CampusItem,
+  CampusLeaderCandidateItem,
+  CampusLeaderPatch,
   CampusCreate,
   CampusUpdate,
   SchoolItem,
@@ -40,6 +42,7 @@ import type {
   CampusDepartmentItem,
   CampusDepartmentCreate,
   CampusDepartmentUpdate,
+  AreaDepartmentItem,
   DepartmentManagerItem,
   DepartmentManagerCreate,
   OrganizationTreeNode,
@@ -111,6 +114,8 @@ import type {
   DailyNoticeItem,
   DailyNoticeCreate,
   DailyNoticeUpdate,
+  // 员工批量导入
+  EmployeeBatchImportResult,
 } from './types'
 
 const BASE_URL = '/admin'
@@ -209,6 +214,16 @@ export const adminApi = {
   /** 更新校区 */
   async updateCampus(id: string, data: CampusUpdate): Promise<ApiResponse<CampusItem>> {
     return apiClient.put<ApiResponse<CampusItem>>(`${BASE_URL}/campuses/${id}`, data)
+  },
+
+  /** 获取校区领导候选员工 */
+  async getCampusLeaderCandidates(campusId: string): Promise<ApiResponse<CampusLeaderCandidateItem[]>> {
+    return apiClient.get<ApiResponse<CampusLeaderCandidateItem[]>>(`${BASE_URL}/campuses/${campusId}/leader-candidates`)
+  },
+
+  /** 更新校区领导任命 */
+  async updateCampusLeaders(id: string, data: CampusLeaderPatch): Promise<ApiResponse<CampusItem>> {
+    return apiClient.patch<ApiResponse<CampusItem>>(`${BASE_URL}/campuses/${id}/leaders`, data)
   },
 
   /** 删除校区 */
@@ -555,6 +570,53 @@ export const adminApi = {
   },
 
   // ========================================================================
+  // 区域部门管理
+  // ========================================================================
+
+  /** 获取区域部门关联列表 */
+  async getAreaDepartments(params: {
+    area_id?: string
+    department_id?: string
+    page?: number
+    size?: number
+  } = {}): Promise<ApiResponse<PaginatedResponse<AreaDepartmentItem>>> {
+    return apiClient.get<ApiResponse<PaginatedResponse<AreaDepartmentItem>>>(`${BASE_URL}/area-departments`, { params })
+  },
+
+  /** 更新区域部门关联 */
+  async updateAreaDepartment(id: string, data: Record<string, unknown>): Promise<ApiResponse<void>> {
+    return apiClient.put<ApiResponse<void>>(`${BASE_URL}/area-departments/${id}`, data)
+  },
+
+  /** 获取区域部门负责人列表 */
+  async getAreaDepartmentManagers(areaDepartmentId: string): Promise<ApiResponse<DepartmentManagerItem[]>> {
+    return apiClient.get<ApiResponse<DepartmentManagerItem[]>>(
+      `${BASE_URL}/area-departments/${areaDepartmentId}/managers`
+    )
+  },
+
+  /** 添加区域部门负责人 */
+  async addAreaDepartmentManager(
+    areaDepartmentId: string,
+    data: DepartmentManagerCreate
+  ): Promise<ApiResponse<DepartmentManagerItem>> {
+    return apiClient.post<ApiResponse<DepartmentManagerItem>>(
+      `${BASE_URL}/area-departments/${areaDepartmentId}/managers`,
+      data
+    )
+  },
+
+  /** 移除区域部门负责人 */
+  async removeAreaDepartmentManager(
+    areaDepartmentId: string,
+    managerId: string
+  ): Promise<ApiResponse<void>> {
+    return apiClient.delete<ApiResponse<void>>(
+      `${BASE_URL}/area-departments/${areaDepartmentId}/managers/${managerId}`
+    )
+  },
+
+  // ========================================================================
   // 组织架构树和统计
   // ========================================================================
 
@@ -634,6 +696,39 @@ export const adminApi = {
   /** 批量更新云客登录状态 */
   async batchUpdateYunkeLogin(): Promise<ApiResponse<YunkeBatchLoginResult>> {
     return apiClient.post<ApiResponse<YunkeBatchLoginResult>>(`${BASE_URL}/yunke/batch-login-update`)
+  },
+
+  // ── 员工批量导入 ──
+
+  /** 下载员工批量导入模板 */
+  async downloadEmployeeImportTemplate(): Promise<Blob> {
+    const response = await apiClient.get<Blob>(
+      '/admin/employee-batch-import/template/download',
+      { responseType: 'blob' }
+    )
+    return response as unknown as Blob
+  },
+
+  /** 上传员工批量导入文件 */
+  async uploadEmployeeBatchImport(
+    file: File,
+    onProgress?: (percent: number) => void,
+  ): Promise<ApiResponse<EmployeeBatchImportResult>> {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.post<ApiResponse<EmployeeBatchImportResult>>(
+      '/admin/employee-batch-import/upload',
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+        onUploadProgress: (e) => {
+          if (onProgress && e.total) {
+            onProgress(Math.round((e.loaded * 100) / e.total))
+          }
+        },
+      }
+    )
   },
 }
 

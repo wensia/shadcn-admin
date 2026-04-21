@@ -40,8 +40,9 @@ import {
   Bot,
   BrainCircuit,
   Bell,
-  HandCoins,
-  ShoppingCart,
+  BrainCog,
+  UserMinus,
+  Wrench,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -113,16 +114,6 @@ export const crmNavGroups: NavGroup[] = [
         icon: Bot,
       },
       {
-        title: '业绩结果',
-        url: '/crm/performance-events',
-        icon: HandCoins,
-      },
-      {
-        title: '订单管理',
-        url: '/crm/orders',
-        icon: ShoppingCart,
-      },
-      {
         title: '日控表',
         url: '/crm/visit-schedule',
         icon: CalendarCheck,
@@ -148,6 +139,11 @@ export const crmNavGroups: NavGroup[] = [
         url: '/crm/courses',
         icon: BookOpen,
       },
+      {
+        title: 'ASP 测评记录',
+        url: '/crm/asp-records',
+        icon: BrainCog,
+      },
     ],
   },
   {
@@ -163,6 +159,17 @@ export const crmNavGroups: NavGroup[] = [
         title: '财务管理',
         url: '/crm/finance',
         icon: Wallet,
+      },
+    ],
+  },
+  {
+    title: '工具',
+    icon: Wrench,
+    items: [
+      {
+        title: '工具导航',
+        url: '/tools',
+        icon: Wrench,
       },
     ],
   },
@@ -246,6 +253,11 @@ export const adminNavGroups: NavGroup[] = [
         title: '校区部门配置',
         url: '/admin/campus-departments',
         icon: GitBranch,
+      },
+      {
+        title: '区域部门配置',
+        url: '/admin/area-departments',
+        icon: Network,
       },
       {
         title: '职位管理',
@@ -356,6 +368,11 @@ export const hrNavGroups: NavGroup[] = [
     title: '人事',
     icon: ClipboardList,
     items: [
+      {
+        title: '离职审批',
+        url: '/hr/resignations',
+        icon: UserMinus,
+      },
       {
         title: 'DISC 测试管理',
         url: '/hr/disc-test',
@@ -482,6 +499,30 @@ export const yunkeTeams = [
     name: '云客管理',
     logo: Cloud,
     plan: '外呼系统',
+  },
+]
+
+// 工具导航组（在 /tools 下使用，侧边栏只留单入口，具体工具通过 Hub 卡片进入）
+export const toolsNavGroups: NavGroup[] = [
+  {
+    title: '工具',
+    icon: Wrench,
+    items: [
+      {
+        title: '工具导航',
+        url: '/tools',
+        icon: Wrench,
+      },
+    ],
+  },
+]
+
+// 工具团队配置
+export const toolsTeams = [
+  {
+    name: '工具中心',
+    logo: Wrench,
+    plan: '实用工具',
   },
 ]
 

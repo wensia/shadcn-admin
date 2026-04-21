@@ -7,5 +7,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { DepartmentsPage } from '@/features/admin/pages/departments-page'
 
 export const Route = createFileRoute('/_authenticated/admin/departments')({
+  staticData: { title: '部门管理' },
   component: DepartmentsPage
 })

@@ -492,7 +492,9 @@ export function BatchUpdateStatusDialog({
           placeholder="请选择状态"
           style={{ width: '100%' }}
         >
-          {Object.entries(leadStatusLabels).map(([value, label]) => (
+          {Object.entries(leadStatusLabels)
+            .filter(([value]) => value !== 'followed_up')
+            .map(([value, label]) => (
             <Select.Option key={value} value={value}>
               {label}
             </Select.Option>

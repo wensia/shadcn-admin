@@ -11,6 +11,7 @@ import {
   adminNavGroups,
   hrNavGroups,
   yunkeNavGroups,
+  toolsNavGroups,
 } from '@/components/layout/data/sidebar-data'
 
 export type RouteComponent = ComponentType<unknown>
@@ -30,6 +31,7 @@ function buildSidebarTitleMap(): Record<string, string> {
     ...adminNavGroups,
     ...hrNavGroups,
     ...yunkeNavGroups,
+    ...toolsNavGroups,
   ]
   for (const group of allGroups) {
     for (const item of group.items) {

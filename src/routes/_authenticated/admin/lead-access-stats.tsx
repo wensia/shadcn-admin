@@ -7,5 +7,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { LeadAccessStatsPage } from '@/features/admin/pages/lead-access-stats-page'
 
 export const Route = createFileRoute('/_authenticated/admin/lead-access-stats')({
+  staticData: { title: '线索查看统计' },
   component: LeadAccessStatsPage
 })

@@ -36,6 +36,7 @@ import {
 } from '@douyinfe/semi-icons'
 import { QrCode, Brain, Clock, AlertCircle, Loader2, Sparkles, X, Link2, Users, Download } from 'lucide-react'
 import { toast } from '@/lib/toast'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
@@ -61,17 +62,23 @@ import {
 import { DiscDetailDrawer } from '@/features/disc/components/disc-detail-drawer'
 import { DiscAccessGrantModal } from '@/features/disc/components/disc-access-grant-modal'
 import { cn, copyToClipboard } from '@/lib/utils'
+import { md5 } from '@/lib/utils/md5'
 import { useAuthStore } from '@/stores/auth-store'
 
 const { Text } = Typography
 
-/** 固定测试 URL（带有当前用户标识和可选渠道） */
+/** 固定测试 URL（有渠道时只用 channel MD5，无渠道时用 ref MD5） */
 function getFixedTestUrl(username: string, channel?: string): string {
-  let url = `${window.location.origin}/disc-test?ref=${encodeURIComponent(username)}`
   if (channel) {
-    url += `&channel=${encodeURIComponent(channel)}`
+    return `${window.location.origin}/disc-test?channel=${encodeURIComponent(md5(channel))}`
   }
-  return url
+  return `${window.location.origin}/disc-test?ref=${encodeURIComponent(md5(username))}`
+}
+
+/** 公开查看结果 URL（人事无需登录即可查看该渠道的测试结果，channel 使用 MD5 加密） */
+function getResultsUrl(_username: string, channel?: string): string {
+  if (!channel) return ''
+  return `${window.location.origin}/disc-results?channel=${encodeURIComponent(md5(channel))}`
 }
 
 // DISC 类型 Tag 组件
@@ -188,6 +195,7 @@ interface ChannelRow {
   key: string
   name: string
   url: string
+  resultsUrl: string
   /** 'default' = 默认行, 'source' = 来源渠道(后端), 'custom' = 用户自建 */
   type: 'default' | 'source' | 'custom'
   disabled?: boolean
@@ -220,6 +228,22 @@ function FixedLinkModal({
     } catch { return [] }
   })
 
+  // 首次打开弹窗时，将 localStorage 中的渠道同步到后端
+  useEffect(() => {
+    if (!visible || channels.length === 0) return
+    const syncKey = 'disc-channels-synced'
+    if (localStorage.getItem(syncKey)) return
+    ;(async () => {
+      try {
+        const { apiClient } = await import('@/lib/api/client')
+        for (const ch of channels) {
+          await apiClient.post('/hr/disc-channels', { name: ch }).catch(() => {})
+        }
+        localStorage.setItem(syncKey, '1')
+      } catch {}
+    })()
+  }, [visible, channels])
+
   // 保存渠道列表到 localStorage
   const saveChannels = (list: string[]) => {
     setChannels(list)
@@ -240,12 +264,19 @@ function FixedLinkModal({
     )
   }
 
-  const handleAddChannel = () => {
+  const handleAddChannel = async () => {
     const ch = newChannel.trim()
     if (!ch) return
     if (channels.includes(ch) || sourceChannels.includes(ch)) {
       toast.warning('该渠道已存在')
       return
+    }
+    // 同步到后端 disc_channels 表（确保结果页能通过 MD5 反查渠道名）
+    try {
+      const { apiClient } = await import('@/lib/api/client')
+      await apiClient.post('/hr/disc-channels', { name: ch })
+    } catch {
+      // 后端同步失败不阻塞前端操作
     }
     saveChannels([...channels, ch])
     setNewChannel('')
@@ -258,11 +289,12 @@ function FixedLinkModal({
 
   // 构建表格数据：默认链接 + 来源渠道 + 自建渠道
   const tableData: ChannelRow[] = [
-    { key: '__default__', name: '默认（无渠道）', url: getFixedTestUrl(username), type: 'default' },
+    { key: '__default__', name: '默认（无渠道）', url: getFixedTestUrl(username), resultsUrl: getResultsUrl(username), type: 'default' },
     ...sourceChannels.map((ch) => ({
       key: `__source__${ch}`,
       name: ch,
       url: getFixedTestUrl(username, ch),
+      resultsUrl: getResultsUrl(username, ch),
       type: 'source' as const,
       disabled: disabledSourceChannels.includes(ch),
     })),
@@ -272,6 +304,7 @@ function FixedLinkModal({
         key: ch,
         name: ch,
         url: getFixedTestUrl(username, ch),
+        resultsUrl: getResultsUrl(username, ch),
         type: 'custom' as const,
       })),
   ]
@@ -301,7 +334,7 @@ function FixedLinkModal({
     {
       title: '操作',
       dataIndex: 'key',
-      width: 130,
+      width: 200,
       align: 'center' as const,
       render: (_: string, record: ChannelRow) => (
         <div className="flex items-center justify-center gap-1">
@@ -313,16 +346,28 @@ function FixedLinkModal({
                 icon={<IconCopy />}
                 size="small"
                 onClick={() => handleCopyUrl(record.url)}
-                title="复制链接"
+                aria-label="复制测试链接"
               />
-              <QrHoverPopover url={record.url}>
+              {record.resultsUrl && (
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  icon={<QrCode className="h-3.5 w-3.5" />}
+                  icon={<IconEyeOpened />}
                   size="small"
-                  title="查看二维码"
+                  onClick={() => handleCopyUrl(record.resultsUrl)}
+                  aria-label="复制查看结果链接"
                 />
+              )}
+              <QrHoverPopover url={record.url}>
+                <span style={{ display: 'inline-flex' }}>
+                  <Button
+                    theme="borderless"
+                    type="tertiary"
+                    icon={<QrCode className="h-3.5 w-3.5" />}
+                    size="small"
+                    aria-label="查看二维码"
+                  />
+                </span>
               </QrHoverPopover>
             </>
           )}
@@ -342,13 +387,15 @@ function FixedLinkModal({
               title={`删除渠道「${record.name}」？`}
               onConfirm={() => saveChannels(channels.filter((c) => c !== record.name))}
             >
-              <Button
-                theme="borderless"
-                type="danger"
-                icon={<IconDelete />}
-                size="small"
-                title="删除渠道"
-              />
+              <span style={{ display: 'inline-flex' }}>
+                <Button
+                  theme="borderless"
+                  type="danger"
+                  icon={<IconDelete />}
+                  size="small"
+                  aria-label="删除渠道"
+                />
+              </span>
             </Popconfirm>
           )}
         </div>
@@ -461,8 +508,8 @@ function EditRecordModal({
       } else {
         toast.error(res.message || '修改失败')
       }
-    } catch {
-      toast.error('修改失败，请稍后重试')
+    } catch (error) {
+      showApiErrorToast(error, '修改失败')
     } finally {
       setSaving(false)
     }
@@ -646,8 +693,8 @@ function CreateLinkModal({
       } else {
         toast.error(res.message || '创建失败')
       }
-    } catch {
-      toast.error('创建失败，请稍后重试')
+    } catch (error) {
+      showApiErrorToast(error, '创建失败')
     } finally {
       setCreating(false)
     }
@@ -769,8 +816,8 @@ function LinksTab() {
       } else {
         toast.error(res.message || '删除失败')
       }
-    } catch {
-      toast.error('删除失败')
+    } catch (error) {
+      showApiErrorToast(error, '删除失败')
     }
   }
 

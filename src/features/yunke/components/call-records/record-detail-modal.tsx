@@ -11,7 +11,7 @@ import { SideSheet, Button, Tag, Slider, Skeleton, Dropdown, Toast, Spin, Modal 
 import {
   Play, Pause, Volume2, VolumeX, SkipBack, SkipForward,
   Download, FileText, BrainCircuit, Copy, FileJson, FileType,
-  ArrowRight, Clock, Building2, Baby, RotateCcw, RefreshCw,
+  ArrowRight, Clock, Building2, Baby, RotateCcw, RefreshCw, Loader2,
 } from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
 import { copyToClipboard } from '@/lib/utils'
@@ -103,6 +103,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const [isMuted, setIsMuted] = useState(false)
   const [playbackRate, setPlaybackRate] = useState(1)
   const [reanalyzeConfirmOpen, setReanalyzeConfirmOpen] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   // 懒加载完整记录（含 transcript 和 ai_analysis）
   const [fullRecord, setFullRecord] = useState<CallRecord | null>(null)
@@ -201,6 +202,31 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     setReanalyzeConfirmOpen(false)
     onOpenChange(false)
   }, [onOpenChange, resetPlayerState])
+
+  const handleDownloadRecord = useCallback(async () => {
+    if (!voiceId) return
+    const baseName = `${record?.staff_name || '录音'}_${record?.callee || record?.caller || ''}`
+    setDownloading(true)
+    try {
+      const blob = await callRecordsApi.downloadRecordBlob(voiceId, baseName)
+      if (!blob || blob.size === 0) {
+        Toast.error('录音文件为空')
+        return
+      }
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = `${baseName}.mp3`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+    } catch (err) {
+      showApiErrorToast(err, '下载录音失败')
+    } finally {
+      setDownloading(false)
+    }
+  }, [voiceId, record?.staff_name, record?.callee, record?.caller])
 
   const togglePlay = () => {
     if (!audioRef.current) return
@@ -539,24 +565,22 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <a
-                        href={record?.voice_id
-                          ? `${callRecordsApi.getRecordStreamUrl(record.voice_id)}&download=1&filename=${encodeURIComponent(record?.staff_name || '录音')}_${encodeURIComponent(record?.callee || record?.caller || '')}`
-                          : '#'}
-                        download
+                      <Button
+                        theme="borderless"
+                        type="tertiary"
+                        size="small"
+                        icon={
+                          downloading
+                            ? <Loader2 className="animate-spin" style={{ height: 13, width: 13 }} />
+                            : <Download style={{ height: 13, width: 13 }} />
+                        }
+                        disabled={!voiceId || downloading}
+                        onClick={handleDownloadRecord}
                         aria-label="下载录音"
-                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ height: 26, padding: '0 6px', fontSize: 11 }}
                       >
-                        <Button
-                          theme="borderless"
-                          type="tertiary"
-                          size="small"
-                          icon={<Download style={{ height: 13, width: 13 }} />}
-                          style={{ height: 26, padding: '0 6px', fontSize: 11 }}
-                        >
-                          下载
-                        </Button>
-                      </a>
+                        下载
+                      </Button>
                       <div style={{ height: 14, width: 1, background: 'var(--semi-color-border)', margin: '0 4px' }} />
                       <Button
                         theme="borderless"

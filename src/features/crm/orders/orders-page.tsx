@@ -112,8 +112,8 @@ export function OrdersPage() {
         setEditingOrder(response.data)
         setDialogOpen(true)
       }
-    } catch {
-      Toast.error('获取订单详情失败')
+    } catch (error) {
+      showApiErrorToast(error, '获取订单详情失败')
     }
   }, [])
 

@@ -7,6 +7,7 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute('/channel-portal')({
+  staticData: { title: '渠道录入' },
   component: ChannelPortal,
   validateSearch: searchSchema,
 })

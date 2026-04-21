@@ -1,1440 +1,1080 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { AnimatePresence, motion } from 'motion/react'
-import {
-  ArrowRight,
-  BookOpen,
-  BrainCircuit,
-  ChevronLeft,
-  ChevronRight,
-  CircleAlert,
-  ClipboardCheck,
-  Eye,
-  Flame,
-  GraduationCap,
-  Layers3,
-  NotebookPen,
-  ScanSearch,
-  Sparkles,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
 import {
   ASP_MEMORY_TASKS,
   ASP_PREFERENCE_QUESTIONS,
   ASP_SCALE_OPTIONS,
   ASP_SCALE_QUESTIONS,
   ASP_STAGE_PROFILES,
-  type AspMemoryTask,
+  ASP_DIGIT_SPAN,
+  ASP_SENTENCE_WORDS,
+  ASP_WORD_TRANSFORM,
+  ASP_STYLE_QUESTIONS,
+  ASP_SENSORY_QUESTIONS,
   type AspStageId,
 } from '../data/assessment'
 
-type StepId = 'intro' | 'flash' | 'state' | 'preference' | 'subjects' | 'result'
-type MemoryPhase = 'ready' | 'memorizing' | 'recall'
+/* ═══════════════════════════════════════════════════════════════
+   Nothing Design — Light Mode Tokens (Student-Adapted)
+   Printed technical manual. Off-white paper, black ink.
+   Chinese labels for student readability.
+   ═══════════════════════════════════════════════════════════════ */
 
-const STEP_CONFIG: Array<{
-  id: StepId
-  label: string
-  title: string
-  intro: string
-}> = [
-  {
-    id: 'intro',
-    label: '01',
-    title: '起始档案',
-    intro: '确认学段、体验说明与页面结构。',
-  },
-  {
-    id: 'flash',
-    label: '02',
-    title: '闪测样例',
-    intro: '用缩短版时间还原 PDF 里的记忆与规律题。',
-  },
-  {
-    id: 'state',
-    label: '03',
-    title: '学习状态',
-    intro: '用 Likert 量表重建学习策略与学习心理部分。',
-  },
-  {
-    id: 'preference',
-    label: '04',
-    title: '偏好画像',
-    intro: '重建学习通道、环境和互动偏好题。',
-  },
-  {
-    id: 'subjects',
-    label: '05',
-    title: '学科画像',
-    intro: '根据学段展示题册中的学科范围，并完成自评。',
-  },
-  {
-    id: 'result',
-    label: '06',
-    title: '结果概览',
-    intro: '这是一个非官方评分原型，只用于预览页面效果。',
-  },
-] as const
-
-const LIKERT_WIDTH = 'minmax(64px,1fr)'
-
-const palette = {
-  paper: '#f7f1e5',
-  paperDeep: '#efe4d2',
-  ink: '#102038',
-  muted: '#5f6d7f',
-  teal: '#2e8b93',
-  tealSoft: '#d9eeef',
-  blue: '#2d58b8',
-  blueSoft: '#dde7fb',
-  red: '#d75f5f',
-  redSoft: '#fde5e1',
-  gold: '#c79a43',
-  line: 'rgba(16,32,56,0.12)',
+const N = {
+  bg: '#F5F5F0',
+  surface: '#FFFFFF',
+  surfaceRaised: '#F0EFE8',
+  border: '#E8E6E0',
+  borderVisible: '#CCC9C0',
+  textDisplay: '#1A1A18',
+  textPrimary: '#2A2A28',
+  textSecondary: '#787870',
+  textDisabled: '#A0A098',
+  accent: '#E8750A',
+  accentSubtle: 'rgba(232,117,10,0.10)',
+  success: '#3D9A50',
+  warning: '#D4A020',
+  interactive: '#E8750A',
 } as const
 
-function tokenizeAnswer(value: string) {
-  return value
-    .split(/[\s,，、/]+/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
+const FONT = {
+  display: '"Doto", "Space Mono", monospace',
+  body: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
+  mono: '"Space Mono", "JetBrains Mono", monospace',
+} as const
 
-function scoreMemoryTask(task: AspMemoryTask, answer: string) {
-  if (task.expectedTokens) {
-    const expected = new Set(task.expectedTokens.map((item) => item.toLowerCase()))
-    const seen = new Set<string>()
-    let hits = 0
+/* ═══════════════════════════════════════════════════════════════ */
 
-    tokenizeAnswer(answer).forEach((item) => {
-      const normalized = item.toLowerCase()
-      if (expected.has(normalized) && !seen.has(normalized)) {
-        seen.add(normalized)
-        hits += 1
-      }
-    })
+const STEPS = [
+  { label: '起始档案', tag: '01' },
+  { label: '闪测记忆', tag: '02' },
+  { label: '思维测试', tag: '03' },
+  { label: '学习状态', tag: '04' },
+  { label: '学习风格', tag: '05' },
+  { label: '感官偏好', tag: '06' },
+  { label: '偏好画像', tag: '07' },
+  { label: '学科画像', tag: '08' },
+  { label: '结果报告', tag: '09' },
+]
 
-    return Math.round((hits / task.expectedTokens.length) * 100)
-  }
+function band(s: number) { return s >= 85 ? '优秀' : s >= 70 ? '良好' : s >= 55 ? '中等' : '待提升' }
+function bandColor(s: number) { return s >= 85 ? N.success : s >= 70 ? N.textPrimary : s >= 55 ? N.warning : N.accent }
 
-  if (task.expectedAnswer) {
-    return answer.trim() === task.expectedAnswer ? 100 : 0
-  }
-
-  return 0
-}
-
-function average(values: number[]) {
-  if (!values.length) return 0
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
-}
-
-function describeBand(score: number) {
-  if (score >= 85) return '高位稳定'
-  if (score >= 70) return '状态较好'
-  if (score >= 55) return '中位波动'
-  return '需要重点关注'
-}
-
-function createMemoryPhaseState() {
-  return Object.fromEntries(ASP_MEMORY_TASKS.map((task) => [task.id, 'ready'])) as Record<string, MemoryPhase>
-}
-
-function createMemoryCountdownState() {
-  return Object.fromEntries(ASP_MEMORY_TASKS.map((task) => [task.id, task.memorizeSeconds])) as Record<
-    string,
-    number
-  >
-}
-
-function createMemoryAnswerState() {
-  return Object.fromEntries(ASP_MEMORY_TASKS.map((task) => [task.id, ''])) as Record<string, string>
-}
-
-function createScaleAnswerState() {
-  return Object.fromEntries(ASP_SCALE_QUESTIONS.map((question) => [question.id, 0])) as Record<string, number>
-}
-
-function createPreferenceState() {
-  return Object.fromEntries(ASP_PREFERENCE_QUESTIONS.map((question) => [question.id, ''])) as Record<string, string>
-}
-
-function createSubjectRatings(stageId: AspStageId, current?: Record<string, number>) {
-  const stage = ASP_STAGE_PROFILES.find((item) => item.id === stageId) ?? ASP_STAGE_PROFILES[0]
-  return Object.fromEntries(
-    stage.subjects.map((subject) => [subject.id, current?.[subject.id] ?? 0])
-  ) as Record<string, number>
-}
-
-function StepChip({
-  active,
-  done,
-  index,
-  title,
-}: {
-  active: boolean
-  done: boolean
-  index: string
-  title: string
-}) {
+function DisplayText({ text }: { text: string }) {
+  const parts = text.split('___')
+  if (parts.length === 1) return <>{text}</>
   return (
-    <div
-      className={cn(
-        'relative overflow-hidden rounded-[24px] border px-4 py-3 transition-all duration-300',
-        active ? 'translate-x-1 shadow-[0_18px_60px_rgba(46,139,147,0.15)]' : 'opacity-75'
-      )}
-      style={{
-        borderColor: active ? 'rgba(46,139,147,0.28)' : palette.line,
-        background: active
-          ? 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(217,238,239,0.74))'
-          : 'rgba(255,255,255,0.62)',
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
-          style={{
-            backgroundColor: active ? palette.teal : done ? palette.blue : 'rgba(255,255,255,0.7)',
-            color: active || done ? '#fff' : palette.ink,
-          }}
-        >
-          {done ? '✓' : index}
-        </div>
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.24em]" style={{ color: palette.muted }}>
-            ASP Flow
-          </div>
-          <div className="text-sm font-semibold" style={{ color: palette.ink }}>
-            {title}
-          </div>
-        </div>
-      </div>
+    <>
+      {parts[0]}
+      <svg width="60" height="4" viewBox="0 0 60 4" style={{ display: 'inline-block', verticalAlign: 'middle', margin: '0 2px' }}>
+        <rect x="0" y="1" width="60" height="2" rx="1" fill="currentColor" />
+      </svg>
+      {parts[1]}
+    </>
+  )
+}
+
+type AspResult = {
+  memoryScore: number
+  executionScore: number
+  resilienceScore: number
+  subjectScore: number
+  overallScore: number
+  preferenceTraits: string[]
+  strongSubjects: { id: string; name: string; rating: number; topics: string[] }[]
+  relativeWeakSubjects: { id: string; name: string; rating: number; gap: number; topics: string[]; reason: string }[]
+  psychWeakSubjects: { id: string; name: string; rating: number; riskLevel: string; reason: string }[]
+  report: { title: string; paragraphs: string[] }[]
+}
+
+const mkMemPhases = () => Object.fromEntries(ASP_MEMORY_TASKS.map((t) => [t.id, 'ready' as const])) as Record<string, 'ready' | 'memorizing' | 'recall'>
+const mkMemCountdowns = () => Object.fromEntries(ASP_MEMORY_TASKS.map((t) => [t.id, t.memorizeSeconds])) as Record<string, number>
+const mkMemAnswers = () => Object.fromEntries(ASP_MEMORY_TASKS.map((t) => [t.id, ''])) as Record<string, string>
+const mkScaleAnswers = () => Object.fromEntries(ASP_SCALE_QUESTIONS.map((q) => [q.id, 0])) as Record<string, number>
+const mkPrefAnswers = () => Object.fromEntries(ASP_PREFERENCE_QUESTIONS.map((q) => [q.id, ''])) as Record<string, string>
+const mkSubjectRatings = (sid: AspStageId) => {
+  const stage = ASP_STAGE_PROFILES.find((s) => s.id === sid) ?? ASP_STAGE_PROFILES[0]
+  return Object.fromEntries(stage.subjects.map((s) => [s.id, 0])) as Record<string, number>
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UI Atoms — Nothing Light, Student-adapted
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Mono label — smaller, secondary, used for metadata */
+function Label({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <span style={{
+      fontFamily: FONT.mono, fontSize: 11, lineHeight: 1.2,
+      letterSpacing: '0.06em', color: N.textSecondary, ...style,
+    }}>{children}</span>
+  )
+}
+
+/** Segmented progress bar — the Nothing signature */
+function SegmentedProgress({ current, total }: { current: number; total: number }) {
+  return (
+    <div style={{ display: 'flex', gap: 2 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} style={{
+          flex: 1, height: 4,
+          background: i <= current ? N.accent : N.border,
+          transition: 'background 200ms ease-out',
+        }} />
+      ))}
     </div>
   )
 }
 
-function MemoryTaskCard({
-  task,
-  phase,
-  countdown,
-  answer,
-  onStart,
-  onRecall,
-  onAnswerChange,
-}: {
-  task: AspMemoryTask
-  phase: MemoryPhase
-  countdown: number
-  answer: string
-  onStart: () => void
-  onRecall: () => void
-  onAnswerChange: (value: string) => void
-}) {
-  const score = answer.trim() ? scoreMemoryTask(task, answer) : 0
-
+/** Circle timer — mechanical instrument style */
+function CircleTimer({ seconds, total }: { seconds: number; total: number }) {
+  const size = 120, r = 48, circ = 2 * Math.PI * r
+  const off = circ * (1 - seconds / total)
+  const ticks = Array.from({ length: 12 }).map((_, i) => {
+    const angle = (i / 12) * 360 - 90, rad = (angle * Math.PI) / 180
+    return {
+      x1: size / 2 + (r + 6) * Math.cos(rad), y1: size / 2 + (r + 6) * Math.sin(rad),
+      x2: size / 2 + (r + 10) * Math.cos(rad), y2: size / 2 + (r + 10) * Math.sin(rad),
+    }
+  })
   return (
-    <div
-      className="rounded-[28px] border p-5 shadow-[0_22px_80px_rgba(16,32,56,0.06)]"
-      style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-    >
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="mb-1 text-xs uppercase tracking-[0.28em]" style={{ color: palette.teal }}>
-            Flash Module
-          </div>
-          <h3 className="text-xl font-semibold" style={{ color: palette.ink }}>
-            {task.title}
-          </h3>
-        </div>
-        <div
-          className="rounded-full border px-3 py-1 text-xs"
-          style={{
-            borderColor: phase === 'memorizing' ? 'rgba(215,95,95,0.25)' : 'rgba(46,139,147,0.22)',
-            color: phase === 'memorizing' ? palette.red : palette.teal,
-            backgroundColor: phase === 'memorizing' ? palette.redSoft : palette.tealSoft,
-          }}
-        >
-          {phase === 'memorizing' ? `剩余 ${countdown}s` : phase === 'recall' ? `原型分 ${score}` : '等待开始'}
-        </div>
-      </div>
-
-      <p className="mb-4 text-sm leading-6" style={{ color: palette.muted }}>
-        {task.instruction}
-      </p>
-
-      <div
-        className={cn(
-          'mb-4 rounded-[24px] border px-4 py-5 text-center text-lg font-semibold tracking-[0.08em]',
-          phase === 'memorizing' || task.memorizeSeconds === 0 ? 'blur-0' : 'blur-[10px]'
-        )}
-        style={{
-          borderColor: palette.line,
-          background:
-            phase === 'memorizing' || task.memorizeSeconds === 0
-              ? 'linear-gradient(135deg, rgba(221,231,251,0.88), rgba(255,255,255,0.92))'
-              : 'linear-gradient(135deg, rgba(239,228,210,0.55), rgba(255,255,255,0.9))',
-          color: palette.ink,
-        }}
-      >
-        {phase === 'memorizing' || task.memorizeSeconds === 0 ? task.display : '内容已隐藏，进入回忆输入'}
-      </div>
-
-      {task.memorizeSeconds > 0 ? (
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={onStart}
-            disabled={phase === 'memorizing'}
-            className="rounded-full px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              background: 'linear-gradient(135deg, #2d58b8, #1f3f8f)',
-              color: '#fff',
-            }}
-          >
-            {phase === 'ready' ? '开始记忆' : phase === 'memorizing' ? '记忆中…' : '重新开始'}
-          </button>
-          {phase === 'memorizing' && (
-            <button
-              type="button"
-              onClick={onRecall}
-              className="rounded-full border px-4 py-2 text-sm font-semibold"
-              style={{ borderColor: palette.line, color: palette.ink }}
-            >
-              提前进入回忆
-            </button>
-          )}
-        </div>
-      ) : null}
-
-      {(phase === 'recall' || task.memorizeSeconds === 0) && (
-        <div className="mt-4 space-y-3">
-          <textarea
-            value={answer}
-            onChange={(event) => onAnswerChange(event.target.value)}
-            placeholder={task.placeholder}
-            className="min-h-[110px] w-full rounded-[22px] border bg-white/80 px-4 py-3 text-sm leading-6"
-            style={{ borderColor: palette.line, color: palette.ink }}
-          />
-          <p className="text-xs leading-5" style={{ color: palette.muted }}>
-            {task.hint}
-          </p>
-        </div>
-      )}
-    </div>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block', margin: '0 auto' }}>
+      {ticks.map((t, i) => <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={N.borderVisible} strokeWidth={1.5} />)}
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={N.border} strokeWidth={2} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={N.textDisplay} strokeWidth={2}
+        strokeDasharray={circ} strokeDashoffset={off}
+        style={{ transition: 'stroke-dashoffset 1s linear', transform: 'rotate(-90deg)', transformOrigin: `${size / 2}px ${size / 2}px` }} />
+      <text x={size / 2} y={size / 2 - 2} textAnchor="middle" dominantBaseline="middle"
+        fill={N.textDisplay} fontSize={36} fontFamily={FONT.mono} fontWeight={400}>{seconds}</text>
+      <text x={size / 2} y={size / 2 + 18} textAnchor="middle"
+        fill={N.textSecondary} fontSize={10} fontFamily={FONT.mono} letterSpacing="0.06em">秒</text>
+    </svg>
   )
 }
 
-function AspResultBar({
-  label,
-  score,
-  tone,
-}: {
-  label: string
-  score: number
-  tone: 'teal' | 'blue' | 'red' | 'gold'
-}) {
-  const toneMap = {
-    teal: { base: palette.teal, soft: palette.tealSoft },
-    blue: { base: palette.blue, soft: palette.blueSoft },
-    red: { base: palette.red, soft: palette.redSoft },
-    gold: { base: palette.gold, soft: 'rgba(199,154,67,0.18)' },
-  }
-
+/** Score gauge — the instrument dial */
+function ScoreGauge({ score, size = 140 }: { score: number; size?: number }) {
+  const r = (size - 16) / 2, circ = 2 * Math.PI * r
+  const off = circ * (1 - score / 100), color = bandColor(score)
+  const ticks = Array.from({ length: 20 }).map((_, i) => {
+    const angle = (i / 20) * 360 - 90, rad = (angle * Math.PI) / 180
+    return {
+      x1: size / 2 + (r + 4) * Math.cos(rad), y1: size / 2 + (r + 4) * Math.sin(rad),
+      x2: size / 2 + (r + 7) * Math.cos(rad), y2: size / 2 + (r + 7) * Math.sin(rad),
+    }
+  })
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span style={{ color: palette.ink }}>{label}</span>
-        <span className="font-semibold" style={{ color: toneMap[tone].base }}>
-          {score}
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
+      {ticks.map((t, i) => <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} stroke={N.border} strokeWidth={1} />)}
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={N.border} strokeWidth={2} />
+      <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={3}
+        initial={{ strokeDashoffset: circ }} animate={{ strokeDashoffset: off }}
+        transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
+        style={{ strokeDasharray: circ, transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }} />
+      <text x={size / 2} y={size / 2 + 4} textAnchor="middle" dominantBaseline="middle"
+        fill={color} fontSize={size * 0.3} fontFamily={FONT.display} fontWeight={400}>{score}</text>
+    </svg>
+  )
+}
+
+/** Segmented metric bar — the signature data viz */
+function MetricBar({ label, score, delay = 0 }: { label: string; score: number; delay?: number }) {
+  const segments = 20, filled = Math.round((score / 100) * segments), color = bandColor(score)
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+        <span style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 400, color: N.textSecondary }}>{label}</span>
+        <span style={{ fontFamily: FONT.mono, fontSize: 14, color, fontWeight: 400 }}>
+          {score}<span style={{ fontSize: 10, color: N.textSecondary, marginLeft: 4 }}>/ 100</span>
         </span>
       </div>
-      <div
-        className="h-3 overflow-hidden rounded-full"
-        style={{ backgroundColor: toneMap[tone].soft }}
-      >
-        <motion.div
-          className="h-full rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${score}%` }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          style={{ backgroundColor: toneMap[tone].base }}
-        />
-      </div>
-      <div className="text-xs" style={{ color: palette.muted }}>
-        {describeBand(score)}
+      <div style={{ display: 'flex', gap: 2 }}>
+        {Array.from({ length: segments }).map((_, i) => (
+          <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            transition={{ delay: delay + i * 0.02, duration: 0.15 }}
+            style={{ flex: 1, height: 8, background: i < filled ? color : '#E0E0E0' }} />
+        ))}
       </div>
     </div>
   )
 }
 
-export function AspPublicTest() {
-  const [step, setStep] = useState(0)
-  const [studentName, setStudentName] = useState('')
-  const [stageId, setStageId] = useState<AspStageId>('junior')
-  const [memoryPhase, setMemoryPhase] = useState<Record<string, MemoryPhase>>(createMemoryPhaseState)
-  const [memoryCountdown, setMemoryCountdown] = useState<Record<string, number>>(createMemoryCountdownState)
-  const [memoryAnswers, setMemoryAnswers] = useState<Record<string, string>>(createMemoryAnswerState)
-  const [activeMemoryId, setActiveMemoryId] = useState<string | null>(null)
-  const [scaleAnswers, setScaleAnswers] = useState<Record<string, number>>(createScaleAnswerState)
-  const [preferenceAnswers, setPreferenceAnswers] = useState<Record<string, string>>(createPreferenceState)
-  const [subjectRatings, setSubjectRatings] = useState<Record<string, number>>(() => createSubjectRatings('junior'))
+/** Tag recall input */
+function TagRecallInput({ tags, onChange, placeholder, total }: {
+  tags: string[]; onChange: (t: string[]) => void; placeholder: string; total: number
+}) {
+  const [input, setInput] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  function add() {
+    const v = input.trim()
+    if (!v || tags.some((t) => t.toLowerCase() === v.toLowerCase())) { setInput(''); return }
+    onChange([...tags, v]); setInput(''); inputRef.current?.focus()
+  }
+  function remove(i: number) { onChange(tags.filter((_, idx) => idx !== i)) }
+  function onKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ',' || e.key === '，') { e.preventDefault(); add() }
+    if (e.key === 'Backspace' && !input && tags.length) remove(tags.length - 1)
+  }
+  return (
+    <div>
+      {tags.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          {tags.map((tag, i) => (
+            <motion.div key={`${tag}-${i}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px',
+                border: `1px solid ${N.borderVisible}`, borderRadius: 4,
+                fontFamily: FONT.mono, fontSize: 13, color: N.textPrimary }}>
+                {tag}
+                <span onClick={() => remove(i)} style={{ cursor: 'pointer', color: N.textDisabled, fontSize: 14, lineHeight: 1 }}>&times;</span>
+              </span>
+            </motion.div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey}
+          placeholder={tags.length ? '继续输入…' : placeholder}
+          style={{ flex: 1, height: 44, padding: '0 12px', border: 'none', borderBottom: `1px solid ${N.borderVisible}`,
+            background: 'transparent', fontFamily: FONT.mono, fontSize: 14, color: N.textPrimary, outline: 'none' }}
+          onFocus={(e) => { e.target.style.borderBottomColor = N.textPrimary }}
+          onBlur={(e) => { e.target.style.borderBottomColor = N.borderVisible }} />
+        <button onClick={add} disabled={!input.trim()} style={{
+          height: 44, padding: '0 24px', border: `1px solid ${N.borderVisible}`, borderRadius: 999,
+          background: 'transparent', fontFamily: FONT.body, fontSize: 13, letterSpacing: '0.02em',
+          color: input.trim() ? N.textPrimary : N.textDisabled, cursor: input.trim() ? 'pointer' : 'default', transition: 'all 200ms',
+        }}>添加</button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+        <Label>已回忆 {tags.length}</Label>
+        <Label>共 {total} 个</Label>
+      </div>
+    </div>
+  )
+}
 
-  const stageProfile = ASP_STAGE_PROFILES.find((item) => item.id === stageId) ?? ASP_STAGE_PROFILES[0]
-  const currentStep = STEP_CONFIG[step]
+/** Nothing-style pill button — Chinese labels */
+function NButton({ children, primary, disabled, loading, block, onClick, style: extraStyle }: {
+  children: React.ReactNode; primary?: boolean; disabled?: boolean; loading?: boolean
+  block?: boolean; onClick?: () => void; style?: React.CSSProperties
+}) {
+  const base: React.CSSProperties = {
+    height: 48, padding: '0 32px',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderRadius: 999, fontFamily: FONT.body, fontSize: 14, fontWeight: 500, letterSpacing: '0.02em',
+    cursor: disabled ? 'default' : 'pointer', transition: 'all 200ms ease-out', border: 'none',
+    width: block ? '100%' : undefined,
+    ...(primary
+      ? { background: disabled ? N.textDisabled : N.accent, color: '#FFFFFF', opacity: disabled ? 0.4 : 1 }
+      : { background: 'transparent', border: `1px solid ${disabled ? N.border : N.borderVisible}`, color: disabled ? N.textDisabled : N.textPrimary }),
+    ...extraStyle,
+  }
+  return (
+    <button onClick={disabled || loading ? undefined : onClick} style={base}>
+      {loading && <span style={{ display: 'inline-block', width: 14, height: 14,
+        border: `2px solid ${primary ? N.bg : N.textSecondary}`, borderTopColor: 'transparent',
+        borderRadius: '50%', animation: 'nothing-spin 0.8s linear infinite' }} />}
+      {children}
+    </button>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Main Component
+   ═══════════════════════════════════════════════════════════════ */
+
+export function AspPublicTest() {
+  useDocumentTitle('ASP 学习风格测评')
 
   useEffect(() => {
-    if (!activeMemoryId) return
-    if (memoryPhase[activeMemoryId] !== 'memorizing') return
-
-    const timer = window.setTimeout(() => {
-      const nextCountdown = memoryCountdown[activeMemoryId] - 1
-      if (nextCountdown <= 0) {
-        setMemoryCountdown((current) => ({ ...current, [activeMemoryId]: 0 }))
-        setMemoryPhase((current) => ({ ...current, [activeMemoryId]: 'recall' }))
-        setActiveMemoryId(null)
-        return
-      }
-
-      setMemoryCountdown((current) => ({ ...current, [activeMemoryId]: nextCountdown }))
-    }, 1000)
-
-    return () => window.clearTimeout(timer)
-  }, [activeMemoryId, memoryCountdown, memoryPhase])
-
-  const introComplete = studentName.trim().length > 0
-  const memoryComplete = ASP_MEMORY_TASKS.every((task) => memoryAnswers[task.id]?.trim())
-  const scaleComplete = ASP_SCALE_QUESTIONS.every((question) => scaleAnswers[question.id] > 0)
-  const preferenceComplete = ASP_PREFERENCE_QUESTIONS.every((question) => preferenceAnswers[question.id])
-  const subjectsComplete = stageProfile.subjects.every((subject) => subjectRatings[subject.id] > 0)
-
-  const stepReady = [introComplete, memoryComplete, scaleComplete, preferenceComplete, subjectsComplete, true]
-  const finishedCount = stepReady.slice(0, -1).filter(Boolean).length
-
-  const memoryScores = ASP_MEMORY_TASKS.map((task) => scoreMemoryTask(task, memoryAnswers[task.id] ?? ''))
-  const executionScore = average(
-    ASP_SCALE_QUESTIONS.filter((question) => question.dimension === 'execution').map((question) => {
-      const raw = scaleAnswers[question.id]
-      const normalized = question.reverse ? 6 - raw : raw
-      return Math.round(((normalized - 1) / 4) * 100)
-    })
-  )
-  const resilienceScore = average(
-    ASP_SCALE_QUESTIONS.filter((question) => question.dimension === 'resilience').map((question) => {
-      const raw = scaleAnswers[question.id]
-      const normalized = question.reverse ? 6 - raw : raw
-      return Math.round(((normalized - 1) / 4) * 100)
-    })
-  )
-  const memoryScore = average(memoryScores)
-  const subjectScore = average(
-    stageProfile.subjects.map((subject) => Math.round(((subjectRatings[subject.id] - 1) / 4) * 100))
-  )
-  const overallScore = Math.round(memoryScore * 0.24 + executionScore * 0.24 + resilienceScore * 0.22 + subjectScore * 0.3)
-
-  const preferenceTraits = Object.entries(preferenceAnswers).flatMap(([questionId, answerId]) => {
-    const question = ASP_PREFERENCE_QUESTIONS.find((item) => item.id === questionId)
-    const option = question?.options.find((item) => item.id === answerId)
-    return option?.traits ?? []
-  })
-  const preferenceTraitCounter = preferenceTraits.reduce<Record<string, number>>((counter, trait) => {
-    counter[trait] = (counter[trait] ?? 0) + 1
-    return counter
-  }, {})
-  const topPreferenceTraits = Object.entries(preferenceTraitCounter)
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, 4)
-    .map(([trait]) => trait)
-
-  const sortedSubjects = [...stageProfile.subjects].sort(
-    (left, right) => subjectRatings[right.id] - subjectRatings[left.id]
-  )
-  const strongSubjects = sortedSubjects.slice(0, 2)
-  const focusSubjects = [...stageProfile.subjects]
-    .sort((left, right) => subjectRatings[left.id] - subjectRatings[right.id])
-    .slice(0, 2)
-
-  function startMemoryTask(taskId: string) {
-    const task = ASP_MEMORY_TASKS.find((item) => item.id === taskId)
-    if (!task || task.memorizeSeconds <= 0) return
-
-    setActiveMemoryId(taskId)
-    setMemoryPhase((current) => ({ ...current, [taskId]: 'memorizing' }))
-    setMemoryCountdown((current) => ({ ...current, [taskId]: task.memorizeSeconds }))
-    setMemoryAnswers((current) => ({ ...current, [taskId]: '' }))
-  }
-
-  function moveToRecall(taskId: string) {
-    setMemoryPhase((current) => ({ ...current, [taskId]: 'recall' }))
-    if (activeMemoryId === taskId) {
-      setActiveMemoryId(null)
+    if (!document.getElementById('nothing-fonts')) {
+      const link = document.createElement('link')
+      link.id = 'nothing-fonts'; link.rel = 'stylesheet'
+      link.href = 'https://fonts.googleapis.com/css2?family=Doto:wght@400;700&family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap'
+      document.head.appendChild(link)
     }
-  }
-
-  function handleStageSelect(nextStageId: AspStageId) {
-    setStageId(nextStageId)
-    setSubjectRatings((current) => createSubjectRatings(nextStageId, current))
-  }
-
-  function resetAll() {
-    setStep(0)
-    setStudentName('')
-    setStageId('junior')
-    setMemoryPhase(createMemoryPhaseState())
-    setMemoryCountdown(createMemoryCountdownState())
-    setMemoryAnswers(createMemoryAnswerState())
-    setActiveMemoryId(null)
-    setScaleAnswers(createScaleAnswerState())
-    setPreferenceAnswers(createPreferenceState())
-    setSubjectRatings(createSubjectRatings('junior'))
-  }
-
-  function goNext() {
-    if (step < STEP_CONFIG.length - 1 && stepReady[step]) {
-      setStep((current) => current + 1)
+    if (!document.getElementById('nothing-keyframes')) {
+      const style = document.createElement('style')
+      style.id = 'nothing-keyframes'
+      style.textContent = '@keyframes nothing-spin { to { transform: rotate(360deg) } }'
+      document.head.appendChild(style)
     }
+  }, [])
+
+  const [step, setStep] = useState(0)
+  const [studentName, setStudentName] = useState('')
+  const [studentPhone, setStudentPhone] = useState('')
+  const [stageId, setStageId] = useState<AspStageId>('junior')
+  const [memPhases, setMemPhases] = useState(mkMemPhases)
+  const [memCountdowns, setMemCountdowns] = useState(mkMemCountdowns)
+  const [memAnswers, setMemAnswers] = useState(mkMemAnswers)
+  const [flashIdx, setFlashIdx] = useState(0)
+  const [scaleAnswers, setScaleAnswers] = useState(mkScaleAnswers)
+  const [prefAnswers, setPrefAnswers] = useState(mkPrefAnswers)
+  const [subjectRatings, setSubjectRatings] = useState<Record<string, number>>(() => mkSubjectRatings('junior'))
+  const [aspResult, setAspResult] = useState<AspResult | null>(null)
+  const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [phoneDup, setPhoneDup] = useState<boolean | null>(null)
+  const [phoneChecking, setPhoneChecking] = useState(false)
+  // THINK step
+  const [thinkIdx, setThinkIdx] = useState(0)
+  const [digitSpanAnswers, setDigitSpanAnswers] = useState<Record<string, string>>({})
+  const [digitSpanPhase, setDigitSpanPhase] = useState<'ready' | 'showing' | 'recall'>('ready')
+  const [digitSpanDigitIdx, setDigitSpanDigitIdx] = useState(-1)
+  const [digitSpanBlank, setDigitSpanBlank] = useState(false)
+  const [digitSpanSeqIdx, setDigitSpanSeqIdx] = useState(0)
+  const [sentenceAnswer, setSentenceAnswer] = useState('')
+  const [wordTransformAnswers, setWordTransformAnswers] = useState<string[]>([])
+  const [wordTransformPhase, setWordTransformPhase] = useState<'ready' | 'active' | 'done'>('ready')
+  const [wordTransformCountdown, setWordTransformCountdown] = useState(60)
+  // STYLE step
+  const [styleAnswers, setStyleAnswers] = useState<Record<string, { most: string; like: string; least: string }>>({})
+  // SENSE step
+  const [senseAnswers, setSenseAnswers] = useState<Record<string, string>>({})
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const stageProfile = useMemo(() => ASP_STAGE_PROFILES.find((s) => s.id === stageId) ?? ASP_STAGE_PROFILES[0], [stageId])
+
+  useEffect(() => { setSubjectRatings(mkSubjectRatings(stageId)) }, [stageId])
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }, [step, flashIdx, thinkIdx])
+
+  useEffect(() => {
+    const task = ASP_MEMORY_TASKS[flashIdx]; if (!task) return
+    if (memPhases[task.id] !== 'memorizing') return
+    if (memCountdowns[task.id] <= 0) { setMemPhases((p) => ({ ...p, [task.id]: 'recall' })); return }
+    const t = setTimeout(() => setMemCountdowns((c) => ({ ...c, [task.id]: c[task.id] - 1 })), 1000)
+    return () => clearTimeout(t)
+  }, [flashIdx, memPhases, memCountdowns])
+
+  // 数字广度逐字显示定时器（数字800ms → 空白200ms → 下一个）
+  useEffect(() => {
+    if (digitSpanPhase !== 'showing') return
+    if (thinkIdx > 1) return
+    const group = ASP_DIGIT_SPAN[thinkIdx]
+    if (!group) return
+    const seq = group.sequences[digitSpanSeqIdx]
+    if (!seq) return
+    if (digitSpanBlank) {
+      // 空白阶段200ms后显示下一个数字
+      const t = setTimeout(() => { setDigitSpanBlank(false); setDigitSpanDigitIdx(i => i + 1) }, 200)
+      return () => clearTimeout(t)
+    }
+    if (digitSpanDigitIdx >= seq.digits.length - 1) {
+      const t = setTimeout(() => setDigitSpanPhase('recall'), 800)
+      return () => clearTimeout(t)
+    }
+    // 显示当前数字800ms后进入空白
+    const t = setTimeout(() => setDigitSpanBlank(true), 800)
+    return () => clearTimeout(t)
+  }, [digitSpanPhase, digitSpanDigitIdx, digitSpanBlank, thinkIdx, digitSpanSeqIdx])
+
+  // 日字加一笔倒计时
+  useEffect(() => {
+    if (wordTransformPhase !== 'active') return
+    if (wordTransformCountdown <= 0) { setWordTransformPhase('done'); return }
+    const t = setTimeout(() => setWordTransformCountdown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [wordTransformPhase, wordTransformCountdown])
+
+  useEffect(() => {
+    const phone = studentPhone.trim()
+    if (!/^1\d{10}$/.test(phone)) { setPhoneDup(null); return }
+    setPhoneChecking(true)
+    const ctrl = new AbortController()
+    fetch(`/api/v1/public/asp-test/check-phone?phone=${phone}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((d) => { setPhoneDup(d.data?.exists ?? false); setPhoneChecking(false) })
+      .catch(() => { setPhoneChecking(false) })
+    return () => ctrl.abort()
+  }, [studentPhone])
+
+  const introOk = studentName.trim().length > 0 && /^1\d{10}$/.test(studentPhone.trim()) && phoneDup === false
+  const flashOk = ASP_MEMORY_TASKS.every((t) => memAnswers[t.id]?.trim())
+  const scaleOk = ASP_SCALE_QUESTIONS.every((q) => scaleAnswers[q.id] > 0)
+  const prefOk = ASP_PREFERENCE_QUESTIONS.every((q) => prefAnswers[q.id])
+  const subjectOk = stageProfile.subjects.every((s) => subjectRatings[s.id] > 0)
+  const thinkOk = ASP_DIGIT_SPAN.every(g => g.sequences.every(s => digitSpanAnswers[s.id]?.trim())) && sentenceAnswer.trim().length > 0 && wordTransformPhase === 'done'
+  const styleOk = ASP_STYLE_QUESTIONS.every(q => { const a = styleAnswers[q.id]; return a && a.most && a.like && a.least })
+  const senseOk = ASP_SENSORY_QUESTIONS.every(q => senseAnswers[q.id])
+  const ready = [introOk, flashOk, thinkOk, scaleOk, styleOk, senseOk, prefOk, subjectOk, true]
+  const R = aspResult
+
+  function startFlash() {
+    const task = ASP_MEMORY_TASKS[flashIdx]
+    if (!task || task.memorizeSeconds <= 0) { setMemPhases((p) => ({ ...p, [task.id]: 'recall' })); return }
+    setMemPhases((p) => ({ ...p, [task.id]: 'memorizing' }))
   }
 
-  function goPrev() {
-    if (step > 0) {
-      setStep((current) => current - 1)
-    }
+  async function submitAndShow() {
+    if (submitState === 'loading') return
+    setSubmitState('loading')
+    try {
+      const resp = await fetch('/api/v1/public/asp-test/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: studentName, phone: studentPhone, stage: stageId, memory_answers: memAnswers, scale_answers: scaleAnswers, preference_answers: prefAnswers, subject_ratings: subjectRatings, digit_span_answers: digitSpanAnswers, sentence_answer: sentenceAnswer, word_transform_answers: wordTransformAnswers, style_answers: styleAnswers, sensory_answers: senseAnswers }),
+      })
+      const data = await resp.json()
+      if (data.success && data.data?.result) {
+        setAspResult(data.data.result as AspResult); setSubmitState('done'); setStep(8)
+      } else { setSubmitState('error') }
+    } catch { setSubmitState('error') }
+  }
+
+  function goNext() { if (step === 7) { submitAndShow(); return }; if (step < 8) setStep(step + 1) }
+  function goPrev() { if (step > 0) setStep(step - 1) }
+
+  const resetAll = useCallback(() => {
+    setStep(0); setStudentName(''); setStudentPhone(''); setStageId('junior')
+    setMemPhases(mkMemPhases); setMemCountdowns(mkMemCountdowns); setMemAnswers(mkMemAnswers); setFlashIdx(0)
+    setScaleAnswers(mkScaleAnswers); setPrefAnswers(mkPrefAnswers)
+    setSubjectRatings(mkSubjectRatings('junior')); setAspResult(null); setSubmitState('idle')
+    setPhoneDup(null); setPhoneChecking(false)
+    setThinkIdx(0); setDigitSpanAnswers({}); setDigitSpanPhase('ready'); setDigitSpanDigitIdx(-1); setDigitSpanBlank(false); setDigitSpanSeqIdx(0);
+    setSentenceAnswer(''); setWordTransformAnswers([]); setWordTransformPhase('ready'); setWordTransformCountdown(60);
+    setStyleAnswers({}); setSenseAnswers({});
+  }, [])
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', height: 44, padding: '0 0',
+    border: 'none', borderBottom: `1px solid ${N.borderVisible}`,
+    background: 'transparent', fontFamily: FONT.body, fontSize: 16, color: N.textPrimary, outline: 'none',
   }
 
   return (
-    <div
-      className="min-h-svh overflow-hidden px-4 py-6 sm:px-6 lg:px-8"
-      style={{
-        background:
-          'radial-gradient(circle at top left, rgba(221,231,251,0.8), transparent 34%), radial-gradient(circle at 90% 10%, rgba(217,238,239,0.88), transparent 24%), linear-gradient(180deg, #fcf7ef 0%, #f7f1e5 50%, #efe4d2 100%)',
-      }}
-    >
-      <div className="mx-auto max-w-[1400px]">
-        <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <div
-              className="overflow-hidden rounded-[34px] border p-5 shadow-[0_30px_120px_rgba(16,32,56,0.12)]"
-              style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.66)' }}
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.3em]" style={{ color: palette.teal }}>
-                    Rui Man Fen
-                  </div>
-                  <h1 className="mt-2 text-3xl font-black tracking-[0.18em]" style={{ color: palette.ink }}>
-                    ASP
-                  </h1>
-                </div>
-                <div
-                  className="rounded-full border px-3 py-1 text-xs font-semibold"
-                  style={{ borderColor: 'rgba(215,95,95,0.25)', color: palette.red, backgroundColor: palette.redSoft }}
-                >
-                  原型预览
-                </div>
-              </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: N.bg, maxWidth: 480, margin: '0 auto', fontFamily: FONT.body }}>
 
-              <div className="mb-6 space-y-3">
-                <div className="rounded-[28px] border p-4" style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.52)' }}>
-                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.ink }}>
-                    <Layers3 size={16} />
-                    三层结构
-                  </div>
-                  <div className="flex items-center justify-center py-3">
-                    <div className="relative h-44 w-44">
-                      <div className="absolute left-8 top-12 flex h-24 w-24 items-center justify-center rounded-full bg-[#2655B61F] text-sm font-semibold text-[#1F4EA7]">
-                        学习
-                        <br />
-                        能力
-                      </div>
-                      <div className="absolute left-14 top-6 flex h-24 w-24 items-center justify-center rounded-full bg-[#2E8B931E] text-sm font-semibold text-[#1E6C73]">
-                        学习
-                        <br />
-                        策略
-                      </div>
-                      <div className="absolute left-20 top-12 flex h-24 w-24 items-center justify-center rounded-full bg-[#D75F5F1F] text-sm font-semibold text-[#B34A4A]">
-                        学习
-                        <br />
-                        心理
-                      </div>
-                      <div className="absolute left-[52px] top-[52px] flex h-16 w-16 items-center justify-center rounded-full bg-[#102038] text-xs font-semibold text-white">
-                        ASP
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-xs leading-5" style={{ color: palette.muted }}>
-                    页面结构参考 PDF 题册封面与末页示意图，右侧流程则是网页化后的答题路径。
-                  </p>
-                </div>
-
-                <div className="rounded-[28px] border p-4" style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.52)' }}>
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.ink }}>
-                    <ClipboardCheck size={16} />
-                    完成进度
-                  </div>
-                  <div className="mb-2 text-4xl font-black" style={{ color: palette.blue }}>
-                    {finishedCount}
-                    <span className="text-lg font-medium" style={{ color: palette.muted }}>
-                      /5
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: 'rgba(16,32,56,0.08)' }}>
-                    <motion.div
-                      className="h-full rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(finishedCount / 5) * 100}%` }}
-                      transition={{ duration: 0.6 }}
-                      style={{ background: 'linear-gradient(90deg, #2e8b93, #2d58b8)' }}
-                    />
-                  </div>
-                  <p className="mt-3 text-xs leading-5" style={{ color: palette.muted }}>
-                    这里做的是“网页化交互原型”，并没有接 ASP 官方后台或官方评分卡。
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {STEP_CONFIG.map((item, index) => (
-                  <StepChip
-                    key={item.id}
-                    active={index === step}
-                    done={index < STEP_CONFIG.length - 1 ? stepReady[index] : false}
-                    index={item.label}
-                    title={item.title}
-                  />
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          <main>
-            <div
-              className="overflow-hidden rounded-[38px] border shadow-[0_30px_120px_rgba(16,32,56,0.12)]"
-              style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.64)' }}
-            >
-              <div
-                className="border-b px-6 py-5 sm:px-8"
-                style={{ borderColor: palette.line, background: 'linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.4))' }}
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                  <div>
-                    <div className="mb-2 text-xs uppercase tracking-[0.28em]" style={{ color: palette.teal }}>
-                      {currentStep.label} / {currentStep.id}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-3xl font-black tracking-[0.08em]" style={{ color: palette.ink }}>
-                        {currentStep.title}
-                      </h2>
-                      <div
-                        className="rounded-full border px-3 py-1 text-xs font-semibold"
-                        style={{ borderColor: palette.line, color: palette.muted }}
-                      >
-                        {currentStep.intro}
-                      </div>
-                    </div>
-                  </div>
-
-                  {step < STEP_CONFIG.length - 1 && (
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={goPrev}
-                        disabled={step === 0}
-                        className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45"
-                        style={{ borderColor: palette.line, color: palette.ink }}
-                      >
-                        <ChevronLeft size={16} />
-                        上一步
-                      </button>
-                      <button
-                        type="button"
-                        onClick={goNext}
-                        disabled={!stepReady[step]}
-                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
-                        style={{ background: 'linear-gradient(135deg, #2e8b93, #2d58b8)' }}
-                      >
-                        下一步
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="px-5 py-5 sm:px-8 sm:py-7">
-                <AnimatePresence mode="wait" initial={false}>
-                  {currentStep.id === 'intro' && (
-                    <motion.div
-                      key="intro"
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -18 }}
-                      transition={{ duration: 0.28 }}
-                      className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]"
-                    >
-                      <section className="space-y-5">
-                        <div
-                          className="overflow-hidden rounded-[34px] border p-6"
-                          style={{
-                            borderColor: 'rgba(46,139,147,0.22)',
-                            background:
-                              'linear-gradient(160deg, rgba(217,238,239,0.8), rgba(255,255,255,0.76) 58%, rgba(221,231,251,0.64))',
-                          }}
-                        >
-                          <div className="mb-4 flex items-center gap-3">
-                            <div className="rounded-full bg-white/80 p-3 text-[#2e8b93]">
-                              <ScanSearch size={20} />
-                            </div>
-                            <div>
-                              <div className="text-xs uppercase tracking-[0.24em]" style={{ color: palette.teal }}>
-                                Assessment Preview
-                              </div>
-                              <h3 className="text-2xl font-black" style={{ color: palette.ink }}>
-                                把 PDF 题册改造成网页答题体验
-                              </h3>
-                            </div>
-                          </div>
-                          <p className="max-w-2xl text-sm leading-7" style={{ color: palette.ink }}>
-                            这个页面不是把 PDF 直接塞进 iframe，而是按题册逻辑重新组织成网页流程：先做闪测样例，再完成学习状态、偏好和学科自评，最后给出一个非官方的原型评分摘要。
-                          </p>
-
-                          <div className="mt-6 grid gap-4 md:grid-cols-3">
-                            {[
-                              {
-                                icon: BrainCircuit,
-                                title: '学习能力',
-                                text: '用数字闪记、词语回忆和规律题示范网页化后的快测区。',
-                              },
-                              {
-                                icon: NotebookPen,
-                                title: '学习策略',
-                                text: '把 PDF 中的陈述题改为 Likert 量表，更适合移动端点选。',
-                              },
-                              {
-                                icon: GraduationCap,
-                                title: '学科画像',
-                                text: '按小学、初中、高中文理分流展示题册里的学科覆盖范围。',
-                              },
-                            ].map((item) => (
-                              <div
-                                key={item.title}
-                                className="rounded-[28px] border p-4"
-                                style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                              >
-                                <item.icon size={18} color={palette.blue} />
-                                <div className="mt-3 text-base font-semibold" style={{ color: palette.ink }}>
-                                  {item.title}
-                                </div>
-                                <p className="mt-2 text-sm leading-6" style={{ color: palette.muted }}>
-                                  {item.text}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </section>
-
-                      <section className="space-y-5">
-                        <div
-                          className="rounded-[34px] border p-6"
-                          style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.74)' }}
-                        >
-                          <div className="mb-5 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.ink }}>
-                            <BookOpen size={16} />
-                            开始设置
-                          </div>
-
-                          <label className="mb-2 block text-sm font-medium" style={{ color: palette.muted }}>
-                            学生姓名 / 体验者标记
-                          </label>
-                          <input
-                            value={studentName}
-                            onChange={(event) => setStudentName(event.target.value)}
-                            placeholder="例如：张同学 / 试听用户 A"
-                            className="mb-5 w-full rounded-[22px] border bg-white/80 px-4 py-3 text-sm"
-                            style={{ borderColor: palette.line, color: palette.ink }}
-                          />
-
-                          <div className="mb-2 text-sm font-medium" style={{ color: palette.muted }}>
-                            选择学段
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {ASP_STAGE_PROFILES.map((stage) => (
-                              <button
-                                key={stage.id}
-                                type="button"
-                                onClick={() => handleStageSelect(stage.id)}
-                                className={cn(
-                                  'rounded-[24px] border p-4 text-left transition',
-                                  stage.id === stageId && 'translate-y-[-2px] shadow-[0_18px_45px_rgba(46,139,147,0.12)]'
-                                )}
-                                style={{
-                                  borderColor: stage.id === stageId ? 'rgba(46,139,147,0.28)' : palette.line,
-                                  background:
-                                    stage.id === stageId
-                                      ? 'linear-gradient(135deg, rgba(217,238,239,0.86), rgba(255,255,255,0.9))'
-                                      : 'rgba(255,255,255,0.72)',
-                                }}
-                              >
-                                <div className="mb-3 flex items-center gap-3">
-                                  <div
-                                    className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                                    style={{ backgroundColor: stage.id === stageId ? palette.teal : palette.blue }}
-                                  >
-                                    {stage.badge}
-                                  </div>
-                                  <div className="text-base font-semibold" style={{ color: palette.ink }}>
-                                    {stage.label}
-                                  </div>
-                                </div>
-                                <p className="text-sm leading-6" style={{ color: palette.muted }}>
-                                  {stage.summary}
-                                </p>
-                              </button>
-                            ))}
-                          </div>
-
-                          <div
-                            className="mt-5 rounded-[24px] border p-4"
-                            style={{ borderColor: 'rgba(215,95,95,0.18)', backgroundColor: palette.redSoft }}
-                          >
-                            <div className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.red }}>
-                              <CircleAlert size={16} />
-                              说明
-                            </div>
-                            <p className="text-sm leading-6" style={{ color: '#8f4646' }}>
-                              当前页面只做交互预览，不包含 ASP 官方答题卡、常模或报告引擎。结果页的分数是为了演示信息架构和视觉效果。
-                            </p>
-                          </div>
-                        </div>
-                      </section>
-                    </motion.div>
-                  )}
-
-                  {currentStep.id === 'flash' && (
-                    <motion.div
-                      key="flash"
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -18 }}
-                      transition={{ duration: 0.28 }}
-                      className="space-y-5"
-                    >
-                      <div
-                        className="rounded-[30px] border p-5"
-                        style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                      >
-                        <div className="mb-3 flex items-center gap-3">
-                          <div className="rounded-full bg-[#2d58b814] p-3 text-[#2d58b8]">
-                            <Eye size={18} />
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.24em]" style={{ color: palette.blue }}>
-                              Timed Demo
-                            </div>
-                            <h3 className="text-xl font-semibold" style={{ color: palette.ink }}>
-                              网页版闪测把 PDF 的 30 秒 / 60 秒任务缩短成演示版
-                            </h3>
-                          </div>
-                        </div>
-                        <p className="text-sm leading-7" style={{ color: palette.muted }}>
-                          这里先验证网页交互是否顺手：开始记忆后内容会短暂显示，时间结束自动隐藏，再进入回忆输入。这样比纸面题册更适合手机端和线上测评。
-                        </p>
-                      </div>
-
-                      <div className="grid gap-5 xl:grid-cols-3">
-                        {ASP_MEMORY_TASKS.map((task) => (
-                          <MemoryTaskCard
-                            key={task.id}
-                            task={task}
-                            phase={memoryPhase[task.id]}
-                            countdown={memoryCountdown[task.id]}
-                            answer={memoryAnswers[task.id]}
-                            onStart={() => startMemoryTask(task.id)}
-                            onRecall={() => moveToRecall(task.id)}
-                            onAnswerChange={(value) =>
-                              setMemoryAnswers((current) => ({ ...current, [task.id]: value }))
-                            }
-                          />
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {currentStep.id === 'state' && (
-                    <motion.div
-                      key="state"
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -18 }}
-                      transition={{ duration: 0.28 }}
-                      className="space-y-5"
-                    >
-                      <div
-                        className="rounded-[30px] border p-5"
-                        style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                      >
-                        <div className="mb-3 flex items-center gap-3">
-                          <div className="rounded-full bg-[#2e8b9314] p-3 text-[#2e8b93]">
-                            <Sparkles size={18} />
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.24em]" style={{ color: palette.teal }}>
-                              Likert Survey
-                            </div>
-                            <h3 className="text-xl font-semibold" style={{ color: palette.ink }}>
-                              把纸质判断题改成可点选矩阵
-                            </h3>
-                          </div>
-                        </div>
-                        <p className="text-sm leading-7" style={{ color: palette.muted }}>
-                          这一段来自 PDF 的第三至第六部分。网页上最适合的承载方式是 5 级量表，不再要求用户手写 √，而是直接点选，非常适合手机操作。
-                        </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        {ASP_SCALE_QUESTIONS.map((question, index) => (
-                          <div
-                            key={question.id}
-                            className="rounded-[28px] border p-5"
-                            style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                          >
-                            <div className="mb-4 flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-                              <div className="text-sm font-semibold leading-7" style={{ color: palette.ink }}>
-                                {index + 1}. {question.prompt}
-                              </div>
-                              <div
-                                className="rounded-full border px-3 py-1 text-xs"
-                                style={{
-                                  borderColor:
-                                    question.dimension === 'execution'
-                                      ? 'rgba(45,88,184,0.16)'
-                                      : 'rgba(215,95,95,0.18)',
-                                  color: question.dimension === 'execution' ? palette.blue : palette.red,
-                                  backgroundColor:
-                                    question.dimension === 'execution' ? palette.blueSoft : palette.redSoft,
-                                }}
-                              >
-                                {question.dimension === 'execution' ? '学习执行' : '心理韧性'}
-                              </div>
-                            </div>
-                            <div
-                              className="grid gap-2"
-                              style={{ gridTemplateColumns: `repeat(${ASP_SCALE_OPTIONS.length}, ${LIKERT_WIDTH})` }}
-                            >
-                              {ASP_SCALE_OPTIONS.map((option) => {
-                                const selected = scaleAnswers[question.id] === option.value
-                                return (
-                                  <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() =>
-                                      setScaleAnswers((current) => ({
-                                        ...current,
-                                        [question.id]: option.value,
-                                      }))
-                                    }
-                                    className={cn(
-                                      'rounded-[22px] border px-3 py-3 text-center text-sm transition',
-                                      selected && 'translate-y-[-2px]'
-                                    )}
-                                    style={{
-                                      borderColor: selected ? 'rgba(46,139,147,0.34)' : palette.line,
-                                      background: selected
-                                        ? 'linear-gradient(135deg, rgba(217,238,239,0.88), rgba(255,255,255,0.96))'
-                                        : 'rgba(255,255,255,0.82)',
-                                      color: selected ? palette.teal : palette.ink,
-                                    }}
-                                  >
-                                    <div className="text-base font-semibold">{option.value}</div>
-                                    <div className="mt-1 text-xs leading-5">{option.label}</div>
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {currentStep.id === 'preference' && (
-                    <motion.div
-                      key="preference"
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -18 }}
-                      transition={{ duration: 0.28 }}
-                      className="space-y-5"
-                    >
-                      <div
-                        className="rounded-[30px] border p-5"
-                        style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                      >
-                        <div className="mb-3 flex items-center gap-3">
-                          <div className="rounded-full bg-[#c79a4316] p-3 text-[#c79a43]">
-                            <Flame size={18} />
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.24em]" style={{ color: palette.gold }}>
-                              Learning Preference
-                            </div>
-                            <h3 className="text-xl font-semibold" style={{ color: palette.ink }}>
-                              偏好题最适合做成卡片式选择
-                            </h3>
-                          </div>
-                        </div>
-                        <p className="text-sm leading-7" style={{ color: palette.muted }}>
-                          这部分用来验证“学习通道、环境、互动偏好”在网页上的呈现方式。你点完以后，结果页会自动整理出偏好标签。
-                        </p>
-                      </div>
-
-                      <div className="grid gap-5 xl:grid-cols-2">
-                        {ASP_PREFERENCE_QUESTIONS.map((question) => (
-                          <div
-                            key={question.id}
-                            className="rounded-[30px] border p-5"
-                            style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                          >
-                            <div className="mb-2 text-xs uppercase tracking-[0.24em]" style={{ color: palette.teal }}>
-                              {question.description}
-                            </div>
-                            <h3 className="mb-4 text-lg font-semibold" style={{ color: palette.ink }}>
-                              {question.prompt}
-                            </h3>
-                            <div className="space-y-3">
-                              {question.options.map((option) => {
-                                const selected = preferenceAnswers[question.id] === option.id
-                                return (
-                                  <button
-                                    key={option.id}
-                                    type="button"
-                                    onClick={() =>
-                                      setPreferenceAnswers((current) => ({
-                                        ...current,
-                                        [question.id]: option.id,
-                                      }))
-                                    }
-                                    className={cn(
-                                      'w-full rounded-[24px] border p-4 text-left transition',
-                                      selected && 'translate-y-[-2px] shadow-[0_16px_40px_rgba(45,88,184,0.1)]'
-                                    )}
-                                    style={{
-                                      borderColor: selected ? 'rgba(45,88,184,0.28)' : palette.line,
-                                      background: selected
-                                        ? 'linear-gradient(135deg, rgba(221,231,251,0.92), rgba(255,255,255,0.98))'
-                                        : 'rgba(255,255,255,0.84)',
-                                    }}
-                                  >
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div>
-                                        <div className="text-sm font-semibold" style={{ color: palette.ink }}>
-                                          {option.label}
-                                        </div>
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                          {option.traits.map((trait) => (
-                                            <span
-                                              key={trait}
-                                              className="rounded-full border px-2 py-1 text-xs"
-                                              style={{
-                                                borderColor: 'rgba(46,139,147,0.18)',
-                                                color: palette.teal,
-                                                backgroundColor: palette.tealSoft,
-                                              }}
-                                            >
-                                              {trait}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <div
-                                        className="mt-1 h-5 w-5 rounded-full border"
-                                        style={{
-                                          borderColor: selected ? palette.blue : palette.line,
-                                          backgroundColor: selected ? palette.blue : 'transparent',
-                                        }}
-                                      />
-                                    </div>
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {currentStep.id === 'subjects' && (
-                    <motion.div
-                      key="subjects"
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -18 }}
-                      transition={{ duration: 0.28 }}
-                      className="space-y-5"
-                    >
-                      <div
-                        className="rounded-[30px] border p-5"
-                        style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                      >
-                        <div className="mb-3 flex items-center gap-3">
-                          <div className="rounded-full bg-[#2d58b814] p-3 text-[#2d58b8]">
-                            <GraduationCap size={18} />
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.24em]" style={{ color: palette.blue }}>
-                              Stage Mapping
-                            </div>
-                            <h3 className="text-xl font-semibold" style={{ color: palette.ink }}>
-                              {stageProfile.label} 学科范围与自评
-                            </h3>
-                          </div>
-                        </div>
-                        <p className="text-sm leading-7" style={{ color: palette.muted }}>
-                          这部分直接参考题册后半段的“学科知识测评 / 题型测评”页。页面里先展示覆盖范围，再让体验者给每门学科做一个快速自评，方便结果页演示“强项 / 关注点”。
-                        </p>
-                      </div>
-
-                      <div className="grid gap-5 xl:grid-cols-2">
-                        {stageProfile.subjects.map((subject) => (
-                          <div
-                            key={subject.id}
-                            className="rounded-[30px] border p-5"
-                            style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.72)' }}
-                          >
-                            <div className="mb-3 flex items-center justify-between gap-3">
-                              <div className="text-lg font-semibold" style={{ color: palette.ink }}>
-                                {subject.name}
-                              </div>
-                              <div
-                                className="rounded-full border px-3 py-1 text-xs"
-                                style={{ borderColor: 'rgba(45,88,184,0.16)', color: palette.blue, backgroundColor: palette.blueSoft }}
-                              >
-                                {subjectRatings[subject.id] > 0 ? `当前 ${subjectRatings[subject.id]} / 5` : '待自评'}
-                              </div>
-                            </div>
-
-                            <div className="mb-4 flex flex-wrap gap-2">
-                              {subject.topics.map((topic) => (
-                                <span
-                                  key={topic}
-                                  className="rounded-full border px-3 py-1 text-xs"
-                                  style={{ borderColor: palette.line, color: palette.muted, backgroundColor: 'rgba(255,255,255,0.86)' }}
-                                >
-                                  {topic}
-                                </span>
-                              ))}
-                            </div>
-
-                            <div className="grid grid-cols-5 gap-2">
-                              {[1, 2, 3, 4, 5].map((value) => {
-                                const selected = subjectRatings[subject.id] === value
-                                return (
-                                  <button
-                                    key={value}
-                                    type="button"
-                                    onClick={() =>
-                                      setSubjectRatings((current) => ({
-                                        ...current,
-                                        [subject.id]: value,
-                                      }))
-                                    }
-                                    className="rounded-[20px] border px-2 py-3 text-center transition"
-                                    style={{
-                                      borderColor: selected ? 'rgba(46,139,147,0.28)' : palette.line,
-                                      background: selected
-                                        ? 'linear-gradient(135deg, rgba(217,238,239,0.88), rgba(255,255,255,0.96))'
-                                        : 'rgba(255,255,255,0.84)',
-                                      color: selected ? palette.teal : palette.ink,
-                                    }}
-                                  >
-                                    <div className="text-base font-semibold">{value}</div>
-                                    <div className="mt-1 text-[11px] leading-4">
-                                      {value === 1
-                                        ? '薄弱'
-                                        : value === 2
-                                          ? '偏弱'
-                                          : value === 3
-                                            ? '一般'
-                                            : value === 4
-                                              ? '稳'
-                                              : '强'}
-                                    </div>
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {currentStep.id === 'result' && (
-                    <motion.div
-                      key="result"
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -18 }}
-                      transition={{ duration: 0.28 }}
-                      className="space-y-5"
-                    >
-                      <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-                        <div
-                          className="overflow-hidden rounded-[34px] border p-6"
-                          style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.74)' }}
-                        >
-                          <div className="mb-4 flex items-center gap-3">
-                            <div className="rounded-full bg-[#2d58b814] p-3 text-[#2d58b8]">
-                              <ArrowRight size={18} />
-                            </div>
-                            <div>
-                              <div className="text-xs uppercase tracking-[0.24em]" style={{ color: palette.blue }}>
-                                Prototype Result
-                              </div>
-                              <h3 className="text-xl font-semibold" style={{ color: palette.ink }}>
-                                {studentName || '未命名体验者'} 的 ASP 网页版概览
-                              </h3>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-center py-4">
-                            <div className="relative flex h-48 w-48 items-center justify-center">
-                              <div
-                                className="absolute inset-0 rounded-full"
-                                style={{
-                                  background:
-                                    'conic-gradient(from 90deg, #2e8b93 0deg, #2d58b8 135deg, #d75f5f 260deg, #c79a43 320deg, rgba(255,255,255,0) 320deg)',
-                                  opacity: 0.18,
-                                }}
-                              />
-                              <div
-                                className="absolute inset-[12px] rounded-full"
-                                style={{ backgroundColor: palette.paper, boxShadow: 'inset 0 0 0 1px rgba(16,32,56,0.08)' }}
-                              />
-                              <div className="relative text-center">
-                                <div className="text-xs uppercase tracking-[0.28em]" style={{ color: palette.muted }}>
-                                  Preview Score
-                                </div>
-                                <div className="mt-2 text-6xl font-black" style={{ color: palette.ink }}>
-                                  {overallScore}
-                                </div>
-                                <div className="mt-2 text-sm font-medium" style={{ color: palette.teal }}>
-                                  {describeBand(overallScore)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div
-                            className="rounded-[24px] border p-4"
-                            style={{ borderColor: 'rgba(215,95,95,0.16)', backgroundColor: palette.redSoft }}
-                          >
-                            <div className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.red }}>
-                              <CircleAlert size={16} />
-                              非官方评分说明
-                            </div>
-                            <p className="text-sm leading-6" style={{ color: '#8f4646' }}>
-                              这个分数来自“闪测样例 + 问卷均值 + 学科自评”的前端原型逻辑，只是为了让你直观看到网页结构是否成立，不代表锐满分 ASP 的正式报告结果。
-                            </p>
-                          </div>
-                        </div>
-
-                        <div
-                          className="rounded-[34px] border p-6"
-                          style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.74)' }}
-                        >
-                          <div className="mb-5 grid gap-5 md:grid-cols-2">
-                            <AspResultBar label="记忆闪测" score={memoryScore} tone="blue" />
-                            <AspResultBar label="学习执行" score={executionScore} tone="teal" />
-                            <AspResultBar label="心理韧性" score={resilienceScore} tone="red" />
-                            <AspResultBar label="学科自评" score={subjectScore} tone="gold" />
-                          </div>
-
-                          <div className="grid gap-5 lg:grid-cols-2">
-                            <div
-                              className="rounded-[26px] border p-4"
-                              style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.82)' }}
-                            >
-                              <div className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.ink }}>
-                                <Sparkles size={16} color={palette.teal} />
-                                偏好标签
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {topPreferenceTraits.length ? (
-                                  topPreferenceTraits.map((trait) => (
-                                    <span
-                                      key={trait}
-                                      className="rounded-full border px-3 py-1 text-xs"
-                                      style={{
-                                        borderColor: 'rgba(46,139,147,0.16)',
-                                        color: palette.teal,
-                                        backgroundColor: palette.tealSoft,
-                                      }}
-                                    >
-                                      {trait}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="text-sm" style={{ color: palette.muted }}>
-                                    暂无偏好标签
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div
-                              className="rounded-[26px] border p-4"
-                              style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.82)' }}
-                            >
-                              <div className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.ink }}>
-                                <BookOpen size={16} color={palette.blue} />
-                                强项学科
-                              </div>
-                              <div className="space-y-3">
-                                {strongSubjects.map((subject) => (
-                                  <div key={subject.id} className="rounded-[22px] border p-3" style={{ borderColor: palette.line }}>
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-semibold" style={{ color: palette.ink }}>
-                                        {subject.name}
-                                      </span>
-                                      <span className="text-sm" style={{ color: palette.blue }}>
-                                        {subjectRatings[subject.id]} / 5
-                                      </span>
-                                    </div>
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                      {subject.topics.slice(0, 2).map((topic) => (
-                                        <span key={topic} className="text-xs" style={{ color: palette.muted }}>
-                                          #{topic}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
-                        <div
-                          className="rounded-[34px] border p-6"
-                          style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.74)' }}
-                        >
-                          <div className="mb-4 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.ink }}>
-                            <ClipboardCheck size={16} color={palette.red} />
-                            重点关注建议
-                          </div>
-                          <div className="space-y-4">
-                            {focusSubjects.map((subject) => (
-                              <div
-                                key={subject.id}
-                                className="rounded-[24px] border p-4"
-                                style={{ borderColor: 'rgba(215,95,95,0.14)', backgroundColor: 'rgba(253,229,225,0.58)' }}
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="text-base font-semibold" style={{ color: palette.ink }}>
-                                    {subject.name}
-                                  </div>
-                                  <div className="text-sm font-medium" style={{ color: palette.red }}>
-                                    当前 {subjectRatings[subject.id]} / 5
-                                  </div>
-                                </div>
-                                <p className="mt-2 text-sm leading-6" style={{ color: '#8f4646' }}>
-                                  可以把这一科放进结果页的“重点突破模块”，继续接正式题目、错题复盘或课程推荐。
-                                </p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {subject.topics.slice(0, 3).map((topic) => (
-                                    <span
-                                      key={topic}
-                                      className="rounded-full border px-3 py-1 text-xs"
-                                      style={{ borderColor: 'rgba(215,95,95,0.18)', color: '#8f4646' }}
-                                    >
-                                      {topic}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div
-                          className="rounded-[34px] border p-6"
-                          style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.74)' }}
-                        >
-                          <div className="mb-4 flex items-center gap-2 text-sm font-semibold" style={{ color: palette.ink }}>
-                            <Layers3 size={16} color={palette.gold} />
-                            下一步可扩展方向
-                          </div>
-                          <div className="space-y-4">
-                            {[
-                              {
-                                title: '接入正式答题卡',
-                                text: '把当前步骤保存成后端记录，对应真实 ASP 的答题卡字段结构。',
-                                icon: ClipboardCheck,
-                              },
-                              {
-                                title: '细化报告模块',
-                                text: '结果页拆成学习能力、学习策略、学习心理三个分卷结果，并增加文字解读。',
-                                icon: NotebookPen,
-                              },
-                              {
-                                title: '补充招生/顾问场景',
-                                text: '可在结果页后接课程建议、试听转化按钮或顾问联系表单。',
-                                icon: Sparkles,
-                              },
-                            ].map((item) => (
-                              <div
-                                key={item.title}
-                                className="rounded-[24px] border p-4"
-                                style={{ borderColor: palette.line, background: 'rgba(255,255,255,0.82)' }}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="rounded-full bg-[#c79a4316] p-3 text-[#c79a43]">
-                                    <item.icon size={16} />
-                                  </div>
-                                  <div>
-                                    <div className="text-base font-semibold" style={{ color: palette.ink }}>
-                                      {item.title}
-                                    </div>
-                                    <p className="mt-1 text-sm leading-6" style={{ color: palette.muted }}>
-                                      {item.text}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="mt-6 flex flex-wrap gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setStep(0)}
-                              className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
-                              style={{ borderColor: palette.line, color: palette.ink }}
-                            >
-                              <ChevronLeft size={16} />
-                              返回第一页
-                            </button>
-                            <button
-                              type="button"
-                              onClick={resetAll}
-                              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white"
-                              style={{ background: 'linear-gradient(135deg, #2e8b93, #2d58b8)' }}
-                            >
-                              <Sparkles size={16} />
-                              重新体验
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </main>
+      {/* Header */}
+      <div style={{ padding: 'max(env(safe-area-inset-top), 16px) 16px 16px' }}>
+        <SegmentedProgress current={step} total={STEPS.length} />
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 12 }}>
+          <Label>{STEPS[step].tag}</Label>
+          <Label style={{ color: N.textDisabled }}>{String(step + 1).padStart(2, '0')} / {String(STEPS.length).padStart(2, '0')}</Label>
+        </div>
+        <div style={{ fontFamily: FONT.body, fontSize: 24, fontWeight: 300, letterSpacing: '-0.01em', lineHeight: 1.2, color: N.textDisplay, marginTop: 4 }}>
+          {STEPS[step].label}
         </div>
       </div>
+
+      {/* Content */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+        <AnimatePresence mode="wait">
+          <motion.div key={step === 1 ? `f-${flashIdx}` : step === 2 ? `t-${thinkIdx}` : step}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}>
+
+            {/* Step 0: Intro */}
+            {step === 0 && (
+              <div style={{ paddingTop: 32 }}>
+                <div style={{ marginBottom: 48 }}>
+                  <div style={{ fontFamily: FONT.display, fontSize: 48, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.02em', color: N.textDisplay }}>
+                    学习力
+                  </div>
+                  <div style={{ fontFamily: FONT.display, fontSize: 48, fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.02em', color: N.textDisplay }}>
+                    探索
+                  </div>
+                  <div style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 300, color: N.textSecondary, marginTop: 12, lineHeight: 1.5 }}>
+                    通过 8 个维度，发现你独特的学习方式
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 32 }}>
+                  <Label>姓名</Label>
+                  <input value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="输入姓名" style={{ ...inputStyle, marginTop: 8, marginBottom: 24 }}
+                    onFocus={(e) => { e.target.style.borderBottomColor = N.textPrimary }}
+                    onBlur={(e) => { e.target.style.borderBottomColor = N.borderVisible }} />
+
+                  <Label>手机号</Label>
+                  <input value={studentPhone} onChange={(e) => setStudentPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                    placeholder="输入手机号" maxLength={11} style={{ ...inputStyle, fontFamily: FONT.mono, marginTop: 8 }}
+                    onFocus={(e) => { e.target.style.borderBottomColor = N.textPrimary }}
+                    onBlur={(e) => { e.target.style.borderBottomColor = N.borderVisible }} />
+                  {studentPhone && !/^1\d{10}$/.test(studentPhone) && (
+                    <div style={{ fontFamily: FONT.body, fontSize: 12, color: N.accent, marginTop: 6 }}>请输入正确的11位手机号</div>
+                  )}
+                  {phoneChecking && <div style={{ fontFamily: FONT.body, fontSize: 12, color: N.textDisabled, marginTop: 6 }}>验证中...</div>}
+                  {phoneDup === true && (
+                    <div style={{ fontFamily: FONT.body, fontSize: 12, color: N.accent, marginTop: 6 }}>该手机号近期已提交过测评，30天内仅可提交一次</div>
+                  )}
+                </div>
+
+                <Label>学段</Label>
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {ASP_STAGE_PROFILES.map((s) => {
+                    const active = stageId === s.id
+                    return (
+                      <div key={s.id} onClick={() => setStageId(s.id)} style={{
+                        padding: '14px 16px', background: active ? N.surface : 'transparent',
+                        borderLeft: active ? `2px solid ${N.accent}` : '2px solid transparent',
+                        cursor: 'pointer', transition: 'all 200ms ease-out',
+                      }}>
+                        <div style={{ fontFamily: FONT.body, fontSize: 15, fontWeight: active ? 500 : 400, color: active ? N.textDisplay : N.textSecondary, transition: 'color 200ms' }}>
+                          {s.label}
+                        </div>
+                        <div style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 300, color: N.textDisabled, marginTop: 2 }}>{s.summary}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Flash Memory */}
+            {step === 1 && (() => {
+              const task = ASP_MEMORY_TASKS[flashIdx]
+              const phase = memPhases[task.id], cd = memCountdowns[task.id], ans = memAnswers[task.id] ?? ''
+              return (
+                <div style={{ paddingTop: 16 }}>
+                  <div style={{ display: 'flex', gap: 2, marginBottom: 24 }}>
+                    {ASP_MEMORY_TASKS.map((_, i) => (
+                      <div key={i} style={{ flex: i === flashIdx ? 3 : 1, height: 3, background: i <= flashIdx ? N.accent : N.border, transition: 'all 200ms' }} />
+                    ))}
+                  </div>
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: FONT.body, fontSize: 18, fontWeight: 400, color: N.textDisplay }}>{task.title}</div>
+                    <div style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 300, color: N.textSecondary, marginTop: 4 }}>{task.instruction}</div>
+                  </div>
+
+                  {phase === 'ready' && (
+                    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                      <div style={{ fontFamily: FONT.display, fontSize: 36, fontWeight: 400, color: N.textDisplay, marginBottom: 32 }}>
+                        {task.memorizeSeconds > 0 ? `${task.memorizeSeconds}s` : '?'}
+                      </div>
+                      <NButton primary onClick={startFlash}>{task.memorizeSeconds > 0 ? '开始记忆' : '开始'}</NButton>
+                    </div>
+                  )}
+
+                  {phase === 'memorizing' && (
+                    <div>
+                      <CircleTimer seconds={cd} total={task.memorizeSeconds} />
+                      <div style={{ marginTop: 24, padding: 24, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 8, textAlign: 'center', fontFamily: FONT.mono, fontSize: 20, fontWeight: 400, letterSpacing: '0.04em', lineHeight: 1.8, color: N.textDisplay }}>
+                        <DisplayText text={task.display} />
+                      </div>
+                      <Label style={{ display: 'block', textAlign: 'center', marginTop: 12 }}>请认真记住上面的内容</Label>
+                    </div>
+                  )}
+
+                  {phase === 'recall' && (
+                    <div>
+                      {task.memorizeSeconds === 0 && (
+                        <div style={{ padding: 24, marginBottom: 24, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 8, textAlign: 'center', fontFamily: FONT.mono, fontSize: 22, fontWeight: 400, letterSpacing: '0.06em', color: N.textDisplay }}>
+                          <DisplayText text={task.display} />
+                        </div>
+                      )}
+                      {task.expectedTokens ? (
+                        <TagRecallInput tags={ans ? ans.split(',').filter(Boolean) : []}
+                          onChange={(tags) => setMemAnswers((a) => ({ ...a, [task.id]: tags.join(',') }))}
+                          placeholder={task.placeholder} total={task.expectedTokens.length} />
+                      ) : (
+                        <input value={ans} onChange={(e) => setMemAnswers((a) => ({ ...a, [task.id]: e.target.value }))}
+                          placeholder={task.placeholder}
+                          style={{ ...inputStyle, textAlign: 'center', fontFamily: FONT.mono, fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}
+                          onFocus={(e) => { e.target.style.borderBottomColor = N.textPrimary }}
+                          onBlur={(e) => { e.target.style.borderBottomColor = N.borderVisible }} />
+                      )}
+                      <div style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 300, color: N.textDisabled, marginTop: 8 }}>{task.hint}</div>
+                      {flashIdx < ASP_MEMORY_TASKS.length - 1 && ans.trim() && (
+                        <NButton primary block onClick={() => setFlashIdx(flashIdx + 1)} style={{ marginTop: 24 }}>下一题 &rarr;</NButton>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* ══════ 2. Think 思维测试 ══════ */}
+            {step === 2 && (() => {
+              const THINK_TASKS = [
+                { title: ASP_DIGIT_SPAN[0].title, desc: ASP_DIGIT_SPAN[0].instruction },
+                { title: ASP_DIGIT_SPAN[1].title, desc: ASP_DIGIT_SPAN[1].instruction },
+                { title: '造句', desc: '从4个词语中任选2个，写一个完整的句子。' },
+                { title: '日字加一笔', desc: `给"${ASP_WORD_TRANSFORM.baseChar}"字加一笔变成另一个字，限时${ASP_WORD_TRANSFORM.timeLimit}秒。` },
+              ]
+              const task = THINK_TASKS[thinkIdx]
+              return (
+                <div style={{ paddingTop: 16 }}>
+                  <div style={{ display: 'flex', gap: 2, marginBottom: 24 }}>
+                    {THINK_TASKS.map((_, i) => (
+                      <div key={i} style={{ flex: i === thinkIdx ? 3 : 1, height: 3, background: i <= thinkIdx ? N.accent : N.border, transition: 'all 200ms ease-out' }} />
+                    ))}
+                  </div>
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: FONT.body, fontSize: 18, fontWeight: 400, color: N.textDisplay }}>{task.title}</div>
+                    <div style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 300, color: N.textSecondary, marginTop: 4 }}>{task.desc}</div>
+                  </div>
+
+                  {/* 数字广度 */}
+                  {thinkIdx <= 1 && (() => {
+                    const group = ASP_DIGIT_SPAN[thinkIdx]
+                    const seq = group.sequences[digitSpanSeqIdx]
+                    if (digitSpanPhase === 'ready') return (
+                      <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 14, color: N.textSecondary, marginBottom: 16 }}>第 {digitSpanSeqIdx + 1} / {group.sequences.length} 组</div>
+                        <NButton primary onClick={() => { setDigitSpanDigitIdx(-1); setDigitSpanBlank(false); setDigitSpanPhase('showing'); setTimeout(() => setDigitSpanDigitIdx(0), 500) }}>开始</NButton>
+                      </div>
+                    )
+                    if (digitSpanPhase === 'showing') return (
+                      <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                        <div style={{ fontFamily: FONT.display, fontSize: 64, fontWeight: 400, color: N.textDisplay, letterSpacing: '0.1em', minHeight: 80, opacity: digitSpanBlank ? 0 : 1, transition: 'opacity 100ms ease-out' }}>
+                          {digitSpanDigitIdx >= 0 && digitSpanDigitIdx < seq.digits.length ? seq.digits[digitSpanDigitIdx] : ''}
+                        </div>
+                        <Label style={{ marginTop: 16 }}>{group.reverse ? '请记住并倒序' : '请记住顺序'}</Label>
+                      </div>
+                    )
+                    return (
+                      <div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 12, color: N.textSecondary, marginBottom: 8 }}>第 {digitSpanSeqIdx + 1} / {group.sequences.length} 组 — {group.reverse ? '请倒序写出' : '请按顺序写出'}</div>
+                        <input value={digitSpanAnswers[seq.id] ?? ''} onChange={e => setDigitSpanAnswers(a => ({ ...a, [seq.id]: e.target.value.replace(/\D/g, '') }))} placeholder={group.reverse ? '倒序输入数字' : '输入记住的数字'} maxLength={6} style={{ width: '100%', height: 44, border: 'none', borderBottom: `1px solid ${N.borderVisible}`, background: 'transparent', fontFamily: FONT.mono, fontSize: 22, letterSpacing: '0.1em', textAlign: 'center', color: N.textPrimary, outline: 'none' }} />
+                        {(digitSpanAnswers[seq.id]?.trim()) && digitSpanSeqIdx < group.sequences.length - 1 && (
+                          <NButton primary block onClick={() => { setDigitSpanSeqIdx(digitSpanSeqIdx + 1); setDigitSpanPhase('ready') }} style={{ marginTop: 24 }}>下一组 →</NButton>
+                        )}
+                        {(digitSpanAnswers[seq.id]?.trim()) && digitSpanSeqIdx === group.sequences.length - 1 && thinkIdx < 3 && (
+                          <NButton primary block onClick={() => { setThinkIdx(thinkIdx + 1); setDigitSpanSeqIdx(0); setDigitSpanPhase('ready') }} style={{ marginTop: 24 }}>下一题 →</NButton>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  {/* 造句 */}
+                  {thinkIdx === 2 && (
+                    <div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
+                        {ASP_SENTENCE_WORDS.map(w => (
+                          <span key={w} style={{ fontFamily: FONT.mono, fontSize: 16, padding: '8px 20px', border: `1px solid ${N.borderVisible}`, borderRadius: 8, color: N.textDisplay }}>{w}</span>
+                        ))}
+                      </div>
+                      <textarea value={sentenceAnswer} onChange={e => setSentenceAnswer(e.target.value)} placeholder="任选其中2个词语，写一个完整的句子" rows={3} style={{ width: '100%', padding: 12, border: `1px solid ${N.borderVisible}`, borderRadius: 8, background: 'transparent', fontFamily: FONT.body, fontSize: 14, color: N.textPrimary, outline: 'none', resize: 'none' }} />
+                      {sentenceAnswer.trim() && <NButton primary block onClick={() => setThinkIdx(3)} style={{ marginTop: 24 }}>下一题 →</NButton>}
+                    </div>
+                  )}
+
+                  {/* 日字加一笔 */}
+                  {thinkIdx === 3 && (
+                    <div>
+                      {wordTransformPhase === 'ready' && (
+                        <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                          <div style={{ fontFamily: FONT.display, fontSize: 72, fontWeight: 400, color: N.textDisplay, marginBottom: 24 }}>{ASP_WORD_TRANSFORM.baseChar}</div>
+                          <NButton primary onClick={() => setWordTransformPhase('active')}>开始 ({ASP_WORD_TRANSFORM.timeLimit}秒)</NButton>
+                        </div>
+                      )}
+                      {(wordTransformPhase === 'active' || wordTransformPhase === 'done') && (
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <div style={{ fontFamily: FONT.display, fontSize: 40, color: N.textDisplay }}>{ASP_WORD_TRANSFORM.baseChar}</div>
+                            {wordTransformPhase === 'active' && <CircleTimer seconds={wordTransformCountdown} total={ASP_WORD_TRANSFORM.timeLimit} />}
+                            {wordTransformPhase === 'done' && <Label style={{ color: N.accent }}>时间到</Label>}
+                          </div>
+                          {wordTransformAnswers.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                              {wordTransformAnswers.map((ch, i) => {
+                                const valid = (ASP_WORD_TRANSFORM.validAnswers as readonly string[]).includes(ch)
+                                return (
+                                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: `1px solid ${valid ? N.success : N.borderVisible}`, borderRadius: 4, fontFamily: FONT.body, fontSize: 18, color: valid ? N.success : N.textSecondary }}>
+                                    {ch}
+                                    {wordTransformPhase === 'active' && <span onClick={() => setWordTransformAnswers(a => a.filter((_, idx) => idx !== i))} style={{ cursor: 'pointer', color: N.textDisabled, fontSize: 14 }}>×</span>}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+                          {wordTransformPhase === 'active' && (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <input id="wt-input" maxLength={1} placeholder="输入一个字" style={{ flex: 1, height: 44, border: 'none', borderBottom: `1px solid ${N.borderVisible}`, background: 'transparent', fontFamily: FONT.body, fontSize: 18, color: N.textPrimary, outline: 'none', textAlign: 'center' }} onKeyDown={e => { if (e.key === 'Enter') { const el = e.target as HTMLInputElement; const v = el.value.trim(); if (v && !wordTransformAnswers.includes(v)) { setWordTransformAnswers(a => [...a, v]); el.value = '' } } }} />
+                              <button onClick={() => { const el = document.getElementById('wt-input') as HTMLInputElement; if (el) { const v = el.value.trim(); if (v && !wordTransformAnswers.includes(v)) { setWordTransformAnswers(a => [...a, v]); el.value = ''; el.focus() } } }} style={{ height: 44, padding: '0 24px', border: `1px solid ${N.borderVisible}`, borderRadius: 999, background: 'transparent', fontFamily: FONT.mono, fontSize: 13, color: N.textPrimary, cursor: 'pointer' }}>添加</button>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                            <Label>有效 {wordTransformAnswers.filter(ch => (ASP_WORD_TRANSFORM.validAnswers as readonly string[]).includes(ch)).length} 个</Label>
+                            <Label>共 {wordTransformAnswers.length} 个</Label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* Step 3: Scale */}
+            {step === 3 && (
+              <div style={{ paddingTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                  <Label>进度</Label>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 14, color: N.textPrimary }}>
+                    {ASP_SCALE_QUESTIONS.filter((q) => scaleAnswers[q.id] > 0).length}
+                    <span style={{ color: N.textDisabled }}> / {ASP_SCALE_QUESTIONS.length}</span>
+                  </span>
+                </div>
+                {ASP_SCALE_QUESTIONS.map((q, qi) => {
+                  const answered = scaleAnswers[q.id] > 0
+                  return (
+                    <div key={q.id} style={{ padding: '16px 0', borderBottom: `1px solid ${N.border}` }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                        <span style={{ fontFamily: FONT.mono, fontSize: 12, color: answered ? N.textPrimary : N.textDisabled, minWidth: 24 }}>
+                          {String(qi + 1).padStart(2, '0')}
+                        </span>
+                        <span style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 400, lineHeight: 1.6, color: N.textPrimary }}>{q.prompt}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, marginLeft: 32 }}>
+                        {ASP_SCALE_OPTIONS.map((opt) => {
+                          const sel = scaleAnswers[q.id] === opt.value
+                          return (
+                            <div key={opt.value} onClick={() => setScaleAnswers((s) => ({ ...s, [q.id]: opt.value }))}
+                              style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontFamily: FONT.mono, fontSize: 14, cursor: 'pointer', transition: 'all 150ms',
+                                borderRadius: 999, border: sel ? 'none' : `1px solid ${N.borderVisible}`,
+                                background: sel ? N.accent : 'transparent', color: sel ? '#FFFFFF' : N.textSecondary }} >
+                              {opt.value}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, marginLeft: 32 }}>
+                        <Label style={{ fontSize: 10 }}>非常不像我</Label>
+                        <Label style={{ fontSize: 10 }}>非常像我</Label>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ══════ 4. Style 学习风格 ══════ */}
+            {step === 4 && (() => {
+              const SLOTS = [
+                { key: 'most' as const, label: '最像我', color: N.success },
+                { key: 'like' as const, label: '很像我', color: N.interactive },
+                { key: 'least' as const, label: '最不像我', color: N.warning },
+              ]
+              const tapOption = (qId: string, optId: string) => {
+                const prev = styleAnswers[qId] || { most: '', like: '', least: '' }
+                const newAns = { ...prev }
+                // 如果已选中，取消
+                for (const s of SLOTS) { if (newAns[s.key] === optId) { newAns[s.key] = ''; setStyleAnswers(a => ({ ...a, [qId]: newAns })); return } }
+                // 填入下一个空槽
+                const empty = SLOTS.find(s => !newAns[s.key])
+                if (empty) { newAns[empty.key] = optId; setStyleAnswers(a => ({ ...a, [qId]: newAns })) }
+              }
+              const clearSlot = (qId: string, slotKey: 'most' | 'like' | 'least') => {
+                const prev = styleAnswers[qId] || { most: '', like: '', least: '' }
+                setStyleAnswers(a => ({ ...a, [qId]: { ...prev, [slotKey]: '' } }))
+              }
+              const getOptSlot = (qId: string, optId: string) => {
+                const a = styleAnswers[qId]; if (!a) return null
+                return SLOTS.find(s => a[s.key] === optId) || null
+              }
+              const getOptLabel = (qId: string, optId: string) => {
+                const q = ASP_STYLE_QUESTIONS.find(x => x.id === qId)
+                return q?.options.find(o => o.id === optId)?.label || ''
+              }
+              const nextSlot = (qId: string) => {
+                const a = styleAnswers[qId] || { most: '', like: '', least: '' }
+                return SLOTS.find(s => !a[s.key]) || null
+              }
+              return (
+                <div style={{ paddingTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                    <Label>进度</Label>
+                    <span style={{ fontFamily: FONT.mono, fontSize: 14, color: N.textPrimary }}>
+                      {ASP_STYLE_QUESTIONS.filter(q => { const a = styleAnswers[q.id]; return a?.most && a?.like && a?.least }).length}
+                      <span style={{ color: N.textDisabled }}> / {ASP_STYLE_QUESTIONS.length}</span>
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 300, color: N.textSecondary, marginBottom: 16 }}>点击选项自动填入槽位，点击槽位可清除</div>
+                  {ASP_STYLE_QUESTIONS.map((q, qi) => {
+                    const ans = styleAnswers[q.id] || { most: '', like: '', least: '' }
+                    const hint = nextSlot(q.id)
+                    return (
+                      <div key={q.id} style={{ padding: '16px 0', borderBottom: `1px solid ${N.border}` }}>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                          <span style={{ fontFamily: FONT.mono, fontSize: 12, color: N.textDisabled, minWidth: 24 }}>{String(qi + 1).padStart(2, '0')}</span>
+                          <span style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 500, lineHeight: 1.6, color: N.textPrimary }}>{q.prompt}</span>
+                        </div>
+                        {/* 三个槽位 */}
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 12, marginLeft: 32 }}>
+                          {SLOTS.map(slot => {
+                            const filled = ans[slot.key]
+                            return (
+                              <div key={slot.key} onClick={() => filled && clearSlot(q.id, slot.key)} style={{
+                                flex: 1, padding: '8px 6px', borderRadius: 8, textAlign: 'center' as const,
+                                border: `1.5px ${filled ? 'solid' : 'dashed'} ${filled ? slot.color : (hint?.key === slot.key ? slot.color : N.borderVisible)}`,
+                                background: filled ? `${slot.color}10` : 'transparent',
+                                cursor: filled ? 'pointer' : 'default', transition: 'all 150ms ease-out',
+                                opacity: !filled && hint?.key !== slot.key ? 0.5 : 1,
+                              }}>
+                                <div style={{ fontFamily: FONT.mono, fontSize: 10, color: slot.color, marginBottom: 2 }}>{slot.label}</div>
+                                <div style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 500, color: filled ? N.textDisplay : N.textDisabled, minHeight: 18 }}>
+                                  {filled ? `${filled} ${getOptLabel(q.id, filled)}` : (hint?.key === slot.key ? '← 点选' : '—')}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {/* 选项列表 */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginLeft: 32 }}>
+                          {q.options.map(opt => {
+                            const slot = getOptSlot(q.id, opt.id)
+                            return (
+                              <div key={opt.id} onClick={() => tapOption(q.id, opt.id)} style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '10px 12px', cursor: 'pointer', transition: 'all 150ms ease-out',
+                                background: slot ? `${slot.color}08` : 'transparent',
+                                borderLeft: slot ? `2px solid ${slot.color}` : '2px solid transparent',
+                                opacity: slot ? 0.6 : 1,
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <span style={{ fontFamily: FONT.mono, fontSize: 12, color: slot ? slot.color : N.textSecondary }}>{opt.id}</span>
+                                  <span style={{ fontFamily: FONT.body, fontSize: 13, color: slot ? N.textSecondary : N.textDisplay, textDecoration: slot ? 'line-through' : 'none' }}>{opt.label}</span>
+                                </div>
+                                {slot && <span style={{ fontFamily: FONT.mono, fontSize: 10, color: slot.color }}>{slot.label}</span>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+
+            {/* ══════ 5. Sense 感官偏好 ══════ */}
+            {step === 5 && (
+              <div style={{ paddingTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                  <Label>进度</Label>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 14, color: N.textPrimary }}>
+                    {ASP_SENSORY_QUESTIONS.filter(q => senseAnswers[q.id]).length}
+                    <span style={{ color: N.textDisabled }}> / {ASP_SENSORY_QUESTIONS.length}</span>
+                  </span>
+                </div>
+                {ASP_SENSORY_QUESTIONS.map((q, qi) => (
+                  <div key={q.id} style={{ padding: '16px 0', borderBottom: `1px solid ${N.border}` }}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                      <span style={{ fontFamily: FONT.mono, fontSize: 12, color: senseAnswers[q.id] ? N.textPrimary : N.textDisabled, minWidth: 24 }}>{String(qi + 1).padStart(2, '0')}</span>
+                      <span style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 400, lineHeight: 1.6, color: N.textPrimary }}>{q.prompt}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginLeft: 32 }}>
+                      {q.options.map(opt => {
+                        const sel = senseAnswers[q.id] === opt.id
+                        return (
+                          <div key={opt.id} onClick={() => setSenseAnswers(s => ({ ...s, [q.id]: opt.id }))} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, background: sel ? N.surface : 'transparent', borderLeft: sel ? `2px solid ${N.accent}` : '2px solid transparent', cursor: 'pointer', transition: 'all 200ms ease-out' }}>
+                            <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
+                              <circle cx="9" cy="9" r="8" fill="none" stroke={sel ? N.accent : N.borderVisible} strokeWidth="1.5" />
+                              {sel && <circle cx="9" cy="9" r="4.5" fill={N.accent} />}
+                            </svg>
+                            <span style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: sel ? 500 : 400, color: sel ? N.textDisplay : N.textSecondary }}>{opt.label}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Step 6: Preference */}
+            {step === 6 && (
+              <div style={{ paddingTop: 16 }}>
+                {ASP_PREFERENCE_QUESTIONS.map((q) => (
+                  <div key={q.id} style={{ marginBottom: 32 }}>
+                    <div style={{ fontFamily: FONT.body, fontSize: 15, fontWeight: 500, color: N.textDisplay }}>{q.prompt}</div>
+                    <div style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 300, color: N.textDisabled, marginTop: 4, marginBottom: 16 }}>{q.description}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {q.options.map((opt) => {
+                        const sel = prefAnswers[q.id] === opt.id
+                        return (
+                          <div key={opt.id} onClick={() => setPrefAnswers((s) => ({ ...s, [q.id]: opt.id }))}
+                            style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+                              background: sel ? N.surface : 'transparent', borderLeft: sel ? `2px solid ${N.accent}` : '2px solid transparent',
+                              cursor: 'pointer', transition: 'all 200ms' }}>
+                            <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
+                              <circle cx="9" cy="9" r="8" fill="none" stroke={sel ? N.accent : N.borderVisible} strokeWidth="1.5" />
+                              {sel && <circle cx="9" cy="9" r="4.5" fill={N.accent} />}
+                            </svg>
+                            <span style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: sel ? 500 : 400, color: sel ? N.textDisplay : N.textSecondary }}>
+                              {opt.label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Step 7: Subject Ratings */}
+            {step === 7 && (
+              <div style={{ paddingTop: 16 }}>
+                <div style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 300, color: N.textSecondary, textAlign: 'center', marginBottom: 24 }}>
+                  为每个学科的掌握程度打分
+                </div>
+                {stageProfile.subjects.map((subject) => (
+                  <div key={subject.id} style={{ padding: '16px 0', borderBottom: `1px solid ${N.border}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                      <span style={{ fontFamily: FONT.body, fontSize: 16, fontWeight: 500, color: N.textDisplay }}>{subject.name}</span>
+                      {subjectRatings[subject.id] > 0 && (
+                        <span style={{ fontFamily: FONT.mono, fontSize: 13, color: N.textPrimary }}>
+                          {subjectRatings[subject.id]}<span style={{ color: N.textDisabled }}>/5</span>
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                      {subject.topics.map((t) => (
+                        <span key={t} style={{ fontFamily: FONT.body, fontSize: 11, letterSpacing: '0.02em', padding: '3px 10px',
+                          border: `1px solid ${N.borderVisible}`, borderRadius: 4, color: N.textSecondary }}>{t}</span>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[1, 2, 3, 4, 5].map((v) => {
+                        const sel = subjectRatings[subject.id] >= v
+                        return (
+                          <div key={v} onClick={() => setSubjectRatings((r) => ({ ...r, [subject.id]: v }))}
+                            style={{ flex: 1, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontFamily: FONT.mono, fontSize: 13,
+                              background: sel ? N.accent : 'transparent', color: sel ? '#FFFFFF' : N.textSecondary,
+                              border: sel ? 'none' : `1px solid ${N.borderVisible}`, cursor: 'pointer', transition: 'all 150ms' }}>
+                            {v}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                      <Label style={{ fontSize: 10 }}>薄弱</Label>
+                      <Label style={{ fontSize: 10 }}>精通</Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Step 8: Results */}
+            {step === 8 && R && (
+              <div style={{ paddingTop: 16 }}>
+                <div style={{ textAlign: 'center', padding: '32px 0 48px' }}>
+                  <Label>综合得分</Label>
+                  <div style={{ margin: '16px auto' }}><ScoreGauge score={R.overallScore} size={160} /></div>
+                  <div style={{ fontFamily: FONT.mono, fontSize: 14, letterSpacing: '0.04em', color: bandColor(R.overallScore) }}>
+                    {band(R.overallScore)}
+                  </div>
+                </div>
+
+                <div style={{ padding: 20, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 12, marginBottom: 16 }}>
+                  <Label style={{ display: 'block', marginBottom: 16 }}>能力维度</Label>
+                  <MetricBar label="记忆力" score={R.memoryScore} delay={0} />
+                  <MetricBar label="执行力" score={R.executionScore} delay={0.1} />
+                  <MetricBar label="抗压力" score={R.resilienceScore} delay={0.2} />
+                  <MetricBar label="学科力" score={R.subjectScore} delay={0.3} />
+                </div>
+
+                {R.report?.map((sec, si) => (
+                  <motion.div key={sec.title} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 + si * 0.07 }}
+                    style={{ padding: 20, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 12, marginBottom: 8 }}>
+                    <div style={{ fontFamily: FONT.body, fontSize: 15, fontWeight: 500, color: N.textDisplay, marginBottom: 8 }}>{sec.title}</div>
+                    {sec.paragraphs.map((p, pi) => (
+                      <div key={pi} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 300, lineHeight: 1.7, color: pi === 0 ? N.textPrimary : N.textSecondary, marginTop: pi > 0 ? 4 : 0 }}>{p}</div>
+                    ))}
+                  </motion.div>
+                ))}
+
+                {R.preferenceTraits.length > 0 && (
+                  <div style={{ padding: 20, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 12, marginBottom: 8 }}>
+                    <Label style={{ display: 'block', marginBottom: 12 }}>学习风格</Label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {R.preferenceTraits.map((t) => (
+                        <span key={t} style={{ fontFamily: FONT.body, fontSize: 12, letterSpacing: '0.02em', padding: '5px 14px',
+                          border: `1px solid ${N.borderVisible}`, borderRadius: 999, color: N.textPrimary }}>{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {R.strongSubjects.length > 0 && (
+                  <div style={{ padding: 20, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 12, marginBottom: 8 }}>
+                    <Label style={{ display: 'block', marginBottom: 12, color: N.success }}>优势学科</Label>
+                    {R.strongSubjects.map((s, i) => (
+                      <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0',
+                        borderBottom: i < R.strongSubjects.length - 1 ? `1px solid ${N.border}` : undefined }}>
+                        <span style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 500, color: N.textDisplay }}>{s.name}</span>
+                        <span style={{ fontFamily: FONT.mono, fontSize: 14, color: N.success }}>{s.rating}/5</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {R.relativeWeakSubjects.length > 0 && (
+                  <div style={{ padding: 20, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 12, marginBottom: 8 }}>
+                    <Label style={{ display: 'block', marginBottom: 4, color: N.warning }}>相对薄弱</Label>
+                    <div style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 300, color: N.textDisabled, marginBottom: 12 }}>与最强科目存在明显落差</div>
+                    {R.relativeWeakSubjects.map((s, i) => (
+                      <div key={s.id} style={{ padding: '10px 0', borderBottom: i < R.relativeWeakSubjects.length - 1 ? `1px solid ${N.border}` : undefined }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 500, color: N.textDisplay }}>{s.name}</span>
+                          <span style={{ fontFamily: FONT.mono, fontSize: 12, color: N.warning }}>
+                            {s.rating}/5 <span style={{ color: N.textDisabled }}>(-{s.gap})</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                          {s.topics.map((t) => (
+                            <span key={t} style={{ fontFamily: FONT.body, fontSize: 10, letterSpacing: '0.02em', padding: '2px 8px',
+                              border: `1px solid ${N.borderVisible}`, borderRadius: 4, color: N.textSecondary }}>{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {R.psychWeakSubjects.length > 0 && (
+                  <div style={{ padding: 20, background: N.surface, border: `1px solid ${N.border}`, borderRadius: 12, marginBottom: 8 }}>
+                    <Label style={{ display: 'block', marginBottom: 4, color: N.accent }}>压力风险</Label>
+                    <div style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 300, color: N.textDisabled, marginBottom: 12 }}>
+                      心理韧性偏低（{R.resilienceScore}分），以下科目在考压下容易退步
+                    </div>
+                    {R.psychWeakSubjects.map((s, i) => (
+                      <div key={s.id} style={{ padding: '10px 0', borderBottom: i < R.psychWeakSubjects.length - 1 ? `1px solid ${N.border}` : undefined }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 500, color: N.textDisplay }}>{s.name}</span>
+                          <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.04em', padding: '3px 10px',
+                            border: `1px solid ${s.riskLevel === 'high' ? N.accent : N.warning}`, borderRadius: 999,
+                            color: s.riskLevel === 'high' ? N.accent : N.warning }}>
+                            {s.riskLevel === 'high' ? '高风险' : '中等'}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 300, color: N.textSecondary, marginTop: 4 }}>{s.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ padding: '24px 0' }}>
+                  <NButton block onClick={resetAll}>重新测评</NButton>
+                  <div style={{ fontFamily: FONT.body, fontSize: 11, color: N.textDisabled, textAlign: 'center', marginTop: 12 }}>测评结果已保存</div>
+                </div>
+              </div>
+            )}
+
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom Nav */}
+      {step < 8 && (
+        <div style={{ padding: '12px 16px max(env(safe-area-inset-bottom), 12px)', display: 'flex', gap: 10, borderTop: `1px solid ${N.border}`, background: N.bg }}>
+          {step > 0 && <NButton onClick={goPrev} style={{ flex: 1 }}>&larr; 上一步</NButton>}
+          <NButton primary loading={submitState === 'loading'} disabled={!ready[step]} onClick={goNext} style={{ flex: 1 }}>
+            {step === 7 ? (submitState === 'loading' ? '生成中...' : '生成报告') : <>下一步 &rarr;</>}
+          </NButton>
+        </div>
+      )}
+
+      {submitState === 'error' && (
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          fontFamily: FONT.body, fontSize: 12, color: N.accent, background: N.surface,
+          border: `1px solid ${N.accent}`, padding: '8px 16px', borderRadius: 8 }}>
+          提交失败，请重试
+        </div>
+      )}
     </div>
   )
 }

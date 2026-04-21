@@ -128,7 +128,7 @@ export function PositionsPage() {
       },
     },
     {
-      title: '职位级别',
+      title: '职级',
       dataIndex: 'level',
       width: 120,
       render: (_level: number, record: PositionItem) => {
@@ -228,11 +228,6 @@ export function PositionsPage() {
   const departmentOptions = useMemo(
     () => (departmentsData || []).map((department) => ({ label: department.name, value: department.id })),
     [departmentsData]
-  )
-
-  const levelFormOptions = useMemo(() =>
-    POSITION_LEVELS.map((l) => ({ value: l.value, label: l.label })),
-    []
   )
 
   // 处理函数
@@ -359,12 +354,11 @@ export function PositionsPage() {
               { max: 50, message: '名称最多50个字符' },
             ]}
           />
-          <Form.Select
+          <Form.InputNumber
             field="level"
-            label="职位级别"
-            placeholder="请选择职位级别"
-            optionList={levelFormOptions}
-            rules={[{ required: true, message: '请选择职位级别' }]}
+            label="职级权重"
+            placeholder="数字越大职级越高，仅用于排序"
+            min={1}
             initValue={1}
             style={{ width: '100%' }}
           />

@@ -6,13 +6,14 @@
  * Touch target ≥ 44 px, focus-visible, prefers-reduced-motion
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearch } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { Input, Button as SemiButton } from '@douyinfe/semi-ui-19'
 import { toast } from '@/lib/toast'
 import { ChevronLeft, ChevronRight, Send, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useDocumentTitle } from '@/hooks/use-document-title'
 import { DISC_QUESTIONS } from '../data/questions'
 import { submitDiscTest, validateDiscTestRef } from '../api'
 import { DiscQuestionCard } from '../components/disc-question-card'
@@ -38,6 +39,18 @@ const c = {
   green: '#788c5d',
   red: '#c9554a',
 } as const
+
+/** 覆盖 Semi UI 默认主色，使其匹配页面品牌色 */
+const semiThemeOverrides: React.CSSProperties = {
+  '--semi-color-primary': '#0064FA',
+  '--semi-color-primary-hover': '#0050C8',
+  '--semi-color-primary-active': '#003D99',
+  '--semi-color-primary-disabled': '#94bffd',
+  '--semi-color-primary-light-default': 'rgba(0,100,250,0.08)',
+  '--semi-color-primary-light-hover': 'rgba(0,100,250,0.12)',
+  '--semi-color-primary-light-active': 'rgba(0,100,250,0.16)',
+  '--semi-color-focus-border': '#0064FA',
+} as React.CSSProperties
 
 /* ─── DISC 四维 Logo ─── */
 const DISC_BADGES = [
@@ -169,6 +182,10 @@ export function DiscPublicTest() {
   const linkId = search.id ?? ''
   const channel = search.channel ?? ''
 
+  const channelInfoRef = useRef<{ ref: string; channelName: string } | null>(null)
+
+  useDocumentTitle('DISC 性格测试')
+
   const [phase, setPhase] = useState<Phase>('loading')
   const [name, setName] = useState(search.name ?? '')
   const [phone, setPhone] = useState(search.phone ?? '')
@@ -180,10 +197,10 @@ export function DiscPublicTest() {
   const [dir, setDir] = useState(1)
   const [startTime, setStartTime] = useState<string | null>(null)
 
-  /* 链接验证：支持 ref 和 id 两种模式 */
+  /* 链接验证：支持 ref、id、channel 三种模式 */
   useEffect(() => {
-    if (!ref && !linkId) { setPhase('invalid'); return }
-    validateDiscTestRef(ref, linkId)
+    if (!ref && !linkId && !channel) { setPhase('invalid'); return }
+    validateDiscTestRef(ref, linkId || undefined, channel || undefined)
       .then((r) => {
         if (r.success === false) { setPhase('invalid'); return }
         // 专属链接模式：自动预填姓名和手机号
@@ -191,10 +208,17 @@ export function DiscPublicTest() {
           if (r.data.name) setName(r.data.name)
           if (r.data.phone) setPhone(r.data.phone)
         }
+        // 渠道模式：保存 owner_username 和渠道名称
+        if (r.data?.mode === 'channel') {
+          channelInfoRef.current = {
+            ref: r.data.ref,
+            channelName: r.data.channel_name,
+          }
+        }
         setPhase('start')
       })
       .catch(() => setPhase('invalid'))
-  }, [ref, linkId])
+  }, [ref, linkId, channel])
 
   const validateStart = useCallback(() => {
     let ok = true
@@ -226,28 +250,21 @@ export function DiscPublicTest() {
     try {
       const res = await submitDiscTest({
         name: name.trim(), phone: phone.trim(), answers,
-        start_time: startTime, ref: ref || undefined,
+        start_time: startTime,
+        ref: channelInfoRef.current?.ref || ref || undefined,
         link_id: linkId || undefined,
         channel: channel || undefined,
       })
       if (res.success === false) { toast.error(res.message || '提交失败'); return }
       setPhase('done')
-    } catch { toast.error('提交失败，请稍后重试') }
+    } catch (err) { toast.error(err instanceof Error ? err.message : '提交失败，请稍后重试') }
     finally { setSubmitting(false) }
   }
-
-  /* ─── 按钮样式工具 ─── */
-  const cta = {
-    background: `linear-gradient(135deg, ${c.accent}, #0050C8)`,
-    color: '#fff',
-    boxShadow: '0 4px 14px rgba(0,100,250,0.22)',
-  }
-  const ctaOff = { backgroundColor: c.sand, color: c.muted }
 
   return (
     <div
       className="min-h-svh px-5 py-6 sm:px-6"
-      style={{ background: `linear-gradient(170deg, ${c.cream} 0%, #f0ede6 55%, ${c.sand} 100%)` }}
+      style={{ background: `linear-gradient(170deg, ${c.cream} 0%, #f0ede6 55%, ${c.sand} 100%)`, ...semiThemeOverrides }}
     >
       <div className="mx-auto max-w-md">
         <AnimatePresence mode="wait" initial={false}>
@@ -311,8 +328,7 @@ export function DiscPublicTest() {
               <div className="space-y-4 rounded-2xl bg-white/70 p-6 shadow-[0_2px_12px_rgba(0,0,0,0.05)] backdrop-blur-sm">
                 <Field label="姓名" error={nameErr}>
                   <Input
-                    className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#0064FA]/40"
-                    style={{ color: c.text }}
+                    size="large"
                     placeholder="请输入您的姓名"
                     autoComplete="name"
                     value={name}
@@ -323,8 +339,7 @@ export function DiscPublicTest() {
 
                 <Field label="手机号" error={phoneErr}>
                   <Input
-                    className="h-12 w-full rounded-xl bg-white px-4 text-[15px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none ring-1 ring-inset ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-[#0064FA]/40"
-                    style={{ color: c.text }}
+                    size="large"
                     placeholder="请输入您的手机号"
                     inputMode="tel" autoComplete="tel"
                     value={phone}
@@ -334,9 +349,9 @@ export function DiscPublicTest() {
                 </Field>
 
                 <SemiButton
+                  size="large"
                   theme="solid"
-                  className="h-12 w-full cursor-pointer rounded-xl text-[15px] font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100"
-                  style={cta}
+                  className="w-full"
                   onClick={handleStart}
                 >
                   开始测试
@@ -451,33 +466,39 @@ export function DiscPublicTest() {
             style={{ backgroundColor: `${c.sand}e6`, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
           >
             <div className="mx-auto flex max-w-md gap-3">
-              <NavBtn
+              <SemiButton
+                size="large"
+                theme="light"
                 disabled={idx === 0}
                 onClick={() => go(-1)}
-                style={idx === 0 ? { ...ctaOff, opacity: 0.45 } : { backgroundColor: '#fff', color: c.text, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                className="flex-1"
               >
                 <ChevronLeft className="h-4 w-4" />
                 上一题
-              </NavBtn>
+              </SemiButton>
 
               {isLast ? (
-                <NavBtn
+                <SemiButton
+                  size="large"
+                  theme="solid"
                   disabled={!allOk || submitting}
                   onClick={handleSubmit}
-                  style={allOk && !submitting ? cta : ctaOff}
+                  className="flex-1"
                 >
                   {submitting ? '提交中...' : '提交测试'}
                   {!submitting && <Send className="h-4 w-4" />}
-                </NavBtn>
+                </SemiButton>
               ) : (
-                <NavBtn
+                <SemiButton
+                  size="large"
+                  theme="solid"
                   disabled={!curOk}
                   onClick={() => go(1)}
-                  style={curOk ? cta : ctaOff}
+                  className="flex-1"
                 >
                   下一题
                   <ChevronRight className="h-4 w-4" />
-                </NavBtn>
+                </SemiButton>
               )}
             </div>
           </div>
@@ -500,29 +521,3 @@ function Field({ label, error, children }: { label: string; error: string; child
   )
 }
 
-/* ─── 导航按钮 ─── */
-function NavBtn({
-  disabled, onClick, style, children,
-}: {
-  disabled: boolean
-  onClick: () => void
-  style: React.CSSProperties
-  children: React.ReactNode
-}) {
-  return (
-    <SemiButton
-      theme="solid"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        'flex h-12 flex-1 items-center justify-center gap-1 rounded-xl text-sm font-semibold',
-        'outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#0064FA]/40 focus-visible:ring-offset-1',
-        'motion-reduce:transition-none',
-        disabled ? 'pointer-events-none' : 'cursor-pointer active:scale-[0.97] motion-reduce:active:scale-100',
-      )}
-      style={style}
-    >
-      {children}
-    </SemiButton>
-  )
-}

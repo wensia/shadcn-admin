@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-import { Table, Button, Input, Modal, Form, Select, Tag, Skeleton, Typography, Tooltip, Radio, Tabs, TabPane } from '@douyinfe/semi-ui-19'
+import { Table, Button, Input, TextArea, Modal, Form, Select, Tag, Skeleton, Typography, Tooltip, Radio, Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
@@ -35,7 +35,6 @@ import { formatTime } from '@/lib/utils/time'
 import { MultiSelect } from '@/components/multi-select'
 
 const { Text } = Typography
-const { TextArea } = Input
 
 // 校区机器人映射规则
 interface CampusRobotRule {

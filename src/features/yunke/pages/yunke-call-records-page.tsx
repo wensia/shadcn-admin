@@ -55,7 +55,6 @@ function CallRecordsContent() {
               filters={filters}
               onFilterChange={updateFilter}
               onReset={resetFilters}
-              isLoading={isLoading}
               extraActions={
                 <Button
                   icon={<IconRefresh />}

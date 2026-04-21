@@ -91,13 +91,13 @@ export function LeadDetailSheet({
     setOutboundLoading(true)
     try {
       const response = await yunkeApi.dialPhone(params)
-      if (response.data?.call_id) {
+      if (response.success && response.data?.call_id) {
         setCurrentCallId(response.data.call_id)
         startCallTimer()
         Toast.success({ content: '拨号成功' })
         return true
       }
-      Toast.error({ content: '拨号失败' })
+      Toast.error({ content: response.message || '拨号失败' })
       return false
     } catch {
       Toast.error({ content: '外呼失败' })
@@ -349,12 +349,14 @@ export function LeadDetailSheet({
         ) : leadError ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
             <Empty
-              title="无法加载线索详情"
+              title={(leadError as { code?: string }).code === 'ACCESS_LIMIT_EXCEEDED' ? '今日查看线索数已达上限' : '无法加载线索详情'}
               description={leadError.message || '请稍后重试'}
             >
-              <Button theme="solid" onClick={() => queryClient.invalidateQueries({ queryKey: ['lead', leadId] })}>
-                重试
-              </Button>
+              {(leadError as { code?: string }).code !== 'ACCESS_LIMIT_EXCEEDED' && (
+                <Button theme="solid" onClick={() => queryClient.invalidateQueries({ queryKey: ['lead', leadId] })}>
+                  重试
+                </Button>
+              )}
             </Empty>
           </div>
         ) : leadId ? (

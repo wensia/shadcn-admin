@@ -18,6 +18,7 @@ interface LeadsSearchParams {
 }
 
 export const Route = createFileRoute('/_authenticated/crm/leads/')({
+  staticData: { title: '线索管理' },
   component: LeadsPage,
   validateSearch: (search: Record<string, unknown>): LeadsSearchParams => {
     return {

@@ -18,6 +18,7 @@ interface PerformanceEventsSearchParams {
 }
 
 export const Route = createFileRoute('/_authenticated/crm/performance-events')({
+  staticData: { title: '业绩事件' },
   component: PerformanceEventsPage,
   validateSearch: (
     search: Record<string, unknown>

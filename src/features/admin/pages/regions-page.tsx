@@ -5,7 +5,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { MapPin, Plus, Pencil, Trash2 } from 'lucide-react'
+import { MapPin, Plus, Pencil, Trash2, Power, PowerOff } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { Button, Input, Modal, Form, Typography, Select } from '@douyinfe/semi-ui-19'
@@ -49,6 +49,7 @@ export function RegionsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<RegionItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<RegionItem | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // 查询数据
   const { data, isLoading, refetch } = useQuery({
@@ -104,6 +105,19 @@ export function RegionsPage() {
     onError: (error: Error) => {
       showApiErrorToast(error, '删除失败')
     },
+  })
+
+  // 启用/禁用
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      adminApi.updateRegion(id, { is_active }),
+    onMutate: ({ id }) => setTogglingId(id),
+    onSettled: () => setTogglingId(null),
+    onSuccess: (_res, { is_active }) => {
+      toast.success(is_active ? '已启用' : '已禁用')
+      queryClient.invalidateQueries({ queryKey: ['admin-regions'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '操作失败'),
   })
 
   // 列定义
@@ -171,6 +185,14 @@ export function RegionsPage() {
         return (
           <div style={{ display: 'flex', gap: 4 }}>
             <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+            <Button
+              theme="borderless"
+              type={record.is_active ? 'warning' : 'tertiary'}
+              icon={record.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4 text-green-600" />}
+              size="small"
+              loading={togglingId === record.id}
+              onClick={() => toggleStatusMutation.mutate({ id: record.id, is_active: !record.is_active })}
+            />
             <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDelete(record)} />
           </div>
         )

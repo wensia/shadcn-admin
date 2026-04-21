@@ -11,6 +11,7 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute('/disc-test')({
+  staticData: { title: 'DISC 性格测试' },
   component: DiscPublicTest,
   validateSearch: searchSchema,
 })

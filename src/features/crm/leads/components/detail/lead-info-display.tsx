@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react'
-import { Popover, Button, Toast, Spin, Tag, Input } from '@douyinfe/semi-ui-19'
+import { Popover, Button, Toast, Spin, Tag, TextArea } from '@douyinfe/semi-ui-19'
 import { IconEdit, IconLoading, IconTick, IconChevronDown } from '@douyinfe/semi-icons'
 import { gradeLabels, type Lead, type LeadStatus, type IntentionLevel } from '../../types'
 import { formatTime } from '@/lib/utils/time'
@@ -11,8 +11,6 @@ import { InfoItem } from './info-item'
 import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
 import { leadStatusStyles, intentionLevelStyles } from '@/lib/status-styles'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-const { TextArea } = Input
 
 /** 家长关系映射 */
 const parentRelationLabels: Record<string, string> = {
@@ -59,6 +57,13 @@ function formatFieldValue(value: unknown): string {
 const leadStatusOptions = Object.entries(leadStatusStyles).map(([value, config]) => ({ value: value as LeadStatus, label: config.label, color: config.color }))
 const statusColorMap: Record<string, string> = { green: '#00b42a', orange: '#ff7d00', red: '#f53f3f', gray: '#86909c' }
 
+/** 状态分组定义 — 按销售漏斗阶段分组 */
+const statusGroups: Array<{ title: string; statuses: LeadStatus[] }> = [
+  { title: '跟进阶段', statuses: ['pending_assign', 'pending_followup', 'following_up'] as LeadStatus[] },
+  { title: '邀约到访', statuses: ['trial_scheduled', 'invited_no_show', 'visited', 'visited_not_signed'] as LeadStatus[] },
+  { title: '结果', statuses: ['paid', 'invalid', 'closed'] as LeadStatus[] },
+]
+
 /** 可编辑的线索状态选择器 */
 function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; editable?: boolean; onSave?: (value: string) => Promise<void> }) {
   const [open, setOpen] = useState(false)
@@ -88,31 +93,47 @@ function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; 
       trigger="click"
       position="bottomLeft"
       content={
-        <div style={{ padding: 8, position: 'relative' }}>
+        <div style={{ padding: 4, position: 'relative', minWidth: 220 }}>
           {isSaving && (
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
               <Spin size="small" />
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-            {leadStatusOptions.map(option => {
-              const isSelected = status === option.value
-              const color = statusColorMap[option.color] || statusColorMap.gray
-              return (
-                <Button
-                  key={option.value}
-                  theme="borderless"
-                  size="small"
-                  style={{ justifyContent: 'flex-start', color, backgroundColor: isSelected ? color + '20' : 'transparent', fontWeight: isSelected ? 500 : 400 }}
-                  onClick={() => handleSelect(option.value)}
-                  disabled={isSaving}
-                >
-                  {isSelected && <IconTick style={{ marginRight: 4, fontSize: 12 }} />}
-                  {option.label}
-                </Button>
-              )
-            })}
-          </div>
+          {statusGroups.map((group, gi) => {
+            const options = group.statuses.map(s => leadStatusOptions.find(o => o.value === s)).filter(Boolean) as typeof leadStatusOptions
+            return (
+              <div key={group.title}>
+                {gi > 0 && <div style={{ height: 1, background: 'var(--semi-color-border)', margin: '4px 12px' }} />}
+                <div style={{ padding: '6px 12px 2px', fontSize: 11, color: 'var(--semi-color-text-3)', fontWeight: 500 }}>{group.title}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: '0 4px 4px' }}>
+                  {options.map(option => {
+                    const isSelected = status === option.value
+                    const color = statusColorMap[option.color] || statusColorMap.gray
+                    return (
+                      <Button
+                        key={option.value}
+                        theme="borderless"
+                        size="small"
+                        style={{
+                          justifyContent: 'flex-start', color,
+                          backgroundColor: isSelected ? color + '18' : 'transparent',
+                          fontWeight: isSelected ? 500 : 400,
+                          borderRadius: 6,
+                          fontSize: 13,
+                          padding: '4px 8px',
+                        }}
+                        onClick={() => handleSelect(option.value)}
+                        disabled={isSaving}
+                      >
+                        {isSelected && <IconTick style={{ marginRight: 4, fontSize: 12 }} />}
+                        {option.label}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       }
     >

@@ -9,6 +9,7 @@ import { Nav, SideSheet } from '@douyinfe/semi-ui-19'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useSidebar } from '@/context/sidebar-context'
 import { usePermission, PERMISSIONS } from '@/hooks/use-permission'
+import { useAuthStore } from '@/stores/auth-store'
 import { AnthropicLogo } from '@/assets/anthropic-logo'
 
 /**
@@ -35,10 +36,12 @@ import {
   adminNavGroups,
   yunkeNavGroups,
   hrNavGroups,
+  toolsNavGroups,
   crmTeams,
   adminTeams,
   yunkeTeams,
   hrTeams,
+  toolsTeams,
 } from './data/sidebar-data'
 import type { NavGroup } from './types'
 import { NavUser } from './nav-user'
@@ -102,6 +105,7 @@ export function AppSidebar() {
   const location = useLocation()
 
   const { hasPermission } = usePermission()
+  const isSuperUser = useAuthStore((s) => s.user?.is_superuser ?? false)
 
   // 根据当前路径选择导航配置，并按权限过滤菜单项
   const { navGroups, teams } = useMemo(() => {
@@ -110,6 +114,7 @@ export function AppSidebar() {
     if (p.startsWith('/yunke')) { groups = yunkeNavGroups; teamList = yunkeTeams }
     else if (p.startsWith('/hr')) { groups = hrNavGroups; teamList = hrTeams }
     else if (p.startsWith('/admin')) { groups = adminNavGroups; teamList = adminTeams }
+    else if (p.startsWith('/tools')) { groups = toolsNavGroups; teamList = toolsTeams }
     else { groups = crmNavGroups; teamList = crmTeams }
 
     // 按权限过滤菜单项
@@ -123,9 +128,11 @@ export function AppSidebar() {
         return hasPermission(requiredPerm)
       }),
     })).filter((group) => group.items.length > 0)
+      // 超管专属：非超管隐藏「工具」导航组
+      .filter((group) => group.title !== '工具' || isSuperUser)
 
     return { navGroups: filtered, teams: teamList }
-  }, [location.pathname, hasPermission])
+  }, [location.pathname, hasPermission, isSuperUser])
 
   const isCollapsed = !open && !isMobile
 

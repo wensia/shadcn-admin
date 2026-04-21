@@ -1,0 +1,108 @@
+/* Anthropic theme — scoped under .tools-anthropic */
+
+.tools-anthropic {
+  --background: #faf9f5;
+  --foreground: #141413;
+  --card: #FFFFFF;
+  --card-foreground: #141413;
+  --popover: #FFFFFF;
+  --popover-foreground: #141413;
+  --primary: #d97757;
+  --primary-foreground: #faf9f5;
+  --secondary: #e8e6dc;
+  --secondary-foreground: #141413;
+  --muted: #e8e6dc;
+  --muted-foreground: #b0aea5;
+  --accent: #e8e6dc;
+  --accent-foreground: #141413;
+  --destructive: #d97757;
+  --border: #e8e6dc;
+  --input: #b0aea5;
+  --ring: #d97757;
+  --chart-1: #d97757;
+  --chart-2: #6a9bcc;
+  --chart-3: #788c5d;
+  --chart-4: #b0aea5;
+  --chart-5: #e8e6dc;
+  --radius: 0.75rem;
+
+  font-family: 'Lora', Georgia, serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.tools-anthropic h1,
+.tools-anthropic h2,
+.tools-anthropic h3,
+.tools-anthropic h4,
+.tools-anthropic h5,
+.tools-anthropic h6 {
+  font-family: 'Poppins', Arial, sans-serif;
+}
+
+/* Anthropic: heading font */
+.tools-anthropic .font-display {
+  font-family: 'Poppins', Arial, sans-serif;
+}
+
+/* Anthropic: form label */
+.tools-anthropic .ant-label {
+  font-family: 'Poppins', Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #141413;
+  letter-spacing: 0.01em;
+}
+
+/* Anthropic: branded button */
+.tools-anthropic .ant-btn {
+  border-radius: 10px;
+  font-family: 'Poppins', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Anthropic: bordered input */
+.tools-anthropic .ant-input {
+  border: 1px solid #e8e6dc;
+  border-radius: 10px;
+  background: #FFFFFF;
+  font-family: 'Lora', Georgia, serif;
+  padding: 0 14px;
+  transition: border-color 0.2s;
+}
+.tools-anthropic .ant-input:focus {
+  border-color: #d97757;
+  outline: none;
+}
+.tools-anthropic .ant-input::placeholder {
+  color: #b0aea5;
+}
+
+/* Anthropic: stat number */
+.tools-anthropic .ant-stat {
+  font-family: 'Poppins', Arial, sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #141413;
+}
+
+/* Anthropic: school score */
+.tools-anthropic .ant-score {
+  font-family: 'Poppins', Arial, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #141413;
+}
+
+/* Anthropic: section label */
+.tools-anthropic .ant-section-label {
+  font-family: 'Poppins', Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #b0aea5;
+  letter-spacing: 0.02em;
+}

@@ -316,7 +316,6 @@ export function ContinuousCallPage() {
   const [appointmentReason, setAppointmentReason] = useState<string>('')
 
   // IME 组合输入状态跟踪，防止中文输入被打断
-  const isComposingRef = useRef(false)
 
   // 数据查询
   const { data: statsData, refetch: refetchStats } = useQuery({
@@ -672,15 +671,7 @@ export function ContinuousCallPage() {
           '.semi-checkbox, .semi-radio, .semi-datepicker, .semi-timepicker, ' +
           '.semi-tag, [role="listbox"], [role="combobox"], [role="option"], [role="button"]'
         )
-      if (isInteractive) {
-        // 交互元素内按空格：先让元素处理自身行为，然后移走焦点，下次空格就能触发外呼
-        requestAnimationFrame(() => {
-          if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur()
-          }
-        })
-        return
-      }
+      if (isInteractive) return
       event.preventDefault()
       startCall()
     }
@@ -841,9 +832,7 @@ export function ContinuousCallPage() {
                       <TextArea
                         placeholder="请输入诺到理由..."
                         value={appointmentReason}
-                        onChange={(value) => { if (!isComposingRef.current) setAppointmentReason(value) }}
-                        onCompositionStart={() => { isComposingRef.current = true }}
-                        onCompositionEnd={(e) => { isComposingRef.current = false; setAppointmentReason((e.target as HTMLTextAreaElement).value) }}
+                        onChange={(value) => setAppointmentReason(value)}
                         autosize={{ minRows: 1, maxRows: 4 }}
                       />
                     </div>
@@ -875,9 +864,7 @@ export function ContinuousCallPage() {
                     <TextArea
                       placeholder="输入跟进内容..."
                       value={followupContent}
-                      onChange={(value) => { if (!isComposingRef.current) setFollowupContent(value) }}
-                      onCompositionStart={() => { isComposingRef.current = true }}
-                      onCompositionEnd={(e) => { isComposingRef.current = false; setFollowupContent((e.target as HTMLTextAreaElement).value) }}
+                      onChange={(value) => setFollowupContent(value)}
                       maxCount={500}
                       autosize={{ minRows: 2, maxRows: 6 }}
                     />

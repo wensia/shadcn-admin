@@ -33,7 +33,6 @@ interface CallRecordsToolbarProps {
   filters: CallRecordListParams
   onFilterChange: <K extends keyof CallRecordListParams>(key: K, value: CallRecordListParams[K]) => void
   onReset: () => void
-  isLoading?: boolean
   extraActions?: React.ReactNode
 }
 
@@ -46,23 +45,32 @@ export function CallRecordsToolbar({
   filters,
   onFilterChange,
   onReset,
-  isLoading,
   extraActions,
 }: CallRecordsToolbarProps) {
   const [searchInput, setSearchInput] = useState(filters.search || '')
   const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false)
+  const [shouldLoadDepartments, setShouldLoadDepartments] = useState(false)
+  const [shouldLoadStaff, setShouldLoadStaff] = useState(false)
 
   // 获取部门列表
-  const { data: departments = [] } = useQuery({
+  const {
+    data: departments = [],
+    isFetching: isDepartmentsFetching,
+  } = useQuery({
     queryKey: ['call-records-departments'],
     queryFn: () => callRecordsApi.getDepartments(),
+    enabled: shouldLoadDepartments,
     staleTime: 5 * 60 * 1000,
   })
 
   // 获取员工列表
-  const { data: staffList = [] } = useQuery({
+  const {
+    data: staffList = [],
+    isFetching: isStaffFetching,
+  } = useQuery({
     queryKey: ['call-records-staff'],
     queryFn: () => callRecordsApi.getStaffList(),
+    enabled: shouldLoadStaff,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -258,32 +266,38 @@ export function CallRecordsToolbar({
       />
 
       {/* 部门筛选 */}
-      {departments.length > 0 && (
-        <Select
-          placeholder="部门"
-          value={filters.department || undefined}
-          onChange={(val) => onFilterChange('department', (val as string) || undefined)}
-          optionList={departmentOptions}
-          showClear
-          style={{ width: 130 }}
-        />
-      )}
+      <Select
+        placeholder="部门"
+        value={filters.department || undefined}
+        onChange={(val) => onFilterChange('department', (val as string) || undefined)}
+        onDropdownVisibleChange={(visible) => {
+          if (visible) setShouldLoadDepartments(true)
+        }}
+        optionList={departmentOptions}
+        emptyContent={shouldLoadDepartments ? '暂无部门' : '展开后加载部门'}
+        loading={isDepartmentsFetching}
+        showClear
+        style={{ width: 130 }}
+      />
 
       {/* 员工筛选（可搜索） */}
-      {staffList.length > 0 && (
-        <Select
-          placeholder="全部员工"
-          value={filters.staff_name || ''}
-          onChange={(val) => onFilterChange('staff_name', (val as string) || undefined)}
-          optionList={staffOptions}
-          filter
-          showClear
-          style={{ width: 130 }}
-          renderSelectedItem={(optionNode: SelectOptionNode) => {
-            return <span>{optionNode.label || '全部员工'}</span>
-          }}
-        />
-      )}
+      <Select
+        placeholder="全部员工"
+        value={filters.staff_name || undefined}
+        onChange={(val) => onFilterChange('staff_name', (val as string) || undefined)}
+        onDropdownVisibleChange={(visible) => {
+          if (visible) setShouldLoadStaff(true)
+        }}
+        optionList={staffOptions}
+        filter
+        emptyContent={shouldLoadStaff ? '暂无员工' : '展开后加载员工'}
+        loading={isStaffFetching}
+        showClear
+        style={{ width: 130 }}
+        renderSelectedItem={(optionNode: SelectOptionNode) => {
+          return <span>{optionNode.label || '全部员工'}</span>
+        }}
+      />
 
       {/* 通话类型 */}
       <Select

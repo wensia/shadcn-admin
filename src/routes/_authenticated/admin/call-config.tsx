@@ -7,5 +7,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { CallConfigPage } from '@/features/admin/pages/call-config-page'
 
 export const Route = createFileRoute('/_authenticated/admin/call-config')({
+  staticData: { title: '外呼配置' },
   component: CallConfigPage
 })

@@ -7,6 +7,7 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute('/lead-submit')({
+  staticData: { title: '线索录入' },
   component: LeadChannelSubmit,
   validateSearch: searchSchema,
 })

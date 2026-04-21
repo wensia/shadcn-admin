@@ -31,7 +31,9 @@ export enum LeadStatus {
   FOLLOWING_UP = 'following_up',
   FOLLOWED_UP = 'followed_up',
   TRIAL_SCHEDULED = 'trial_scheduled',
+  INVITED_NO_SHOW = 'invited_no_show',
   VISITED = 'visited',
+  VISITED_NOT_SIGNED = 'visited_not_signed',
   PAID = 'paid',
   INVALID = 'invalid',
   CLOSED = 'closed'

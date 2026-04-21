@@ -926,3 +926,61 @@ npm run dev         # 开发服务器 (端口 3457)
 npm run build       # 构建生产版本
 npx tsc --noEmit    # 类型检查
 ```
+
+---
+
+## 路由元数据 & 浏览器标签 title（强制）
+
+### 规则
+
+**每一个路由文件（叶子路由，即包含 `component:` 的）必须在 `createFileRoute(...)({ ... })` 里声明 `staticData.title`。**
+
+根路由 `src/routes/__root.tsx` 会自动读取当前匹配路由的 `staticData.title`，设置 `document.title = \`RMF CRM-${title}\``。
+
+### 正确写法
+
+```tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { SomePage } from '@/features/some/pages/some-page'
+
+export const Route = createFileRoute('/some/path')({
+  staticData: { title: '页面名称' },   // ← 必填
+  component: SomePage,
+})
+```
+
+### 哪些路由可以不加
+
+- `route.tsx`（纯 layout，不是 leaf，本身不对应一个"页面"）
+- 根路由 `__root.tsx`
+
+### 需要动态 title 时
+
+详情页 title 依赖于拉取数据（如 "XXX 的详情"），可以**同时**用 `useDocumentTitle`：
+
+```tsx
+import { useDocumentTitle } from '@/hooks/use-document-title'
+
+export function LeadDetailPage() {
+  const { data } = useQuery(...)
+  useDocumentTitle(data ? `线索 · ${data.name}` : undefined)
+  // ...
+}
+```
+
+路由文件仍保留静态兜底：
+```tsx
+staticData: { title: '线索详情' }
+```
+
+### 约定优先级
+
+1. 页面组件内 `useDocumentTitle(...)` 运行时调用（动态 title）
+2. 路由 `staticData.title`（静态声明）
+3. 都没有 → fallback 到 `RMF CRM`（根路由默认）
+
+### Code review checklist
+
+新建路由文件时，reviewer 必查：
+- [ ] `staticData: { title: '...' }` 存在
+- [ ] title 使用简短中文，不含 "RMF CRM-" 前缀（根路由会自动加）

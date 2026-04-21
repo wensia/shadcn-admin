@@ -9,15 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ZhongkaoTestRouteImport } from './routes/zhongkao-test'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeadSubmitRouteImport } from './routes/lead-submit'
 import { Route as DiscTestRouteImport } from './routes/disc-test'
+import { Route as DiscResultsRouteImport } from './routes/disc-results'
 import { Route as ChannelPortalRouteImport } from './routes/channel-portal'
 import { Route as AspTestRouteImport } from './routes/asp-test'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as FullscreenRouteRouteImport } from './routes/_fullscreen/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as ToolsZhongkaoRouteImport } from './routes/tools.zhongkao'
+import { Route as ToolsXiaoshengchuRouteImport } from './routes/tools.xiaoshengchu'
 import { Route as FullscreenExcelDemoRouteImport } from './routes/_fullscreen/excel-demo'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
@@ -33,12 +37,14 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedYunkeRouteRouteImport } from './routes/_authenticated/yunke/route'
+import { Route as AuthenticatedToolsRouteRouteImport } from './routes/_authenticated/tools/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedHrRouteRouteImport } from './routes/_authenticated/hr/route'
 import { Route as AuthenticatedCrmRouteRouteImport } from './routes/_authenticated/crm/route'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedYunkeIndexRouteImport } from './routes/_authenticated/yunke/index'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
+import { Route as AuthenticatedToolsIndexRouteImport } from './routes/_authenticated/tools/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
@@ -56,10 +62,14 @@ import { Route as AuthenticatedYunkeCallRecordsRouteImport } from './routes/_aut
 import { Route as AuthenticatedYunkeAiAssistantRouteImport } from './routes/_authenticated/yunke/ai-assistant'
 import { Route as AuthenticatedYunkeAdvisorTrainingRouteImport } from './routes/_authenticated/yunke/advisor-training'
 import { Route as AuthenticatedYunkeAccountsRouteImport } from './routes/_authenticated/yunke/accounts'
+import { Route as AuthenticatedToolsZhongkaoRecordsRouteImport } from './routes/_authenticated/tools/zhongkao-records'
+import { Route as AuthenticatedToolsRedemptionCodesRouteImport } from './routes/_authenticated/tools/redemption-codes'
+import { Route as AuthenticatedToolsQuotaSettingsRouteImport } from './routes/_authenticated/tools/quota-settings'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedHrResignationsRouteImport } from './routes/_authenticated/hr/resignations'
 import { Route as AuthenticatedHrDiscTestRouteImport } from './routes/_authenticated/hr/disc-test'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedDemoTdesignLeadsRouteImport } from './routes/_authenticated/demo/tdesign-leads'
@@ -74,6 +84,7 @@ import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_au
 import { Route as AuthenticatedCrmChannelLedgerRouteImport } from './routes/_authenticated/crm/channel-ledger'
 import { Route as AuthenticatedCrmCallRecordsRouteImport } from './routes/_authenticated/crm/call-records'
 import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
+import { Route as AuthenticatedCrmAspRecordsRouteImport } from './routes/_authenticated/crm/asp-records'
 import { Route as AuthenticatedCrmAiAssistantRouteImport } from './routes/_authenticated/crm/ai-assistant'
 import { Route as AuthenticatedCrmAdvisorTasksRouteImport } from './routes/_authenticated/crm/advisor-tasks'
 import { Route as AuthenticatedCrmAdvisorCenterRouteImport } from './routes/_authenticated/crm/advisor-center'
@@ -102,6 +113,7 @@ import { Route as AuthenticatedAdminCampusDepartmentsRouteImport } from './route
 import { Route as AuthenticatedAdminCallConfigRouteImport } from './routes/_authenticated/admin/call-config'
 import { Route as AuthenticatedAdminAsrConfigRouteImport } from './routes/_authenticated/admin/asr-config'
 import { Route as AuthenticatedAdminAreasRouteImport } from './routes/_authenticated/admin/areas'
+import { Route as AuthenticatedAdminAreaDepartmentsRouteImport } from './routes/_authenticated/admin/area-departments'
 import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin/api-keys'
 import { Route as AuthenticatedAdminAiConfigRouteImport } from './routes/_authenticated/admin/ai-config'
 import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
@@ -112,6 +124,11 @@ import { Route as AuthenticatedCrmDataStatisticsAdvisorRouteImport } from './rou
 import { Route as AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/index'
 import { Route as AuthenticatedCrmLeadsAssignmentTasksTaskIdRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/$taskId'
 
+const ZhongkaoTestRoute = ZhongkaoTestRouteImport.update({
+  id: '/zhongkao-test',
+  path: '/zhongkao-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -125,6 +142,11 @@ const LeadSubmitRoute = LeadSubmitRouteImport.update({
 const DiscTestRoute = DiscTestRouteImport.update({
   id: '/disc-test',
   path: '/disc-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscResultsRoute = DiscResultsRouteImport.update({
+  id: '/disc-results',
+  path: '/disc-results',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChannelPortalRoute = ChannelPortalRouteImport.update({
@@ -154,6 +176,16 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ToolsZhongkaoRoute = ToolsZhongkaoRouteImport.update({
+  id: '/tools/zhongkao',
+  path: '/tools/zhongkao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsXiaoshengchuRoute = ToolsXiaoshengchuRouteImport.update({
+  id: '/tools/xiaoshengchu',
+  path: '/tools/xiaoshengchu',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FullscreenExcelDemoRoute = FullscreenExcelDemoRouteImport.update({
   id: '/excel-demo',
@@ -228,6 +260,11 @@ const AuthenticatedYunkeRouteRoute = AuthenticatedYunkeRouteRouteImport.update({
   path: '/yunke',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedToolsRouteRoute = AuthenticatedToolsRouteRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRouteRoute =
   AuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
@@ -258,6 +295,11 @@ const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolsIndexRoute = AuthenticatedToolsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedToolsRouteRoute,
 } as any)
 const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
   id: '/tasks/',
@@ -354,6 +396,24 @@ const AuthenticatedYunkeAccountsRoute =
     path: '/accounts',
     getParentRoute: () => AuthenticatedYunkeRouteRoute,
   } as any)
+const AuthenticatedToolsZhongkaoRecordsRoute =
+  AuthenticatedToolsZhongkaoRecordsRouteImport.update({
+    id: '/zhongkao-records',
+    path: '/zhongkao-records',
+    getParentRoute: () => AuthenticatedToolsRouteRoute,
+  } as any)
+const AuthenticatedToolsRedemptionCodesRoute =
+  AuthenticatedToolsRedemptionCodesRouteImport.update({
+    id: '/redemption-codes',
+    path: '/redemption-codes',
+    getParentRoute: () => AuthenticatedToolsRouteRoute,
+  } as any)
+const AuthenticatedToolsQuotaSettingsRoute =
+  AuthenticatedToolsQuotaSettingsRouteImport.update({
+    id: '/quota-settings',
+    path: '/quota-settings',
+    getParentRoute: () => AuthenticatedToolsRouteRoute,
+  } as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -377,6 +437,12 @@ const AuthenticatedSettingsAccountRoute =
     id: '/account',
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedHrResignationsRoute =
+  AuthenticatedHrResignationsRouteImport.update({
+    id: '/resignations',
+    path: '/resignations',
+    getParentRoute: () => AuthenticatedHrRouteRoute,
   } as any)
 const AuthenticatedHrDiscTestRoute = AuthenticatedHrDiscTestRouteImport.update({
   id: '/disc-test',
@@ -458,6 +524,12 @@ const AuthenticatedCrmBatchImportRoute =
   AuthenticatedCrmBatchImportRouteImport.update({
     id: '/batch-import',
     path: '/batch-import',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmAspRecordsRoute =
+  AuthenticatedCrmAspRecordsRouteImport.update({
+    id: '/asp-records',
+    path: '/asp-records',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmAiAssistantRoute =
@@ -627,6 +699,12 @@ const AuthenticatedAdminAreasRoute = AuthenticatedAdminAreasRouteImport.update({
   path: '/areas',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminAreaDepartmentsRoute =
+  AuthenticatedAdminAreaDepartmentsRouteImport.update({
+    id: '/area-departments',
+    path: '/area-departments',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminApiKeysRoute =
   AuthenticatedAdminApiKeysRouteImport.update({
     id: '/api-keys',
@@ -687,13 +765,16 @@ export interface FileRoutesByFullPath {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
+  '/disc-results': typeof DiscResultsRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
+  '/zhongkao-test': typeof ZhongkaoTestRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/crm': typeof AuthenticatedCrmRouteRouteWithChildren
   '/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/tools': typeof AuthenticatedToolsRouteRouteWithChildren
   '/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
@@ -707,8 +788,11 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/excel-demo': typeof FullscreenExcelDemoRoute
+  '/tools/xiaoshengchu': typeof ToolsXiaoshengchuRoute
+  '/tools/zhongkao': typeof ToolsZhongkaoRoute
   '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
+  '/admin/area-departments': typeof AuthenticatedAdminAreaDepartmentsRoute
   '/admin/areas': typeof AuthenticatedAdminAreasRoute
   '/admin/asr-config': typeof AuthenticatedAdminAsrConfigRoute
   '/admin/call-config': typeof AuthenticatedAdminCallConfigRoute
@@ -737,6 +821,7 @@ export interface FileRoutesByFullPath {
   '/crm/advisor-center': typeof AuthenticatedCrmAdvisorCenterRoute
   '/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
+  '/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
@@ -751,10 +836,14 @@ export interface FileRoutesByFullPath {
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/hr/resignations': typeof AuthenticatedHrResignationsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/tools/quota-settings': typeof AuthenticatedToolsQuotaSettingsRoute
+  '/tools/redemption-codes': typeof AuthenticatedToolsRedemptionCodesRoute
+  '/tools/zhongkao-records': typeof AuthenticatedToolsZhongkaoRecordsRoute
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
@@ -772,6 +861,7 @@ export interface FileRoutesByFullPath {
   '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
+  '/tools/': typeof AuthenticatedToolsIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/yunke/': typeof AuthenticatedYunkeIndexRoute
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
@@ -787,9 +877,11 @@ export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
+  '/disc-results': typeof DiscResultsRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
+  '/zhongkao-test': typeof ZhongkaoTestRoute
   '/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
@@ -803,8 +895,11 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/excel-demo': typeof FullscreenExcelDemoRoute
+  '/tools/xiaoshengchu': typeof ToolsXiaoshengchuRoute
+  '/tools/zhongkao': typeof ToolsZhongkaoRoute
   '/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
+  '/admin/area-departments': typeof AuthenticatedAdminAreaDepartmentsRoute
   '/admin/areas': typeof AuthenticatedAdminAreasRoute
   '/admin/asr-config': typeof AuthenticatedAdminAsrConfigRoute
   '/admin/call-config': typeof AuthenticatedAdminCallConfigRoute
@@ -833,6 +928,7 @@ export interface FileRoutesByTo {
   '/crm/advisor-center': typeof AuthenticatedCrmAdvisorCenterRoute
   '/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
+  '/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
@@ -847,10 +943,14 @@ export interface FileRoutesByTo {
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/hr/resignations': typeof AuthenticatedHrResignationsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/tools/quota-settings': typeof AuthenticatedToolsQuotaSettingsRoute
+  '/tools/redemption-codes': typeof AuthenticatedToolsRedemptionCodesRoute
+  '/tools/zhongkao-records': typeof AuthenticatedToolsZhongkaoRecordsRoute
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
@@ -868,6 +968,7 @@ export interface FileRoutesByTo {
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
+  '/tools': typeof AuthenticatedToolsIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/yunke': typeof AuthenticatedYunkeIndexRoute
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
@@ -885,13 +986,16 @@ export interface FileRoutesById {
   '/clerk': typeof ClerkRouteRouteWithChildren
   '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
+  '/disc-results': typeof DiscResultsRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
+  '/zhongkao-test': typeof ZhongkaoTestRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/crm': typeof AuthenticatedCrmRouteRouteWithChildren
   '/_authenticated/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/_authenticated/tools': typeof AuthenticatedToolsRouteRouteWithChildren
   '/_authenticated/yunke': typeof AuthenticatedYunkeRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
   '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -907,9 +1011,12 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_fullscreen/excel-demo': typeof FullscreenExcelDemoRoute
+  '/tools/xiaoshengchu': typeof ToolsXiaoshengchuRoute
+  '/tools/zhongkao': typeof ToolsZhongkaoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/ai-config': typeof AuthenticatedAdminAiConfigRoute
   '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
+  '/_authenticated/admin/area-departments': typeof AuthenticatedAdminAreaDepartmentsRoute
   '/_authenticated/admin/areas': typeof AuthenticatedAdminAreasRoute
   '/_authenticated/admin/asr-config': typeof AuthenticatedAdminAsrConfigRoute
   '/_authenticated/admin/call-config': typeof AuthenticatedAdminCallConfigRoute
@@ -938,6 +1045,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/advisor-center': typeof AuthenticatedCrmAdvisorCenterRoute
   '/_authenticated/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/_authenticated/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
+  '/_authenticated/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/_authenticated/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/_authenticated/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
@@ -952,10 +1060,14 @@ export interface FileRoutesById {
   '/_authenticated/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/_authenticated/hr/resignations': typeof AuthenticatedHrResignationsRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/tools/quota-settings': typeof AuthenticatedToolsQuotaSettingsRoute
+  '/_authenticated/tools/redemption-codes': typeof AuthenticatedToolsRedemptionCodesRoute
+  '/_authenticated/tools/zhongkao-records': typeof AuthenticatedToolsZhongkaoRecordsRoute
   '/_authenticated/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/_authenticated/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/_authenticated/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
@@ -973,6 +1085,7 @@ export interface FileRoutesById {
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
+  '/_authenticated/tools/': typeof AuthenticatedToolsIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/yunke/': typeof AuthenticatedYunkeIndexRoute
   '/_authenticated/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
@@ -990,13 +1103,16 @@ export interface FileRouteTypes {
     | '/clerk'
     | '/asp-test'
     | '/channel-portal'
+    | '/disc-results'
     | '/disc-test'
     | '/lead-submit'
     | '/login'
+    | '/zhongkao-test'
     | '/admin'
     | '/crm'
     | '/hr'
     | '/settings'
+    | '/tools'
     | '/yunke'
     | '/forgot-password'
     | '/otp'
@@ -1010,8 +1126,11 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/excel-demo'
+    | '/tools/xiaoshengchu'
+    | '/tools/zhongkao'
     | '/admin/ai-config'
     | '/admin/api-keys'
+    | '/admin/area-departments'
     | '/admin/areas'
     | '/admin/asr-config'
     | '/admin/call-config'
@@ -1040,6 +1159,7 @@ export interface FileRouteTypes {
     | '/crm/advisor-center'
     | '/crm/advisor-tasks'
     | '/crm/ai-assistant'
+    | '/crm/asp-records'
     | '/crm/batch-import'
     | '/crm/call-records'
     | '/crm/channel-ledger'
@@ -1054,10 +1174,14 @@ export interface FileRouteTypes {
     | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
+    | '/hr/resignations'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/tools/quota-settings'
+    | '/tools/redemption-codes'
+    | '/tools/zhongkao-records'
     | '/yunke/accounts'
     | '/yunke/advisor-training'
     | '/yunke/ai-assistant'
@@ -1075,6 +1199,7 @@ export interface FileRouteTypes {
     | '/help-center/'
     | '/settings/'
     | '/tasks/'
+    | '/tools/'
     | '/users/'
     | '/yunke/'
     | '/crm/data-statistics/advisor'
@@ -1090,9 +1215,11 @@ export interface FileRouteTypes {
     | '/clerk'
     | '/asp-test'
     | '/channel-portal'
+    | '/disc-results'
     | '/disc-test'
     | '/lead-submit'
     | '/login'
+    | '/zhongkao-test'
     | '/hr'
     | '/forgot-password'
     | '/otp'
@@ -1106,8 +1233,11 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/excel-demo'
+    | '/tools/xiaoshengchu'
+    | '/tools/zhongkao'
     | '/admin/ai-config'
     | '/admin/api-keys'
+    | '/admin/area-departments'
     | '/admin/areas'
     | '/admin/asr-config'
     | '/admin/call-config'
@@ -1136,6 +1266,7 @@ export interface FileRouteTypes {
     | '/crm/advisor-center'
     | '/crm/advisor-tasks'
     | '/crm/ai-assistant'
+    | '/crm/asp-records'
     | '/crm/batch-import'
     | '/crm/call-records'
     | '/crm/channel-ledger'
@@ -1150,10 +1281,14 @@ export interface FileRouteTypes {
     | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
+    | '/hr/resignations'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/tools/quota-settings'
+    | '/tools/redemption-codes'
+    | '/tools/zhongkao-records'
     | '/yunke/accounts'
     | '/yunke/advisor-training'
     | '/yunke/ai-assistant'
@@ -1171,6 +1306,7 @@ export interface FileRouteTypes {
     | '/help-center'
     | '/settings'
     | '/tasks'
+    | '/tools'
     | '/users'
     | '/yunke'
     | '/crm/data-statistics/advisor'
@@ -1187,13 +1323,16 @@ export interface FileRouteTypes {
     | '/clerk'
     | '/asp-test'
     | '/channel-portal'
+    | '/disc-results'
     | '/disc-test'
     | '/lead-submit'
     | '/login'
+    | '/zhongkao-test'
     | '/_authenticated/admin'
     | '/_authenticated/crm'
     | '/_authenticated/hr'
     | '/_authenticated/settings'
+    | '/_authenticated/tools'
     | '/_authenticated/yunke'
     | '/clerk/(auth)'
     | '/clerk/_authenticated'
@@ -1209,9 +1348,12 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_fullscreen/excel-demo'
+    | '/tools/xiaoshengchu'
+    | '/tools/zhongkao'
     | '/_authenticated/'
     | '/_authenticated/admin/ai-config'
     | '/_authenticated/admin/api-keys'
+    | '/_authenticated/admin/area-departments'
     | '/_authenticated/admin/areas'
     | '/_authenticated/admin/asr-config'
     | '/_authenticated/admin/call-config'
@@ -1240,6 +1382,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/advisor-center'
     | '/_authenticated/crm/advisor-tasks'
     | '/_authenticated/crm/ai-assistant'
+    | '/_authenticated/crm/asp-records'
     | '/_authenticated/crm/batch-import'
     | '/_authenticated/crm/call-records'
     | '/_authenticated/crm/channel-ledger'
@@ -1254,10 +1397,14 @@ export interface FileRouteTypes {
     | '/_authenticated/demo/tdesign-leads'
     | '/_authenticated/errors/$error'
     | '/_authenticated/hr/disc-test'
+    | '/_authenticated/hr/resignations'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/tools/quota-settings'
+    | '/_authenticated/tools/redemption-codes'
+    | '/_authenticated/tools/zhongkao-records'
     | '/_authenticated/yunke/accounts'
     | '/_authenticated/yunke/advisor-training'
     | '/_authenticated/yunke/ai-assistant'
@@ -1275,6 +1422,7 @@ export interface FileRouteTypes {
     | '/_authenticated/help-center/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
+    | '/_authenticated/tools/'
     | '/_authenticated/users/'
     | '/_authenticated/yunke/'
     | '/_authenticated/crm/data-statistics/advisor'
@@ -1292,9 +1440,11 @@ export interface RootRouteChildren {
   ClerkRouteRoute: typeof ClerkRouteRouteWithChildren
   AspTestRoute: typeof AspTestRoute
   ChannelPortalRoute: typeof ChannelPortalRoute
+  DiscResultsRoute: typeof DiscResultsRoute
   DiscTestRoute: typeof DiscTestRoute
   LeadSubmitRoute: typeof LeadSubmitRoute
   LoginRoute: typeof LoginRoute
+  ZhongkaoTestRoute: typeof ZhongkaoTestRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOtpRoute: typeof authOtpRoute
   authSelectIdentityRoute: typeof authSelectIdentityRoute
@@ -1306,10 +1456,19 @@ export interface RootRouteChildren {
   errors404Route: typeof errors404Route
   errors500Route: typeof errors500Route
   errors503Route: typeof errors503Route
+  ToolsXiaoshengchuRoute: typeof ToolsXiaoshengchuRoute
+  ToolsZhongkaoRoute: typeof ToolsZhongkaoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/zhongkao-test': {
+      id: '/zhongkao-test'
+      path: '/zhongkao-test'
+      fullPath: '/zhongkao-test'
+      preLoaderRoute: typeof ZhongkaoTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -1329,6 +1488,13 @@ declare module '@tanstack/react-router' {
       path: '/disc-test'
       fullPath: '/disc-test'
       preLoaderRoute: typeof DiscTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disc-results': {
+      id: '/disc-results'
+      path: '/disc-results'
+      fullPath: '/disc-results'
+      preLoaderRoute: typeof DiscResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/channel-portal': {
@@ -1372,6 +1538,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/tools/zhongkao': {
+      id: '/tools/zhongkao'
+      path: '/tools/zhongkao'
+      fullPath: '/tools/zhongkao'
+      preLoaderRoute: typeof ToolsZhongkaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/xiaoshengchu': {
+      id: '/tools/xiaoshengchu'
+      path: '/tools/xiaoshengchu'
+      fullPath: '/tools/xiaoshengchu'
+      preLoaderRoute: typeof ToolsXiaoshengchuRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_fullscreen/excel-demo': {
       id: '/_fullscreen/excel-demo'
@@ -1478,6 +1658,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedYunkeRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tools': {
+      id: '/_authenticated/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof AuthenticatedToolsRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -1519,6 +1706,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/users/'
       preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools/': {
+      id: '/_authenticated/tools/'
+      path: '/'
+      fullPath: '/tools/'
+      preLoaderRoute: typeof AuthenticatedToolsIndexRouteImport
+      parentRoute: typeof AuthenticatedToolsRouteRoute
     }
     '/_authenticated/tasks/': {
       id: '/_authenticated/tasks/'
@@ -1639,6 +1833,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedYunkeAccountsRouteImport
       parentRoute: typeof AuthenticatedYunkeRouteRoute
     }
+    '/_authenticated/tools/zhongkao-records': {
+      id: '/_authenticated/tools/zhongkao-records'
+      path: '/zhongkao-records'
+      fullPath: '/tools/zhongkao-records'
+      preLoaderRoute: typeof AuthenticatedToolsZhongkaoRecordsRouteImport
+      parentRoute: typeof AuthenticatedToolsRouteRoute
+    }
+    '/_authenticated/tools/redemption-codes': {
+      id: '/_authenticated/tools/redemption-codes'
+      path: '/redemption-codes'
+      fullPath: '/tools/redemption-codes'
+      preLoaderRoute: typeof AuthenticatedToolsRedemptionCodesRouteImport
+      parentRoute: typeof AuthenticatedToolsRouteRoute
+    }
+    '/_authenticated/tools/quota-settings': {
+      id: '/_authenticated/tools/quota-settings'
+      path: '/quota-settings'
+      fullPath: '/tools/quota-settings'
+      preLoaderRoute: typeof AuthenticatedToolsQuotaSettingsRouteImport
+      parentRoute: typeof AuthenticatedToolsRouteRoute
+    }
     '/_authenticated/settings/notifications': {
       id: '/_authenticated/settings/notifications'
       path: '/notifications'
@@ -1666,6 +1881,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/account'
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/hr/resignations': {
+      id: '/_authenticated/hr/resignations'
+      path: '/resignations'
+      fullPath: '/hr/resignations'
+      preLoaderRoute: typeof AuthenticatedHrResignationsRouteImport
+      parentRoute: typeof AuthenticatedHrRouteRoute
     }
     '/_authenticated/hr/disc-test': {
       id: '/_authenticated/hr/disc-test'
@@ -1763,6 +1985,13 @@ declare module '@tanstack/react-router' {
       path: '/batch-import'
       fullPath: '/crm/batch-import'
       preLoaderRoute: typeof AuthenticatedCrmBatchImportRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/asp-records': {
+      id: '/_authenticated/crm/asp-records'
+      path: '/asp-records'
+      fullPath: '/crm/asp-records'
+      preLoaderRoute: typeof AuthenticatedCrmAspRecordsRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/ai-assistant': {
@@ -1961,6 +2190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAreasRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/area-departments': {
+      id: '/_authenticated/admin/area-departments'
+      path: '/area-departments'
+      fullPath: '/admin/area-departments'
+      preLoaderRoute: typeof AuthenticatedAdminAreaDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/api-keys': {
       id: '/_authenticated/admin/api-keys'
       path: '/api-keys'
@@ -2030,6 +2266,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminAiConfigRoute: typeof AuthenticatedAdminAiConfigRoute
   AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
+  AuthenticatedAdminAreaDepartmentsRoute: typeof AuthenticatedAdminAreaDepartmentsRoute
   AuthenticatedAdminAreasRoute: typeof AuthenticatedAdminAreasRoute
   AuthenticatedAdminAsrConfigRoute: typeof AuthenticatedAdminAsrConfigRoute
   AuthenticatedAdminCallConfigRoute: typeof AuthenticatedAdminCallConfigRoute
@@ -2062,6 +2299,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
   {
     AuthenticatedAdminAiConfigRoute: AuthenticatedAdminAiConfigRoute,
     AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
+    AuthenticatedAdminAreaDepartmentsRoute:
+      AuthenticatedAdminAreaDepartmentsRoute,
     AuthenticatedAdminAreasRoute: AuthenticatedAdminAreasRoute,
     AuthenticatedAdminAsrConfigRoute: AuthenticatedAdminAsrConfigRoute,
     AuthenticatedAdminCallConfigRoute: AuthenticatedAdminCallConfigRoute,
@@ -2106,6 +2345,7 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmAdvisorCenterRoute: typeof AuthenticatedCrmAdvisorCenterRoute
   AuthenticatedCrmAdvisorTasksRoute: typeof AuthenticatedCrmAdvisorTasksRoute
   AuthenticatedCrmAiAssistantRoute: typeof AuthenticatedCrmAiAssistantRoute
+  AuthenticatedCrmAspRecordsRoute: typeof AuthenticatedCrmAspRecordsRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
   AuthenticatedCrmChannelLedgerRoute: typeof AuthenticatedCrmChannelLedgerRoute
@@ -2131,6 +2371,7 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
   AuthenticatedCrmAdvisorCenterRoute: AuthenticatedCrmAdvisorCenterRoute,
   AuthenticatedCrmAdvisorTasksRoute: AuthenticatedCrmAdvisorTasksRoute,
   AuthenticatedCrmAiAssistantRoute: AuthenticatedCrmAiAssistantRoute,
+  AuthenticatedCrmAspRecordsRoute: AuthenticatedCrmAspRecordsRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
   AuthenticatedCrmChannelLedgerRoute: AuthenticatedCrmChannelLedgerRoute,
@@ -2165,10 +2406,12 @@ const AuthenticatedCrmRouteRouteWithChildren =
 
 interface AuthenticatedHrRouteRouteChildren {
   AuthenticatedHrDiscTestRoute: typeof AuthenticatedHrDiscTestRoute
+  AuthenticatedHrResignationsRoute: typeof AuthenticatedHrResignationsRoute
 }
 
 const AuthenticatedHrRouteRouteChildren: AuthenticatedHrRouteRouteChildren = {
   AuthenticatedHrDiscTestRoute: AuthenticatedHrDiscTestRoute,
+  AuthenticatedHrResignationsRoute: AuthenticatedHrResignationsRoute,
 }
 
 const AuthenticatedHrRouteRouteWithChildren =
@@ -2195,6 +2438,28 @@ const AuthenticatedSettingsRouteRouteChildren: AuthenticatedSettingsRouteRouteCh
 const AuthenticatedSettingsRouteRouteWithChildren =
   AuthenticatedSettingsRouteRoute._addFileChildren(
     AuthenticatedSettingsRouteRouteChildren,
+  )
+
+interface AuthenticatedToolsRouteRouteChildren {
+  AuthenticatedToolsQuotaSettingsRoute: typeof AuthenticatedToolsQuotaSettingsRoute
+  AuthenticatedToolsRedemptionCodesRoute: typeof AuthenticatedToolsRedemptionCodesRoute
+  AuthenticatedToolsZhongkaoRecordsRoute: typeof AuthenticatedToolsZhongkaoRecordsRoute
+  AuthenticatedToolsIndexRoute: typeof AuthenticatedToolsIndexRoute
+}
+
+const AuthenticatedToolsRouteRouteChildren: AuthenticatedToolsRouteRouteChildren =
+  {
+    AuthenticatedToolsQuotaSettingsRoute: AuthenticatedToolsQuotaSettingsRoute,
+    AuthenticatedToolsRedemptionCodesRoute:
+      AuthenticatedToolsRedemptionCodesRoute,
+    AuthenticatedToolsZhongkaoRecordsRoute:
+      AuthenticatedToolsZhongkaoRecordsRoute,
+    AuthenticatedToolsIndexRoute: AuthenticatedToolsIndexRoute,
+  }
+
+const AuthenticatedToolsRouteRouteWithChildren =
+  AuthenticatedToolsRouteRoute._addFileChildren(
+    AuthenticatedToolsRouteRouteChildren,
   )
 
 interface AuthenticatedYunkeRouteRouteChildren {
@@ -2231,6 +2496,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCrmRouteRoute: typeof AuthenticatedCrmRouteRouteWithChildren
   AuthenticatedHrRouteRoute: typeof AuthenticatedHrRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedToolsRouteRoute: typeof AuthenticatedToolsRouteRouteWithChildren
   AuthenticatedYunkeRouteRoute: typeof AuthenticatedYunkeRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedDemoTdesignLeadsRoute: typeof AuthenticatedDemoTdesignLeadsRoute
@@ -2247,6 +2513,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCrmRouteRoute: AuthenticatedCrmRouteRouteWithChildren,
   AuthenticatedHrRouteRoute: AuthenticatedHrRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedToolsRouteRoute: AuthenticatedToolsRouteRouteWithChildren,
   AuthenticatedYunkeRouteRoute: AuthenticatedYunkeRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedDemoTdesignLeadsRoute: AuthenticatedDemoTdesignLeadsRoute,
@@ -2322,9 +2589,11 @@ const rootRouteChildren: RootRouteChildren = {
   ClerkRouteRoute: ClerkRouteRouteWithChildren,
   AspTestRoute: AspTestRoute,
   ChannelPortalRoute: ChannelPortalRoute,
+  DiscResultsRoute: DiscResultsRoute,
   DiscTestRoute: DiscTestRoute,
   LeadSubmitRoute: LeadSubmitRoute,
   LoginRoute: LoginRoute,
+  ZhongkaoTestRoute: ZhongkaoTestRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOtpRoute: authOtpRoute,
   authSelectIdentityRoute: authSelectIdentityRoute,
@@ -2336,6 +2605,8 @@ const rootRouteChildren: RootRouteChildren = {
   errors404Route: errors404Route,
   errors500Route: errors500Route,
   errors503Route: errors503Route,
+  ToolsXiaoshengchuRoute: ToolsXiaoshengchuRoute,
+  ToolsZhongkaoRoute: ToolsZhongkaoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

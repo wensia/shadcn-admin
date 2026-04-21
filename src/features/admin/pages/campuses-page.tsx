@@ -6,7 +6,7 @@ import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/lib/toast'
-import { Plus, Pencil, Trash2, Building2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, Power, PowerOff, Users } from 'lucide-react'
 import { Button, Form, Input, Modal, Select, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
@@ -15,7 +15,14 @@ import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi } from '../api'
-import type { AreaItem, CampusItem, CampusCreate, CampusUpdate } from '../types'
+import type {
+  AreaItem,
+  CampusItem,
+  CampusCreate,
+  CampusLeaderCandidateItem,
+  CampusLeaderPatch,
+  CampusUpdate,
+} from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
@@ -27,7 +34,11 @@ interface CampusFormValues extends CampusCreate {
   description?: string
   sort_order?: number
   is_active?: boolean
-  is_area_office?: boolean
+}
+
+interface LeaderOption {
+  value: string
+  label: string
 }
 
 export function CampusesPage() {
@@ -43,8 +54,13 @@ export function CampusesPage() {
   const [areaFilter, setAreaFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [leaderDialogOpen, setLeaderDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<CampusItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<CampusItem | null>(null)
+  const [leaderCampus, setLeaderCampus] = useState<CampusItem | null>(null)
+  const [principalId, setPrincipalId] = useState<string | undefined>(undefined)
+  const [vicePrincipalId, setVicePrincipalId] = useState<string | undefined>(undefined)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // 获取校区列表
   const { data, isLoading, refetch } = useQuery({
@@ -53,6 +69,7 @@ export function CampusesPage() {
       const params: Record<string, unknown> = {
         page,
         size: pageSize,
+        is_area_office: false,
       }
       if (searchValue) {
         params.search = searchValue
@@ -78,6 +95,16 @@ export function CampusesPage() {
   })
 
   const areas = useMemo<AreaItem[]>(() => areasData?.items ?? [], [areasData?.items])
+
+  const { data: leaderCandidatesData = [], isLoading: isLeaderCandidatesLoading } = useQuery({
+    queryKey: ['campus-leader-candidates', leaderCampus?.id],
+    queryFn: async () => {
+      if (!leaderCampus?.id) return []
+      const response = await adminApi.getCampusLeaderCandidates(leaderCampus.id)
+      return response.data || []
+    },
+    enabled: leaderDialogOpen && !!leaderCampus?.id,
+  })
 
   // 创建校区
   const createMutation = useMutation({
@@ -121,6 +148,81 @@ export function CampusesPage() {
     },
   })
 
+  // 启用/禁用
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      adminApi.updateCampus(id, { is_active }),
+    onMutate: ({ id }) => setTogglingId(id),
+    onSettled: () => setTogglingId(null),
+    onSuccess: (_res, { is_active }) => {
+      toast.success(is_active ? '已启用' : '已禁用')
+      queryClient.invalidateQueries({ queryKey: ['admin-campuses'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '操作失败'),
+  })
+
+  const updateLeadersMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CampusLeaderPatch }) =>
+      adminApi.updateCampusLeaders(id, data),
+    onSuccess: () => {
+      toast.success('校区领导已更新')
+      setLeaderDialogOpen(false)
+      setLeaderCampus(null)
+      setPrincipalId(undefined)
+      setVicePrincipalId(undefined)
+      queryClient.invalidateQueries({ queryKey: ['admin-campuses'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '更新校区领导失败')
+    },
+  })
+
+  const leaderOptions = useMemo<LeaderOption[]>(() => {
+    const optionMap = new Map<string, LeaderOption>()
+
+    leaderCandidatesData.forEach((candidate: CampusLeaderCandidateItem) => {
+      const suffix = candidate.username ? `（${candidate.username}）` : ''
+      optionMap.set(candidate.id, {
+        value: candidate.id,
+        label: `${candidate.name}${suffix}`,
+      })
+    })
+
+    if (
+      leaderCampus?.principal_id &&
+      leaderCampus.principal_name &&
+      !optionMap.has(leaderCampus.principal_id)
+    ) {
+      optionMap.set(leaderCampus.principal_id, {
+        value: leaderCampus.principal_id,
+        label: `${leaderCampus.principal_name}（当前任命）`,
+      })
+    }
+
+    if (
+      leaderCampus?.vice_principal_id &&
+      leaderCampus.vice_principal_name &&
+      !optionMap.has(leaderCampus.vice_principal_id)
+    ) {
+      optionMap.set(leaderCampus.vice_principal_id, {
+        value: leaderCampus.vice_principal_id,
+        label: `${leaderCampus.vice_principal_name}（当前任命）`,
+      })
+    }
+
+    return Array.from(optionMap.values())
+  }, [leaderCandidatesData, leaderCampus])
+
+  const principalOptions = useMemo(
+    () => leaderOptions.filter((option) => option.value !== vicePrincipalId),
+    [leaderOptions, vicePrincipalId]
+  )
+
+  const vicePrincipalOptions = useMemo(
+    () => leaderOptions.filter((option) => option.value !== principalId),
+    [leaderOptions, principalId]
+  )
+
   // 表格列定义
   const columns: ColumnProps<CampusItem>[] = [
       {
@@ -149,18 +251,24 @@ export function CampusesPage() {
         },
       },
       {
-        title: '类型',
-        dataIndex: 'is_area_office',
+        title: '校区领导',
+        dataIndex: 'principal_name',
+        width: 190,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <SemiSkeletonCell width={56} />
+            return <SemiSkeletonCell width={136} />
           }
-          return record.is_area_office ? (
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
-              区域办
-            </span>
-          ) : (
-            <Text type="tertiary" size="small">普通校区</Text>
+          if (record.is_area_office) {
+            return <Text type="tertiary" size="small">不适用</Text>
+          }
+          if (!record.principal_name && !record.vice_principal_name) {
+            return <Text type="tertiary" size="small">未任命</Text>
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <Text size="small">校长：{record.principal_name || '-'}</Text>
+              <Text type="tertiary" size="small">助理：{record.vice_principal_name || '-'}</Text>
+            </div>
           )
         },
       },
@@ -226,19 +334,36 @@ export function CampusesPage() {
       {
         title: '操作',
         dataIndex: 'id',
-        width: 120,
+        width: 160,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={64} />
           }
           return (
             <div style={{ display: 'flex', gap: 4 }}>
+              {!record.is_area_office && (
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<Users className="h-4 w-4" />}
+                  size="small"
+                  onClick={() => handleLeaderEdit(record)}
+                />
+              )}
               <Button
                 theme="borderless"
                 type="tertiary"
                 icon={<Pencil className="h-4 w-4" />}
                 size="small"
                 onClick={() => handleEdit(record)}
+              />
+              <Button
+                theme="borderless"
+                type={record.is_active ? 'warning' : 'tertiary'}
+                icon={record.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4 text-green-600" />}
+                size="small"
+                loading={togglingId === record.id}
+                onClick={() => toggleStatusMutation.mutate({ id: record.id, is_active: !record.is_active })}
               />
               <Button
                 theme="borderless"
@@ -261,7 +386,7 @@ export function CampusesPage() {
     setDialogOpen(true)
     setTimeout(() => {
       formRef.current?.reset()
-      formRef.current?.setValues({ sort_order: 0, is_active: true, is_area_office: false })
+      formRef.current?.setValues({ sort_order: 0, is_active: true })
     }, 0)
   }
 
@@ -278,7 +403,6 @@ export function CampusesPage() {
         description: item.description || '',
         sort_order: item.sort_order,
         is_active: item.is_active,
-        is_area_office: item.is_area_office || false,
       })
     }, 0)
   }
@@ -289,11 +413,29 @@ export function CampusesPage() {
     setDeleteDialogOpen(true)
   }
 
+  const handleLeaderEdit = (item: CampusItem) => {
+    setLeaderCampus(item)
+    setPrincipalId(item.principal_id || undefined)
+    setVicePrincipalId(item.vice_principal_id || undefined)
+    setLeaderDialogOpen(true)
+  }
+
   // 处理删除确认
   const handleDeleteConfirm = () => {
     if (deletingItem) {
       deleteMutation.mutate(deletingItem.id)
     }
+  }
+
+  const handleLeaderSubmit = () => {
+    if (!leaderCampus) return
+    updateLeadersMutation.mutate({
+      id: leaderCampus.id,
+      data: {
+        principal_id: principalId ?? null,
+        vice_principal_id: vicePrincipalId ?? null,
+      },
+    })
   }
 
   // 处理表单提交
@@ -453,18 +595,12 @@ export function CampusesPage() {
             placeholder="请输入排序值"
             min={0}
           />
-          <Form.Switch
-            field="is_area_office"
-            label="区域办"
-            checkedText="是"
-            uncheckedText="否"
-          />
-          <Form.Switch
+          <Form.Checkbox
             field="is_active"
-            label="启用状态"
-            checkedText="启用"
-            uncheckedText="停用"
-          />
+            noLabel
+          >
+            启用状态
+          </Form.Checkbox>
         </Form>
       </Modal>
 
@@ -484,6 +620,82 @@ export function CampusesPage() {
       >
         确定要删除校区"{deletingItem?.name}"吗？此操作不可撤销。
         如果该校区下存在员工或部门配置，则无法删除。
+      </Modal>
+
+      <Modal
+        title="任命校区领导"
+        visible={leaderDialogOpen}
+        onCancel={() => {
+          setLeaderDialogOpen(false)
+          setLeaderCampus(null)
+          setPrincipalId(undefined)
+          setVicePrincipalId(undefined)
+        }}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button
+              onClick={() => {
+                setLeaderDialogOpen(false)
+                setLeaderCampus(null)
+                setPrincipalId(undefined)
+                setVicePrincipalId(undefined)
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={handleLeaderSubmit}
+              loading={updateLeadersMutation.isPending}
+            >
+              保存任命
+            </Button>
+          </div>
+        }
+        style={{ maxWidth: 560 }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ padding: 12, borderRadius: 8, background: 'var(--semi-color-fill-0)' }}>
+            <Text strong>{leaderCampus?.name || '-'}</Text>
+            <div>
+              <Text type="tertiary" size="small">
+                所属区域：{leaderCampus?.area_name || '-'}
+              </Text>
+            </div>
+            <div>
+              <Text type="tertiary" size="small">
+                仅展示当前校区内、在职且具备有效身份的员工；清空表示取消任命。
+              </Text>
+            </div>
+          </div>
+
+          <div>
+            <Text strong style={{ display: 'block', marginBottom: 6 }}>校长</Text>
+            <Select
+              value={principalId}
+              onChange={(value) => setPrincipalId((value as string) || undefined)}
+              optionList={principalOptions}
+              placeholder={isLeaderCandidatesLoading ? '正在加载候选人...' : '请选择校长'}
+              showClear
+              loading={isLeaderCandidatesLoading}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div>
+            <Text strong style={{ display: 'block', marginBottom: 6 }}>助理校长</Text>
+            <Select
+              value={vicePrincipalId}
+              onChange={(value) => setVicePrincipalId((value as string) || undefined)}
+              optionList={vicePrincipalOptions}
+              placeholder={isLeaderCandidatesLoading ? '正在加载候选人...' : '请选择助理校长'}
+              showClear
+              loading={isLeaderCandidatesLoading}
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
       </Modal>
     </>
   )

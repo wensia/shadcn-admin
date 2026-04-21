@@ -12,6 +12,7 @@ const appsSearchSchema = z.object({
 })
 
 export const Route = createFileRoute('/_authenticated/apps/')({
+  staticData: { title: '应用中心' },
   validateSearch: appsSearchSchema,
   component: Apps,
 })

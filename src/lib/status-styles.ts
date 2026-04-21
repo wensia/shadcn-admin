@@ -30,7 +30,9 @@ export const leadStatusStyles: Record<LeadStatus, StatusStyleConfig> = {
   [LeadStatus.FOLLOWING_UP]: { label: '跟进中', color: 'orange' },
   [LeadStatus.FOLLOWED_UP]: { label: '已回访', color: 'gray' },
   [LeadStatus.TRIAL_SCHEDULED]: { label: '已预约试听', color: 'orange' },
+  [LeadStatus.INVITED_NO_SHOW]: { label: '已邀约未上门', color: 'red' },
   [LeadStatus.VISITED]: { label: '已到访', color: 'green' },
+  [LeadStatus.VISITED_NOT_SIGNED]: { label: '已到访未签约', color: 'orange' },
   [LeadStatus.PAID]: { label: '已缴费', color: 'green' },
   [LeadStatus.INVALID]: { label: '无效', color: 'red' },
   [LeadStatus.CLOSED]: { label: '关闭', color: 'gray' }

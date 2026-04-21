@@ -6,7 +6,7 @@ import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/lib/toast'
-import { Plus, Pencil, Trash2, MapPinned } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPinned, Power, PowerOff } from 'lucide-react'
 import { Form, Button, Modal, Input, Select, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
@@ -40,6 +40,7 @@ export function AreasPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<AreaItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<AreaItem | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // 获取区域列表
   const { data, isLoading, refetch } = useQuery({
@@ -116,6 +117,19 @@ export function AreasPage() {
     },
   })
 
+  // 启用/禁用
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      adminApi.updateArea(id, { is_active }),
+    onMutate: ({ id }) => setTogglingId(id),
+    onSettled: () => setTogglingId(null),
+    onSuccess: (_res, { is_active }) => {
+      toast.success(is_active ? '已启用' : '已禁用')
+      queryClient.invalidateQueries({ queryKey: ['admin-areas'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '操作失败'),
+  })
+
   // 表格列定义
   const columns: ColumnProps<AreaItem>[] = [
     {
@@ -185,6 +199,14 @@ export function AreasPage() {
         return (
           <div style={{ display: 'flex', gap: 4 }}>
             <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+            <Button
+              theme="borderless"
+              type={record.is_active ? 'warning' : 'tertiary'}
+              icon={record.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4 text-green-600" />}
+              size="small"
+              loading={togglingId === record.id}
+              onClick={() => toggleStatusMutation.mutate({ id: record.id, is_active: !record.is_active })}
+            />
             <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
           </div>
         )

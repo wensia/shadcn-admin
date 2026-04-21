@@ -7,5 +7,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { MarketingStatisticsPage } from '@/features/crm/data-statistics/marketing-statistics-page'
 
 export const Route = createFileRoute('/_authenticated/crm/data-statistics/marketing')({
+  staticData: { title: '市场数据' },
   component: MarketingStatisticsPage
 })

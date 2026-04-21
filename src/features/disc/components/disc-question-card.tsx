@@ -129,31 +129,21 @@ function ActionBtn({
 
   return (
     <SemiButton
-      theme="solid"
+      size="large"
+      theme={active ? 'solid' : 'outline'}
       onClick={onClick}
       className={cn(
-        // 基础：pill, 44px 触控高度, flex 居中
-        'flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl text-[13px] font-medium',
-        // 过渡 + 点按
-        'transition-all duration-200 active:scale-[0.96]',
-        'motion-reduce:transition-none motion-reduce:active:scale-100',
-        // focus-visible
-        'outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
-        active
-          ? 'text-white shadow-sm'
-          : [
-              // 未选中：白底 + 描边 + 可读文字
-              'bg-white text-[#7a7a74]',
-              'ring-1 ring-inset ring-black/[0.08]',
-              kind === 'most'
-                ? 'hover:bg-[#788c5d]/[0.06] hover:text-[#5e7043] hover:ring-[#788c5d]/25'
-                : 'hover:bg-[#c9554a]/[0.06] hover:text-[#a8433a] hover:ring-[#c9554a]/25',
-            ],
+        'flex-1',
+        !active && [
+          kind === 'most'
+            ? 'hover:bg-[#788c5d]/[0.06] hover:text-[#5e7043]'
+            : 'hover:bg-[#c9554a]/[0.06] hover:text-[#a8433a]',
+        ],
       )}
       style={
         active
-          ? { backgroundColor: c.bg, boxShadow: `0 2px 6px ${c.bg}33` }
-          : undefined
+          ? { backgroundColor: c.bg, color: '#fff', borderColor: c.bg }
+          : { backgroundColor: '#fff', color: '#7a7a74', borderColor: 'rgba(0,0,0,0.08)' }
       }
     >
       {active ? (

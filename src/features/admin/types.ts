@@ -61,8 +61,26 @@ export interface CampusItem {
   region_name: string
   managing_office_id?: string | null
   managing_office_name?: string | null
+  principal_id?: string | null
+  principal_name?: string | null
+  vice_principal_id?: string | null
+  vice_principal_name?: string | null
   created_at?: string
   updated_at?: string
+}
+
+/** 校区领导候选人 */
+export interface CampusLeaderCandidateItem {
+  id: string
+  name: string
+  username: string
+  phone?: string | null
+}
+
+/** 校区领导任命请求 */
+export interface CampusLeaderPatch {
+  principal_id?: string | null
+  vice_principal_id?: string | null
 }
 
 /** 学校 */
@@ -116,6 +134,22 @@ export interface CampusDepartmentItem {
   /** 负责人列表 */
   managers?: DepartmentManagerItem[]
   /** 负责人数量 */
+  managers_count?: number
+}
+
+/** 区域部门关联 */
+export interface AreaDepartmentItem {
+  id: string
+  area_id: string
+  area_name?: string
+  department_id: string
+  department_name?: string
+  is_active: boolean
+  dingtalk_robot_id?: string | null
+  dingtalk_robot_name?: string | null
+  created_at?: string
+  updated_at?: string
+  managers?: DepartmentManagerItem[]
   managers_count?: number
 }
 
@@ -186,6 +220,13 @@ export interface YunkeInfo {
   cookies_updated_at?: string
 }
 
+export interface CampusLeadershipItem {
+  campus_id: string
+  campus_name: string
+  role: 'principal' | 'vice_principal'
+  role_label: string
+}
+
 /** 员工 */
 export interface EmployeeItem {
   id: string
@@ -197,6 +238,7 @@ export interface EmployeeItem {
   is_active: boolean
   is_superuser: boolean
   has_api_key?: boolean
+  campus_leaderships?: CampusLeadershipItem[]
   joined_at?: string
   created_at?: string
   updated_at?: string
@@ -431,7 +473,6 @@ export interface CampusCreate {
   contact_phone?: string
   sort_order?: number
   is_active?: boolean
-  is_area_office?: boolean
   managing_office_id?: string | null
   auto_create_departments?: boolean
 }
@@ -445,7 +486,6 @@ export interface CampusUpdate {
   contact_phone?: string
   sort_order?: number
   is_active?: boolean
-  is_area_office?: boolean
   managing_office_id?: string | null
 }
 
@@ -671,14 +711,16 @@ export interface YunkeBatchLoginResult {
 // 常量定义
 // ============================================================================
 
-/** 职位级别选项 */
+/** 职级排序权重选项（仅用于筛选，创建时可自由输入） */
 export const POSITION_LEVELS = [
-  { label: '专员', value: 1 },
-  { label: '主管', value: 2 },
-  { label: '经理', value: 3 },
-  { label: '总监', value: 4 },
-  { label: '副总裁', value: 5 },
-  { label: '总裁', value: 6 }
+  { label: 'L1', value: 1 },
+  { label: 'L2', value: 2 },
+  { label: 'L3', value: 3 },
+  { label: 'L4', value: 4 },
+  { label: 'L5', value: 5 },
+  { label: 'L6', value: 6 },
+  { label: 'L7', value: 7 },
+  { label: 'L8', value: 8 },
 ] as const
 
 /** 状态选项 */
@@ -1573,4 +1615,27 @@ export interface DailyNoticeActive {
   title: string
   content: string
   updated_at?: string
+}
+
+// ── 员工批量导入 ──
+
+export interface EmployeeBatchImportFailure {
+  row: number
+  name: string
+  reason: string
+}
+
+export interface EmployeeBatchImportCredential {
+  name: string
+  username: string
+  password: string
+}
+
+export interface EmployeeBatchImportResult {
+  total_count: number
+  success_count: number
+  failed_count: number
+  failures: EmployeeBatchImportFailure[]
+  created_credentials: EmployeeBatchImportCredential[]
+  source_file: string
 }

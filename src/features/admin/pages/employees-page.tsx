@@ -7,7 +7,7 @@ import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/lib/toast'
 import { Plus, Pencil, Trash2, User, KeyRound, X, CheckCircle, AlertCircle, Copy, Eye, EyeOff, AlertTriangle, Key, XCircle, MoreHorizontal, UserCheck, UserX } from 'lucide-react'
-import { Button, Input, Select, Modal, Form, Tag, Typography, Switch, Dropdown } from '@douyinfe/semi-ui-19'
+import { Button, Input, Select, Modal, Form, Tag, Typography, Switch, Dropdown, TreeSelect } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
@@ -16,8 +16,9 @@ import type { FilterTag } from '@/components/semi/filter-tags-bar'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { adminApi, apiKeysApi } from '../api'
-import { type EmployeeItem, type EmployeeUpdate, type EmployeeIdentityItem, type ApiKeyCreateResponse } from '../types'
+import { type EmployeeItem, type EmployeeUpdate, type EmployeeIdentityItem, type ApiKeyCreateResponse, type OrganizationTreeNode } from '../types'
 import { EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
+import { EmployeeBatchImportDialog } from '../components/employee-batch-import-dialog'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
@@ -62,6 +63,15 @@ interface ApiKeyFormValues {
   expires_in_days: number
 }
 
+interface CampusTreeOption {
+  label: string
+  value: string
+  key: string
+  disabled: boolean
+  isLeaf: boolean
+  children?: CampusTreeOption[]
+}
+
 function normalizeDateInputValue(value?: string | null): string {
   if (!value) return ''
   const matched = /^(\d{4}-\d{2}-\d{2})/.exec(value)
@@ -81,10 +91,12 @@ export function EmployeesPage() {
   const [pageSize, setPageSize] = useState(20)
   const [searchValue, setSearchValue] = useState('')
   const [committedSearch, setCommittedSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('active')
+  const [campusFilter, setCampusFilter] = useState<string>('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [batchImportDialogOpen, setBatchImportDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<EmployeeItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<EmployeeItem | null>(null)
   const [resetPasswordItem, setResetPasswordItem] = useState<EmployeeItem | null>(null)
@@ -115,7 +127,7 @@ export function EmployeesPage() {
 
   // 获取员工列表
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-employees', page, pageSize, committedSearch, statusFilter, apiKeyFilter],
+    queryKey: ['admin-employees', page, pageSize, committedSearch, statusFilter, apiKeyFilter, campusFilter],
     queryFn: async () => {
       const params: Record<string, unknown> = {
         page,
@@ -130,21 +142,64 @@ export function EmployeesPage() {
       if (apiKeyFilter !== 'all') {
         params.has_api_key = apiKeyFilter === 'yes'
       }
+      if (campusFilter) {
+        params.campus_id = campusFilter
+      }
       const response = await adminApi.getEmployees(params)
       return response.data
     },
   })
 
-  // 获取校区列表
-  const { data: campusesData } = useQuery({
-    queryKey: ['admin-campuses-simple'],
+  // 获取组织架构树（用于校区TreeSelect）
+  const { data: orgTreeData } = useQuery({
+    queryKey: ['admin-organization-tree'],
     queryFn: async () => {
-      const response = await adminApi.getCampusesSimple()
+      const response = await adminApi.getOrganizationTree()
       return response.data || []
     },
   })
 
-  const campuses = campusesData || []
+  // 将组织架构树转换为 Semi TreeSelect 格式，只有校区/区域办公室可选
+  const campusTreeData = useMemo(() => {
+    const TYPE_LABELS: Record<string, string> = { region: '大区', district: '地区', area: '片区' }
+    const convert = (nodes: OrganizationTreeNode[]): CampusTreeOption[] =>
+      nodes.map(node => {
+        const isLeaf = node.type === 'campus' || node.type === 'area_office'
+        const children = node.children ? convert(node.children) : []
+        const prefix = TYPE_LABELS[node.type]
+        return {
+          label: prefix ? `${prefix}: ${node.name}` : node.name,
+          value: node.id,
+          key: node.id,
+          disabled: !isLeaf,
+          isLeaf,
+          ...(children.length > 0 ? { children } : {}),
+        }
+      })
+    return convert(orgTreeData || [])
+  }, [orgTreeData])
+
+  // 平铺所有校区节点（用于筛选下拉 + filter tag 显示）
+  const flatCampusList = useMemo(() => {
+    const list: { id: string; name: string; regionName?: string }[] = []
+    const walk = (nodes: OrganizationTreeNode[], regionName?: string) => {
+      for (const node of nodes) {
+        if (node.type === 'campus' || node.type === 'area_office') {
+          list.push({ id: node.id, name: node.name, regionName })
+        } else {
+          walk(node.children || [], node.type === 'region' ? node.name : regionName)
+        }
+      }
+    }
+    walk(orgTreeData || [])
+    return list
+  }, [orgTreeData])
+
+  const campusNameMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    flatCampusList.forEach(c => { map[c.id] = c.name })
+    return map
+  }, [flatCampusList])
 
   // 获取大区列表
   const { data: regionsData } = useQuery({
@@ -555,6 +610,13 @@ export function EmployeesPage() {
     return false
   }
 
+  const getCampusLeadershipLabel = (record: EmployeeItem) => {
+    const leaderships = record.campus_leaderships || []
+    if (leaderships.length === 0) return null
+    const first = leaderships[0]
+    return `${first.campus_name} ${first.role_label}`
+  }
+
   // Semi Table 列定义
   const columns: ColumnProps<EmployeeItem>[] = [
       {
@@ -640,6 +702,29 @@ export function EmployeesPage() {
             return <Text type="tertiary">-</Text>
           }
           return <PositionNameBadge positionName={activeIdentity.position_name} />
+        },
+      },
+      {
+        title: '校区职务',
+        dataIndex: 'campus_leaderships',
+        render: (_: unknown, record: EmployeeItem) => {
+          if (isSkeletonRow(record.id)) {
+            return <SemiSkeletonCell width={120} />
+          }
+          const leaderships = record.campus_leaderships || []
+          if (leaderships.length === 0) {
+            return <Text type="tertiary">-</Text>
+          }
+          const firstLabel = getCampusLeadershipLabel(record)
+          if (leaderships.length === 1) {
+            return <Tag size="small">{firstLabel}</Tag>
+          }
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Tag size="small">{firstLabel}</Tag>
+              <Text type="tertiary" size="small">+{leaderships.length - 1}</Text>
+            </div>
+          )
         },
       },
       {
@@ -1026,6 +1111,7 @@ export function EmployeesPage() {
     setCommittedSearch('')
     setStatusFilter('all')
     setApiKeyFilter('all')
+    setCampusFilter('')
     setPage(1)
   }
 
@@ -1068,6 +1154,18 @@ export function EmployeesPage() {
     })
   }
 
+  if (campusFilter) {
+    filterTags.push({
+      key: 'campus',
+      label: '校区',
+      value: campusNameMap[campusFilter] || campusFilter,
+      onClose: () => {
+        setCampusFilter('')
+        setPage(1)
+      },
+    })
+  }
+
   return (
     <>
       <div
@@ -1083,9 +1181,14 @@ export function EmployeesPage() {
           title="员工管理"
           total={data?.total}
           headerActions={
-            <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
-              新建员工
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button icon={<Plus className="h-4 w-4" />} onClick={() => setBatchImportDialogOpen(true)}>
+                批量导入
+              </Button>
+              <Button theme="solid" type="primary" icon={<Plus className="h-4 w-4" />} onClick={handleCreate}>
+                新建员工
+              </Button>
+            </div>
           }
           onRefresh={() => refetch()}
           isRefreshing={isLoading}
@@ -1118,6 +1221,18 @@ export function EmployeesPage() {
                   { label: '已创建API Key', value: 'yes' },
                   { label: '未创建API Key', value: 'no' },
                 ]}
+              />
+              <Select
+                value={campusFilter || undefined}
+                onChange={(value) => { setCampusFilter((value as string) || ''); setPage(1) }}
+                placeholder="筛选校区"
+                style={{ width: 180 }}
+                showClear
+                filter
+                optionList={flatCampusList.map(c => ({
+                  label: c.regionName ? `${c.regionName} · ${c.name}` : c.name,
+                  value: c.id,
+                }))}
               />
               <Button theme="outline" onClick={handleSearch}>搜索</Button>
             </div>
@@ -1183,6 +1298,25 @@ export function EmployeesPage() {
             <Form.Switch field="is_superuser" label="超级管理员" />
           </div>
 
+          {editingItem && (
+            <div style={{ borderTop: '1px solid var(--semi-color-border)', marginTop: 16, paddingTop: 16 }}>
+              <Text strong>校区职务</Text>
+              <div style={{ marginTop: 8 }}>
+                {(editingItem.campus_leaderships || []).length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {(editingItem.campus_leaderships || []).map((leadership) => (
+                      <Tag key={`${leadership.campus_id}-${leadership.role}`} size="small">
+                        {leadership.campus_name} {leadership.role_label}
+                      </Tag>
+                    ))}
+                  </div>
+                ) : (
+                  <Text type="tertiary" size="small">当前未担任校区校长或助理校长</Text>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* 身份管理区域 */}
           <div style={{ borderTop: '1px solid var(--semi-color-border)', marginTop: 16, paddingTop: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -1198,7 +1332,7 @@ export function EmployeesPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
                 <AlertCircle className="h-4 w-4" />
                 {editingItem
-                  ? '员工需要至少一个有效的组织身份配置才能正常使用系统功能。支持大区/地区/片区/校区级别。'
+                  ? '员工需要至少一个有效的组织身份配置才能正常使用系统功能。若该员工担任校区领导，移除对应校区有效身份后系统会自动解绑任命。'
                   : '请为新员工配置组织级别、部门和职位，用户名和密码将自动生成。'
                 }
               </div>
@@ -1255,12 +1389,15 @@ export function EmployeesPage() {
 
                       {identity.scope_type === 'campus' && (
                         <div style={{ gridColumn: 'span 3' }}>
-                          <Select
+                          <TreeSelect
                             value={identity.campus_id || undefined}
                             onChange={(value) => handleIdentityCampusChange(index, value as string)}
-                            placeholder="选择校区"
+                            placeholder="搜索或选择校区"
                             style={DIALOG_SELECT_STYLE}
-                            optionList={campuses.map(c => ({ label: c.name, value: c.id }))}
+                            treeData={campusTreeData}
+                            filterTreeNode
+                            showSearchClear
+                            dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
                           />
                         </div>
                       )}
@@ -1678,6 +1815,13 @@ export function EmployeesPage() {
         确定要删除员工「{deletingItem?.name}」吗？此操作不可撤销。
         删除后该员工将无法登录系统。
       </Modal>
+
+      {/* 批量导入弹窗 */}
+      <EmployeeBatchImportDialog
+        open={batchImportDialogOpen}
+        onOpenChange={setBatchImportDialogOpen}
+        onSuccess={() => refetch()}
+      />
     </>
   )
 }

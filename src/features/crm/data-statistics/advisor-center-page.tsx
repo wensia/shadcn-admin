@@ -23,6 +23,7 @@ import { adminApi } from '@/features/admin/api'
 import { yunkeCredentialsApi } from '@/features/yunke/api'
 import { useIsSuperUser } from '@/stores/auth-store'
 import { AdvisorDashboardPage } from './advisor-dashboard-page'
+import { AdvisorFollowupAnalysisPage } from './advisor-followup-analysis-page'
 import { AdvisorTaskBattlePage } from './advisor-task-battle-page'
 import { CallStatsTab } from './consulting-statistics-page'
 import {
@@ -33,7 +34,7 @@ import {
 
 const { Text } = Typography
 
-type TabKey = 'overview' | 'call-stats' | 'tasks'
+type TabKey = 'overview' | 'call-stats' | 'tasks' | 'followup-analysis'
 
 function FilterField({
   label,
@@ -263,6 +264,7 @@ export function AdvisorCenterPage() {
         onChange={handleTabChange}
         type="line"
         style={{ flex: 1 }}
+        tabBarStyle={{ paddingInline: 16 }}
         keepDOM={false}
       >
         <TabPane tab="综合看板" itemKey="overview">
@@ -273,6 +275,9 @@ export function AdvisorCenterPage() {
         </TabPane>
         <TabPane tab="任务战情" itemKey="tasks">
           <AdvisorTaskBattlePage externalFilter={sharedFilter} />
+        </TabPane>
+        <TabPane tab="跟进分析" itemKey="followup-analysis">
+          <AdvisorFollowupAnalysisPage externalFilter={sharedFilter} />
         </TabPane>
       </Tabs>
     </DataTableLayout>

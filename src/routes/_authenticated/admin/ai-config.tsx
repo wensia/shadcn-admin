@@ -7,5 +7,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AIConfigPage } from '@/features/admin/pages/ai-config-page'
 
 export const Route = createFileRoute('/_authenticated/admin/ai-config')({
+  staticData: { title: 'AI 配置' },
   component: AIConfigPage
 })

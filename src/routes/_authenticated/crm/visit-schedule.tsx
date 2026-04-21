@@ -5,5 +5,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { DailyControlPage } from '@/features/crm/daily-control'
 
 export const Route = createFileRoute('/_authenticated/crm/visit-schedule')({
+  staticData: { title: '日控表' },
   component: DailyControlPage,
 })

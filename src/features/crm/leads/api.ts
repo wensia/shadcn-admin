@@ -588,9 +588,9 @@ export const yunkeApi = {
   /** 拨打电话 */
   dialPhone(payload: string | { phone?: string; leadId?: string }): Promise<ApiResponse<{ call_id: string; status: string; message?: string }>> {
     if (typeof payload === 'string') {
-      return apiClient.post('/yunke/call/dial', { phone: payload })
+      return apiClient.postSilent('/yunke/call/dial', { phone: payload })
     }
-    return apiClient.post('/yunke/call/dial', {
+    return apiClient.postSilent('/yunke/call/dial', {
       phone: payload.phone,
       lead_id: payload.leadId,
     })

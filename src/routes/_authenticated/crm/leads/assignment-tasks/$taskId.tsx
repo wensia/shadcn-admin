@@ -4,6 +4,7 @@ import { AssignmentTaskDetailPage } from '@/features/crm/lead-assignment-tasks'
 export const Route = createFileRoute(
   '/_authenticated/crm/leads/assignment-tasks/$taskId'
 )({
+  staticData: { title: '分配任务详情' },
   component: RouteComponent,
 })
 

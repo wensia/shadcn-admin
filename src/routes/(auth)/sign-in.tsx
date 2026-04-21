@@ -7,6 +7,7 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute('/(auth)/sign-in')({
+  staticData: { title: '登录' },
   component: SignIn,
   validateSearch: searchSchema,
 })

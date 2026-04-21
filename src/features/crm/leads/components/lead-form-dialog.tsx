@@ -8,7 +8,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Modal, Form, Button, Input, Select, DatePicker, Toast, Steps, Table, Tag, Card } from '@douyinfe/semi-ui-19'
+import { Modal, Form, Button, Input, TextArea, Select, DatePicker, Toast, Steps, Table, Tag, Card } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconInfoCircle } from '@douyinfe/semi-icons'
@@ -18,8 +18,6 @@ import { gradeLabels, type Lead, type LeadCreate, type LeadStatus, type LeadUpda
 import { leadStatusStyles } from '@/lib/status-styles'
 import type { SourceChannel } from '@/features/admin/types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
-
-const { TextArea } = Input
 
 interface LeadFormDialogProps {
   lead?: Lead | null

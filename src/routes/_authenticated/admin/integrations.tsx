@@ -7,6 +7,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { IntegrationsPage } from '@/features/admin/pages/integrations-page'
 
 export const Route = createFileRoute('/_authenticated/admin/integrations')({
+  staticData: { title: '集成配置' },
   validateSearch: (search: Record<string, unknown>) => {
     return {
       tab: (search.tab as string) || 'asr',

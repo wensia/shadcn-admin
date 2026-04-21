@@ -6,5 +6,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { YunkeCredentialsPage } from '@/features/yunke/pages/yunke-credentials-page'
 
 export const Route = createFileRoute('/_authenticated/yunke/credentials')({
+  staticData: { title: '云客凭据' },
   component: YunkeCredentialsPage
 })

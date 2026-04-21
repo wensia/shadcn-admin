@@ -369,6 +369,18 @@ export const callRecordsApi = {
     return `/api/v1/yunke/call-records/record-stream?voice_id=${encodeURIComponent(voiceId)}`
   },
 
+  /** 下载录音文件（带认证，返回 Blob） */
+  async downloadRecordBlob(voiceId: string, filename: string): Promise<Blob> {
+    const response = await apiClient.get<Blob>(
+      `/yunke/call-records/record-stream`,
+      {
+        params: { voice_id: voiceId, download: 1, filename },
+        responseType: 'blob',
+      }
+    )
+    return response
+  },
+
   /** 获取部门列表 */
   async getDepartments(): Promise<string[]> {
     const response = await apiClient.get<ApiResponse<string[]>>(

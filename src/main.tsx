@@ -9,6 +9,8 @@ import {
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { toast } from '@/lib/toast'
 import { handleServerError } from '@/lib/handle-server-error'
+import { showApiErrorToast } from '@/lib/api/error-toast'
+import { ApiClientError } from '@/lib/api/response-handler'
 import { AccentColorProvider } from './context/accent-color-provider'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
@@ -60,6 +62,12 @@ const queryClient = new QueryClient({
   },
   queryCache: new QueryCache({
     onError: (error) => {
+      // 业务错误（API 返回 success: false）统一 Toast 通知
+      if (error instanceof ApiClientError && error.isBusinessError) {
+        showApiErrorToast(error)
+        return
+      }
+
       if (error instanceof AxiosError) {
         // 401 错误由 client.ts 统一处理，这里不重复处理
         // 避免与 client.ts 中的 401 处理逻辑冲突导致循环重定向

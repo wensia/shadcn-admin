@@ -9,8 +9,9 @@ import { z } from 'zod'
 import { AdvisorCenterPage } from '@/features/crm/data-statistics'
 
 export const Route = createFileRoute('/_authenticated/crm/advisor-center')({
+  staticData: { title: '顾问数据中心' },
   validateSearch: z.object({
-    tab: z.enum(['overview', 'call-stats', 'tasks']).optional().catch('overview'),
+    tab: z.enum(['overview', 'call-stats', 'tasks', 'followup-analysis']).optional().catch('overview'),
   }),
   component: AdvisorCenterPage,
 })
