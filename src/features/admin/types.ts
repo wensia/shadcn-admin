@@ -69,20 +69,6 @@ export interface CampusItem {
   updated_at?: string
 }
 
-/** 校区领导候选人 */
-export interface CampusLeaderCandidateItem {
-  id: string
-  name: string
-  username: string
-  phone?: string | null
-}
-
-/** 校区领导任命请求 */
-export interface CampusLeaderPatch {
-  principal_id?: string | null
-  vice_principal_id?: string | null
-}
-
 /** 学校 */
 export interface SchoolItem {
   id: string
@@ -323,17 +309,45 @@ export interface ManagementScope {
 // 组织架构树
 // ============================================================================
 
-/** 组织架构树节点 */
+/** 组织架构树节点：组织单位 + 部门关联（部门作为单位的子节点） */
+export type OrgTreeNodeType =
+  | 'region'
+  | 'district'
+  | 'area'
+  | 'area_office'
+  | 'campus'
+  | 'campus_department'
+  | 'area_department'
+  | 'district_department'
+
+/** 组织架构树上的负责人（精简自 OrganizationAssignment） */
+export interface OrgNodeLeader {
+  assignment_id: string
+  role: string
+  role_label?: string | null
+  rank: number
+  employee_id: string
+  employee_name: string
+}
+
 export interface OrganizationTreeNode {
   id: string
   name: string
-  type: 'region' | 'district' | 'area' | 'area_office' | 'campus'
+  type: OrgTreeNodeType
   is_active: boolean
-  address?: string
-  contact_phone?: string
+  address?: string | null
+  contact_phone?: string | null
+  /** 部门节点才有此字段，指向 Department.id */
+  department_id?: string | null
+  /** campus/area/district 级：直属在任员工数 */
+  employee_count?: number | null
+  /** campus/area/district 级：挂载的部门数 */
+  department_count?: number | null
+  /** 该节点上的在任任命 */
+  leaders?: OrgNodeLeader[]
+  /** 应配置但未任命的 singleton 角色（用于告警 badge） */
+  missing_singleton_roles?: string[]
   children?: OrganizationTreeNode[]
-  campuses?: OrganizationTreeNode[]
-  area_offices?: OrganizationTreeNode[]
 }
 
 /** 员工层级树节点 */
@@ -1638,4 +1652,113 @@ export interface EmployeeBatchImportResult {
   failures: EmployeeBatchImportFailure[]
   created_credentials: EmployeeBatchImportCredential[]
   source_file: string
+}
+
+// ============================================================================
+// 组织任命统一模型（Phase A）
+// ============================================================================
+
+export type AssignmentRole =
+  | 'principal'
+  | 'vice_principal'
+  | 'area_director'
+  | 'area_manager'
+  | 'teaching_supervisor'
+  | 'dept_manager'
+  | 'dept_deputy'
+  | 'dept_supervisor'
+
+export const ASSIGNMENT_ROLE_LABELS: Record<AssignmentRole, string> = {
+  principal: '校长',
+  vice_principal: '助理校长',
+  area_director: '区域总',
+  area_manager: '区域经理',
+  teaching_supervisor: '教学督导',
+  dept_manager: '部门经理',
+  dept_deputy: '部门副经理',
+  dept_supervisor: '部门主管',
+}
+
+/** 单人角色：必须 rank=0 */
+export const SINGLETON_ROLES: AssignmentRole[] = [
+  'principal',
+  'vice_principal',
+  'area_director',
+  'area_manager',
+  'teaching_supervisor',
+  'dept_manager',
+]
+
+export interface AssignmentRoleMeta {
+  value: AssignmentRole
+  label: string
+  /** campus / area / area_department / department（三选一：校区/区域/地区部门）*/
+  scope: 'campus' | 'area' | 'area_department' | 'department'
+}
+
+export interface AssignmentRoleMetaResponse {
+  roles: AssignmentRoleMeta[]
+  singleton_roles: AssignmentRole[]
+}
+
+export interface AssignmentItem {
+  id: string
+  employee_id: string
+  employee_name: string | null
+
+  role: AssignmentRole
+  role_label: string | null
+
+  campus_id: string | null
+  campus_name: string | null
+  area_id: string | null
+  area_name: string | null
+  campus_department_id: string | null
+  campus_department_label: string | null
+  area_department_id: string | null
+  area_department_label: string | null
+  district_department_id: string | null
+  district_department_label: string | null
+
+  rank: number
+  is_active: boolean
+  appointed_at: string | null
+  relieved_at: string | null
+  remark: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface AssignmentCreateRequest {
+  employee_id: string
+  role: AssignmentRole
+  campus_id?: string | null
+  area_id?: string | null
+  campus_department_id?: string | null
+  area_department_id?: string | null
+  district_department_id?: string | null
+  /** None=自动分配；0=正职（替换现任）；1+=指定副职排序 */
+  rank?: number | null
+  remark?: string | null
+}
+
+export interface AssignmentRelieveRequest {
+  reason?: string | null
+}
+
+export interface AssignmentTransferRequest {
+  new_employee_id?: string | null
+  new_rank?: number | null
+  remark?: string | null
+}
+
+export interface AssignmentListQuery {
+  campus_id?: string
+  area_id?: string
+  campus_department_id?: string
+  area_department_id?: string
+  district_department_id?: string
+  employee_id?: string
+  role?: AssignmentRole
+  active_only?: boolean
 }

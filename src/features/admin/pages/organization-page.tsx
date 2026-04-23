@@ -1,38 +1,35 @@
 /**
- * 组织架构树页面
+ * 组织架构（主从融合）页面
  *
- * 展示真实的组织架构层级：
- * Region → District → Area → (Area Office) → Campus → Department
+ * 左侧：组织树；右侧：选中节点的任命面板。
+ * 日常高频操作（给节点加/换负责人）在同屏完成，替代旧的
+ * /admin/organization-tree + /admin/organization-assignments 跨页面流程。
  *
- * 每个节点显示：名称 + 类型标签 + 负责人 + 员工数 + 部门数 + 未任命告警
- * 点击任一节点 → 右侧 Drawer 显示详情 + 跳转到任命管理
+ * Stage 1：
+ *   - 本节点就地维护（新增 / 卸任 / 交接）
+ *   - 未包含"下挂部门任命"段（Stage 2）
+ *   - URL 选中持久化暂未实现（Stage 2）
  *
- * 注：员工个人间的上下级汇报关系在 /admin/employee-hierarchy
+ * 设计文档：docs/dev/organization-admin-page-consolidation.md
  */
 
 import { useMemo, useState } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery } from '@tanstack/react-query'
 import { Search, X } from 'lucide-react'
-import { Main } from '@/components/layout/main'
-import { Button, Input, Typography, Card, Skeleton, Empty } from '@douyinfe/semi-ui-19'
+import { Button, Empty, Input, Skeleton, Typography } from '@douyinfe/semi-ui-19'
 import { IconRefresh } from '@douyinfe/semi-icons'
 import { adminApi } from '../api'
 import type { OrganizationTreeNode } from '../types'
 import { OrgTreeStats } from '../components/org-tree/org-tree-stats'
 import { OrgTreeNode } from '../components/org-tree/org-tree-node'
-import { OrgNodeDetailDrawer } from '../components/org-tree/org-node-detail-drawer'
+import { OrgNodeAssignmentPanel } from '../components/org-tree/org-node-assignment-panel'
 
 const { Text } = Typography
 
-/** 深拷贝裁剪：保留搜索命中或其祖先节点 */
-function filterTree(
-  nodes: OrganizationTreeNode[],
-  term: string,
-): OrganizationTreeNode[] {
+function filterTree(nodes: OrganizationTreeNode[], term: string): OrganizationTreeNode[] {
   if (!term) return nodes
   const lower = term.toLowerCase()
-
   function visit(node: OrganizationTreeNode): OrganizationTreeNode | null {
     const selfMatch = node.name.toLowerCase().includes(lower)
     const childMatches: OrganizationTreeNode[] = []
@@ -47,7 +44,6 @@ function filterTree(
     }
     return null
   }
-
   const out: OrganizationTreeNode[] = []
   for (const n of nodes) {
     const r = visit(n)
@@ -56,7 +52,6 @@ function filterTree(
   return out
 }
 
-/** 收集默认展开的节点 ID：展开到 area 层 */
 function defaultExpandedIds(nodes: OrganizationTreeNode[]): Set<string> {
   const out = new Set<string>()
   function walk(list: OrganizationTreeNode[]) {
@@ -71,7 +66,6 @@ function defaultExpandedIds(nodes: OrganizationTreeNode[]): Set<string> {
   return out
 }
 
-/** 搜索时自动展开所有祖先 */
 function allAncestorIds(nodes: OrganizationTreeNode[]): Set<string> {
   const out = new Set<string>()
   function walk(list: OrganizationTreeNode[]) {
@@ -98,12 +92,11 @@ function findNode(
   return null
 }
 
-export function OrganizationTreePage() {
-  useDocumentTitle('组织架构树')
+export function OrganizationPage() {
+  useDocumentTitle('组织架构')
 
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [manualExpanded, setManualExpanded] = useState<Set<string>>(new Set())
   const [userTouchedExpansion, setUserTouchedExpansion] = useState(false)
 
@@ -115,7 +108,6 @@ export function OrganizationTreePage() {
     },
   })
 
-  // 默认展开到 area 层；搜索时展开所有命中路径
   const expandedIds = useMemo(() => {
     if (searchTerm) {
       return allAncestorIds(filterTree(tree, searchTerm))
@@ -136,7 +128,6 @@ export function OrganizationTreePage() {
 
   const handleSelect = (node: OrganizationTreeNode) => {
     setSelectedId(node.id)
-    setDrawerOpen(true)
   }
 
   const filteredTree = useMemo(() => filterTree(tree, searchTerm), [tree, searchTerm])
@@ -146,13 +137,13 @@ export function OrganizationTreePage() {
   )
 
   return (
-    <div className="h-full overflow-y-auto">
-    <Main>
-      <div className="mb-2 flex items-center justify-between">
+    <div className="flex flex-col h-full">
+      {/* 顶部标题栏 */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--semi-color-border)]">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">组织架构树</h2>
-          <Text type="tertiary">
-            大区 → 地区 → 区域 → 校区 → 部门，以及各级在任负责人一览
+          <h2 className="text-xl font-bold tracking-tight">组织架构</h2>
+          <Text type="tertiary" size="small">
+            大区 → 地区 → 区域 → 校区 → 部门；选中节点后在右侧管理任命
           </Text>
         </div>
         <Button
@@ -164,70 +155,73 @@ export function OrganizationTreePage() {
       </div>
 
       {/* 统计卡片 */}
-      {!isLoading && <OrgTreeStats tree={tree} />}
+      {!isLoading && (
+        <div className="px-4 pt-3">
+          <OrgTreeStats tree={tree} />
+        </div>
+      )}
 
-      {/* 搜索框 */}
-      <div className="mt-4 flex items-center gap-2">
-        <Input
-          prefix={<Search className="h-4 w-4" />}
-          placeholder="搜索组织单位/部门名称..."
-          value={searchTerm}
-          onChange={(v) => setSearchTerm(v)}
-          style={{ maxWidth: 384 }}
-        />
-        {searchTerm && (
-          <Button
-            theme="borderless"
-            type="tertiary"
-            size="small"
-            icon={<X className="h-4 w-4" />}
-            onClick={() => setSearchTerm('')}
-          >
-            清除
-          </Button>
-        )}
-      </div>
-
-      {/* 树 */}
-      <Card className="mt-4" title="组织架构" headerExtraContent={
-        <Text type="tertiary" size="small">
-          点击节点查看详情，点击箭头展开/折叠
-        </Text>
-      }>
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} placeholder={<Skeleton.Paragraph rows={1} />} loading={true}>
-                <div />
-              </Skeleton>
-            ))}
-          </div>
-        ) : filteredTree.length === 0 ? (
-          <Empty title={searchTerm ? '未找到匹配的组织单位' : '暂无组织数据'} />
-        ) : (
-          <div className="space-y-0.5">
-            {filteredTree.map((node) => (
-              <OrgTreeNode
-                key={node.id}
-                node={node}
-                level={0}
-                searchTerm={searchTerm}
-                expandedIds={expandedIds}
-                onToggle={handleToggle}
-                onSelect={handleSelect}
-                selectedId={selectedId}
+      {/* 主从主体：左树 + 右面板 */}
+      <div className="flex-1 flex min-h-0 px-4 pb-4 pt-3 gap-3">
+        {/* 左侧：树 */}
+        <div className="w-[380px] shrink-0 flex flex-col border border-[var(--semi-color-border)] rounded-md overflow-hidden">
+          <div className="p-3 border-b border-[var(--semi-color-border)] flex items-center gap-2">
+            <Input
+              prefix={<Search className="h-4 w-4" />}
+              placeholder="搜索组织单位/部门..."
+              value={searchTerm}
+              onChange={(v) => setSearchTerm(v)}
+              style={{ flex: 1 }}
+            />
+            {searchTerm && (
+              <Button
+                theme="borderless"
+                type="tertiary"
+                size="small"
+                icon={<X className="h-4 w-4" />}
+                onClick={() => setSearchTerm('')}
               />
-            ))}
+            )}
           </div>
-        )}
-      </Card>
+          <div className="flex-1 overflow-y-auto p-2">
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton
+                    key={i}
+                    placeholder={<Skeleton.Paragraph rows={1} />}
+                    loading={true}
+                  >
+                    <div />
+                  </Skeleton>
+                ))}
+              </div>
+            ) : filteredTree.length === 0 ? (
+              <Empty title={searchTerm ? '未找到匹配的组织单位' : '暂无组织数据'} />
+            ) : (
+              <div className="space-y-0.5">
+                {filteredTree.map((node) => (
+                  <OrgTreeNode
+                    key={node.id}
+                    node={node}
+                    level={0}
+                    searchTerm={searchTerm}
+                    expandedIds={expandedIds}
+                    onToggle={handleToggle}
+                    onSelect={handleSelect}
+                    selectedId={selectedId}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-      <OrgNodeDetailDrawer
-        node={selectedNode}
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      />
-    </Main>
+        {/* 右侧：任命面板 */}
+        <div className="flex-1 min-w-0 border border-[var(--semi-color-border)] rounded-md overflow-hidden">
+          <OrgNodeAssignmentPanel node={selectedNode} />
+        </div>
+      </div>
     </div>
   )
 }

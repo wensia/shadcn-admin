@@ -43,6 +43,7 @@ import {
   BrainCog,
   UserMinus,
   Wrench,
+  Crown,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -214,7 +215,12 @@ export const adminNavGroups: NavGroup[] = [
     icon: Network,
     items: [
       {
-        title: '组织架构树',
+        title: '组织架构',
+        url: '/admin/organization',
+        icon: Network,
+      },
+      {
+        title: '组织架构树（旧）',
         url: '/admin/organization-tree',
         icon: Network,
       },
@@ -237,6 +243,11 @@ export const adminNavGroups: NavGroup[] = [
         title: '校区管理',
         url: '/admin/campuses',
         icon: Building2,
+      },
+      {
+        title: '组织任命管理（旧）',
+        url: '/admin/organization-assignments',
+        icon: Crown,
       },
     ],
   },

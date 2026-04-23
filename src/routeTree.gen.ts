@@ -97,6 +97,8 @@ import { Route as AuthenticatedAdminRegionsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminPositionsRouteImport } from './routes/_authenticated/admin/positions'
 import { Route as AuthenticatedAdminPageAccessRouteImport } from './routes/_authenticated/admin/page-access'
 import { Route as AuthenticatedAdminOrganizationTreeRouteImport } from './routes/_authenticated/admin/organization-tree'
+import { Route as AuthenticatedAdminOrganizationAssignmentsRouteImport } from './routes/_authenticated/admin/organization-assignments'
+import { Route as AuthenticatedAdminOrganizationRouteImport } from './routes/_authenticated/admin/organization'
 import { Route as AuthenticatedAdminLeadAccessStatsRouteImport } from './routes/_authenticated/admin/lead-access-stats'
 import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated/admin/integrations'
 import { Route as AuthenticatedAdminIdentitiesRouteImport } from './routes/_authenticated/admin/identities'
@@ -604,6 +606,18 @@ const AuthenticatedAdminOrganizationTreeRoute =
     path: '/organization-tree',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminOrganizationAssignmentsRoute =
+  AuthenticatedAdminOrganizationAssignmentsRouteImport.update({
+    id: '/organization-assignments',
+    path: '/organization-assignments',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminOrganizationRoute =
+  AuthenticatedAdminOrganizationRouteImport.update({
+    id: '/organization',
+    path: '/organization',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminLeadAccessStatsRoute =
   AuthenticatedAdminLeadAccessStatsRouteImport.update({
     id: '/lead-access-stats',
@@ -809,6 +823,8 @@ export interface FileRoutesByFullPath {
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
+  '/admin/organization': typeof AuthenticatedAdminOrganizationRoute
+  '/admin/organization-assignments': typeof AuthenticatedAdminOrganizationAssignmentsRoute
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/admin/page-access': typeof AuthenticatedAdminPageAccessRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
@@ -916,6 +932,8 @@ export interface FileRoutesByTo {
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
+  '/admin/organization': typeof AuthenticatedAdminOrganizationRoute
+  '/admin/organization-assignments': typeof AuthenticatedAdminOrganizationAssignmentsRoute
   '/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/admin/page-access': typeof AuthenticatedAdminPageAccessRoute
   '/admin/positions': typeof AuthenticatedAdminPositionsRoute
@@ -1033,6 +1051,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
   '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/_authenticated/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
+  '/_authenticated/admin/organization': typeof AuthenticatedAdminOrganizationRoute
+  '/_authenticated/admin/organization-assignments': typeof AuthenticatedAdminOrganizationAssignmentsRoute
   '/_authenticated/admin/organization-tree': typeof AuthenticatedAdminOrganizationTreeRoute
   '/_authenticated/admin/page-access': typeof AuthenticatedAdminPageAccessRoute
   '/_authenticated/admin/positions': typeof AuthenticatedAdminPositionsRoute
@@ -1147,6 +1167,8 @@ export interface FileRouteTypes {
     | '/admin/identities'
     | '/admin/integrations'
     | '/admin/lead-access-stats'
+    | '/admin/organization'
+    | '/admin/organization-assignments'
     | '/admin/organization-tree'
     | '/admin/page-access'
     | '/admin/positions'
@@ -1254,6 +1276,8 @@ export interface FileRouteTypes {
     | '/admin/identities'
     | '/admin/integrations'
     | '/admin/lead-access-stats'
+    | '/admin/organization'
+    | '/admin/organization-assignments'
     | '/admin/organization-tree'
     | '/admin/page-access'
     | '/admin/positions'
@@ -1370,6 +1394,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/identities'
     | '/_authenticated/admin/integrations'
     | '/_authenticated/admin/lead-access-stats'
+    | '/_authenticated/admin/organization'
+    | '/_authenticated/admin/organization-assignments'
     | '/_authenticated/admin/organization-tree'
     | '/_authenticated/admin/page-access'
     | '/_authenticated/admin/positions'
@@ -2078,6 +2104,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminOrganizationTreeRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/organization-assignments': {
+      id: '/_authenticated/admin/organization-assignments'
+      path: '/organization-assignments'
+      fullPath: '/admin/organization-assignments'
+      preLoaderRoute: typeof AuthenticatedAdminOrganizationAssignmentsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/organization': {
+      id: '/_authenticated/admin/organization'
+      path: '/organization'
+      fullPath: '/admin/organization'
+      preLoaderRoute: typeof AuthenticatedAdminOrganizationRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/lead-access-stats': {
       id: '/_authenticated/admin/lead-access-stats'
       path: '/lead-access-stats'
@@ -2283,6 +2323,8 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminIdentitiesRoute: typeof AuthenticatedAdminIdentitiesRoute
   AuthenticatedAdminIntegrationsRoute: typeof AuthenticatedAdminIntegrationsRoute
   AuthenticatedAdminLeadAccessStatsRoute: typeof AuthenticatedAdminLeadAccessStatsRoute
+  AuthenticatedAdminOrganizationRoute: typeof AuthenticatedAdminOrganizationRoute
+  AuthenticatedAdminOrganizationAssignmentsRoute: typeof AuthenticatedAdminOrganizationAssignmentsRoute
   AuthenticatedAdminOrganizationTreeRoute: typeof AuthenticatedAdminOrganizationTreeRoute
   AuthenticatedAdminPageAccessRoute: typeof AuthenticatedAdminPageAccessRoute
   AuthenticatedAdminPositionsRoute: typeof AuthenticatedAdminPositionsRoute
@@ -2321,6 +2363,9 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminIntegrationsRoute: AuthenticatedAdminIntegrationsRoute,
     AuthenticatedAdminLeadAccessStatsRoute:
       AuthenticatedAdminLeadAccessStatsRoute,
+    AuthenticatedAdminOrganizationRoute: AuthenticatedAdminOrganizationRoute,
+    AuthenticatedAdminOrganizationAssignmentsRoute:
+      AuthenticatedAdminOrganizationAssignmentsRoute,
     AuthenticatedAdminOrganizationTreeRoute:
       AuthenticatedAdminOrganizationTreeRoute,
     AuthenticatedAdminPageAccessRoute: AuthenticatedAdminPageAccessRoute,

@@ -16,8 +16,6 @@ import type {
   AreaCreate,
   AreaUpdate,
   CampusItem,
-  CampusLeaderCandidateItem,
-  CampusLeaderPatch,
   CampusCreate,
   CampusUpdate,
   SchoolItem,
@@ -214,16 +212,6 @@ export const adminApi = {
   /** 更新校区 */
   async updateCampus(id: string, data: CampusUpdate): Promise<ApiResponse<CampusItem>> {
     return apiClient.put<ApiResponse<CampusItem>>(`${BASE_URL}/campuses/${id}`, data)
-  },
-
-  /** 获取校区领导候选员工 */
-  async getCampusLeaderCandidates(campusId: string): Promise<ApiResponse<CampusLeaderCandidateItem[]>> {
-    return apiClient.get<ApiResponse<CampusLeaderCandidateItem[]>>(`${BASE_URL}/campuses/${campusId}/leader-candidates`)
-  },
-
-  /** 更新校区领导任命 */
-  async updateCampusLeaders(id: string, data: CampusLeaderPatch): Promise<ApiResponse<CampusItem>> {
-    return apiClient.patch<ApiResponse<CampusItem>>(`${BASE_URL}/campuses/${id}/leaders`, data)
   },
 
   /** 删除校区 */
@@ -574,6 +562,23 @@ export const adminApi = {
   // ========================================================================
 
   /** 获取区域部门关联列表 */
+  /** 获取地区部门关联列表 */
+  async getDistrictDepartments(params: {
+    district_id?: string
+    department_id?: string
+    page?: number
+    size?: number
+  } = {}): Promise<ApiResponse<PaginatedResponse<{
+    id: string
+    district_id: string
+    district_name: string | null
+    department_id: string
+    department_name: string | null
+    is_active: boolean
+  }>>> {
+    return apiClient.get(`${BASE_URL}/district-departments`, { params })
+  },
+
   async getAreaDepartments(params: {
     area_id?: string
     department_id?: string
@@ -729,6 +734,62 @@ export const adminApi = {
         },
       }
     )
+  },
+
+  // ========================================================================
+  // 组织任命统一管理（Phase A）
+  // ========================================================================
+
+  /** 查询任命列表（按作用域/员工/角色过滤） */
+  async listAssignments(params: import('./types').AssignmentListQuery = {}): Promise<
+    ApiResponse<import('./types').AssignmentItem[]>
+  > {
+    return apiClient.get(`${BASE_URL}/assignments`, { params })
+  },
+
+  /** 查询单条任命 */
+  async getAssignment(id: string): Promise<ApiResponse<import('./types').AssignmentItem>> {
+    return apiClient.get(`${BASE_URL}/assignments/${id}`)
+  },
+
+  /** 查询员工的所有任命 */
+  async listAssignmentsByEmployee(
+    employeeId: string,
+    activeOnly: boolean = true,
+  ): Promise<ApiResponse<import('./types').AssignmentItem[]>> {
+    return apiClient.get(`${BASE_URL}/assignments/by-employee/${employeeId}`, {
+      params: { active_only: activeOnly },
+    })
+  },
+
+  /** 创建任命 */
+  async createAssignment(
+    data: import('./types').AssignmentCreateRequest,
+  ): Promise<ApiResponse<import('./types').AssignmentItem>> {
+    return apiClient.post(`${BASE_URL}/assignments`, data)
+  },
+
+  /** 卸任 */
+  async relieveAssignment(
+    id: string,
+    data?: import('./types').AssignmentRelieveRequest,
+  ): Promise<ApiResponse<void>> {
+    return apiClient.delete(`${BASE_URL}/assignments/${id}`, { data: data ?? {} })
+  },
+
+  /** 交接/晋升 */
+  async transferAssignment(
+    id: string,
+    data: import('./types').AssignmentTransferRequest,
+  ): Promise<ApiResponse<import('./types').AssignmentItem>> {
+    return apiClient.post(`${BASE_URL}/assignments/${id}/transfer`, data)
+  },
+
+  /** 获取角色元信息（动态渲染表单） */
+  async getAssignmentRoleMeta(): Promise<
+    ApiResponse<import('./types').AssignmentRoleMetaResponse>
+  > {
+    return apiClient.get(`${BASE_URL}/assignments/meta/roles`)
   },
 }
 

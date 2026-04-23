@@ -7,6 +7,9 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { semiGlobal } from '@douyinfe/semi-ui-19'
+// 为 Semi 注入 React 19 的 createRoot（在任何 Semi 组件渲染前调用）
+semiGlobal.config.createRoot = ReactDOM.createRoot
 import { toast } from '@/lib/toast'
 import { handleServerError } from '@/lib/handle-server-error'
 import { showApiErrorToast } from '@/lib/api/error-toast'

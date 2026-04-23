@@ -6,7 +6,7 @@ import { useState, useMemo, useRef } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/lib/toast'
-import { Plus, Pencil, Trash2, Building2, Power, PowerOff, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, Power, PowerOff } from 'lucide-react'
 import { Button, Form, Input, Modal, Select, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
@@ -19,8 +19,6 @@ import type {
   AreaItem,
   CampusItem,
   CampusCreate,
-  CampusLeaderCandidateItem,
-  CampusLeaderPatch,
   CampusUpdate,
 } from '../types'
 import { StatusBadge } from '../components/status-badge'
@@ -36,11 +34,6 @@ interface CampusFormValues extends CampusCreate {
   is_active?: boolean
 }
 
-interface LeaderOption {
-  value: string
-  label: string
-}
-
 export function CampusesPage() {
   useDocumentTitle('校区管理')
   const queryClient = useQueryClient()
@@ -54,12 +47,8 @@ export function CampusesPage() {
   const [areaFilter, setAreaFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [leaderDialogOpen, setLeaderDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<CampusItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<CampusItem | null>(null)
-  const [leaderCampus, setLeaderCampus] = useState<CampusItem | null>(null)
-  const [principalId, setPrincipalId] = useState<string | undefined>(undefined)
-  const [vicePrincipalId, setVicePrincipalId] = useState<string | undefined>(undefined)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // 获取校区列表
@@ -95,16 +84,6 @@ export function CampusesPage() {
   })
 
   const areas = useMemo<AreaItem[]>(() => areasData?.items ?? [], [areasData?.items])
-
-  const { data: leaderCandidatesData = [], isLoading: isLeaderCandidatesLoading } = useQuery({
-    queryKey: ['campus-leader-candidates', leaderCampus?.id],
-    queryFn: async () => {
-      if (!leaderCampus?.id) return []
-      const response = await adminApi.getCampusLeaderCandidates(leaderCampus.id)
-      return response.data || []
-    },
-    enabled: leaderDialogOpen && !!leaderCampus?.id,
-  })
 
   // 创建校区
   const createMutation = useMutation({
@@ -160,68 +139,6 @@ export function CampusesPage() {
     },
     onError: (error: Error) => showApiErrorToast(error, '操作失败'),
   })
-
-  const updateLeadersMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CampusLeaderPatch }) =>
-      adminApi.updateCampusLeaders(id, data),
-    onSuccess: () => {
-      toast.success('校区领导已更新')
-      setLeaderDialogOpen(false)
-      setLeaderCampus(null)
-      setPrincipalId(undefined)
-      setVicePrincipalId(undefined)
-      queryClient.invalidateQueries({ queryKey: ['admin-campuses'] })
-    },
-    onError: (error: Error) => {
-      showApiErrorToast(error, '更新校区领导失败')
-    },
-  })
-
-  const leaderOptions = useMemo<LeaderOption[]>(() => {
-    const optionMap = new Map<string, LeaderOption>()
-
-    leaderCandidatesData.forEach((candidate: CampusLeaderCandidateItem) => {
-      const suffix = candidate.username ? `（${candidate.username}）` : ''
-      optionMap.set(candidate.id, {
-        value: candidate.id,
-        label: `${candidate.name}${suffix}`,
-      })
-    })
-
-    if (
-      leaderCampus?.principal_id &&
-      leaderCampus.principal_name &&
-      !optionMap.has(leaderCampus.principal_id)
-    ) {
-      optionMap.set(leaderCampus.principal_id, {
-        value: leaderCampus.principal_id,
-        label: `${leaderCampus.principal_name}（当前任命）`,
-      })
-    }
-
-    if (
-      leaderCampus?.vice_principal_id &&
-      leaderCampus.vice_principal_name &&
-      !optionMap.has(leaderCampus.vice_principal_id)
-    ) {
-      optionMap.set(leaderCampus.vice_principal_id, {
-        value: leaderCampus.vice_principal_id,
-        label: `${leaderCampus.vice_principal_name}（当前任命）`,
-      })
-    }
-
-    return Array.from(optionMap.values())
-  }, [leaderCandidatesData, leaderCampus])
-
-  const principalOptions = useMemo(
-    () => leaderOptions.filter((option) => option.value !== vicePrincipalId),
-    [leaderOptions, vicePrincipalId]
-  )
-
-  const vicePrincipalOptions = useMemo(
-    () => leaderOptions.filter((option) => option.value !== principalId),
-    [leaderOptions, principalId]
-  )
 
   // 表格列定义
   const columns: ColumnProps<CampusItem>[] = [
@@ -341,15 +258,6 @@ export function CampusesPage() {
           }
           return (
             <div style={{ display: 'flex', gap: 4 }}>
-              {!record.is_area_office && (
-                <Button
-                  theme="borderless"
-                  type="tertiary"
-                  icon={<Users className="h-4 w-4" />}
-                  size="small"
-                  onClick={() => handleLeaderEdit(record)}
-                />
-              )}
               <Button
                 theme="borderless"
                 type="tertiary"
@@ -413,29 +321,11 @@ export function CampusesPage() {
     setDeleteDialogOpen(true)
   }
 
-  const handleLeaderEdit = (item: CampusItem) => {
-    setLeaderCampus(item)
-    setPrincipalId(item.principal_id || undefined)
-    setVicePrincipalId(item.vice_principal_id || undefined)
-    setLeaderDialogOpen(true)
-  }
-
   // 处理删除确认
   const handleDeleteConfirm = () => {
     if (deletingItem) {
       deleteMutation.mutate(deletingItem.id)
     }
-  }
-
-  const handleLeaderSubmit = () => {
-    if (!leaderCampus) return
-    updateLeadersMutation.mutate({
-      id: leaderCampus.id,
-      data: {
-        principal_id: principalId ?? null,
-        vice_principal_id: vicePrincipalId ?? null,
-      },
-    })
   }
 
   // 处理表单提交
@@ -620,82 +510,6 @@ export function CampusesPage() {
       >
         确定要删除校区"{deletingItem?.name}"吗？此操作不可撤销。
         如果该校区下存在员工或部门配置，则无法删除。
-      </Modal>
-
-      <Modal
-        title="任命校区领导"
-        visible={leaderDialogOpen}
-        onCancel={() => {
-          setLeaderDialogOpen(false)
-          setLeaderCampus(null)
-          setPrincipalId(undefined)
-          setVicePrincipalId(undefined)
-        }}
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button
-              onClick={() => {
-                setLeaderDialogOpen(false)
-                setLeaderCampus(null)
-                setPrincipalId(undefined)
-                setVicePrincipalId(undefined)
-              }}
-            >
-              取消
-            </Button>
-            <Button
-              theme="solid"
-              type="primary"
-              onClick={handleLeaderSubmit}
-              loading={updateLeadersMutation.isPending}
-            >
-              保存任命
-            </Button>
-          </div>
-        }
-        style={{ maxWidth: 560 }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ padding: 12, borderRadius: 8, background: 'var(--semi-color-fill-0)' }}>
-            <Text strong>{leaderCampus?.name || '-'}</Text>
-            <div>
-              <Text type="tertiary" size="small">
-                所属区域：{leaderCampus?.area_name || '-'}
-              </Text>
-            </div>
-            <div>
-              <Text type="tertiary" size="small">
-                仅展示当前校区内、在职且具备有效身份的员工；清空表示取消任命。
-              </Text>
-            </div>
-          </div>
-
-          <div>
-            <Text strong style={{ display: 'block', marginBottom: 6 }}>校长</Text>
-            <Select
-              value={principalId}
-              onChange={(value) => setPrincipalId((value as string) || undefined)}
-              optionList={principalOptions}
-              placeholder={isLeaderCandidatesLoading ? '正在加载候选人...' : '请选择校长'}
-              showClear
-              loading={isLeaderCandidatesLoading}
-              style={{ width: '100%' }}
-            />
-          </div>
-
-          <div>
-            <Text strong style={{ display: 'block', marginBottom: 6 }}>助理校长</Text>
-            <Select
-              value={vicePrincipalId}
-              onChange={(value) => setVicePrincipalId((value as string) || undefined)}
-              optionList={vicePrincipalOptions}
-              placeholder={isLeaderCandidatesLoading ? '正在加载候选人...' : '请选择助理校长'}
-              showClear
-              loading={isLeaderCandidatesLoading}
-              style={{ width: '100%' }}
-            />
-          </div>
-        </div>
       </Modal>
     </>
   )
