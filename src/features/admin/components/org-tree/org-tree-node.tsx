@@ -3,16 +3,29 @@
  *
  * 展示：类型图标 + 名称 + 类型 tag + 未任命 badge + 员工/部门计数 + 负责人 chips
  * 交互：点击整行打开详情 Drawer；有 children 时点击箭头展开/折叠
+ *
+ * 对于 campus/area/district 级节点：其子节点会被拆成两组
+ *   - 组织单位子节点（campus/area/area_office）— 正常展示
+ *   - 部门子节点（*_department）— 归到一个可折叠的「部门 (N)」分组下
+ * 这样用户看区域展开不会被大量部门淹没下面的校区列表
  */
+import { useState } from 'react'
 import { Tag, Typography, Tooltip } from '@douyinfe/semi-ui-19'
 import { ChevronDown, ChevronRight, AlertCircle, Users, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { OrganizationTreeNode, AssignmentRole } from '../../types'
+import type { OrganizationTreeNode, AssignmentRole, OrgTreeNodeType } from '../../types'
 import { ASSIGNMENT_ROLE_LABELS } from '../../types'
 import { OrgNodeIcon } from './org-tree-icons'
 import { orgNodeTypeLabel, orgNodeTypeColor, roleTagColor } from '../../lib/assignment-format'
 
 const { Text } = Typography
+
+const DEPT_TYPES = new Set<OrgTreeNodeType>([
+  'campus_department',
+  'area_department',
+  'district_department',
+])
+const CONTAINER_TYPES = new Set<OrgTreeNodeType>(['region', 'district', 'area', 'campus', 'area_office'])
 
 interface OrgTreeNodeProps {
   node: OrganizationTreeNode
@@ -101,20 +114,22 @@ export function OrgTreeNode({
           </Tag>
 
           {!node.is_active && (
-            <Tag size="small" color="light-grey">
+            <Tag size="small" color="grey">
               已停用
             </Tag>
           )}
 
           {missing.length > 0 && (
             <Tooltip content={`未任命：${missing.map((r) => ASSIGNMENT_ROLE_LABELS[r as AssignmentRole] ?? r).join('、')}`}>
-              <Tag
-                size="small"
-                color="red"
-                prefixIcon={<AlertCircle className="h-3 w-3" />}
+              <span
+                className="inline-flex items-center justify-center w-5 h-5 rounded"
+                style={{
+                  background: 'var(--semi-color-danger-light-default)',
+                  color: 'var(--semi-color-danger)',
+                }}
               >
-                未任命
-              </Tag>
+                <AlertCircle className="h-3.5 w-3.5" />
+              </span>
             </Tooltip>
           )}
         </div>
@@ -158,11 +173,156 @@ export function OrgTreeNode({
 
       {/* 子节点 */}
       {hasChildren && isExpanded && (
+        <NodeChildren
+          node={node}
+          level={level}
+          searchTerm={searchTerm}
+          expandedIds={expandedIds}
+          onToggle={onToggle}
+          onSelect={onSelect}
+          selectedId={selectedId}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * 子节点渲染：把部门子节点聚合到一个可折叠分组里
+ */
+function NodeChildren({
+  node,
+  level,
+  searchTerm,
+  expandedIds,
+  onToggle,
+  onSelect,
+  selectedId,
+}: OrgTreeNodeProps) {
+  const children = node.children ?? []
+  const deptChildren = children.filter((c) => DEPT_TYPES.has(c.type))
+  const unitChildren = children.filter((c) => CONTAINER_TYPES.has(c.type))
+  // 搜索时展开整个分组（用户期望看到命中路径）
+  const groupDefaultOpen = searchTerm.length > 0
+  const [deptGroupOpen, setDeptGroupOpen] = useState(groupDefaultOpen)
+
+  return (
+    <div className="border-l ml-[22px]" style={{ borderColor: 'var(--semi-color-border)' }}>
+      {/* 先渲染组织单位子节点 */}
+      {unitChildren.map((child) => (
+        <OrgTreeNode
+          key={child.id}
+          node={child}
+          level={level + 1}
+          searchTerm={searchTerm}
+          expandedIds={expandedIds}
+          onToggle={onToggle}
+          onSelect={onSelect}
+          selectedId={selectedId}
+        />
+      ))}
+      {/* 再渲染部门分组（可折叠） */}
+      {deptChildren.length > 0 && (
+        <DeptGroup
+          depts={deptChildren}
+          level={level + 1}
+          searchTerm={searchTerm}
+          expandedIds={expandedIds}
+          onToggle={onToggle}
+          onSelect={onSelect}
+          selectedId={selectedId}
+          isOpen={deptGroupOpen || searchTerm.length > 0}
+          onToggleGroup={() => setDeptGroupOpen((v) => !v)}
+        />
+      )}
+    </div>
+  )
+}
+
+function DeptGroup({
+  depts,
+  level,
+  searchTerm,
+  expandedIds,
+  onToggle,
+  onSelect,
+  selectedId,
+  isOpen,
+  onToggleGroup,
+}: {
+  depts: OrganizationTreeNode[]
+  level: number
+  searchTerm: string
+  expandedIds: Set<string>
+  onToggle: (id: string) => void
+  onSelect: (node: OrganizationTreeNode) => void
+  selectedId: string | null
+  isOpen: boolean
+  onToggleGroup: () => void
+}) {
+  const deptEmployeeSum = depts.reduce((sum, d) => sum + (d.employee_count ?? 0), 0)
+  const missingCount = depts.filter((d) => (d.missing_singleton_roles?.length ?? 0) > 0).length
+
+  return (
+    <div>
+      {/* 分组 header（可点击折叠） */}
+      <div
+        className="group flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer hover:bg-[var(--semi-color-fill-0)]"
+        style={{ paddingLeft: `${level * 20 + 8}px` }}
+        onClick={onToggleGroup}
+      >
+        <span className="w-5 h-5 flex items-center justify-center shrink-0">
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
+          ) : (
+            <ChevronRight className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
+          )}
+        </span>
+        <div
+          className="w-7 h-7 rounded flex items-center justify-center shrink-0"
+          style={{ background: 'var(--semi-color-fill-1)' }}
+        >
+          <Briefcase className="h-4 w-4" style={{ color: 'var(--semi-color-text-2)' }} />
+        </div>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <Text type="tertiary" className="truncate">
+            部门
+          </Text>
+          <Tag size="small" color="grey">
+            {depts.length}
+          </Tag>
+          {deptEmployeeSum > 0 && (
+            <div
+              className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded"
+              style={{ background: 'var(--semi-color-fill-1)', color: 'var(--semi-color-text-1)' }}
+            >
+              <Users className="h-3 w-3" />
+              {deptEmployeeSum}
+            </div>
+          )}
+          {missingCount > 0 && (
+            <Tooltip content={`${missingCount} 个部门缺负责人`}>
+              <span
+                className="inline-flex items-center justify-center w-5 h-5 rounded relative"
+                style={{
+                  background: 'var(--semi-color-danger-light-default)',
+                  color: 'var(--semi-color-danger)',
+                }}
+              >
+                <AlertCircle className="h-3.5 w-3.5" />
+              </span>
+            </Tooltip>
+          )}
+        </div>
+      </div>
+
+      {/* 分组展开：渲染每个部门节点 */}
+      {isOpen && (
         <div className="border-l ml-[22px]" style={{ borderColor: 'var(--semi-color-border)' }}>
-          {node.children!.map((child) => (
+          {depts.map((d) => (
             <OrgTreeNode
-              key={child.id}
-              node={child}
+              key={d.id}
+              node={d}
               level={level + 1}
               searchTerm={searchTerm}
               expandedIds={expandedIds}

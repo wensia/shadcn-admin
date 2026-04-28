@@ -76,7 +76,7 @@ export function VisitScheduleDialog({
   useEffect(() => {
     if (!open) return
 
-    const nextSelectedLead = editData
+    const nextSelectedLead = editData?.lead_id
       ? {
           id: editData.lead_id,
           child_name: editData.student_name || editData.child_name || '',
@@ -200,7 +200,7 @@ export function VisitScheduleDialog({
           </div>
         }
       >
-        <Form ref={formRef} labelPosition="top">
+        <Form getFormApi={(api) => { formRef.current = api }} labelPosition="top">
           {/* 线索选择 */}
           <Form.Slot label={<span>选择线索 <span style={{ color: 'var(--semi-color-danger)' }}>*</span></span>}>
             {selectedLead ? (

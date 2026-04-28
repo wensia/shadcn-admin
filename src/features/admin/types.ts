@@ -769,7 +769,7 @@ export interface ChannelFieldConfig {
 export interface SourceChannel {
   id: string
   name: string
-  category: 'online' | 'offline' | 'referral' | 'event' | 'other'
+  category: 'ONLINE' | 'OFFLINE' | 'REFERRAL' | 'EVENT' | 'OTHER'
   is_active: boolean
   sort_order: number
   description?: string
@@ -906,7 +906,7 @@ export interface RobotInfo {
 
 /** Webhook 钩子 */
 export interface WebhookHook {
-  id?: string
+  id: string
   name: string
   hook_key: string
   description?: string
@@ -1140,34 +1140,6 @@ export interface YunkePasswordResetResponse {
   }
 }
 
-/** 批量登录更新结果 */
-export interface YunkeBatchLoginResult {
-  total: number
-  success: number
-  failed: number
-  skipped: number
-  details: Array<{
-    employee_id: string
-    employee_name: string
-    employee_username: string
-    yunke_phone?: string
-    status: 'success' | 'failed' | 'skipped'
-    message: string
-    update_time?: string
-  }>
-}
-
-/** 登录状态检查结果 */
-export interface YunkeLoginStatusResult {
-  total: number
-  logged_in: number
-  details: Array<{
-    employee_id: string
-    is_logged_in: boolean
-    message: string
-  }>
-}
-
 // ============================================================================
 // API 密钥相关类型
 // ============================================================================
@@ -1289,6 +1261,30 @@ export interface AvailableTask {
   name: string
   description?: string
   module: string
+}
+
+/** 云客部门选项（用于 ASR / 同步任务白名单配置） */
+export interface YunkeDepartmentOption {
+  value: string
+  label: string
+  name?: string
+  path?: string
+}
+
+export interface YunkeDepartmentOptionsResponse {
+  options: YunkeDepartmentOption[]
+  dept_tree?: unknown[]
+  company?: {
+    id: string
+    company_code: string | null
+    company_name: string | null
+    domain: string | null
+    root_dept_id?: string | null
+  }
+  account?: {
+    id: string
+    phone: string
+  }
 }
 
 /** 间隔周期选项 */

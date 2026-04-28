@@ -42,7 +42,7 @@ type AnalysisStatusResponse = {
   error: string | null
   analyzed_at: string | null
 }
-type SemiTagColor = 'grey' | 'green' | 'orange' | 'blue'
+type SemiTagColor = 'grey' | 'green' | 'orange' | 'blue' | 'red'
 
 /**
  * 将转写文本格式化为可读对话文本
@@ -151,7 +151,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
       if (data.status === 'completed' && data.analysis) {
         setFullRecord((prev) =>
           prev
-            ? { ...prev, ai_analysis: data.analysis, ai_analysis_status: 'completed', ai_analyzed_at: data.analyzed_at }
+            ? { ...prev, ai_analysis: data.analysis as CallRecord['ai_analysis'], ai_analysis_status: 'completed', ai_analyzed_at: data.analyzed_at }
             : prev
         )
         Toast.success('AI 分析完成')
@@ -485,7 +485,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                         max={duration || 100}
                         step={0.1}
                         onChange={(val) => handleSeek(val as number)}
-                        tipFormatter={null}
+                        tipFormatter={undefined}
                       />
                     </div>
                     <span style={{ width: 36, flexShrink: 0, fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
@@ -596,7 +596,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                         max={1}
                         step={0.1}
                         onChange={(val) => handleVolumeChange(val as number)}
-                        tipFormatter={null}
+                        tipFormatter={undefined}
                         style={{ width: 60, flexShrink: 0 }}
                       />
                     </div>

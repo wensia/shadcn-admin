@@ -112,7 +112,7 @@ export function AreaDepartmentsPage() {
       width: 80,
       render: (val, record) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={50} />
-        return <StatusBadge active={val as boolean} />
+        return <StatusBadge isActive={val as boolean} />
       },
     },
     {

@@ -242,11 +242,12 @@ function createComponents(
       li: ({ children, className }) => {
         if (className?.includes('task-list-item')) {
           // Unwrap <p> to prevent block-level line breaks in task items
-          const unwrapped = React.Children.map(children, (child) =>
-            React.isValidElement(child) && child.type === 'p'
-              ? child.props.children
-              : child,
-          )
+          const unwrapped = React.Children.map(children, (child) => {
+            if (React.isValidElement<{ children?: React.ReactNode }>(child) && child.type === 'p') {
+              return child.props.children
+            }
+            return child
+          })
           return <li>{unwrapped}</li>
         }
         return <li>{children}</li>
@@ -399,11 +400,12 @@ function createComponents(
     ),
     li: ({ children, className }) => {
       if (className?.includes('task-list-item')) {
-        const unwrapped = React.Children.map(children, (child) =>
-          React.isValidElement(child) && child.type === 'p'
-            ? child.props.children
-            : child,
-        )
+        const unwrapped = React.Children.map(children, (child) => {
+          if (React.isValidElement<{ children?: React.ReactNode }>(child) && child.type === 'p') {
+            return child.props.children
+          }
+          return child
+        })
         return <li className="leading-relaxed">{unwrapped}</li>
       }
       return <li className="leading-relaxed">{children}</li>
@@ -524,7 +526,7 @@ export function Markdown({
   children,
   mode = 'minimal',
   className,
-  id,
+  id: _id,
   onUrlClick,
   onFileClick,
   onCheckboxToggle,

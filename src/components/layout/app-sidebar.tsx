@@ -6,6 +6,7 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useLocation, Link } from '@tanstack/react-router'
 import { Nav, SideSheet } from '@douyinfe/semi-ui-19'
+import type { NavProps } from '@douyinfe/semi-ui-19/lib/es/navigation'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useSidebar } from '@/context/sidebar-context'
 import { usePermission, PERMISSIONS } from '@/hooks/use-permission'
@@ -151,8 +152,9 @@ export function AppSidebar() {
     return openKeys.filter((key) => availableOpenKeys.includes(key))
   }, [availableOpenKeys, isCollapsed, openKeys])
 
-  const handleOpenChange = useCallback(
-    ({ openKeys: newKeys }: { openKeys: string[] }) => {
+  const handleOpenChange = useCallback<NonNullable<NavProps['onOpenChange']>>(
+    ({ openKeys: rawOpenKeys }) => {
+      const newKeys = (rawOpenKeys ?? []).map(String)
       // 手风琴模式：找到新展开的 key，只保留它
       const added = newKeys.filter((k) => !openKeys.includes(k))
       const result = added.length > 0 ? added.slice(-1) : newKeys
@@ -171,23 +173,19 @@ export function AppSidebar() {
   const selectedKeys = useMemo(() => [location.pathname], [location.pathname])
 
   // ─── Render wrapper: TanStack Router Link ─────────────────
-  const renderWrapper = useCallback(
+  const renderWrapper = useCallback<NonNullable<NavProps['renderWrapper']>>(
     ({
       itemElement,
       isSubNav,
       props,
-    }: {
-      itemElement: React.ReactElement
-      isSubNav: boolean
-      isInSubNav: boolean
-      props: { itemKey?: string }
     }) => {
-      if (isSubNav || !props.itemKey || String(props.itemKey).startsWith('group-')) {
+      const itemKey = props.itemKey == null ? undefined : String(props.itemKey)
+      if (isSubNav || !itemKey || itemKey.startsWith('group-')) {
         return itemElement
       }
       return (
         <Link
-          to={props.itemKey as string}
+          to={itemKey}
           style={{ textDecoration: 'none' }}
           onClick={() => isMobile && setOpenMobile(false)}
         >

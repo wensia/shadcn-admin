@@ -457,7 +457,6 @@ export function FollowupForm({
           <span>
             {pipelineStatus === 'transcribing' && '正在转录通话录音...'}
             {pipelineStatus === 'analyzing' && 'AI 正在分析通话内容...'}
-            {(pipelineStatus === 'idle' || !pipelineStatus) && '正在获取 AI 跟进建议...'}
           </span>
         </div>
       )}
@@ -612,7 +611,7 @@ export function FollowupForm({
           <span style={{ '--semi-color-primary': '#ff7d00', '--semi-color-primary-hover': '#ff7d00' } as React.CSSProperties}>
             <Checkbox
               checked={releaseToPool}
-              onChange={(e) => setReleaseToPool(e.target.checked)}
+              onChange={(e) => setReleaseToPool(Boolean(e.target.checked))}
             >
               <span style={{ color: '#ff7d00' }}>释放到公海</span>
             </Checkbox>
@@ -621,7 +620,7 @@ export function FollowupForm({
         <span style={{ '--semi-color-primary': '#0077fa', '--semi-color-primary-hover': '#0077fa' } as React.CSSProperties}>
           <Checkbox
             checked={wechatAdded}
-            onChange={(e) => setWechatAdded(e.target.checked)}
+            onChange={(e) => setWechatAdded(Boolean(e.target.checked))}
           >
             <span style={{ color: '#0077fa' }}>已加微信</span>
           </Checkbox>
@@ -630,7 +629,7 @@ export function FollowupForm({
           <Checkbox
             checked={sendToDingding}
             disabled={!followupContent.trim()}
-            onChange={(e) => setSendToDingding(e.target.checked)}
+            onChange={(e) => setSendToDingding(Boolean(e.target.checked))}
           >
             <span style={{ color: !followupContent.trim() ? 'var(--semi-color-text-2)' : '#00b42a', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Send style={{ width: 12, height: 12 }} />

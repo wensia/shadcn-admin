@@ -10,6 +10,7 @@ import { Users, UserPlus, Trash2 } from 'lucide-react'
 import { Button, Modal, Select, Tag, Typography } from '@douyinfe/semi-ui-19'
 import { IconLoading } from '@douyinfe/semi-icons'
 import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
+import type { SemiTagColor } from '@/lib/semi-types'
 import { adminApi } from '../api'
 import {
   MANAGER_TYPE_OPTIONS,
@@ -30,7 +31,7 @@ interface ManageManagersDialogProps {
 }
 
 /** 负责人类型显示配置 */
-const managerTypeTagColors: Record<ManagerType, string> = {
+const managerTypeTagColors: Record<ManagerType, SemiTagColor> = {
   manager: 'blue',
   deputy: 'cyan',
   supervisor: 'grey',

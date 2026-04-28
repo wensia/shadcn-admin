@@ -44,7 +44,7 @@ export function DailyNoticesPage() {
     queryKey: ['admin-daily-notices'],
     queryFn: async () => {
       const response = await adminApi.getDailyNotices(1, 100)
-      return response.data?.data
+      return response.data
     },
   })
 

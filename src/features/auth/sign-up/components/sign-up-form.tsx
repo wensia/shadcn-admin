@@ -7,10 +7,11 @@ import { cn } from '@/lib/utils'
 
 export function SignUpForm({
   className,
-  ...props
-}: React.HTMLAttributes<HTMLFormElement>) {
+}: {
+  className?: string
+}) {
   const [isLoading, setIsLoading] = useState(false)
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   type SignUpFormValues = {
     email: string
@@ -30,7 +31,6 @@ export function SignUpForm({
       getFormApi={(api) => { formRef.current = api }}
       onSubmit={handleSubmit}
       className={cn('grid gap-3', className)}
-      {...props}
     >
       <Form.Input
         field='email'
@@ -95,7 +95,7 @@ export function SignUpForm({
         <Button
           theme='borderless'
           className='w-full'
-          type='button'
+          htmlType='button'
           disabled={isLoading}
           icon={<IconGithubLogo />}
           style={{ border: '1px solid var(--semi-color-border)' }}
@@ -105,7 +105,7 @@ export function SignUpForm({
         <Button
           theme='borderless'
           className='w-full'
-          type='button'
+          htmlType='button'
           disabled={isLoading}
           icon={<IconFacebook className='h-4 w-4' />}
           style={{ border: '1px solid var(--semi-color-border)' }}

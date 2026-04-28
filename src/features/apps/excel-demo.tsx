@@ -209,7 +209,7 @@ export function ExcelDemoPage() {
     return () => {
       window.clearTimeout(readyTimer)
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      subscription?.dispose()
+      subscription?.dispose?.()
       api.dispose()
       apiRef.current = null
       setIsReady(false)

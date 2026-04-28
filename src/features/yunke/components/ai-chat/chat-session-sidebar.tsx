@@ -125,7 +125,7 @@ function SessionItem({
           <Dropdown.Menu>
             <Dropdown.Item
               onClick={(e) => {
-                e?.domEvent?.stopPropagation()
+                e?.stopPropagation()
                 setEditTitle(session.title)
                 setIsEditing(true)
               }}
@@ -136,7 +136,7 @@ function SessionItem({
             <Dropdown.Item
               type="danger"
               onClick={(e) => {
-                e?.domEvent?.stopPropagation()
+                e?.stopPropagation()
                 onDelete()
               }}
             >

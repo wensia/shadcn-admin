@@ -32,7 +32,7 @@ interface CampusDepartmentFormValues {
 export function CampusDepartmentsPage() {
   useDocumentTitle('校区部门配置')
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -270,7 +270,7 @@ export function CampusDepartmentsPage() {
       width: 180,
       render: (_, record) => {
         if (isSkeletonRow(record!.id)) return <SemiSkeletonCell width={112} />
-        return new Date(record!.created_at).toLocaleString('zh-CN')
+        return record?.created_at ? new Date(record.created_at).toLocaleString('zh-CN') : '-'
       },
     },
     {

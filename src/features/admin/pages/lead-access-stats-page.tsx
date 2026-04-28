@@ -186,7 +186,7 @@ export function LeadAccessStatsPage() {
       {
         title: '查看线索数',
         dataIndex: 'view_count',
-        sorter: (a: StatsRow, b: StatsRow) => (a?.view_count ?? 0) - (b?.view_count ?? 0),
+        sorter: (a?: StatsRow, b?: StatsRow) => (a?.view_count ?? 0) - (b?.view_count ?? 0),
         render: (_text: number, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={48} />
@@ -207,7 +207,7 @@ export function LeadAccessStatsPage() {
       {
         title: '总访问次数',
         dataIndex: 'total_access',
-        sorter: (a: StatsRow, b: StatsRow) => (a?.total_access ?? 0) - (b?.total_access ?? 0),
+        sorter: (a?: StatsRow, b?: StatsRow) => (a?.total_access ?? 0) - (b?.total_access ?? 0),
         render: (_text: number, record: StatsRow) => {
           if (isSkeletonRow(record.user_id)) {
             return <SemiSkeletonCell width={48} />

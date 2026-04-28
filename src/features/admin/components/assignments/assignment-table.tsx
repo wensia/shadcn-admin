@@ -72,7 +72,7 @@ export function AssignmentTable({
                 </Tag>
               )}
               {!a.is_active && (
-                <Tag color="light-grey" size="small">
+                <Tag color="grey" size="small">
                   已卸任
                 </Tag>
               )}

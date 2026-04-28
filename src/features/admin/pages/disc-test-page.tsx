@@ -64,6 +64,7 @@ import { DiscAccessGrantModal } from '@/features/disc/components/disc-access-gra
 import { cn, copyToClipboard } from '@/lib/utils'
 import { md5 } from '@/lib/utils/md5'
 import { useAuthStore } from '@/stores/auth-store'
+import type { SemiTagColor } from '@/lib/semi-types'
 
 const { Text } = Typography
 
@@ -96,7 +97,7 @@ function DiscTypeTag({ type }: { type?: string }) {
   )
 }
 
-const CONFIDENCE_LEVEL_META: Record<string, { label: string; color: string }> = {
+const CONFIDENCE_LEVEL_META: Record<string, { label: string; color: SemiTagColor }> = {
   high: { label: '高置信', color: 'green' },
   medium: { label: '中置信', color: 'blue' },
   low: { label: '低置信', color: 'grey' },
@@ -768,7 +769,7 @@ function CreateLinkModal({
 // 测试链接管理 Tab
 // ============================================================================
 
-const LINK_STATUS_META: Record<string, { label: string; color: string }> = {
+const LINK_STATUS_META: Record<string, { label: string; color: SemiTagColor }> = {
   PENDING: { label: '待填写', color: 'blue' },
   COMPLETED: { label: '已完成', color: 'green' },
   EXPIRED: { label: '已过期', color: 'grey' },
@@ -998,7 +999,7 @@ function LinksTab() {
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="rounded-lg border p-4 space-y-2 mb-3">
-                <Skeleton.Paragraph rows={2} style={{ width: '100%' }} loading />
+                <Skeleton.Paragraph rows={2} style={{ width: '100%' }} />
               </div>
             ))
           ) : links.length === 0 ? (
@@ -1671,20 +1672,20 @@ export function DiscTestPage() {
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="rounded-lg border p-4 space-y-3 mb-3">
                 <div className="flex items-center justify-between">
-                  <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} loading />
-                  <Skeleton.Paragraph rows={1} style={{ width: 80, height: 20 }} loading />
+                  <Skeleton.Paragraph rows={1} style={{ width: 64, height: 20 }} />
+                  <Skeleton.Paragraph rows={1} style={{ width: 80, height: 20 }} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} loading />
-                  <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} loading />
+                  <Skeleton.Paragraph rows={1} style={{ width: 96, height: 16 }} />
+                  <Skeleton.Paragraph rows={1} style={{ width: 64, height: 16 }} />
                 </div>
                 <div className="flex gap-3">
-                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} loading />
-                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} loading />
-                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} loading />
-                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} loading />
+                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} />
+                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} />
+                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} />
+                  <Skeleton.Paragraph rows={1} style={{ width: 40, height: 16 }} />
                 </div>
-                <Skeleton.Paragraph rows={1} style={{ width: '66%', height: 16 }} loading />
+                <Skeleton.Paragraph rows={1} style={{ width: '66%', height: 16 }} />
               </div>
             ))
           ) : records.length === 0 ? (

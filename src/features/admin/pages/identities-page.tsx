@@ -44,7 +44,7 @@ interface IdentityFormValues {
 export function IdentitiesPage() {
   useDocumentTitle('员工身份管理')
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -274,7 +274,7 @@ export function IdentitiesPage() {
   // 处理编辑
   const handleEdit = (item: EmployeeIdentityItem) => {
     setEditingItem(item)
-    setFormCampusId(item.campus_id)
+    setFormCampusId(item.campus_id ?? '')
     setDialogOpen(true)
     setTimeout(() => {
       formRef.current?.setValues({
@@ -283,8 +283,8 @@ export function IdentitiesPage() {
         department_id: item.department_id,
         position_id: item.position_id,
         is_active: item.is_active,
-        can_manage_leads: (item as Record<string, unknown>).can_manage_leads as boolean ?? true,
-        can_access_pool: (item as Record<string, unknown>).can_access_pool as boolean ?? true,
+        can_manage_leads: (item as unknown as Record<string, unknown>).can_manage_leads as boolean ?? true,
+        can_access_pool: (item as unknown as Record<string, unknown>).can_access_pool as boolean ?? true,
       })
     }, 0)
   }

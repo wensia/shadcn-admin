@@ -49,7 +49,7 @@ type ApiKeyTableItem = EmployeeApiKeyInfo & { id: string }
 
 export function ApiKeysPage() {
   const queryClient = useQueryClient()
-  const createFormRef = useRef<FormApi>()
+  const createFormRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)

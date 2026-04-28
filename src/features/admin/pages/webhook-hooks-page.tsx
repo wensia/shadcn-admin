@@ -71,7 +71,7 @@ const statusOptions = [
 
 export function WebhookHooksPage() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -558,7 +558,7 @@ export function WebhookHooksPage() {
                         <Text size="small" type="tertiary" style={{ display: 'block', marginBottom: 4 }}>校区</Text>
                         <Select
                           value={rule.campus_id}
-                          onChange={(v) => updateCampusRule(index, 'campus_id', v)}
+                          onChange={(v) => updateCampusRule(index, 'campus_id', (Array.isArray(v) ? v[0] : v) || '')}
                           optionList={campusOptions}
                           placeholder="选择校区"
                           style={{ width: '100%' }}

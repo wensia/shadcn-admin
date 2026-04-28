@@ -35,7 +35,7 @@ interface DingtalkRobotFormValues {
 
 export function DingtalkRobotsPage() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)

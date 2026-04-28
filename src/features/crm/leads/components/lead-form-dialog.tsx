@@ -14,7 +14,7 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconInfoCircle } from '@douyinfe/semi-icons'
 import { leadsApi } from '../api'
 import { apiClient } from '@/lib/api/client'
-import { gradeLabels, type Lead, type LeadCreate, type LeadStatus, type LeadUpdate, type Gender, type SourceChannelExtraField } from '../types'
+import { gradeLabels, type Lead, type LeadCreate, type LeadStatus, type LeadUpdate, type Gender, type SourceChannelExtraField, type Grade, type IntentionLevel } from '../types'
 import { leadStatusStyles } from '@/lib/status-styles'
 import type { SourceChannel } from '@/features/admin/types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
@@ -117,7 +117,7 @@ function toDateString(val: unknown): string | undefined {
 
 export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadFormDialogProps) {
   const queryClient = useQueryClient()
-  const formApiRef = useRef<FormApi>()
+  const formApiRef = useRef<FormApi | null>(null)
   const [watchedChannelId, setWatchedChannelId] = useState('')
   const [extraFieldValues, setExtraFieldValues] = useState<Record<string, string>>({})
   const [currentStep, setCurrentStep] = useState(0)
@@ -348,7 +348,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
       child_name: values.child_name || undefined,
       child_gender: values.child_gender || undefined,
       child_birthday: toDateString(values.child_birthday),
-      grade: values.grade || undefined,
+      grade: (values.grade || undefined) as Grade | undefined,
       school_name: values.school_name || undefined,
       course_interests: values.course_interests
         ? values.course_interests.split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -370,13 +370,13 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
     }
 
     // 清理 undefined 值，避免发送空字段
-    for (const key of Object.keys(formattedData)) {
+    for (const key of Object.keys(formattedData) as Array<keyof typeof formattedData>) {
       if (formattedData[key] === undefined) delete formattedData[key]
     }
 
     if (isEdit && lead) {
       // 编辑模式：额外包含 intention_level（LeadUpdate 接受此字段）
-      if (values.intention_level) formattedData.intention_level = values.intention_level
+      if (values.intention_level) formattedData.intention_level = values.intention_level as IntentionLevel
       updateMutation.mutate({ id: lead.id, data: formattedData })
     } else {
       createMutation.mutate(formattedData as LeadCreate)
@@ -572,8 +572,12 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
                       ) : field.field_type === 'date' ? (
                         <DatePicker
                           value={extraFieldValues[field.field_name] || undefined}
-                          onChange={(_date: Date | Date[] | undefined, dateStr: string | string[]) => {
-                            const nextValue = Array.isArray(dateStr) ? dateStr[0] || '' : dateStr || ''
+                          onChange={(_date, dateStr) => {
+                            const nextValue = Array.isArray(dateStr)
+                              ? String(dateStr[0] || '')
+                              : typeof dateStr === 'string'
+                                ? dateStr
+                                : ''
                             handleExtraFieldChange(field.field_name, nextValue)
                           }}
                           placeholder={field.placeholder || `选择${field.field_label}`}

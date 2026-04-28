@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Form, Modal, Toast, Typography } from '@douyinfe/semi-ui-19'
+import { Button, Form, Input, Modal, Toast, Typography } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { UserPlus, X } from 'lucide-react'
 import { apiClient } from '@/lib/api/client'
@@ -69,7 +69,7 @@ export function PerformanceEventDialog({
 }: PerformanceEventDialogProps) {
   const queryClient = useQueryClient()
   const isEdit = !!performanceEvent?.id
-  const formApiRef = useRef<FormApi<EventFormValues>>()
+  const formApiRef = useRef<FormApi<EventFormValues> | null>(null)
   const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
   const [leadSelectOpen, setLeadSelectOpen] = useState(false)
   const [amountInput, setAmountInput] = useState('0')
@@ -344,13 +344,12 @@ export function PerformanceEventDialog({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Form.Input
-                field="amount"
-                label="金额（元）"
-                value={amountInput}
-                onChange={(value) => handleAmountChange(String(value))}
-                rules={[{ required: true, message: '请输入金额' }]}
-              />
+              <Form.Slot label="金额（元）">
+                <Input
+                  value={amountInput}
+                  onChange={(value) => handleAmountChange(String(value))}
+                />
+              </Form.Slot>
               <Form.Input field="contract_no" label="合同编号" placeholder="可选" />
             </div>
 

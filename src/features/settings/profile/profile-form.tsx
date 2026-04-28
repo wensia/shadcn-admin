@@ -17,7 +17,7 @@ type ProfileFormValues = {
 }
 
 export function ProfileForm() {
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
   const [urls, setUrls] = useState([
     { value: 'https://ruimf.example.com' },
     { value: 'https://x.com/ruimf' },

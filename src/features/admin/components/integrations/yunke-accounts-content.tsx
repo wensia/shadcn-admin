@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import type { SemiTagColor } from '@/lib/semi-types'
 import { Table, Button, Input, Modal, Form, Select, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
@@ -52,7 +53,7 @@ const STATUS_OPTIONS = [
 
 export function YunkeAccountsContent() {
   const queryClient = useQueryClient()
-  const loginFormRef = useRef<FormApi>()
+  const loginFormRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -209,7 +210,7 @@ export function YunkeAccountsContent() {
 
   // 状态图标映射
   const getStatusInfo = (status: string) => {
-    const statusMap: Record<string, { icon: typeof CheckCircle; color: string; label: string }> = {
+    const statusMap: Record<string, { icon: typeof CheckCircle; color: SemiTagColor; label: string }> = {
       active: { icon: CheckCircle, color: 'green', label: '正常' },
       paused: { icon: PauseCircle, color: 'grey', label: '暂停' },
       inactive: { icon: XCircle, color: 'red', label: '停用' },
@@ -406,8 +407,8 @@ export function YunkeAccountsContent() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
-      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info?: { currentStart?: number; currentEnd?: number; total?: number }) =>
+      `第 ${info?.currentStart ?? 0}–${info?.currentEnd ?? 0} 条，共 ${info?.total ?? 0} 条`,
   }), [page, pageSize, total])
 
   // 处理函数

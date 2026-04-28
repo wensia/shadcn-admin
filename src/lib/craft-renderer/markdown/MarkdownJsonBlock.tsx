@@ -172,7 +172,7 @@ export function MarkdownJsonBlock({ code, className }: MarkdownJsonBlockProps) {
         <div className="p-3 overflow-x-auto text-sm">
           <JsonView
             value={parsed}
-            style={jsonTheme}
+            style={jsonTheme as React.CSSProperties}
             collapsed={2}
             enableClipboard={true}
             displayDataTypes={false}

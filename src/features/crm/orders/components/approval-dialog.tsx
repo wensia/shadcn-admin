@@ -27,6 +27,7 @@ import { orderApi } from '../api'
 import type { Order, OrderListItem } from '../types'
 import { formatTime } from '@/lib/utils/time'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import type { SemiTagColor } from '@/lib/semi-types'
 
 const { Text } = Typography
 
@@ -42,7 +43,7 @@ interface ApprovalDialogProps {
 }
 
 // 审批状态颜色映射
-const approvalStatusColorMap: Record<string, string> = {
+const approvalStatusColorMap: Record<string, SemiTagColor> = {
   pending: 'grey',
   leader_pending: 'blue',
   leader_rejected: 'red',

@@ -72,7 +72,7 @@ export function DateTimePicker({
   }
 
   // 清除选择
-  const handleClear = (e: React.MouseEvent) => {
+  const handleClear: React.MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation()
     onChange(undefined)
   }
@@ -105,11 +105,12 @@ export function DateTimePicker({
         disabledDate={disabledDate}
         format='MM/dd HH:mm'
         className='min-w-[120px]'
-        suffix={
+        showClear={Boolean(selectedDate)}
+        onClear={handleClear}
+        clearIcon={
           selectedDate ? (
             <X
               className='h-4 w-4 opacity-50 hover:opacity-100 cursor-pointer'
-              onClick={handleClear}
             />
           ) : undefined
         }

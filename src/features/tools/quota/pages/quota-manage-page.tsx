@@ -105,7 +105,7 @@ export function QuotaManagePage() {
   const { data: userData, isLoading: userLoading, refetch: refetchUsers } = useQuery({
     queryKey: ['quota-employees', userPage, userPageSize, userSearchText],
     queryFn: async () => {
-      const res = await apiClient.get('/employees', {
+      const res = await apiClient.get<{ data: { items: EmployeeItem[]; total: number } }>('/employees', {
         params: {
           page: userPage,
           size: userPageSize,
@@ -115,7 +115,7 @@ export function QuotaManagePage() {
           use_cache: false,
         },
       })
-      return res.data as { items: EmployeeItem[]; total: number }
+      return res.data
     },
     enabled: createModalVisible,
   })

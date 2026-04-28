@@ -151,7 +151,7 @@ export function SemiBadge({
   return (
     <Tag
       size={size}
-      shape="round"
+      shape="circle"
       className={className}
       style={{
         ...variantStyle,

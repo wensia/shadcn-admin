@@ -29,7 +29,6 @@ function UserManagement() {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
 
-  const [opened, setOpened] = useState(true)
   const { isLoaded, isSignedIn } = useAuth()
 
   if (!isLoaded) {
@@ -65,9 +64,7 @@ function UserManagement() {
                     Manage your users and their roles here.
                   </p>
                   <LearnMore
-                    open={opened}
-                    onOpenChange={setOpened}
-                    contentProps={{ side: 'right' }}
+                    contentClassName='max-w-sm'
                   >
                     <p>
                       This is the same as{' '}
@@ -107,7 +104,7 @@ function Unauthorized() {
   const navigate = useNavigate()
   const { history } = useRouter()
 
-  const [opened, setOpened] = useState(true)
+  const opened = false
   const [cancelled, setCancelled] = useState(false)
   const [countdown, setCountdown] = useState(COUNTDOWN)
 
@@ -134,7 +131,7 @@ function Unauthorized() {
         <p className='text-center text-muted-foreground'>
           You must be authenticated via Clerk{' '}
           <sup>
-            <LearnMore open={opened} onOpenChange={setOpened}>
+            <LearnMore>
               <p>
                 This is the same as{' '}
                 <Link

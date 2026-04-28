@@ -135,7 +135,7 @@ export function JSONPreviewOverlay({
           <div className="p-4">
             <JsonView
               value={processedData}
-              style={jsonTheme}
+              style={jsonTheme as React.CSSProperties}
               collapsed={false}
               enableClipboard={true}
               displayDataTypes={false}

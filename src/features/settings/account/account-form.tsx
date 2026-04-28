@@ -16,7 +16,7 @@ const languages = [
 ]
 
 export function AccountForm() {
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   function handleSubmit(values: { name: string; dob?: string; language: string }) {
     showSubmittedData(values)

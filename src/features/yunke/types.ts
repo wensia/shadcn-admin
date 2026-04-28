@@ -57,7 +57,15 @@ export interface YunkeAvailableEmployee {
   bound_yunke?: {
     phone: string
     real_name: string
+    yunke_user_id?: string
+    source_account_id?: string
   }
+  bound_yunke_accounts?: Array<{
+    phone?: string
+    real_name?: string
+    yunke_user_id?: string
+    source_account_id?: string
+  }>
 }
 
 // 密码重置响应
@@ -334,14 +342,14 @@ export interface YunkeCredential {
   company_id: string
   company_code: string | null
   company_name: string | null
-  root_dept_id: string | null  // 根部门ID
+  root_dept_id: string | null // 根部门ID
   user_id: string | null
-  status: number  // 0=失效, 1=正常
+  status: number // 0=失效, 1=正常
   last_login: string | null
   created_at: string | null
   updated_at: string | null
-  notify_robot_id: string | null  // 通知机器人ID
-  notify_robot_name: string | null  // 通知机器人名称
+  notify_robot_id: string | null // 通知机器人ID
+  notify_robot_name: string | null // 通知机器人名称
 }
 
 // 创建账号凭证请求
@@ -360,7 +368,7 @@ export interface YunkeCredentialUpdate {
   company_code?: string
   company_name?: string
   domain?: string
-  notify_robot_id?: string  // 通知机器人ID，空字符串表示清除
+  notify_robot_id?: string // 通知机器人ID，空字符串表示清除
 }
 
 // 账号状态响应
@@ -378,24 +386,97 @@ export interface YunkeCredentialListResponse {
   total: number
 }
 
+// ========================================================================
+// 一键建咨询师（onboarding）相关类型
+// ========================================================================
+
+export interface YunkeOnboardingOptions {
+  /** 云客部门树原始结构（嵌套；每个节点至少有 id + name + children） */
+  dept_tree: YunkeDeptNode[] | null
+  /** 云客角色列表（含「咨询师」） */
+  roles: YunkeRole[] | null
+  /** 所选 credential 对应的云客公司信息 */
+  company: {
+    id: string
+    company_code: string | null
+    company_name: string | null
+    domain: string | null
+  }
+}
+
+export interface YunkeDeptNode {
+  id: string
+  name: string
+  parentId?: string
+  children?: YunkeDeptNode[]
+  [key: string]: unknown
+}
+
+export interface YunkeRole {
+  id: string
+  name: string
+  [key: string]: unknown
+}
+
+export interface OnboardingCreateConsultantRequest {
+  employee_id: string
+  identity_id: string
+  yunke_admin_account_id: string
+  yunke_dept_id: string
+  yunke_role_id: string
+  yunke_major?: string
+  send_sms?: 0 | 1
+}
+
+export interface OnboardingConsultantEmployee {
+  id: string
+  name: string
+  username: string
+  phone: string | null
+  password: string | null
+  joined_at: string | null
+  scope_type: string | null
+  campus: { id: string; name: string } | null
+  department: { id: string; name: string } | null
+  position: { id: string; name: string; level?: number | string } | null
+}
+
+export interface OnboardingConsultantYunke {
+  phone: string
+  yunke_user_id: string
+  username: string
+  password: string | null
+  company_code: string
+  login_type: string
+  bound_at: string
+  login_ok: boolean
+  cookies_updated_at?: string
+}
+
+export interface OnboardingConsultantResult {
+  employee: OnboardingConsultantEmployee
+  yunke: OnboardingConsultantYunke | null
+  step_errors: string[]
+}
+
 // 云客通话记录原始数据（从云客 API 实时查询返回）
 export interface YunkeCallLogItem {
   id: string
-  startCallTime: string  // 通话开始时间
-  callDuration: string  // 格式化的通话时长，如 "0'07\""
-  callSeconds: number  // 通话时长（秒）
-  createdTime: string  // 创建时间
-  ringTime: string  // 振铃时间
-  ringSecond: number  // 振铃时长（秒）
-  callStatus: number  // 通话状态：0=未接通, 2=已接通
-  incomingCall: number  // 是否呼入：0=外呼, 1=呼入
-  callNumber: string  // 被叫号码
-  simPhone: string  // 主叫号码（SIM卡）
-  userIdName: string  // 员工姓名
-  departmentList: string  // 部门名称
-  planCustomerName?: string  // 客户名称
-  planCustomerCompany?: string  // 客户公司
-  recordFile?: string  // 录音文件URL
+  startCallTime: string // 通话开始时间
+  callDuration: string // 格式化的通话时长，如 "0'07\""
+  callSeconds: number // 通话时长（秒）
+  createdTime: string // 创建时间
+  ringTime: string // 振铃时间
+  ringSecond: number // 振铃时长（秒）
+  callStatus: number // 通话状态：0=未接通, 2=已接通
+  incomingCall: number // 是否呼入：0=外呼, 1=呼入
+  callNumber: string // 被叫号码
+  simPhone: string // 主叫号码（SIM卡）
+  userIdName: string // 员工姓名
+  departmentList: string // 部门名称
+  planCustomerName?: string // 客户名称
+  planCustomerCompany?: string // 客户公司
+  recordFile?: string // 录音文件URL
   companyCode: string
   userId: string
   departmentId: string

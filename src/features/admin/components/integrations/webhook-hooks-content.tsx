@@ -58,7 +58,7 @@ function createSkeletonData(count: number): WebhookHook[] {
 
 export function WebhookHooksContent() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -72,6 +72,7 @@ export function WebhookHooksContent() {
   const [deletingItem, setDeletingItem] = useState<WebhookHook | null>(null)
   const [testingItem, setTestingItem] = useState<WebhookHook | null>(null)
   const [testDataString, setTestDataString] = useState('')
+  const [selectedRobotIds, setSelectedRobotIds] = useState<string[]>([])
   // 校区规则状态 (替代 useFieldArray)
   const [campusRobotRules, setCampusRobotRules] = useState<CampusRobotRule[]>([])
 
@@ -380,13 +381,14 @@ export function WebhookHooksContent() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
-      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info?: { currentStart?: number; currentEnd?: number; total?: number }) =>
+      `第 ${info?.currentStart ?? 0}–${info?.currentEnd ?? 0} 条，共 ${info?.total ?? 0} 条`,
   }), [page, pageSize, filteredHooks.length])
 
   // 打开编辑对话框
   const handleEdit = (item: WebhookHook) => {
     setEditingItem(item)
+    setSelectedRobotIds(item.robot_ids || [])
     const campusRules = (item.extra_config as { campus_robot_map?: Array<{ campus_id: string; campus_name?: string; robot_ids: string[] }> })?.campus_robot_map || []
     setCampusRobotRules(campusRules.map((rule) => ({
       campus_id: rule.campus_id || '',
@@ -474,7 +476,7 @@ export function WebhookHooksContent() {
     const updateData: WebhookHookUpdate = {
       name: formData.name as string,
       description: formData.description as string,
-      robot_ids: formData.robot_ids as string[],
+      robot_ids: selectedRobotIds,
       message_template: formData.message_template as string,
       message_type: formData.message_type as 'text' | 'markdown',
       is_active: formData.is_active as boolean,
@@ -581,14 +583,15 @@ export function WebhookHooksContent() {
                 <div>
                   <div className="text-sm font-medium mb-2">关联机器人</div>
                   <Form.Slot label="">
-                    {({ values }: { values: Record<string, unknown> }) => (
-                      <MultiSelect
-                        options={robotOptions}
-                        value={(values.robot_ids as string[]) || []}
-                        onValueChange={(v) => formRef.current?.setValue('robot_ids', v)}
-                        placeholder="选择关联的钉钉机器人"
-                      />
-                    )}
+                    <MultiSelect
+                      options={robotOptions}
+                      value={selectedRobotIds}
+                      onValueChange={(v) => {
+                        setSelectedRobotIds(v)
+                        formRef.current?.setValue('robot_ids', v)
+                      }}
+                      placeholder="选择关联的钉钉机器人"
+                    />
                   </Form.Slot>
                   <div className="text-xs text-gray-500 mt-1">选择触发此钩子时发送消息的机器人</div>
                 </div>

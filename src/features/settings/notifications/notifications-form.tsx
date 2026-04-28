@@ -14,7 +14,7 @@ type NotificationFormValues = {
 }
 
 export function NotificationsForm() {
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   function handleSubmit(values: NotificationFormValues) {
     showSubmittedData(values)

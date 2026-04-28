@@ -252,7 +252,7 @@ export function YunkeDashboardPage() {
               <Text strong style={{ fontSize: 15 }}>管理员登录</Text>
             </div>
             <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>登录云客管理员账号以启用功能</Text>
-            <Link to="/yunke/admin-login">
+            <Link to="/yunke/credentials">
               <Button theme="outline" block>
                 去登录 <ArrowRight style={{ width: 16, height: 16, marginLeft: 8 }} />
               </Button>

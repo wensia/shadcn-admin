@@ -128,7 +128,7 @@ export function FullscreenOverlayBase({
             className
           )}
           style={{ zIndex: Z_FULLSCREEN }}
-          initialFocus={false as unknown as null}
+          initialFocus={false}
         >
           {/* Visually hidden title for accessibility */}
           <Dialog.Title className="sr-only">{accessibleTitle}</Dialog.Title>

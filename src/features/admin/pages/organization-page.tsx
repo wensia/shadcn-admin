@@ -13,7 +13,7 @@
  * 设计文档：docs/dev/organization-admin-page-consolidation.md
  */
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery } from '@tanstack/react-query'
 import { Search, X } from 'lucide-react'
@@ -26,6 +26,11 @@ import { OrgTreeNode } from '../components/org-tree/org-tree-node'
 import { OrgNodeAssignmentPanel } from '../components/org-tree/org-node-assignment-panel'
 
 const { Text } = Typography
+
+const TREE_WIDTH_STORAGE_KEY = 'admin.organization.tree_width'
+const TREE_MIN_WIDTH = 240
+const TREE_MAX_WIDTH = 720
+const TREE_DEFAULT_WIDTH = 380
 
 function filterTree(nodes: OrganizationTreeNode[], term: string): OrganizationTreeNode[] {
   if (!term) return nodes
@@ -100,6 +105,67 @@ export function OrganizationPage() {
   const [manualExpanded, setManualExpanded] = useState<Set<string>>(new Set())
   const [userTouchedExpansion, setUserTouchedExpansion] = useState(false)
 
+  // 左侧树宽度（可拖拽 + localStorage 持久化）
+  const [treeWidth, setTreeWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return TREE_DEFAULT_WIDTH
+    const raw = window.localStorage.getItem(TREE_WIDTH_STORAGE_KEY)
+    const n = raw ? parseInt(raw, 10) : NaN
+    if (!isNaN(n) && n >= TREE_MIN_WIDTH && n <= TREE_MAX_WIDTH) return n
+    return TREE_DEFAULT_WIDTH
+  })
+  const draggingRef = useRef(false)
+  const dragStartXRef = useRef(0)
+  const dragStartWidthRef = useRef(0)
+
+  const handleResizerMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      draggingRef.current = true
+      dragStartXRef.current = e.clientX
+      dragStartWidthRef.current = treeWidth
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [treeWidth],
+  )
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return
+      const delta = e.clientX - dragStartXRef.current
+      const next = Math.max(
+        TREE_MIN_WIDTH,
+        Math.min(TREE_MAX_WIDTH, dragStartWidthRef.current + delta),
+      )
+      setTreeWidth(next)
+    }
+    const onUp = () => {
+      if (!draggingRef.current) return
+      draggingRef.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      // 持久化当前值
+      setTreeWidth((w) => {
+        try {
+          window.localStorage.setItem(TREE_WIDTH_STORAGE_KEY, String(w))
+        } catch {}
+        return w
+      })
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [])
+
+  const handleResizerDoubleClick = useCallback(() => {
+    setTreeWidth(TREE_DEFAULT_WIDTH)
+    try {
+      window.localStorage.setItem(TREE_WIDTH_STORAGE_KEY, String(TREE_DEFAULT_WIDTH))
+    } catch {}
+  }, [])
+
   const { data: tree = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['organization-tree-full'],
     queryFn: async () => {
@@ -161,10 +227,13 @@ export function OrganizationPage() {
         </div>
       )}
 
-      {/* 主从主体：左树 + 右面板 */}
-      <div className="flex-1 flex min-h-0 px-4 pb-4 pt-3 gap-3">
+      {/* 主从主体：左树 + 拖拽条 + 右面板 */}
+      <div className="flex-1 flex min-h-0 px-4 pb-4 pt-3">
         {/* 左侧：树 */}
-        <div className="w-[380px] shrink-0 flex flex-col border border-[var(--semi-color-border)] rounded-md overflow-hidden">
+        <div
+          className="shrink-0 flex flex-col border border-[var(--semi-color-border)] rounded-md overflow-hidden"
+          style={{ width: treeWidth }}
+        >
           <div className="p-3 border-b border-[var(--semi-color-border)] flex items-center gap-2">
             <Input
               prefix={<Search className="h-4 w-4" />}
@@ -217,9 +286,29 @@ export function OrganizationPage() {
           </div>
         </div>
 
+        {/* 拖拽条：可拖拽调整左栏宽度；双击重置；持久化到 localStorage */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="调整树宽度"
+          title="拖拽调整宽度（双击重置）"
+          className="shrink-0 w-[6px] mx-1 cursor-col-resize relative group"
+          onMouseDown={handleResizerMouseDown}
+          onDoubleClick={handleResizerDoubleClick}
+        >
+          {/* hover 时加亮中线 */}
+          <div
+            className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px transition-colors group-hover:w-[2px]"
+            style={{ background: 'var(--semi-color-border)' }}
+          />
+        </div>
+
         {/* 右侧：任命面板 */}
         <div className="flex-1 min-w-0 border border-[var(--semi-color-border)] rounded-md overflow-hidden">
-          <OrgNodeAssignmentPanel node={selectedNode} />
+          <OrgNodeAssignmentPanel
+            node={selectedNode}
+            onNodeDeleted={() => setSelectedId(null)}
+          />
         </div>
       </div>
     </div>

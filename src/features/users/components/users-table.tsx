@@ -38,7 +38,7 @@ export function UsersTable({ data, search, navigate, isLoading = false }: DataTa
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: (_keys: (string | number)[], rows: User[]) => {
+    onChange: (_keys: (string | number)[] = [], rows: User[] = []) => {
       setSelectedRowKeys(rows.map((r) => r.id))
     },
   }

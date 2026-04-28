@@ -9,6 +9,7 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { formatTime } from '@/lib/utils/time'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import type { SemiTagColor } from '@/lib/semi-types'
 import {
   leadStatusLabels,
   intentionLevelLabels,
@@ -35,7 +36,7 @@ function maskPhone(phone?: string): string {
 }
 
 /* ── 状态颜色映射 ── */
-const statusColorMap: Record<string, string> = {
+const statusColorMap: Record<string, SemiTagColor> = {
   pending_assign: 'orange',
   pending_followup: 'amber',
   following_up: 'blue',
@@ -47,13 +48,13 @@ const statusColorMap: Record<string, string> = {
   closed: 'grey',
 }
 
-const intentionColorMap: Record<string, string> = {
+const intentionColorMap: Record<string, SemiTagColor> = {
   high: 'red',
   medium: 'orange',
   low: 'grey',
 }
 
-const followupResultColorMap: Record<string, string> = {
+const followupResultColorMap: Record<string, SemiTagColor> = {
   not_connected: 'grey',
   hung_up: 'red',
   no_need: 'red',
@@ -177,7 +178,7 @@ export function LeadsTable({
         title: '来源渠道',
         dataIndex: 'source_channel_name',
         width: 130,
-        ellipsis: { showTooltip: false },
+        ellipsis: { showTitle: false },
         render: (_text: string, record: LeadListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
           return (
@@ -280,7 +281,7 @@ export function LeadsTable({
         title: '校区',
         dataIndex: 'owner_campus_name',
         width: 110,
-        ellipsis: { showTooltip: false },
+        ellipsis: { showTitle: false },
         render: (_text: string, record: LeadListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
           return (
@@ -307,7 +308,7 @@ export function LeadsTable({
         title: '备注',
         dataIndex: 'notes',
         width: 160,
-        ellipsis: { showTooltip: false },
+        ellipsis: { showTitle: false },
         render: (_text: string, record: LeadListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
           return record.notes ? (

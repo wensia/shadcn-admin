@@ -114,7 +114,7 @@ const PAGE_SIZE = 20
 export function SourceChannelsPage() {
   useDocumentTitle('来源渠道管理')
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -769,7 +769,7 @@ export function SourceChannelsPage() {
                           <Text size="small" type="tertiary" style={{ display: 'block', marginBottom: 4 }}>字段类型</Text>
                           <Select
                             value={field.field_type}
-                            onChange={(v) => updateExtraField(index, 'field_type', v)}
+                            onChange={(v) => updateExtraField(index, 'field_type', ((Array.isArray(v) ? v[0] : v) || 'text') as ExtraFieldType)}
                             optionList={FIELD_TYPE_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
                             style={{ width: '100%' }}
                           />

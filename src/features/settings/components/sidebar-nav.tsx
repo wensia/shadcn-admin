@@ -11,9 +11,9 @@ type SidebarNavProps = React.HTMLAttributes<HTMLElement> & {
   }[]
 }
 
-type SidebarSelectValue = string | number | undefined
+type SidebarSelectValue = string | string[] | undefined
 type SidebarSelectedOption = {
-  value?: string | number
+  value?: string | number | string[]
 }
 
 export function SidebarNav({ className, items, ...props }: SidebarNavProps) {

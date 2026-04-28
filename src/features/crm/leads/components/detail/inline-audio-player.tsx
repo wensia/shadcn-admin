@@ -210,7 +210,7 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
               max={1}
               step={0.05}
               onChange={(val) => handleVolumeChange(val as number)}
-              tipFormatter={null}
+              tipFormatter={undefined}
               style={{ height: '100%' }}
             />
           </div>

@@ -42,7 +42,7 @@ function getCategoryLabel(value: string | null): string {
 
 export function AIDocumentLibrary() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')

@@ -76,7 +76,7 @@ export function DataTableBulkActions({
           <Divider layout='vertical' style={{ height: 20 }} />
 
           <div className='flex items-center gap-x-1 text-sm'>
-            <Tag color='dark' size='large' shape='circle'>
+            <Tag color='grey' size='large' shape='circle'>
               {selectedCount}
             </Tag>
             <span className='hidden sm:inline'>

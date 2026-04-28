@@ -68,15 +68,16 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
   useEffect(() => {
     if (!progressData?.data) return
 
-    const status = progressData.data.status
+    const progress = progressData.data
+    const status = progress.status
     if (status === 'completed') {
       const timer = window.setTimeout(() => {
         setPhase('completed')
         setProcessingBatchId(null)
         setUploadResult(prev => prev ? {
           ...prev,
-          success_count: progressData.data.success_count,
-          failed_count: progressData.data.failed_count,
+          success_count: progress.success_count,
+          failed_count: progress.failed_count,
           status: 'completed',
         } : null)
       }, 0)
@@ -85,7 +86,7 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
       const timer = window.setTimeout(() => {
         setPhase('failed')
         setProcessingBatchId(null)
-        setErrorMessage(progressData.data.error_message || '处理失败')
+        setErrorMessage(progress.error_message || '处理失败')
       }, 0)
       return () => window.clearTimeout(timer)
     }
@@ -116,6 +117,11 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
       }
 
       const result = response.data
+      if (!result) {
+        setPhase('failed')
+        setErrorMessage(response.message || '上传结果为空')
+        return
+      }
       setUploadResult(result)
 
       if (result.mode === 'sync') {

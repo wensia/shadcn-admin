@@ -16,7 +16,7 @@ export function TasksMutateDrawer({
   currentRow,
 }: TaskMutateDrawerProps) {
   const isUpdate = !!currentRow
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   useEffect(() => {
     if (open && formRef.current) {

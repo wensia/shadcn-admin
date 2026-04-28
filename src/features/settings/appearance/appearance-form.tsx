@@ -11,15 +11,17 @@ const fontOptions = fonts.map((f) => ({
   label: f.charAt(0).toUpperCase() + f.slice(1),
 }))
 
+type AppFont = (typeof fonts)[number]
+
 type AppearanceFormValues = {
-  font: string
+  font: AppFont
   theme: 'light' | 'dark'
 }
 
 export function AppearanceForm() {
   const { font, setFont } = useFont()
   const { theme, setTheme } = useTheme()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   function handleSubmit(values: AppearanceFormValues) {
     if (values.font !== font) setFont(values.font)

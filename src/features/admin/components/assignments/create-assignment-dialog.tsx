@@ -249,7 +249,7 @@ export function CreateAssignmentDialog({
                 onChange={(v) => setRank(v as number | undefined)}
                 placeholder="自动分配"
                 style={{ width: '100%' }}
-                allowClear
+                showClear
               >
                 <Select.Option value={0}>正职 (0)</Select.Option>
                 <Select.Option value={1}>副职 #1</Select.Option>

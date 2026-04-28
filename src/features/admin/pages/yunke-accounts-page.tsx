@@ -58,7 +58,7 @@ const STATUS_OPTIONS = [
 
 export function YunkeAccountsPage() {
   const queryClient = useQueryClient()
-  const loginFormRef = useRef<FormApi>()
+  const loginFormRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)

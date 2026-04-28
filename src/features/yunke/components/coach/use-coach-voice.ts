@@ -132,7 +132,9 @@ export function useCoachVoice({
     if (float32.length === 0) return
 
     const audioBuffer = ctx.createBuffer(1, float32.length, TTS_SAMPLE_RATE)
-    audioBuffer.copyToChannel(float32, 0)
+    const audioData = new Float32Array(float32.length)
+    audioData.set(float32)
+    audioBuffer.copyToChannel(audioData, 0)
 
     const source = ctx.createBufferSource()
     source.buffer = audioBuffer

@@ -259,7 +259,7 @@ const leadsApi = {
     sort_order?: string
     compact?: boolean
   }): Promise<ApiResponse<{
-    items: unknown[]
+    items: LeadListItem[]
     total: number
     page: number
     size: number

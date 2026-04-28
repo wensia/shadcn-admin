@@ -88,8 +88,7 @@ export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: Cale
         visit_date_from: monthRange.from, visit_date_to: monthRange.to,
         creator_campus_id: creatorCampusId,
       })
-      if (response && response.success === false) throw new Error(response.message || '获取诺到数据失败')
-      return response.data?.items ?? []
+      return response?.items ?? []
     },
     enabled: showPromised,
   })
@@ -102,8 +101,7 @@ export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: Cale
         visit_date_from: monthRange.from, visit_date_to: monthRange.to,
         creator_campus_id: creatorCampusId,
       })
-      if (response && response.success === false) throw new Error(response.message || '获取到访数据失败')
-      return response.data?.items ?? []
+      return response?.items ?? []
     },
     enabled: showVisited,
   })
@@ -115,8 +113,7 @@ export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: Cale
         page: 1, size: 100, date_from: monthRange.from, date_to: monthRange.to,
         status: 'confirmed', creator_campus_id: creatorCampusId,
       })
-      if (response && response.success === false) throw new Error(response.message || '获取缴费数据失败')
-      return response.data?.items ?? []
+      return response?.items ?? []
     },
     enabled: showPayment,
   })
@@ -500,7 +497,7 @@ export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: Cale
                     <div
                       key={`${item.type}-${item.id}`}
                       onClick={() => {
-                        setSelectedLeadId(item.raw.lead_id)
+                        setSelectedLeadId(item.raw.lead_id ?? null)
                         setDetailSheetOpen(true)
                       }}
                       style={{

@@ -27,7 +27,7 @@ export function UserAuthForm({ redirectTo }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { setAuthState, setTempToken, setAvailableIdentities, setIdentityContext } = useAuthStore()
-  const formApiRef = useRef<FormApi>()
+  const formApiRef = useRef<FormApi | null>(null)
 
   async function handleSubmit(values: SignInFormValues) {
     setIsLoading(true)

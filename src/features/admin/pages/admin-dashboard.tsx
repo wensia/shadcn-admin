@@ -96,7 +96,7 @@ export function AdminDashboardPage() {
         key: String(idx + 1),
         seq: idx + 1,
         label: row.label,
-        count: (stats as Record<string, number>)[row.key] || 0,
+        count: (stats as unknown as Record<string, number>)[row.key] || 0,
         path: row.path,
       }))
     : []
@@ -256,7 +256,7 @@ export function AdminDashboardPage() {
                 bordered
                 rowKey="key"
                 style={tableStyle}
-                onHeaderRow={() => ({ style: headerCellStyle })}
+                className="admin-dashboard-summary-table"
               />
             )}
           </div>
@@ -278,7 +278,7 @@ export function AdminDashboardPage() {
                 bordered
                 rowKey="key"
                 style={tableStyle}
-                onHeaderRow={() => ({ style: headerCellStyle })}
+                className="admin-dashboard-summary-table"
                 onRow={(record) => ({
                   style: { cursor: 'pointer' },
                   onClick: () => navigate({ to: (record as { path: string }).path }),

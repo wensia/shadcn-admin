@@ -31,7 +31,9 @@ import {
 } from '../types'
 
 const { Text } = Typography
-type DateRangeValue = [Date | undefined, Date | undefined] | undefined
+type DateRangeValue = [Date, Date] | undefined
+const toStringArray = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value : value ? [value] : undefined
 
 // 来源渠道响应类型
 interface SourceChannelItem {
@@ -208,7 +210,7 @@ export function FilterSheet({
             multiple
             maxTagCount={3}
             value={localFilters.source_channel_id || []}
-            onChange={(v) => updateFilter('source_channel_id', v)}
+            onChange={(v) => updateFilter('source_channel_id', toStringArray(v))}
             style={{ width: '100%' }}
             showClear
             loading={isLoadingChannels}
@@ -302,7 +304,7 @@ export function FilterSheet({
             <Select
               placeholder="筛选方式"
               value={localFilters.followup_result_mode || undefined}
-              onChange={(v) => updateFilter('followup_result_mode', v || undefined)}
+              onChange={(v) => updateFilter('followup_result_mode', ((Array.isArray(v) ? v[0] : v) || undefined) as 'include' | 'exclude' | undefined)}
               style={{ width: '100%' }}
               showClear
             >
@@ -367,7 +369,7 @@ export function FilterSheet({
               multiple
               maxTagCount={2}
               value={localFilters.owner_campus_id || []}
-              onChange={(v) => updateFilter('owner_campus_id', v)}
+              onChange={(v) => updateFilter('owner_campus_id', toStringArray(v))}
               style={{ width: '100%' }}
               showClear
               loading={isLoadingOptions}
@@ -442,10 +444,10 @@ export function FilterSheet({
           <DatePicker
             type="dateRange"
             value={
-              localFilters.created_from || localFilters.created_to
+              localFilters.created_from && localFilters.created_to
                 ? ([
-                    localFilters.created_from ? new Date(localFilters.created_from) : undefined,
-                    localFilters.created_to ? new Date(localFilters.created_to) : undefined,
+                    new Date(localFilters.created_from),
+                    new Date(localFilters.created_to),
                   ] as DateRangeValue)
                 : undefined
             }
@@ -475,7 +477,7 @@ export function FilterSheet({
           <Checkbox
             checked={enableActivatedFilter}
             onChange={(e) => {
-              const checked = e.target.checked
+              const checked = Boolean(e.target.checked)
               setEnableActivatedFilter(checked)
               if (!checked) {
                 updateFilter('activated_from', undefined)
@@ -490,10 +492,10 @@ export function FilterSheet({
               <DatePicker
                 type="dateRange"
                 value={
-                  localFilters.activated_from || localFilters.activated_to
+                  localFilters.activated_from && localFilters.activated_to
                     ? ([
-                        localFilters.activated_from ? new Date(localFilters.activated_from) : undefined,
-                        localFilters.activated_to ? new Date(localFilters.activated_to) : undefined,
+                        new Date(localFilters.activated_from),
+                        new Date(localFilters.activated_to),
                       ] as DateRangeValue)
                     : undefined
                 }

@@ -80,9 +80,10 @@ export function InfoItem({
       const searchParam = asyncSelectConfig.searchParam || 'search'
       const params = new URLSearchParams({ page: '1', size: '20' })
       if (searchQuery) params.set(searchParam, searchQuery)
-      const res = await apiClient.get(`${asyncSelectConfig.apiEndpoint}?${params}`)
+      const res = await apiClient.get<{ data?: Record<string, unknown[]> }>(`${asyncSelectConfig.apiEndpoint}?${params}`)
       const itemsKey = asyncSelectConfig.itemsKey || 'items'
-      return res.data[itemsKey] || []
+      const items = res.data?.[itemsKey]
+      return Array.isArray(items) ? (items as AsyncSelectOptionItem[]) : []
     },
     enabled: isEditing && fieldType === 'async-select' && !!asyncSelectConfig,
     staleTime: 30000,
@@ -94,7 +95,7 @@ export function InfoItem({
       if (!asyncSelectConfig) throw new Error('Missing config')
       const endpoint = asyncSelectConfig.createEndpoint || asyncSelectConfig.apiEndpoint
       const fieldName = asyncSelectConfig.createFieldName || 'name'
-      const res = await apiClient.post(endpoint, { [fieldName]: newValue })
+      const res = await apiClient.post<{ data?: unknown }>(endpoint, { [fieldName]: newValue })
       return res.data
     },
     onSuccess: () => {

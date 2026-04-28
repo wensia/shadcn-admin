@@ -4,6 +4,7 @@
  */
 
 import { Tag } from '@douyinfe/semi-ui-19'
+import type { SemiTagColor } from '@/lib/semi-types'
 import {
   leadStatusLabels,
   intentionLevelLabels,
@@ -14,7 +15,7 @@ import {
 } from '../types'
 
 /* ── 状态颜色映射 ── */
-const statusColorMap: Record<string, string> = {
+const statusColorMap: Record<string, SemiTagColor> = {
   pending_assign: 'orange',
   pending_followup: 'amber',
   following_up: 'blue',
@@ -26,13 +27,13 @@ const statusColorMap: Record<string, string> = {
   closed: 'grey',
 }
 
-const intentionColorMap: Record<string, string> = {
+const intentionColorMap: Record<string, SemiTagColor> = {
   high: 'red',
   medium: 'orange',
   low: 'grey',
 }
 
-const followupResultColorMap: Record<string, string> = {
+const followupResultColorMap: Record<string, SemiTagColor> = {
   not_connected: 'grey',
   hung_up: 'red',
   no_need: 'red',
@@ -50,6 +51,7 @@ const followupResultColorMap: Record<string, string> = {
 interface LeadStatusBadgeProps {
   status: LeadStatus
   className?: string
+  showDot?: boolean
 }
 
 export function LeadStatusBadge({ status, className }: LeadStatusBadgeProps) {
@@ -84,6 +86,7 @@ export function FollowupResultBadge({ result, className }: FollowupResultBadgePr
 interface IntentionLevelBadgeProps {
   level: IntentionLevel
   className?: string
+  showDot?: boolean
 }
 
 export function IntentionLevelBadge({ level, className }: IntentionLevelBadgeProps) {

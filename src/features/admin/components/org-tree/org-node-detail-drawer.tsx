@@ -82,7 +82,7 @@ export function OrgNodeDetailDrawer({ node, open, onClose }: OrgNodeDetailDrawer
             {orgNodeTypeLabel(node.type)}
           </Tag>
           {!node.is_active && (
-            <Tag size="small" color="light-grey">
+            <Tag size="small" color="grey">
               已停用
             </Tag>
           )}

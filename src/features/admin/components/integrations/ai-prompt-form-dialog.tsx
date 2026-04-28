@@ -42,7 +42,7 @@ export function AIPromptFormDialog({
 }: AIPromptFormDialogProps) {
   const { open, mode, sceneKey, prompt, sourcePrompt } = state
   const sceneLabel = AI_SCENES.find((s) => s.key === sceneKey)?.label || sceneKey
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 根据模式重置表单
   useEffect(() => {

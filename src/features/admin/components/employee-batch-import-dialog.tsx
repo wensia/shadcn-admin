@@ -81,6 +81,11 @@ export function EmployeeBatchImportDialog({ open, onOpenChange, onSuccess }: Pro
         setErrorMessage(response.message || '导入失败')
         return
       }
+      if (!response.data) {
+        setPhase('failed')
+        setErrorMessage(response.message || '导入结果为空')
+        return
+      }
       setResult(response.data)
       setPhase('completed')
       queryClient.invalidateQueries({ queryKey: ['admin-employees'] })

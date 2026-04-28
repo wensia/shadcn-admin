@@ -14,7 +14,7 @@ export function UsersInviteDialog({
   open,
   onOpenChange,
 }: UserInviteDialogProps) {
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   const handleSubmit = (values: Record<string, unknown>) => {
     formRef.current?.reset()

@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Mic, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle, Star } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import type { SemiTagColor } from '@/lib/semi-types'
 import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
@@ -102,7 +103,7 @@ function createSkeletonData(count: number): ASRConfigItem[] {
 
 export function ASRConfigContent() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -206,7 +207,7 @@ export function ASRConfigContent() {
     return option?.label || provider
   }
 
-  const getProviderTagColor = (provider: string): string => {
+  const getProviderTagColor = (provider: string): SemiTagColor => {
     switch (provider) {
       case 'volcengine': return 'blue'
       case 'tencent': return 'green'
@@ -323,8 +324,8 @@ export function ASRConfigContent() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
-      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info?: { currentStart?: number; currentEnd?: number; total?: number }) =>
+      `第 ${info?.currentStart ?? 0}–${info?.currentEnd ?? 0} 条，共 ${info?.total ?? 0} 条`,
   }), [page, pageSize, data?.total])
 
   const handleCreate = () => {

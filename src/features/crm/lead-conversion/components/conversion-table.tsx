@@ -10,6 +10,7 @@ import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { IconMore } from '@douyinfe/semi-icons'
 import { Eye, Edit, Trash2 } from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
+import type { SemiTagColor } from '@/lib/semi-types'
 import { PaymentStatus, VisitStatus, type ConversionType, type Payment, type VisitSchedule } from '../types'
 
 const { Text } = Typography
@@ -55,14 +56,14 @@ const typeLabels: Record<ConversionType, string> = {
 }
 
 // 类型标签颜色
-const typeTagColors: Record<ConversionType, string> = {
+const typeTagColors: Record<ConversionType, SemiTagColor> = {
   scheduled: 'blue',
   visited: 'green',
   payment: 'purple',
 }
 
 // 状态标签颜色
-function getStatusTagColor(type: ConversionType, status: string): string {
+function getStatusTagColor(type: ConversionType, status: string): SemiTagColor {
   if (type === 'payment') {
     switch (status) {
       case PaymentStatus.CONFIRMED: return 'green'
@@ -123,7 +124,7 @@ export function ConversionTable({
       title: '时间',
       dataIndex: 'record_time',
       width: 150,
-      render: (_recordTime: string, record: ConversionRecord) => formatTime(record.record_time, 'YYYY-MM-DD HH:mm'),
+      render: (_recordTime: string, record: ConversionRecord) => formatTime(record.record_time),
     },
     {
       title: '状态',

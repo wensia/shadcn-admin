@@ -16,7 +16,7 @@ export function ForgotPasswordForm({
 }: React.HTMLAttributes<HTMLDivElement>) {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   function handleSubmit(values: ForgotPasswordFormValues) {
     setIsLoading(true)

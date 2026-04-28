@@ -122,7 +122,7 @@ export function ScheduledTasksPage() {
   const [asrTaskKwargs, setAsrTaskKwargs] = useState<Record<string, unknown>>({})
 
   // Semi Form ref
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 查询任务列表
   const { data, isLoading } = useQuery({
@@ -1125,11 +1125,32 @@ function formatTaskResult(result: string | null | undefined): { lines: Array<{ l
       lines.push({ label: '跳过记录', value: `${data.total_skipped} 条（已存在）` })
     }
 
-    if (typeof data.success_count === 'number' && typeof data.failed_count === 'number') {
+    if (typeof data.preview_count === 'number') {
+      lines.push({ label: '预览数量', value: `${data.preview_count} 条`, type: 'info' })
+    }
+    if (typeof data.preview_duration_seconds === 'number') {
+      lines.push({ label: '预览时长', value: `${data.preview_duration_seconds} 秒`, type: 'info' })
+    }
+    if (typeof data.processed_count === 'number') {
+      lines.push({ label: '处理数量', value: `${data.processed_count} 条`, type: 'info' })
+    }
+    if (typeof data.processed_duration_seconds === 'number') {
+      lines.push({ label: '处理时长', value: `${data.processed_duration_seconds} 秒`, type: 'info' })
+    }
+
+    const failCount = typeof data.fail_count === 'number' ? data.fail_count : data.failed_count
+    if (typeof data.success_count === 'number') {
       lines.push({ label: '成功数', value: `${data.success_count} 个`, type: 'success' })
-      if (data.failed_count > 0) {
-        lines.push({ label: '失败数', value: `${data.failed_count} 个`, type: 'error' })
+      if (typeof failCount === 'number' && failCount > 0) {
+        lines.push({ label: '失败数', value: `${failCount} 个`, type: 'error' })
       }
+      if (typeof data.skip_count === 'number' && data.skip_count > 0) {
+        lines.push({ label: '跳过数', value: `${data.skip_count} 个`, type: 'warning' })
+      }
+    }
+
+    if (data.filters?.department_ids?.length) {
+      lines.push({ label: '云客部门', value: `${data.filters.department_ids.length} 个白名单`, type: 'info' })
     }
 
     if (typeof data.timeout_count === 'number') {

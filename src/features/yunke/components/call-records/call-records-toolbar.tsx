@@ -36,7 +36,7 @@ interface CallRecordsToolbarProps {
   extraActions?: React.ReactNode
 }
 
-type DateRangeValue = [Date | undefined, Date | undefined] | undefined
+type DateRangeValue = [Date, Date] | undefined
 type SelectOptionNode = {
   label?: React.ReactNode
 }
@@ -150,7 +150,10 @@ export function CallRecordsToolbar({
           onFilterChange('min_duration', min === 0 ? undefined : min)
           onFilterChange('max_duration', max >= 600 ? undefined : max)
         }}
-        tipFormatter={(v) => v !== undefined && v >= 60 ? `${Math.floor(v / 60)}分${v % 60 ? `${v % 60}秒` : ''}` : `${v}秒`}
+        tipFormatter={(v) => {
+          const value = Number(v ?? 0)
+          return value >= 60 ? `${Math.floor(value / 60)}分${value % 60 ? `${value % 60}秒` : ''}` : `${value}秒`
+        }}
         marks={{ 0: '0', 60: '1m', 120: '2m', 300: '5m', 600: '10m' }}
         style={{ marginBottom: 8 }}
       />
@@ -196,7 +199,7 @@ export function CallRecordsToolbar({
           onFilterChange('min_score', min === 0 ? undefined : min)
           onFilterChange('max_score', max === 100 ? undefined : max)
         }}
-        tipFormatter={(v) => `${v}分`}
+        tipFormatter={(v) => `${Number(v ?? 0)}分`}
         marks={{ 0: '0', 25: '25', 50: '50', 75: '75', 100: '100' }}
         style={{ marginBottom: 8 }}
       />
@@ -218,10 +221,10 @@ export function CallRecordsToolbar({
 
   // 日期范围值
   const dateRangeValue: DateRangeValue =
-    filters.start_date || filters.end_date
+    filters.start_date && filters.end_date
       ? [
-          filters.start_date ? new Date(filters.start_date) : undefined,
-          filters.end_date ? new Date(filters.end_date) : undefined,
+          new Date(filters.start_date),
+          new Date(filters.end_date),
         ]
       : undefined
 

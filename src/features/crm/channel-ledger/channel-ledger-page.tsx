@@ -22,6 +22,7 @@ import { format } from 'date-fns'
 
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { FilterTag } from '@/components/semi/filter-tags-bar'
+import type { SemiTagColor } from '@/lib/semi-types'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import {
@@ -53,7 +54,7 @@ const { Text, Title } = Typography
 
 const STORAGE_KEY = 'crm-channel-ledger-filters:v1'
 
-const validityTagColors: Record<ChannelLedgerValidity, string> = {
+const validityTagColors: Record<ChannelLedgerValidity, SemiTagColor> = {
   valid: 'green',
   invalid: 'red',
   pending: 'grey',
@@ -964,7 +965,7 @@ export function ChannelLedgerPage() {
                   style={{ width: 124 }}
                 />
                 <Select
-                  value={status}
+                  value={status as string}
                   onChange={(value) => {
                     setStatus(((value as LeadStatus) || '') as LeadStatus | '')
                     resetPage()

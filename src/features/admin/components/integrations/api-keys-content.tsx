@@ -42,7 +42,7 @@ function createSkeletonData(count: number): EmployeeApiKeyInfo[] {
 
 export function ApiKeysContent() {
   const queryClient = useQueryClient()
-  const createFormRef = useRef<FormApi>()
+  const createFormRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -323,8 +323,8 @@ export function ApiKeysContent() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
-      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info?: { currentStart?: number; currentEnd?: number; total?: number }) =>
+      `第 ${info?.currentStart ?? 0}–${info?.currentEnd ?? 0} 条，共 ${info?.total ?? 0} 条`,
   }), [page, pageSize, total])
 
   const handleCopyToClipboard = async (text: string) => {

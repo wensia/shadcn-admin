@@ -33,7 +33,7 @@ interface FormValues {
 }
 
 export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBatchDialogProps) {
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 当 batch 变化时重置表单
   useEffect(() => {
@@ -67,8 +67,9 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
 
   // 提交表单
   const handleSubmit = () => {
-    formRef.current?.validate().then((values: FormValues) => {
-      updateMutation.mutate(values)
+    formRef.current?.validate().then((values) => {
+      const formValues = values as FormValues
+      updateMutation.mutate(formValues)
     })
   }
 
@@ -98,7 +99,7 @@ export function EditBatchDialog({ open, onOpenChange, batch, onSuccess }: EditBa
     >
       {batch && (
         <Form
-          ref={formRef}
+          getFormApi={(api) => { formRef.current = api }}
           initValues={{
             batch_name: batch.batch_name,
             batch_description: batch.batch_description || '',

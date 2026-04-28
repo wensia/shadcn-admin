@@ -4,7 +4,7 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Plus, Pencil, Trash2, Play, CheckCircle } from 'lucide-react'
+import { Bot, Plus, Pencil, Trash2, Play, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { Table, Button, Input, Modal, Form, Tag, Skeleton, Typography, Tooltip } from '@douyinfe/semi-ui-19'
@@ -37,7 +37,7 @@ function createSkeletonData(count: number): DingtalkRobot[] {
 
 export function DingtalkRobotsContent() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -246,8 +246,8 @@ export function DingtalkRobotsContent() {
     showSizeChanger: true,
     pageSizeOpts: [10, 20, 50, 100],
     showTotal: true,
-    formatPageText: (info: { currentStart: number; currentEnd: number; total: number }) =>
-      `第 ${info.currentStart}–${info.currentEnd} 条，共 ${info.total} 条`,
+    formatPageText: (info?: { currentStart?: number; currentEnd?: number; total?: number }) =>
+      `第 ${info?.currentStart ?? 0}–${info?.currentEnd ?? 0} 条，共 ${info?.total ?? 0} 条`,
   }), [page, pageSize, data?.total])
 
   // 打开新增对话框

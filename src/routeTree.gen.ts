@@ -73,6 +73,7 @@ import { Route as AuthenticatedHrResignationsRouteImport } from './routes/_authe
 import { Route as AuthenticatedHrDiscTestRouteImport } from './routes/_authenticated/hr/disc-test'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedDemoTdesignLeadsRouteImport } from './routes/_authenticated/demo/tdesign-leads'
+import { Route as AuthenticatedCrmXiaodituiRouteImport } from './routes/_authenticated/crm/xiaoditui'
 import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authenticated/crm/workbench'
 import { Route as AuthenticatedCrmVisitScheduleRouteImport } from './routes/_authenticated/crm/visit-schedule'
 import { Route as AuthenticatedCrmPerformanceEventsRouteImport } from './routes/_authenticated/crm/performance-events'
@@ -463,6 +464,12 @@ const AuthenticatedDemoTdesignLeadsRoute =
     path: '/demo/tdesign-leads',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCrmXiaodituiRoute =
+  AuthenticatedCrmXiaodituiRouteImport.update({
+    id: '/xiaoditui',
+    path: '/xiaoditui',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmWorkbenchRoute =
   AuthenticatedCrmWorkbenchRouteImport.update({
     id: '/workbench',
@@ -849,6 +856,7 @@ export interface FileRoutesByFullPath {
   '/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
+  '/crm/xiaoditui': typeof AuthenticatedCrmXiaodituiRoute
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
@@ -958,6 +966,7 @@ export interface FileRoutesByTo {
   '/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
+  '/crm/xiaoditui': typeof AuthenticatedCrmXiaodituiRoute
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
@@ -1077,6 +1086,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
   '/_authenticated/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/_authenticated/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
+  '/_authenticated/crm/xiaoditui': typeof AuthenticatedCrmXiaodituiRoute
   '/_authenticated/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
@@ -1193,6 +1203,7 @@ export interface FileRouteTypes {
     | '/crm/performance-events'
     | '/crm/visit-schedule'
     | '/crm/workbench'
+    | '/crm/xiaoditui'
     | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
@@ -1302,6 +1313,7 @@ export interface FileRouteTypes {
     | '/crm/performance-events'
     | '/crm/visit-schedule'
     | '/crm/workbench'
+    | '/crm/xiaoditui'
     | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
@@ -1420,6 +1432,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/performance-events'
     | '/_authenticated/crm/visit-schedule'
     | '/_authenticated/crm/workbench'
+    | '/_authenticated/crm/xiaoditui'
     | '/_authenticated/demo/tdesign-leads'
     | '/_authenticated/errors/$error'
     | '/_authenticated/hr/disc-test'
@@ -1936,6 +1949,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDemoTdesignLeadsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/crm/xiaoditui': {
+      id: '/_authenticated/crm/xiaoditui'
+      path: '/xiaoditui'
+      fullPath: '/crm/xiaoditui'
+      preLoaderRoute: typeof AuthenticatedCrmXiaodituiRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/workbench': {
       id: '/_authenticated/crm/workbench'
       path: '/workbench'
@@ -2402,6 +2422,7 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmPerformanceEventsRoute: typeof AuthenticatedCrmPerformanceEventsRoute
   AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
   AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
+  AuthenticatedCrmXiaodituiRoute: typeof AuthenticatedCrmXiaodituiRoute
   AuthenticatedCrmIndexRoute: typeof AuthenticatedCrmIndexRoute
   AuthenticatedCrmDataStatisticsAdvisorRoute: typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   AuthenticatedCrmDataStatisticsConsultingRoute: typeof AuthenticatedCrmDataStatisticsConsultingRoute
@@ -2429,6 +2450,7 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
     AuthenticatedCrmPerformanceEventsRoute,
   AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
   AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
+  AuthenticatedCrmXiaodituiRoute: AuthenticatedCrmXiaodituiRoute,
   AuthenticatedCrmIndexRoute: AuthenticatedCrmIndexRoute,
   AuthenticatedCrmDataStatisticsAdvisorRoute:
     AuthenticatedCrmDataStatisticsAdvisorRoute,

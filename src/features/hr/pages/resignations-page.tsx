@@ -68,7 +68,7 @@ function StatusTag({ status }: { status: string }) {
 export function ResignationsPage() {
   useDocumentTitle('离职审批')
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
   const user = useAuthStore((s) => s.user)
 
   const [page, setPage] = useState(1)

@@ -29,6 +29,7 @@ import { IconChevronLeft, IconChevronRight, IconCalendar, IconClock, IconUser, I
 import { leadsApi } from '@/features/crm/leads/api'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
 import { LeadStatusBadge } from '@/features/crm/leads/components/status-badges'
+import type { LeadListItem } from '@/features/crm/leads/types'
 
 type ViewMode = 'month' | 'week'
 
@@ -67,7 +68,7 @@ export function CalendarView() {
 
   // 将线索按日期分组
   const leadsByDate = useMemo(() => {
-    const map = new Map<string, typeof allPendingLeads>()
+    const map = new Map<string, LeadListItem[]>()
     if (!allPendingLeads) return map
 
     allPendingLeads.forEach((lead) => {
@@ -489,7 +490,7 @@ export function CalendarView() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
                     <IconUser size="extra-small" />
-                    <span>{lead.advisor?.name || '未分配'}</span>
+                    <span>{lead.advisor_name || '未分配'}</span>
                     <span style={{ width: 1, height: 12, background: 'var(--semi-color-border)', margin: '0 4px' }} />
                     <LeadStatusBadge status={lead.status} showDot={false} className="text-[10px] py-0 h-4" />
                   </div>

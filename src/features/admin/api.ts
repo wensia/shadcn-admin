@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '@/lib/api/client'
-import type { ApiResponse } from '@/lib/api/types'
+import { unwrapData, type ApiResponse } from '@/lib/api/types'
 import type {
   RegionItem,
   RegionCreate,
@@ -57,6 +57,7 @@ import type {
   TaskExecutionHistory,
   TaskResult,
   TaskStats,
+  YunkeDepartmentOptionsResponse,
   // 来源渠道相关
   SourceChannel,
   DingtalkRobot,
@@ -517,6 +518,16 @@ export const adminApi = {
     return apiClient.delete<ApiResponse<void>>(`${BASE_URL}/campus-departments/${id}`)
   },
 
+  /** 删除区域部门关联（仅员工为空时允许） */
+  async deleteAreaDepartment(id: string): Promise<ApiResponse<void>> {
+    return apiClient.delete<ApiResponse<void>>(`${BASE_URL}/area-departments/${id}`)
+  },
+
+  /** 删除地区部门关联（仅员工为空时允许） */
+  async deleteDistrictDepartment(id: string): Promise<ApiResponse<void>> {
+    return apiClient.delete<ApiResponse<void>>(`${BASE_URL}/district-departments/${id}`)
+  },
+
   /** 批量创建校区部门关联 */
   async batchCreateCampusDepartments(data: {
     campus_id: string
@@ -785,11 +796,80 @@ export const adminApi = {
     return apiClient.post(`${BASE_URL}/assignments/${id}/transfer`, data)
   },
 
+  /** 查询某作用域下的在任员工列表（用于组织架构树右侧部门成员展示） */
+  async listScopeMembers(params: {
+    scope_type: 'campus_department' | 'area_department' | 'district_department' | 'campus' | 'area'
+    scope_id: string
+  }): Promise<ApiResponse<Array<{
+    employee_id: string
+    name: string
+    username: string
+    phone: string | null
+    email: string | null
+    department_name: string | null
+    position_name: string | null
+  }>>> {
+    return apiClient.get(`${BASE_URL}/assignments/meta/scope-members`, { params })
+  },
+
   /** 获取角色元信息（动态渲染表单） */
   async getAssignmentRoleMeta(): Promise<
     ApiResponse<import('./types').AssignmentRoleMetaResponse>
   > {
     return apiClient.get(`${BASE_URL}/assignments/meta/roles`)
+  },
+
+  // ========================================================================
+  // 页面访问权限配置
+  // ========================================================================
+
+  /** 获取所有页面访问配置 */
+  async getPageAccessConfigs(): Promise<ApiResponse<PageAccessConfigItem[]>> {
+    return apiClient.get<ApiResponse<PageAccessConfigItem[]>>(`${BASE_URL}/page-access-configs`)
+  },
+
+  /** 获取指定页面访问配置 */
+  async getPageAccessConfig(pageKey: string): Promise<ApiResponse<PageAccessConfigItem>> {
+    return apiClient.get<ApiResponse<PageAccessConfigItem>>(`${BASE_URL}/page-access-configs/${pageKey}`)
+  },
+
+  /** 更新页面访问配置 (upsert) */
+  async updatePageAccessConfig(pageKey: string, data: PageAccessConfigUpdate): Promise<ApiResponse<PageAccessConfigItem>> {
+    return apiClient.put<ApiResponse<PageAccessConfigItem>>(`${BASE_URL}/page-access-configs/${pageKey}`, data)
+  },
+
+  // ========================================================================
+  // 每日通知管理
+  // ========================================================================
+
+  /** 获取每日通知列表 */
+  async getDailyNotices(page = 1, size = 20): Promise<ApiResponse<PaginatedResponse<DailyNoticeItem>>> {
+    return apiClient.get<ApiResponse<PaginatedResponse<DailyNoticeItem>>>(`${BASE_URL}/daily-notices`, { params: { page, size } })
+  },
+
+  /** 创建每日通知 */
+  async createDailyNotice(data: DailyNoticeCreate): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.post<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices`, data)
+  },
+
+  /** 更新每日通知 */
+  async updateDailyNotice(id: string, data: DailyNoticeUpdate): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.put<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices/${id}`, data)
+  },
+
+  /** 删除每日通知 */
+  async deleteDailyNotice(id: string): Promise<ApiResponse<void>> {
+    return apiClient.delete<ApiResponse<void>>(`${BASE_URL}/daily-notices/${id}`)
+  },
+
+  /** 激活每日通知 */
+  async activateDailyNotice(id: string): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.put<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices/${id}/activate`)
+  },
+
+  /** 停用每日通知 */
+  async deactivateDailyNotice(id: string): Promise<ApiResponse<DailyNoticeItem>> {
+    return apiClient.put<ApiResponse<DailyNoticeItem>>(`${BASE_URL}/daily-notices/${id}/deactivate`)
   },
 }
 
@@ -810,7 +890,7 @@ export const sourceChannelApi = {
   /** 获取渠道详情 */
   async getChannelById(channelId: string): Promise<SourceChannel | undefined> {
     const response = await apiClient.get<ApiResponse<SourceChannel>>(`/source-channels/${channelId}`)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 获取分页的渠道列表 */
@@ -829,19 +909,19 @@ export const sourceChannelApi = {
       page: number
       size: number
     }>>('/source-channels', { params })
-    return response.data
+    return unwrapData(response)
   },
 
   /** 创建来源渠道 */
   async createChannel(data: Partial<SourceChannel>): Promise<SourceChannel | undefined> {
     const response = await apiClient.post<ApiResponse<SourceChannel>>('/source-channels', data)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 更新来源渠道 */
   async updateChannel(id: string, data: Partial<SourceChannel>): Promise<SourceChannel | undefined> {
     const response = await apiClient.put<ApiResponse<SourceChannel>>(`/source-channels/${id}`, data)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 删除来源渠道 */
@@ -1105,25 +1185,25 @@ export const leadAccessStatsApi = {
       statistics: AdvisorAccessStatistics[]
       summary: AccessStatisticsSummary
     }>>(url)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 批量更新访问限制 */
   async batchUpdateAccessLimits(updates: BatchUpdateLimit[]): Promise<{ update_count: number }> {
     const response = await apiClient.put<ApiResponse<{ update_count: number }>>('/lead-access-stats/access-limits', updates)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 获取用户访问限制 */
   async getUserAccessLimit(userId: string): Promise<UserAccessLimit> {
     const response = await apiClient.get<ApiResponse<UserAccessLimit>>(`/lead-access-stats/user/${userId}/limit`)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 设置用户访问限制 */
   async setUserAccessLimit(userId: string, dailyLimit: number): Promise<UserAccessLimit> {
     const response = await apiClient.put<ApiResponse<UserAccessLimit>>(`/lead-access-stats/user/${userId}/limit`, dailyLimit)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 获取访问日志 */
@@ -1153,13 +1233,13 @@ export const leadAccessStatsApi = {
       page: number
       size: number
     }>>(url)
-    return response.data
+    return unwrapData(response)
   },
 
   /** 获取通知配置 */
   async getNotifyConfig(): Promise<LeadAccessNotifyConfig> {
     const response = await apiClient.get<ApiResponse<LeadAccessNotifyConfig>>('/lead-access-stats/notify-config')
-    return response.data
+    return unwrapData(response)
   },
 
   /** 更新通知配置 */
@@ -1381,7 +1461,7 @@ export const apiKeysApi = {
 export interface ASRConfigCreate {
   provider: string
   name: string
-  credentials: Record<string, string>
+  credentials: Record<string, string | boolean>
   is_default?: boolean
   notes?: string
 }
@@ -1389,7 +1469,7 @@ export interface ASRConfigCreate {
 /** ASR 配置更新请求 */
 export interface ASRConfigUpdate {
   name?: string
-  credentials?: Record<string, string>
+  credentials?: Record<string, string | boolean>
   is_active?: boolean
   is_default?: boolean
   notes?: string
@@ -1509,7 +1589,7 @@ export interface AIConfigUpdate {
 // AI 配置 API 已改为 ApiResponse 包装，自动解包 data 字段
 function rawResult<T>(response: unknown): T {
   if (response && typeof response === 'object' && 'success' in response) {
-    return (response as { data: T }).data
+    return (response as unknown as { data: T }).data
   }
   return response as T
 }
@@ -1741,6 +1821,21 @@ export const scheduledTasksApi = {
     })
     if (!response.success || !response.data) {
       throw new Error(response.message || '获取执行时间失败')
+    }
+    return response.data
+  },
+
+  /** 获取云客部门树选项（用于 ASR / 同步任务部门白名单） */
+  async getYunkeDepartmentOptions(params?: {
+    company_code?: string
+    yunke_account_id?: string
+  }): Promise<YunkeDepartmentOptionsResponse> {
+    const response = await apiClient.get<ApiResponse<YunkeDepartmentOptionsResponse>>(
+      '/yunke/call-records/departments/tree',
+      { params }
+    )
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '获取云客部门失败')
     }
     return response.data
   },

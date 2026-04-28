@@ -44,6 +44,7 @@ import {
   UserMinus,
   Wrench,
   Crown,
+  Megaphone,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -68,6 +69,11 @@ export const crmNavGroups: NavGroup[] = [
         url: '/crm/lead-creation-logs',
         icon: ClipboardList,
       },
+      {
+        title: '小地推',
+        url: '/crm/xiaoditui',
+        icon: Megaphone,
+      },
     ],
   },
   {
@@ -83,11 +89,6 @@ export const crmNavGroups: NavGroup[] = [
         title: '线索管理',
         url: '/crm/leads',
         icon: Users,
-      },
-      {
-        title: '渠道台账',
-        url: '/crm/channel-ledger',
-        icon: Library,
       },
       {
         title: '分配任务',

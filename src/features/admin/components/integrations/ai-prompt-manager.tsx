@@ -475,7 +475,7 @@ export function AIPromptManager() {
                   : prev.filter((key) => key !== (record as PromptGroupRow).id)
               )
             }}
-            expandedRowRender={(record: PromptGroupRow) => (
+            expandedRowRender={(record?: PromptGroupRow) => record ? (
               <VersionHistoryPanel
                 record={record}
                 onEdit={(p) => openDialog('edit', p.scene_key, p)}
@@ -483,10 +483,10 @@ export function AIPromptManager() {
                 onPreview={handlePreview}
                 onActivate={(id) => activateMutation.mutate(id)}
               />
-            )}
-            rowExpandable={(record: PromptGroupRow) => record.versionCount > 0}
-            onRow={(record: PromptGroupRow) => ({
-              style: { cursor: record.versionCount > 0 ? 'pointer' : 'default' },
+            ) : null}
+            rowExpandable={(record?: PromptGroupRow) => (record?.versionCount ?? 0) > 0}
+            onRow={(record?: PromptGroupRow) => ({
+              style: { cursor: (record?.versionCount ?? 0) > 0 ? 'pointer' : 'default' },
             })}
             empty={
               <div className="flex flex-col items-center py-8" style={{ color: 'var(--semi-color-text-2)' }}>

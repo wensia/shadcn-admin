@@ -122,8 +122,8 @@ export function EmployeesPage() {
   const [showApiKey, setShowApiKey] = useState(false)
 
   // Semi Form refs
-  const formRef = useRef<FormApi>()
-  const apiKeyFormRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
+  const apiKeyFormRef = useRef<FormApi | null>(null)
 
   // 获取员工列表
   const { data, isLoading, refetch } = useQuery({

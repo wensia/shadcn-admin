@@ -42,6 +42,5 @@ export function SemiSkeletonCell({ width = '70%' }: { width?: string | number })
   return createElement(Skeleton.Paragraph, {
     rows: 1,
     style: { width, height: 16 },
-    loading: true,
   })
 }

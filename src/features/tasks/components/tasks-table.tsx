@@ -46,7 +46,7 @@ export function TasksTable({ data, isLoading = false }: DataTableProps) {
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: (_keys: (string | number)[], rows: Task[]) => {
+    onChange: (_keys: (string | number)[] = [], rows: Task[] = []) => {
       setSelectedRowKeys(rows.map((r) => r.id))
     },
   }

@@ -17,7 +17,7 @@ export function UsersActionDialog({
   onOpenChange,
 }: UserActionDialogProps) {
   const isEdit = !!currentRow
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   useEffect(() => {
     if (open && formRef.current) {
@@ -142,10 +142,8 @@ export function UsersActionDialog({
                   : [
                       { required: true, message: 'Password is required.' },
                       {
-                        validator: (_rule, value) =>
-                          !value || value.length >= 8
-                            ? ''
-                            : 'Password must be at least 8 characters long.',
+                        validator: (_rule, value) => !value || value.length >= 8,
+                        message: 'Password must be at least 8 characters long.',
                       },
                     ]
               }
@@ -162,10 +160,11 @@ export function UsersActionDialog({
                   validator: (_rule, value) => {
                     const password = formRef.current?.getValue('password')
                     if (!isEdit && password && value !== password) {
-                      return "Passwords don't match."
+                      return false
                     }
-                    return ''
+                    return true
                   },
+                  message: "Passwords don't match.",
                 },
               ]}
             />

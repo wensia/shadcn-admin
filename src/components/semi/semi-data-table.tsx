@@ -124,7 +124,8 @@ export function SemiDataTable<T extends { id: string | number }>({
   // 稳定的 onRow 回调 — 通过 ref 访问最新回调，避免闭包过时
   // Semi BaseRow.render() 每次渲染都会调用 onRow() 并缓存返回的 onClick，
   // handleClick 从缓存读取并调用，因此 onClick 始终是最新的。
-  const handleRow = useCallback((record: T | undefined) => ({
+  const handleRow = useCallback((record: T | undefined, index?: number) => ({
+    className: record && !isSkeletonId(record.id) ? rowClassName?.(record, index ?? 0) : undefined,
     onClick: (e: React.MouseEvent) => {
       // 跳过交互元素：checkbox、下拉菜单、显式标记的按钮
       const target = e.target as HTMLElement
@@ -142,7 +143,7 @@ export function SemiDataTable<T extends { id: string | number }>({
     style: {
       cursor: record && !isSkeletonId(record.id) ? 'pointer' : 'default',
     } as React.CSSProperties,
-  }), [])
+  }), [rowClassName])
 
   // 稳定的 empty 内容（防止 Semi Table componentDidUpdate 检测到 prop 变化）
   const emptyContent = useMemo(() => (
@@ -186,7 +187,6 @@ export function SemiDataTable<T extends { id: string | number }>({
           onRow={handleRow}
           pagination={false}
           empty={emptyContent}
-          rowClassName={rowClassName}
         />
       </div>
 

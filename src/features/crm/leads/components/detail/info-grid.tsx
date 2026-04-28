@@ -22,7 +22,8 @@ export function InfoGrid({
   let currentColCount = 0
 
   items.forEach((item) => {
-    const span = React.isValidElement(item) && item.props.span === 2 ? 2 : 1
+    const props = React.isValidElement<{ span?: number }>(item) ? item.props : {}
+    const span = props.span === 2 ? 2 : 1
     if (currentColCount + span > cols) {
       if (currentRow.length > 0) {
         rows.push(currentRow)
@@ -55,7 +56,7 @@ export function InfoGrid({
               </React.Fragment>
             ))}
             {row.length < cols && !row.some((item) =>
-              React.isValidElement(item) && item.props.span === 2
+              React.isValidElement<{ span?: number }>(item) && item.props.span === 2
             ) && (
               <>
                 <td style={{ padding: '6px 12px 6px 0', color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap' }}></td>

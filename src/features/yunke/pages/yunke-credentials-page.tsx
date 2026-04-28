@@ -66,8 +66,8 @@ export function YunkeCredentialsPage() {
   const [selectedCredential, setSelectedCredential] = useState<YunkeCredential | null>(null)
 
   // Semi Form refs
-  const createFormRef = useRef<FormApi>()
-  const updateFormRef = useRef<FormApi>()
+  const createFormRef = useRef<FormApi | null>(null)
+  const updateFormRef = useRef<FormApi | null>(null)
 
   // 查询账号凭证列表
   const { data, isLoading, refetch } = useQuery({
@@ -96,7 +96,18 @@ export function YunkeCredentialsPage() {
 
   // 创建账号
   const createMutation = useMutation({
-    mutationFn: yunkeCredentialsApi.createCredential,
+    mutationFn: (data: CredentialFormValues) => {
+      if (!data.phone || !data.password || !data.company_code || !data.company_name) {
+        throw new Error('请完整填写手机号、密码、公司编码和公司名称')
+      }
+      return yunkeCredentialsApi.createCredential({
+        phone: data.phone,
+        password: data.password,
+        company_code: data.company_code,
+        company_name: data.company_name,
+        domain: data.domain || undefined,
+      })
+    },
     onSuccess: () => {
       toast.success('账号创建成功')
       setCreateModalOpen(false)

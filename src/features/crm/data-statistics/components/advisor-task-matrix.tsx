@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Button, Empty, Skeleton, Table, Tag, Tooltip, Typography } from '@douyinfe/semi-ui-19'
+import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { FileSearch, ShieldCheck, TrendingUp } from 'lucide-react'
 import { formatDurationShort } from '../utils/advisor-call-stats'
 import type { AdvisorTaskCandidateStatus, AdvisorTaskFinalStatus, AdvisorTaskRow } from '../api/advisor-task-api'
@@ -447,26 +448,26 @@ export function AdvisorTaskMatrix({
   onViewDetail,
   onOpenReview,
 }: AdvisorTaskMatrixProps) {
-  const columns = useMemo(() => {
-    const leftFixedCell = (_: unknown, row: AdvisorTaskRow) => ({
-      style: getFixedCellStyle(row),
+  const columns = useMemo<ColumnProps<AdvisorTaskRow>[]>(() => {
+    const leftFixedCell = (row?: AdvisorTaskRow) => ({
+      style: row ? getFixedCellStyle(row) : {},
     })
 
-    const rightFixedCell = (_: unknown, row: AdvisorTaskRow) => ({
-      style: getFixedCellStyle(row),
+    const rightFixedCell = (row?: AdvisorTaskRow) => ({
+      style: row ? getFixedCellStyle(row) : {},
     })
 
-    const baseColumns = [
+    const baseColumns: ColumnProps<AdvisorTaskRow>[] = [
       {
         title: '顾问信息',
-        fixed: 'left',
+        fixed: 'left' as const,
         children: [
           {
             title: '顾问',
             dataIndex: 'advisorName',
             key: 'advisorName',
             width: 180,
-            fixed: 'left',
+            fixed: 'left' as const,
             onCell: leftFixedCell,
             render: (_: unknown, row: AdvisorTaskRow) => (
               <div style={{ minWidth: 0 }}>
@@ -595,7 +596,7 @@ export function AdvisorTaskMatrix({
       {
         title: '操作',
         key: 'actions',
-        fixed: 'right',
+        fixed: 'right' as const,
         width: 170,
         onCell: rightFixedCell,
         render: (_: unknown, row: AdvisorTaskRow) => {
@@ -652,11 +653,12 @@ export function AdvisorTaskMatrix({
         pagination={false}
         columns={columns}
         dataSource={rows}
-        rowKey={(row) => row.recordId || `${row.advisorId}-${row.rangeStart}-${row.rangeEnd}`}
-        expandedRowRender={(row) => <ExpandedTaskRow row={row} />}
+        rowKey={(row) => row ? (row.recordId || `${row.advisorId}-${row.rangeStart}-${row.rangeEnd}`) : ''}
+        expandedRowRender={(row) => row ? <ExpandedTaskRow row={row} /> : null}
         hideExpandedColumn
         scroll={{ x: 2320 }}
         onRow={(row) => {
+          if (!row) return {}
           const meta = getFinalStatusMeta(row.finalStatus)
           const surface = getRowSurface(row.finalStatus)
           return {

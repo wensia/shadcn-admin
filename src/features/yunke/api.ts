@@ -1,9 +1,12 @@
 /**
  * 云客模块 API
  */
-
 import { apiClient } from '@/lib/api/client'
-import { unwrapData, type ApiResponse, type PaginatedResponse } from '@/lib/api/types'
+import {
+  unwrapData,
+  type ApiResponse,
+  type PaginatedResponse,
+} from '@/lib/api/types'
 import type {
   YunkeAdminStatus,
   YunkeAdminLoginResponse,
@@ -25,6 +28,9 @@ import type {
   RecordUrlResponse,
   YunkeCallLogItem,
   AIAnalysisResult,
+  YunkeOnboardingOptions,
+  OnboardingCreateConsultantRequest,
+  OnboardingConsultantResult,
 } from './types'
 
 /**
@@ -36,20 +42,30 @@ export const yunkeApi = {
   // ========================================================================
 
   /** 管理员登录 */
-  async login(data?: { phone?: string; password?: string }): Promise<YunkeAdminLoginResponse> {
-    const response = await apiClient.post<ApiResponse<YunkeAdminLoginResponse>>('/yunke/admin/login', data)
+  async login(data?: {
+    phone?: string
+    password?: string
+  }): Promise<YunkeAdminLoginResponse> {
+    const response = await apiClient.post<ApiResponse<YunkeAdminLoginResponse>>(
+      '/yunke/admin/login',
+      data
+    )
     return unwrapData(response)
   },
 
   /** 获取管理员状态 */
   async getStatus(): Promise<YunkeAdminStatus> {
-    const response = await apiClient.get<ApiResponse<YunkeAdminStatus>>('/yunke/admin/status')
+    const response = await apiClient.get<ApiResponse<YunkeAdminStatus>>(
+      '/yunke/admin/status'
+    )
     return unwrapData(response)
   },
 
   /** 管理员登出 */
   async logout(): Promise<boolean> {
-    const response = await apiClient.post<ApiResponse<{ cookies_cleared: boolean }>>('/yunke/admin/logout')
+    const response = await apiClient.post<
+      ApiResponse<{ cookies_cleared: boolean }>
+    >('/yunke/admin/logout')
     return response.data?.cookies_cleared ?? false
   },
 
@@ -70,18 +86,22 @@ export const yunkeApi = {
     page: number
     page_size: number
   }> {
-    const response = await apiClient.post<ApiResponse<{
-      users: YunkeSubAccount[]
-      total: number
-      page: number
-      page_size: number
-    }>>('/yunke/admin/sub-accounts', params)
+    const response = await apiClient.post<
+      ApiResponse<{
+        users: YunkeSubAccount[]
+        total: number
+        page: number
+        page_size: number
+      }>
+    >('/yunke/admin/sub-accounts', params)
     return unwrapData(response)
   },
 
   /** 获取可绑定的员工列表 */
   async getAvailableEmployees(): Promise<YunkeAvailableEmployee[]> {
-    const response = await apiClient.get<ApiResponse<YunkeAvailableEmployee[]>>('/yunke/admin/available-employees')
+    const response = await apiClient.get<ApiResponse<YunkeAvailableEmployee[]>>(
+      '/yunke/admin/available-employees'
+    )
     return response.data || []
   },
 
@@ -90,16 +110,25 @@ export const yunkeApi = {
     yunke_phone: string
     yunke_user_id: string
     employee_id: string
+    source_account_id?: string
+    company_code?: string | null
+    real_name?: string
   }): Promise<{ success: boolean; message?: string }> {
-    const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>('/yunke/admin/bind-employee', data)
+    const response = await apiClient.post<
+      ApiResponse<{ success: boolean; message?: string }>
+    >('/yunke/admin/bind-employee', data)
     return unwrapData(response)
   },
 
   /** 解绑员工 */
   async unbindEmployee(data: {
     employee_id: string
+    yunke_phone?: string
+    yunke_user_id?: string
   }): Promise<{ success: boolean; message?: string }> {
-    const response = await apiClient.post<ApiResponse<{ success: boolean; message?: string }>>('/yunke/admin/unbind-employee', data)
+    const response = await apiClient.post<
+      ApiResponse<{ success: boolean; message?: string }>
+    >('/yunke/admin/unbind-employee', data)
     return unwrapData(response)
   },
 
@@ -107,17 +136,33 @@ export const yunkeApi = {
   async resetPassword(data: {
     yunke_user_id: string
     phone: string
-    credential_id?: string  // 凭证ID，用于获取对应凭证的cookies
+    credential_id?: string // 凭证ID，用于获取对应凭证的cookies
   }): Promise<YunkePasswordResetResponse> {
-    const response = await apiClient.post<ApiResponse<YunkePasswordResetResponse>>('/yunke/auth/reset-password', data)
+    const response = await apiClient.post<
+      ApiResponse<YunkePasswordResetResponse>
+    >('/yunke/auth/reset-password', data)
     return unwrapData(response)
   },
 
   /** 为员工执行云客登录 */
   async loginForEmployee(data: {
     employee_id: string
-  }): Promise<{ success: boolean; message?: string; employee_name?: string; yunke_phone?: string }> {
-    const response = await apiClient.post<ApiResponse<{ employee_id: string; employee_name: string; yunke_phone: string; cookies_saved: boolean }>>('/yunke/admin/login-for-employee', data)
+    yunke_phone?: string
+    yunke_user_id?: string
+  }): Promise<{
+    success: boolean
+    message?: string
+    employee_name?: string
+    yunke_phone?: string
+  }> {
+    const response = await apiClient.post<
+      ApiResponse<{
+        employee_id: string
+        employee_name: string
+        yunke_phone: string
+        cookies_saved: boolean
+      }>
+    >('/yunke/admin/login-for-employee', data)
     return {
       success: true,
       message: '登录成功',
@@ -128,7 +173,9 @@ export const yunkeApi = {
 
   /** 自动同步绑定（根据姓名匹配） */
   async autoSyncBindings(): Promise<YunkeAutoSyncResult> {
-    const response = await apiClient.post<ApiResponse<YunkeAutoSyncResult>>('/yunke/admin/auto-sync-bindings')
+    const response = await apiClient.post<ApiResponse<YunkeAutoSyncResult>>(
+      '/yunke/admin/auto-sync-bindings'
+    )
     return unwrapData(response)
   },
 
@@ -138,13 +185,17 @@ export const yunkeApi = {
 
   /** 检查所有员工的云客登录状态 */
   async checkAllLoginStatus(): Promise<YunkeLoginStatusResult> {
-    const response = await apiClient.get<ApiResponse<YunkeLoginStatusResult>>('/yunke/admin/check-login-status')
+    const response = await apiClient.get<ApiResponse<YunkeLoginStatusResult>>(
+      '/yunke/admin/check-login-status'
+    )
     return unwrapData(response)
   },
 
   /** 批量更新登录状态 */
   async batchUpdateLogin(): Promise<YunkeBatchLoginResult> {
-    const response = await apiClient.post<ApiResponse<YunkeBatchLoginResult>>('/yunke/admin/batch-update-login')
+    const response = await apiClient.post<ApiResponse<YunkeBatchLoginResult>>(
+      '/yunke/admin/batch-update-login'
+    )
     return unwrapData(response)
   },
 
@@ -154,15 +205,19 @@ export const yunkeApi = {
 
   /** 获取仪表盘统计数据 */
   async getDashboardStats(): Promise<YunkeDashboardStats> {
-    const response = await apiClient.get<ApiResponse<YunkeDashboardStats>>('/yunke/admin/dashboard-stats')
-    return response.data || {
-      total_accounts: 0,
-      active_accounts: 0,
-      logged_in_accounts: 0,
-      bound_employees: 0,
-      today_calls: 0,
-      today_duration: 0,
-    }
+    const response = await apiClient.get<ApiResponse<YunkeDashboardStats>>(
+      '/yunke/admin/dashboard-stats'
+    )
+    return (
+      response.data || {
+        total_accounts: 0,
+        active_accounts: 0,
+        logged_in_accounts: 0,
+        bound_employees: 0,
+        today_calls: 0,
+        today_duration: 0,
+      }
+    )
   },
 }
 
@@ -177,10 +232,9 @@ export const yunkeCredentialsApi = {
     skip?: number
     limit?: number
   }): Promise<YunkeCredentialListResponse> {
-    const response = await apiClient.get<ApiResponse<YunkeCredentialListResponse>>(
-      '/external/yunke-accounts',
-      { params }
-    )
+    const response = await apiClient.get<
+      ApiResponse<YunkeCredentialListResponse>
+    >('/external/yunke-accounts', { params })
     return unwrapData(response)
   },
 
@@ -193,7 +247,9 @@ export const yunkeCredentialsApi = {
   },
 
   /** 创建账号凭证（Upsert） */
-  async createCredential(data: YunkeCredentialCreate): Promise<YunkeCredential> {
+  async createCredential(
+    data: YunkeCredentialCreate
+  ): Promise<YunkeCredential> {
     const response = await apiClient.post<ApiResponse<YunkeCredential>>(
       '/external/yunke-accounts',
       data
@@ -202,7 +258,10 @@ export const yunkeCredentialsApi = {
   },
 
   /** 更新账号密码 */
-  async updateCredential(id: string, data: YunkeCredentialUpdate): Promise<YunkeCredential> {
+  async updateCredential(
+    id: string,
+    data: YunkeCredentialUpdate
+  ): Promise<YunkeCredential> {
     const response = await apiClient.put<ApiResponse<YunkeCredential>>(
       `/external/yunke-accounts/${id}`,
       data
@@ -211,15 +270,19 @@ export const yunkeCredentialsApi = {
   },
 
   /** 删除账号凭证 */
-  async deleteCredential(id: string): Promise<{ success: boolean; message: string }> {
-    const response = await apiClient.delete<ApiResponse<{ success: boolean; message: string }>>(
-      `/external/yunke-accounts/${id}`
-    )
+  async deleteCredential(
+    id: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await apiClient.delete<
+      ApiResponse<{ success: boolean; message: string }>
+    >(`/external/yunke-accounts/${id}`)
     return unwrapData(response)
   },
 
   /** 手动登录/刷新登录 */
-  async loginCredential(id: string): Promise<{ success: boolean; message: string; status?: number }> {
+  async loginCredential(
+    id: string
+  ): Promise<{ success: boolean; message: string; status?: number }> {
     const response = await apiClient.post<ApiResponse<{ status: number }>>(
       `/external/yunke-accounts/${id}/refresh`
     )
@@ -251,12 +314,18 @@ export const yunkeCredentialsApi = {
     accounts_count: number
     errors?: Array<{ account_id: string; account_phone: string; error: string }>
   }> {
-    const response = await apiClient.post<ApiResponse<{
-      users: YunkeSubAccount[]
-      total: number
-      accounts_count: number
-      errors?: Array<{ account_id: string; account_phone: string; error: string }>
-    }>>('/external/yunke-accounts/sub-accounts', params)
+    const response = await apiClient.post<
+      ApiResponse<{
+        users: YunkeSubAccount[]
+        total: number
+        accounts_count: number
+        errors?: Array<{
+          account_id: string
+          account_phone: string
+          error: string
+        }>
+      }>
+    >('/external/yunke-accounts/sub-accounts', params)
     return unwrapData(response)
   },
 
@@ -278,16 +347,64 @@ export const yunkeCredentialsApi = {
       company_name: string | null
     }
   }> {
-    const response = await apiClient.post<ApiResponse<{
-      users: YunkeSubAccount[]
-      total: number
-      account: {
-        id: string
-        phone: string
-        company_code: string | null
-        company_name: string | null
-      }
-    }>>(`/external/yunke-accounts/${accountId}/sub-accounts`, params)
+    const response = await apiClient.post<
+      ApiResponse<{
+        users: YunkeSubAccount[]
+        total: number
+        account: {
+          id: string
+          phone: string
+          company_code: string | null
+          company_name: string | null
+        }
+      }>
+    >(`/external/yunke-accounts/${accountId}/sub-accounts`, params)
+    return unwrapData(response)
+  },
+}
+
+/**
+ * 一键建咨询师（onboarding）API
+ */
+export const yunkeOnboardingApi = {
+  /** 拉取 credential 对应的云客部门树 + 角色列表，填充弹窗级联下拉 */
+  async getOptions(
+    yunkeAdminAccountId: string
+  ): Promise<YunkeOnboardingOptions> {
+    const response = await apiClient.get<ApiResponse<YunkeOnboardingOptions>>(
+      '/yunke/admin/onboarding/yunke-options',
+      { params: { yunke_admin_account_id: yunkeAdminAccountId } }
+    )
+    return unwrapData(response)
+  },
+
+  /** 一键创建：已有 CRM 员工 + 云客咨询师 + 绑定 + 登录 */
+  async createConsultant(
+    payload: OnboardingCreateConsultantRequest
+  ): Promise<OnboardingConsultantResult> {
+    const response = await apiClient.post<
+      ApiResponse<OnboardingConsultantResult>
+    >('/yunke/admin/onboarding/create-consultant', payload)
+    return unwrapData(response)
+  },
+
+  /** 云客子账号「离职处理」：调用云客 unBindMemberAndDevice 并同步清空 RuiMF employee.yunke */
+  async offboardSubAccount(payload: {
+    yunke_admin_account_id: string
+    yunke_user_id: string
+    area_flag?: string
+  }): Promise<{
+    yunke_user_id: string
+    yunke_raw: unknown
+    rmf_unbound_employees: Array<{ id: string; name: string }>
+  }> {
+    const response = await apiClient.post<
+      ApiResponse<{
+        yunke_user_id: string
+        yunke_raw: unknown
+        rmf_unbound_employees: Array<{ id: string; name: string }>
+      }>
+    >('/yunke/admin/offboard-sub-account', payload)
     return unwrapData(response)
   },
 }
@@ -297,11 +414,12 @@ export const yunkeCredentialsApi = {
  */
 export const callRecordsApi = {
   /** 获取通话记录列表 */
-  async getCallRecords(params?: CallRecordListParams): Promise<PaginatedResponse<CallRecord>> {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<CallRecord>>>(
-      '/yunke/call-records',
-      { params }
-    )
+  async getCallRecords(
+    params?: CallRecordListParams
+  ): Promise<PaginatedResponse<CallRecord>> {
+    const response = await apiClient.get<
+      ApiResponse<PaginatedResponse<CallRecord>>
+    >('/yunke/call-records', { params })
     return unwrapData(response)
   },
 
@@ -336,13 +454,13 @@ export const callRecordsApi = {
     record_id: string
     status: string
   }> {
-    const response = await apiClient.post<ApiResponse<{
-      task_id: string
-      record_id: string
-      status: string
-    }>>(
-      `/yunke/call-records/${recordId}/analyze`
-    )
+    const response = await apiClient.post<
+      ApiResponse<{
+        task_id: string
+        record_id: string
+        status: string
+      }>
+    >(`/yunke/call-records/${recordId}/analyze`)
     return unwrapData(response)
   },
 
@@ -353,14 +471,14 @@ export const callRecordsApi = {
     error: string | null
     analyzed_at: string | null
   }> {
-    const response = await apiClient.get<ApiResponse<{
-      status: string
-      analysis: AIAnalysisResult | null
-      error: string | null
-      analyzed_at: string | null
-    }>>(
-      `/yunke/call-records/${recordId}/analysis-status`
-    )
+    const response = await apiClient.get<
+      ApiResponse<{
+        status: string
+        analysis: AIAnalysisResult | null
+        error: string | null
+        analyzed_at: string | null
+      }>
+    >(`/yunke/call-records/${recordId}/analysis-status`)
     return unwrapData(response)
   },
 
@@ -410,12 +528,14 @@ export const callRecordsApi = {
     page: number
     size: number
   }> {
-    const response = await apiClient.get<ApiResponse<{
-      items: YunkeCallLogItem[]
-      total: number
-      page: number
-      size: number
-    }>>('/yunke/call-records/search', { params })
+    const response = await apiClient.get<
+      ApiResponse<{
+        items: YunkeCallLogItem[]
+        total: number
+        page: number
+        size: number
+      }>
+    >('/yunke/call-records/search', { params })
     return unwrapData(response)
   },
 
@@ -430,7 +550,7 @@ export const callRecordsApi = {
     start_date?: string
     end_date?: string
     incoming_call_type?: string
-    account_id?: string  // 云客账号ID，用于指定使用哪个账号的凭证
+    account_id?: string // 云客账号ID，用于指定使用哪个账号的凭证
   }): Promise<CallStatisticsData> {
     const response = await apiClient.get<ApiResponse<CallStatisticsData>>(
       '/yunke/call-records/statistics',
@@ -445,10 +565,9 @@ export const callRecordsApi = {
     time: string
     account_id?: string
   }): Promise<AppCallAndMsgStatisticsData> {
-    const response = await apiClient.get<ApiResponse<AppCallAndMsgStatisticsData>>(
-      '/yunke/call-records/app-statistics/call-and-msg',
-      { params }
-    )
+    const response = await apiClient.get<
+      ApiResponse<AppCallAndMsgStatisticsData>
+    >('/yunke/call-records/app-statistics/call-and-msg', { params })
     return unwrapData(response)
   },
 
@@ -465,15 +584,19 @@ export const callRecordsApi = {
     corrections: Record<string, string>
     total: number
   }> {
-    const response = await apiClient.get<ApiResponse<{
-      corrections: Record<string, string>
-      total: number
-    }>>('/yunke/call-records/transcript-correction/dictionary')
+    const response = await apiClient.get<
+      ApiResponse<{
+        corrections: Record<string, string>
+        total: number
+      }>
+    >('/yunke/call-records/transcript-correction/dictionary')
     return unwrapData(response)
   },
 
   /** 预览转录纠错结果 */
-  async previewTranscriptCorrection(corrections: Record<string, string>): Promise<{
+  async previewTranscriptCorrection(
+    corrections: Record<string, string>
+  ): Promise<{
     total_records_affected: number
     total_replacements: number
     details: Array<{ wrong: string; correct: string; count: number }>
@@ -485,38 +608,38 @@ export const callRecordsApi = {
       corrected_text: string
     }>
   }> {
-    const response = await apiClient.post<ApiResponse<{
-      total_records_affected: number
-      total_replacements: number
-      details: Array<{ wrong: string; correct: string; count: number }>
-      sample_records: Array<{
-        record_id: string
-        staff_name: string
-        call_time: string
-        original_text: string
-        corrected_text: string
+    const response = await apiClient.post<
+      ApiResponse<{
+        total_records_affected: number
+        total_replacements: number
+        details: Array<{ wrong: string; correct: string; count: number }>
+        sample_records: Array<{
+          record_id: string
+          staff_name: string
+          call_time: string
+          original_text: string
+          corrected_text: string
+        }>
       }>
-    }>>(
-      '/yunke/call-records/transcript-correction/preview',
-      { corrections }
-    )
+    >('/yunke/call-records/transcript-correction/preview', { corrections })
     return unwrapData(response)
   },
 
   /** 执行转录纠错 */
-  async applyTranscriptCorrection(corrections: Record<string, string>): Promise<{
+  async applyTranscriptCorrection(
+    corrections: Record<string, string>
+  ): Promise<{
     total_records_updated: number
     total_replacements: number
     details: Array<{ wrong: string; correct: string; replaced: number }>
   }> {
-    const response = await apiClient.post<ApiResponse<{
-      total_records_updated: number
-      total_replacements: number
-      details: Array<{ wrong: string; correct: string; replaced: number }>
-    }>>(
-      '/yunke/call-records/transcript-correction/apply',
-      { corrections }
-    )
+    const response = await apiClient.post<
+      ApiResponse<{
+        total_records_updated: number
+        total_replacements: number
+        details: Array<{ wrong: string; correct: string; replaced: number }>
+      }>
+    >('/yunke/call-records/transcript-correction/apply', { corrections })
     return unwrapData(response)
   },
 }

@@ -5,6 +5,7 @@
 
 import { Tag } from '@douyinfe/semi-ui-19'
 import { Check, X, CircleDot } from 'lucide-react'
+import type { CSSProperties } from 'react'
 
 interface StatusBadgeProps {
   isActive: boolean
@@ -17,7 +18,7 @@ export function StatusBadge({ isActive, showIcon = true }: StatusBadgeProps) {
   return (
     <Tag
       size="small"
-      shape="round"
+      shape="circle"
       style={
         isActive
           ? { backgroundColor: 'rgba(120,140,93,0.1)', color: '#788c5d', borderColor: 'rgba(120,140,93,0.3)' }
@@ -37,7 +38,7 @@ export function EmployeeStatusBadge({ isActive, showIcon = true }: StatusBadgePr
   return (
     <Tag
       size="small"
-      shape="round"
+      shape="circle"
       style={
         isActive
           ? { backgroundColor: 'rgba(120,140,93,0.1)', color: '#788c5d', borderColor: 'rgba(120,140,93,0.3)' }
@@ -53,7 +54,7 @@ export function EmployeeStatusBadge({ isActive, showIcon = true }: StatusBadgePr
 }
 
 // 来源渠道分类标签
-const categoryStyles: Record<string, { style: React.CSSProperties; label: string }> = {
+const categoryStyles: Record<string, { style: CSSProperties; label: string }> = {
   ONLINE: { style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' }, label: '线上渠道' },
   OFFLINE: { style: { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }, label: '线下渠道' },
   REFERRAL: { style: { backgroundColor: 'rgba(120,140,93,0.1)', color: '#788c5d', borderColor: 'rgba(120,140,93,0.3)' }, label: '推荐渠道' },
@@ -64,7 +65,7 @@ const categoryStyles: Record<string, { style: React.CSSProperties; label: string
 export function SourceChannelCategoryBadge({ category }: { category: string }) {
   const config = categoryStyles[category] || categoryStyles.OTHER
   return (
-    <Tag size="small" shape="round" style={{ ...config.style, fontSize: 12, fontWeight: 500 }}>
+    <Tag size="small" shape="circle" style={{ ...config.style, fontSize: 12, fontWeight: 500 }}>
       {config.label}
     </Tag>
   )
@@ -72,11 +73,11 @@ export function SourceChannelCategoryBadge({ category }: { category: string }) {
 
 // 职级排序权重标签
 export function PositionLevelBadge({ level }: { level: number }) {
-  const style: React.CSSProperties = level >= 4
+  const style: CSSProperties = level >= 4
     ? { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }
     : { backgroundColor: 'rgba(176,174,165,0.1)', color: '#b0aea5', borderColor: 'rgba(176,174,165,0.3)' }
   return (
-    <Tag size="small" shape="round" style={{ ...style, fontSize: 12, fontWeight: 500 }}>
+    <Tag size="small" shape="circle" style={{ ...style, fontSize: 12, fontWeight: 500 }}>
       L{level}
     </Tag>
   )
@@ -88,7 +89,7 @@ export function SuperuserBadge({ isSuperuser }: { isSuperuser: boolean }) {
   return (
     <Tag
       size="small"
-      shape="round"
+      shape="circle"
       style={{ backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', fontSize: 12, fontWeight: 500 }}
     >
       超级管理员
@@ -97,7 +98,7 @@ export function SuperuserBadge({ isSuperuser }: { isSuperuser: boolean }) {
 }
 
 // 职位名称标签
-const positionKeywordVariants: Array<{ keywords: string[]; style: React.CSSProperties }> = [
+const positionKeywordVariants: Array<{ keywords: string[]; style: CSSProperties }> = [
   { keywords: ['总裁', '副总裁', '总经理', 'CEO', 'COO', 'CFO'], style: { backgroundColor: 'rgba(20,20,19,0.1)', color: '#141413', borderColor: 'rgba(20,20,19,0.3)' } },
   { keywords: ['总监', '副总监'], style: { backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' } },
   { keywords: ['经理', '副经理'], style: { backgroundColor: 'rgba(106,155,204,0.1)', color: '#6a9bcc', borderColor: 'rgba(106,155,204,0.3)' } },
@@ -105,7 +106,7 @@ const positionKeywordVariants: Array<{ keywords: string[]; style: React.CSSPrope
   { keywords: ['专员', '助理', '顾问'], style: { backgroundColor: 'rgba(232,230,220,0.5)', color: '#141413', borderColor: 'rgba(176,174,165,0.3)' } },
 ]
 
-function getPositionStyle(name: string): React.CSSProperties {
+function getPositionStyle(name: string): CSSProperties {
   for (const { keywords, style } of positionKeywordVariants) {
     for (const kw of keywords) {
       if (name.includes(kw)) return style
@@ -116,7 +117,7 @@ function getPositionStyle(name: string): React.CSSProperties {
 
 export function PositionNameBadge({ positionName }: { positionName: string }) {
   return (
-    <Tag size="small" shape="round" style={{ ...getPositionStyle(positionName), fontSize: 12, fontWeight: 500 }}>
+    <Tag size="small" shape="circle" style={{ ...getPositionStyle(positionName), fontSize: 12, fontWeight: 500 }}>
       {positionName}
     </Tag>
   )

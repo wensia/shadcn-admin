@@ -13,7 +13,7 @@ const items = [
 ] as const
 
 export function DisplayForm() {
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   function handleSubmit(values: { items: string[] }) {
     showSubmittedData(values)

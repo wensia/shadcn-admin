@@ -845,13 +845,13 @@ export function ContinuousCallPage() {
                 </Divider>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Checkbox checked={releaseToPool} onChange={(e) => setReleaseToPool(e.target.checked)}>
+                    <Checkbox checked={releaseToPool} onChange={(e) => setReleaseToPool(Boolean(e.target.checked))}>
                       释放公海
                     </Checkbox>
-                    <Checkbox checked={wechatAdded} onChange={(e) => setWechatAdded(e.target.checked)}>
+                    <Checkbox checked={wechatAdded} onChange={(e) => setWechatAdded(Boolean(e.target.checked))}>
                       已加微信
                     </Checkbox>
-                    <Checkbox checked={sendToDingding} onChange={(e) => setSendToDingding(e.target.checked)}>
+                    <Checkbox checked={sendToDingding} onChange={(e) => setSendToDingding(Boolean(e.target.checked))}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                         <Send style={{ width: 12, height: 12 }} />
                         发钉钉

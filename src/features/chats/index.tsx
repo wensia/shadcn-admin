@@ -41,7 +41,7 @@ export function Chats() {
 
   const currentMessage = selectedUser?.messages.reduce(
     (acc: Record<string, Convo[]>, obj) => {
-      const key = format(obj.timestamp, 'd MMM, yyyy')
+      const key = format(new Date(obj.timestamp), 'd MMM, yyyy')
 
       // Create an array for the category if it doesn't exist
       if (!acc[key]) {
@@ -230,7 +230,7 @@ export function Chats() {
                                       'text-end text-primary-foreground/85'
                                   )}
                                 >
-                                  {format(msg.timestamp, 'h:mm a')}
+                                  {format(new Date(msg.timestamp), 'h:mm a')}
                                 </span>
                               </div>
                             ))}

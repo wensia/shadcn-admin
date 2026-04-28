@@ -1,5 +1,6 @@
 import { SideSheet, Tag, Typography } from '@douyinfe/semi-ui-19'
 import { useIsMobile } from '@/hooks/use-mobile'
+import type { SemiTagColor } from '@/lib/semi-types'
 import type { TrainingReview } from './coach-types'
 
 const { Text } = Typography
@@ -14,7 +15,7 @@ const SCORE_LABELS: Record<string, { label: string; weight: string }> = {
   rhythm: { label: '整体节奏', weight: '5%' },
 }
 
-const GRADE_COLORS: Record<string, string> = {
+const GRADE_COLORS: Record<string, SemiTagColor> = {
   S: 'red',
   A: 'orange',
   B: 'blue',

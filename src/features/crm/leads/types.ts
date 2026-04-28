@@ -553,7 +553,9 @@ export const leadStatusLabels: Record<LeadStatus, string> = {
   [LeadStatus.FOLLOWING_UP]: '跟进中',
   [LeadStatus.FOLLOWED_UP]: '已回访',
   [LeadStatus.TRIAL_SCHEDULED]: '已预约试听',
+  [LeadStatus.INVITED_NO_SHOW]: '已邀约未到访',
   [LeadStatus.VISITED]: '已到访',
+  [LeadStatus.VISITED_NOT_SIGNED]: '到访未签约',
   [LeadStatus.PAID]: '已缴费',
   [LeadStatus.INVALID]: '无效',
   [LeadStatus.CLOSED]: '关闭'

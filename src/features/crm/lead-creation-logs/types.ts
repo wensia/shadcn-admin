@@ -2,6 +2,8 @@
  * 线索创建日志类型定义
  */
 
+import type { SemiTagColor } from '@/lib/semi-types'
+
 /** 渠道提交日志列表项 */
 export interface ChannelSubmitLogItem {
   id: string
@@ -48,7 +50,7 @@ export interface ManualLeadLogParams {
 /** 渠道提交状态配置 */
 export const submitStatusConfig: Record<
   string,
-  { label: string; color: string }
+  { label: string; color: SemiTagColor }
 > = {
   created: { label: '新录入', color: 'green' },
   collision_taken: { label: '撞量接管', color: 'orange' },

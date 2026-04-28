@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from '@/lib/api/client'
-import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
+import { unwrapData, type ApiResponse, type PaginatedResponse } from '@/lib/api/types'
 
 // ==================== 类型定义 ====================
 
@@ -221,7 +221,7 @@ export const paymentTypeLabels: Record<PaymentType, string> = {
   other: '其他'
 }
 
-function compactQueryParams<T extends Record<string, unknown>>(params: T) {
+function compactQueryParams<T extends object>(params: T) {
   return Object.fromEntries(
     Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
   ) as Partial<T>
@@ -267,7 +267,7 @@ export async function getVisitSchedules(params: VisitScheduleQueryParams = {}) {
     '/visit-schedules',
     { params }
   )
-  return response.data
+  return unwrapData(response)
 }
 
 /** 创建到访预约 */
@@ -282,7 +282,7 @@ export async function createVisitSchedule(data: VisitScheduleCreateData) {
       status: data.status ?? 'scheduled',
     }
   )
-  return response.data
+  return unwrapData(response)
 }
 
 /** 更新到访预约状态 */
@@ -353,7 +353,7 @@ export async function getPayments(params: PaymentQueryParams = {}) {
     '/payments',
     { params }
   )
-  return response.data
+  return unwrapData(response)
 }
 
 /** 更新缴费状态 */

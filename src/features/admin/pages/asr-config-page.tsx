@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Mic, Plus, Pencil, Trash2, Play, Star } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import type { SemiTagColor } from '@/lib/semi-types'
 
 import { Form, Button, Modal, Input, Typography, Tag, Banner } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
@@ -75,7 +76,7 @@ const PROVIDER_FIELD_CONFIGS: Record<ASRProvider, { required: string[]; optional
 
 export function ASRConfigPage() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   // 状态管理
   const [page, setPage] = useState(1)
@@ -188,7 +189,7 @@ export function ASRConfigPage() {
   }
 
   // 提供商徽章颜色
-  const getProviderTagColor = (provider: string): string | undefined => {
+  const getProviderTagColor = (provider: string): SemiTagColor | undefined => {
     switch (provider) {
       case 'volcengine':
         return 'blue'

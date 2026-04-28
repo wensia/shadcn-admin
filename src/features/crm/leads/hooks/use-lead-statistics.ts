@@ -6,9 +6,9 @@
 import * as React from 'react'
 import {
   followupMethodLabels,
+  LeadStatus,
   type Lead,
   type LeadFollowup,
-  type LeadStatus,
   type FollowupMethod,
   type FollowupResult,
 } from '../types'
@@ -19,16 +19,16 @@ import type { ResultDistributionData } from '../components/detail/charts/followu
 
 // 状态流程顺序（从左到右表示销售漏斗进度）
 const STATUS_ORDER: LeadStatus[] = [
-  'pending_assign',
-  'pending_followup',
-  'following_up',
-  'followed_up',
-  'trial_scheduled',
-  'visited',
-  'paid',
+  LeadStatus.PENDING_ASSIGN,
+  LeadStatus.PENDING_FOLLOWUP,
+  LeadStatus.FOLLOWING_UP,
+  LeadStatus.FOLLOWED_UP,
+  LeadStatus.TRIAL_SCHEDULED,
+  LeadStatus.VISITED,
+  LeadStatus.PAID,
 ]
 
-const TERMINAL_STATUSES: LeadStatus[] = ['invalid', 'closed']
+const TERMINAL_STATUSES: LeadStatus[] = [LeadStatus.INVALID, LeadStatus.CLOSED]
 
 // 跟进方式颜色
 const METHOD_COLORS: Record<FollowupMethod, string> = {

@@ -18,18 +18,20 @@ import {
   PauseCircle,
   AlertCircle,
   Check,
+  UserPlus,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Tag, Modal, Tabs, TabPane, Typography, Banner } from '@douyinfe/semi-ui-19'
-import { IconSearch } from '@douyinfe/semi-icons'
+import { Table, Button, Input, Tag, Modal, Tabs, TabPane, Typography, Banner, Dropdown } from '@douyinfe/semi-ui-19'
+import { IconSearch, IconMore } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
-import { yunkeApi, yunkeCredentialsApi } from '../api'
+import { yunkeApi, yunkeCredentialsApi, yunkeOnboardingApi } from '../api'
 import type { YunkeSubAccount, YunkeAvailableEmployee, YunkePasswordResetResponse, YunkeCredential } from '../types'
+import { CreateConsultantDialog } from '../components/create-consultant-dialog'
 
 const { Text } = Typography
 const EMPTY_EMPLOYEES: YunkeAvailableEmployee[] = []
@@ -54,7 +56,7 @@ function SubAccountsTable({
   const [selectedBindEmployee, setSelectedBindEmployee] = useState<YunkeAvailableEmployee | null>(null)
   const bindPageSize = 5
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'resetPassword' | 'unbind'
+    type: 'resetPassword' | 'unbind' | 'offboard'
     account?: YunkeSubAccount
   } | null>(null)
   const [selectedAccount, setSelectedAccount] = useState<YunkeSubAccount | null>(null)
@@ -119,7 +121,14 @@ function SubAccountsTable({
 
   // 绑定员工
   const bindMutation = useMutation({
-    mutationFn: (data: { yunke_phone: string; yunke_user_id: string; employee_id: string }) =>
+    mutationFn: (data: {
+      yunke_phone: string
+      yunke_user_id: string
+      employee_id: string
+      source_account_id?: string
+      company_code?: string | null
+      real_name?: string
+    }) =>
       yunkeApi.bindEmployee(data),
     onSuccess: () => {
       toast.success('绑定成功')
@@ -136,7 +145,7 @@ function SubAccountsTable({
 
   // 解绑员工
   const unbindMutation = useMutation({
-    mutationFn: (data: { employee_id: string }) => yunkeApi.unbindEmployee(data),
+    mutationFn: (data: { employee_id: string; yunke_phone?: string; yunke_user_id?: string }) => yunkeApi.unbindEmployee(data),
     onSuccess: () => {
       toast.success('解绑成功')
       queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
@@ -149,13 +158,35 @@ function SubAccountsTable({
 
   // 为员工执行云客登录
   const loginForEmployeeMutation = useMutation({
-    mutationFn: (data: { employee_id: string }) => yunkeApi.loginForEmployee(data),
+    mutationFn: (data: { employee_id: string; yunke_phone?: string; yunke_user_id?: string }) => yunkeApi.loginForEmployee(data),
     onSuccess: (response) => {
       toast.success(response.message || '登录成功')
       queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '登录失败')
+    },
+  })
+
+  // 云客子账号离职处理
+  const offboardMutation = useMutation({
+    mutationFn: (data: { yunke_user_id: string }) =>
+      yunkeOnboardingApi.offboardSubAccount({
+        yunke_admin_account_id: credential.id,
+        yunke_user_id: data.yunke_user_id,
+      }),
+    onSuccess: (res) => {
+      const unboundCount = res?.rmf_unbound_employees?.length ?? 0
+      toast.success(
+        unboundCount > 0
+          ? `已离职处理，同步解绑 RuiMF 员工 ${unboundCount} 位`
+          : '已离职处理'
+      )
+      queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['yunke-available-employees'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '离职处理失败')
     },
   })
 
@@ -314,10 +345,10 @@ function SubAccountsTable({
       {
         title: '操作',
         dataIndex: 'actions',
-        width: 180,
+        width: 80,
         fixed: 'right' as const,
         render: (_: unknown, record: YunkeSubAccount) => {
-          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={40} />
           const bound = record.bound_employee
           const loginStatus = record.login_status
           const isLoggedIn = loginStatus?.is_logged_in
@@ -326,30 +357,56 @@ function SubAccountsTable({
             !bound || !loginStatus?.has_password || loginForEmployeeMutation.isPending
 
           return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Dropdown
+              trigger="click"
+              position="bottomRight"
+              render={
+                <Dropdown.Menu>
+                  <Dropdown.Item
+                    disabled={loginDisabled}
+                    onClick={() => {
+                      if (bound && canLogin) {
+                        loginForEmployeeMutation.mutate({
+                          employee_id: bound.id,
+                          yunke_phone: record.phone,
+                          yunke_user_id: record.id,
+                        })
+                      }
+                    }}
+                  >
+                    {isLoggedIn ? '重新登录' : '登录'}
+                    {!bound && (
+                      <Text type="tertiary" size="small" style={{ marginLeft: 6 }}>
+                        (请先绑定员工)
+                      </Text>
+                    )}
+                    {bound && !loginStatus?.has_password && (
+                      <Text type="tertiary" size="small" style={{ marginLeft: 6 }}>
+                        (请先重置密码)
+                      </Text>
+                    )}
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => handleResetPasswordClick(record)}>
+                    重置密码
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item
+                    type="danger"
+                    disabled={offboardMutation.isPending}
+                    onClick={() => handleOffboardClick(record)}
+                  >
+                    离职处理
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              }
+            >
               <Button
-                theme={isLoggedIn ? 'light' : 'outline'}
+                theme="borderless"
+                icon={<IconMore />}
                 size="small"
-                style={{ height: 28, fontSize: 12 }}
-                disabled={loginDisabled}
-                title={!bound ? '请先绑定员工' : !loginStatus?.has_password ? '请先重置密码' : undefined}
-                onClick={() => {
-                  if (bound && canLogin) {
-                    loginForEmployeeMutation.mutate({ employee_id: bound.id })
-                  }
-                }}
-              >
-                {isLoggedIn ? '重新登录' : '登录'}
-              </Button>
-              <Button
-                theme="outline"
-                size="small"
-                style={{ height: 28, fontSize: 12 }}
-                onClick={() => handleResetPasswordClick(record)}
-              >
-                重置密码
-              </Button>
-            </div>
+                style={{ height: 28, width: 32 }}
+              />
+            </Dropdown>
           )
         },
       },
@@ -376,6 +433,12 @@ function SubAccountsTable({
     setConfirmDialogOpen(true)
   }
 
+  const handleOffboardClick = (account: YunkeSubAccount) => {
+    setSelectedAccount(account)
+    setConfirmAction({ type: 'offboard', account })
+    setConfirmDialogOpen(true)
+  }
+
   const handleConfirmAction = () => {
     if (!confirmAction) return
 
@@ -391,7 +454,16 @@ function SubAccountsTable({
         break
       case 'unbind':
         if (confirmAction.account?.bound_employee) {
-          unbindMutation.mutate({ employee_id: confirmAction.account.bound_employee.id })
+          unbindMutation.mutate({
+            employee_id: confirmAction.account.bound_employee.id,
+            yunke_phone: confirmAction.account.phone,
+            yunke_user_id: confirmAction.account.id,
+          })
+        }
+        break
+      case 'offboard':
+        if (confirmAction.account?.id) {
+          offboardMutation.mutate({ yunke_user_id: confirmAction.account.id })
         }
         break
     }
@@ -405,6 +477,9 @@ function SubAccountsTable({
       yunke_phone: selectedAccount.phone,
       yunke_user_id: selectedAccount.id,
       employee_id: selectedBindEmployee.id,
+      source_account_id: selectedAccount.source_account_id || credential.id,
+      company_code: credential.company_code,
+      real_name: selectedAccount.real_name,
     })
   }
 
@@ -451,6 +526,11 @@ function SubAccountsTable({
         return {
           title: '确认解绑',
           description: `确定要解绑用户 ${confirmAction.account?.real_name} 与员工 ${confirmAction.account?.bound_employee?.name} 的绑定关系吗？`,
+        }
+      case 'offboard':
+        return {
+          title: '确认离职处理',
+          description: `确定要将云客员工 ${confirmAction.account?.real_name}（${confirmAction.account?.username}）做离职处理吗？此操作会在云客侧解绑账号和设备，并同步清空 RuiMF 员工的云客绑定。`,
         }
     }
   }
@@ -514,9 +594,23 @@ function SubAccountsTable({
       title: '已绑定云客',
       dataIndex: 'bound_yunke',
       render: (_: unknown, record: YunkeAvailableEmployee) => {
-        if (record.bound_yunke) {
+        const boundAccounts = record.bound_yunke_accounts?.length
+          ? record.bound_yunke_accounts
+          : record.bound_yunke
+            ? [record.bound_yunke]
+            : []
+        if (boundAccounts.length > 0) {
           return (
-            <Tag color="orange" type="ghost" size="small">{record.bound_yunke.phone}</Tag>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {boundAccounts.slice(0, 2).map((account, index) => (
+                <Tag key={`${account.yunke_user_id || account.phone || index}`} color="orange" type="ghost" size="small">
+                  {account.phone || account.yunke_user_id}
+                </Tag>
+              ))}
+              {boundAccounts.length > 2 && (
+                <Tag color="grey" type="light" size="small">+{boundAccounts.length - 2}</Tag>
+              )}
+            </div>
           )
         }
         return <Text type="tertiary" size="small">-</Text>
@@ -570,14 +664,14 @@ function SubAccountsTable({
               {bindMutation.isPending
                 ? '绑定中...'
                 : selectedBindEmployee
-                  ? `确定选择 ${selectedBindEmployee.name}`
+                  ? `绑定到 ${selectedBindEmployee.name}`
                   : '请先选择员工'}
             </Button>
           </div>
         }
       >
         <Text type="tertiary" style={{ display: 'block', marginBottom: 12 }}>
-          为云客账号 {selectedAccount?.real_name}（{selectedAccount?.phone}）选择要绑定的员工
+          为云客账号 {selectedAccount?.real_name}（{selectedAccount?.phone}）选择要绑定的 CRM 员工；员工已有云客账号时会追加绑定。
         </Text>
 
         {/* 搜索栏 */}
@@ -738,6 +832,7 @@ export function YunkeAccountsPage() {
   const [searchValue, setSearchValue] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [activeTab, setActiveTab] = useState<string>('')
+  const [onboardingCred, setOnboardingCred] = useState<YunkeCredential | null>(null)
 
   // 查询凭证列表
   const { data: credentialsData, isLoading: credentialsLoading } = useQuery({
@@ -855,6 +950,16 @@ export function YunkeAccountsPage() {
                     <><XCircle style={{ width: 12, height: 12 }} /> 未登录</>
                   )}
                 </Tag>
+                <Button
+                  theme="solid"
+                  type="primary"
+                  size="small"
+                  icon={<UserPlus style={{ width: 14, height: 14 }} />}
+                  disabled={cred.status !== 1}
+                  onClick={() => setOnboardingCred(cred)}
+                >
+                  一键建咨询师
+                </Button>
               </div>
 
               {/* 子账号表格 */}
@@ -863,6 +968,23 @@ export function YunkeAccountsPage() {
           </TabPane>
         ))}
       </Tabs>
+
+      {onboardingCred && (
+        <CreateConsultantDialog
+          open={!!onboardingCred}
+          credential={{
+            id: onboardingCred.id,
+            phone: onboardingCred.phone,
+            company_name: onboardingCred.company_name,
+            status: onboardingCred.status,
+          }}
+          onClose={() => {
+            setOnboardingCred(null)
+            // 提交成功后刷新子账号表格
+            queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
+          }}
+        />
+      )}
     </DataTableLayout>
   )
 }

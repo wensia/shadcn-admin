@@ -147,7 +147,7 @@ function TdInput({
   prefix,
   suffix,
   ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & {
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> & {
   prefix?: React.ReactNode
   suffix?: React.ReactNode
 }) {

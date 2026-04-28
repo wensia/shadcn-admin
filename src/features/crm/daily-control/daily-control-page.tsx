@@ -27,6 +27,7 @@ import { dailyControlQueryKeys, getVisitSchedules, getPayments } from './api'
 import { brandColors, type TabType } from './theme'
 import { apiClient } from '@/lib/api/client'
 
+type CampusOption = { id: string; name: string }
 
 // 获取本月第一天
 const getMonthStartStr = () => format(startOfMonth(new Date()), 'yyyy-MM-dd')
@@ -46,7 +47,7 @@ export function DailyControlPage() {
   const { data: campusesData } = useQuery({
     queryKey: ['campuses-for-daily-control'],
     queryFn: async () => {
-      const response = await apiClient.get('/organization/campuses/simple')
+      const response = await apiClient.get<{ data?: CampusOption[] }>('/organization/campuses/simple')
       return response.data || []
     },
   })
@@ -163,7 +164,7 @@ export function DailyControlPage() {
   // 校区选项
   const campusOptions = [
     { value: 'all', label: '全部校区' },
-    ...campuses.map((campus: { id: string; name: string }) => ({
+    ...campuses.map((campus) => ({
       value: campus.id,
       label: campus.name,
     })),

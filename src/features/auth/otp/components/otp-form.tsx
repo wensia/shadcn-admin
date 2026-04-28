@@ -14,7 +14,7 @@ export function OtpForm({ className, ...props }: OtpFormProps) {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [otp, setOtp] = useState('')
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   function handleSubmit(values: OtpFormValues) {
     setIsLoading(true)

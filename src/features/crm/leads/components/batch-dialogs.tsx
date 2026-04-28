@@ -24,6 +24,7 @@ import { leadStatusLabels, type LeadStatus } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
+type SimpleCampus = { id: string; name: string }
 
 // ==================== 批量分配 Dialog ====================
 interface BatchAssignDialogProps {
@@ -62,7 +63,7 @@ export function BatchAssignDialog({
   const { data: campuses = [] } = useQuery({
     queryKey: ['all-campuses-simple'],
     queryFn: async () => {
-      const response = await apiClient.get('/organization/campuses/simple')
+      const response = await apiClient.get<{ data?: SimpleCampus[] }>('/organization/campuses/simple')
       return response.data || []
     },
     enabled: open,
@@ -487,8 +488,8 @@ export function BatchUpdateStatusDialog({
           目标状态 <Text type="danger">*</Text>
         </Text>
         <Select
-          value={selectedStatus}
-          onChange={(v) => setSelectedStatus(v as LeadStatus)}
+          value={selectedStatus as string}
+          onChange={(v) => setSelectedStatus(((Array.isArray(v) ? v[0] : v) || '') as LeadStatus | '')}
           placeholder="请选择状态"
           style={{ width: '100%' }}
         >

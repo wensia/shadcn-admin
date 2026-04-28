@@ -388,7 +388,7 @@ export function ZhongkaoPublicPage() {
             {/* District */}
             <div className="space-y-2">
               <label className="ant-label">所在区</label>
-              <Select value={district} onValueChange={setDistrict}>
+              <Select value={district} onValueChange={(value) => value && setDistrict(value)}>
                 <SelectTrigger className="w-full !h-10 rounded-[10px] border-[#e8e6dc] bg-white">
                   <SelectValue />
                 </SelectTrigger>

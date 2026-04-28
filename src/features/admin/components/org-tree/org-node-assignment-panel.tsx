@@ -14,10 +14,11 @@ import {
   Button,
   Descriptions,
   Empty,
+  Popconfirm,
   Tag,
   Typography,
 } from '@douyinfe/semi-ui-19'
-import { IconPlus, IconRefresh } from '@douyinfe/semi-icons'
+import { IconPlus, IconRefresh, IconDelete } from '@douyinfe/semi-icons'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { adminApi } from '../../api'
@@ -95,9 +96,10 @@ function getNodeScopeConfig(type: OrgTreeNodeType): NodeScopeConfig | null {
 
 export interface OrgNodeAssignmentPanelProps {
   node: OrganizationTreeNode | null
+  onNodeDeleted?: () => void
 }
 
-export function OrgNodeAssignmentPanel({ node }: OrgNodeAssignmentPanelProps) {
+export function OrgNodeAssignmentPanel({ node, onNodeDeleted }: OrgNodeAssignmentPanelProps) {
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
   const [transferItem, setTransferItem] = useState<AssignmentItem | null>(null)
@@ -139,6 +141,59 @@ export function OrgNodeAssignmentPanel({ node }: OrgNodeAssignmentPanelProps) {
     onError: (error: Error) => showApiErrorToast(error, '卸任失败'),
   })
 
+  // 删除部门（仅员工为空时允许）
+  const deleteDeptMutation = useMutation({
+    mutationFn: async () => {
+      if (!node) return
+      if (node.type === 'campus_department') {
+        return adminApi.deleteCampusDepartment(node.id)
+      }
+      if (node.type === 'area_department') {
+        return adminApi.deleteAreaDepartment(node.id)
+      }
+      if (node.type === 'district_department') {
+        return adminApi.deleteDistrictDepartment(node.id)
+      }
+      throw new Error('该节点类型不支持删除')
+    },
+    onSuccess: () => {
+      toast.success('部门已删除')
+      queryClient.invalidateQueries({ queryKey: ['admin-assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['organization-tree-full'] })
+      onNodeDeleted?.()
+    },
+    onError: (error: Error) => showApiErrorToast(error, '删除失败'),
+  })
+
+  const isDeptNode =
+    node?.type === 'campus_department' ||
+    node?.type === 'area_department' ||
+    node?.type === 'district_department'
+  const employeeCount = node?.employee_count ?? 0
+  const canDelete = isDeptNode && employeeCount === 0
+
+  // 部门成员列表（仅在叶子部门节点或 campus/area 节点上查）
+  const memberScopeType: 'campus_department' | 'area_department' | 'district_department' | 'campus' | 'area' | null =
+    node?.type === 'campus_department' ? 'campus_department'
+    : node?.type === 'area_department' ? 'area_department'
+    : node?.type === 'district_department' ? 'district_department'
+    : node?.type === 'campus' || node?.type === 'area_office' ? 'campus'
+    : node?.type === 'area' ? 'area'
+    : null
+
+  const { data: members = [], isLoading: membersLoading } = useQuery({
+    queryKey: ['scope-members', memberScopeType, node?.id],
+    queryFn: async () => {
+      if (!node || !memberScopeType) return []
+      const response = await adminApi.listScopeMembers({
+        scope_type: memberScopeType,
+        scope_id: node.id,
+      })
+      return response.data || []
+    },
+    enabled: !!node && !!memberScopeType,
+  })
+
   const invalidateAfterMutation = () => {
     queryClient.invalidateQueries({ queryKey: ['admin-assignments'] })
     queryClient.invalidateQueries({ queryKey: ['organization-tree-full'] })
@@ -171,22 +226,55 @@ export function OrgNodeAssignmentPanel({ node }: OrgNodeAssignmentPanelProps) {
               {orgNodeTypeLabel(node.type)}
             </Tag>
             {!node.is_active && (
-              <Tag size="small" color="light-grey">
+              <Tag size="small" color="grey">
                 已停用
               </Tag>
             )}
           </div>
-          {config && (
-            <Button
-              theme="solid"
-              type="primary"
-              size="small"
-              icon={<IconPlus />}
-              onClick={() => setCreateOpen(true)}
-            >
-              新增任命
-            </Button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {config && (
+              <Button
+                theme="solid"
+                type="primary"
+                size="small"
+                icon={<IconPlus />}
+                onClick={() => setCreateOpen(true)}
+              >
+                新增任命
+              </Button>
+            )}
+            {isDeptNode && (
+              canDelete ? (
+                <Popconfirm
+                  title="确认删除该部门？"
+                  content="删除后不可恢复。负责人任命会自动卸任。"
+                  onConfirm={() => deleteDeptMutation.mutate()}
+                  okText="删除"
+                  cancelText="取消"
+                  okType="danger"
+                >
+                  <Button
+                    type="danger"
+                    size="small"
+                    icon={<IconDelete />}
+                    loading={deleteDeptMutation.isPending}
+                  >
+                    删除部门
+                  </Button>
+                </Popconfirm>
+              ) : (
+                <Button
+                  type="danger"
+                  size="small"
+                  icon={<IconDelete />}
+                  disabled
+                  title={`该部门下有 ${employeeCount} 名员工，需先全部转出或停用`}
+                >
+                  删除部门
+                </Button>
+              )
+            )}
+          </div>
         </div>
 
         <div className="mt-3">
@@ -261,6 +349,65 @@ export function OrgNodeAssignmentPanel({ node }: OrgNodeAssignmentPanelProps) {
               emptyDescription='点击右上角"新增任命"按钮开始'
             />
           </>
+        )}
+
+        {/* 部门成员列表 */}
+        {memberScopeType && (
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Text type="tertiary" size="small">
+                  部门成员
+                </Text>
+                <Tag size="small" color="grey">
+                  {members.length}
+                </Tag>
+              </div>
+            </div>
+            {membersLoading ? (
+              <Text type="tertiary" size="small">加载中...</Text>
+            ) : members.length === 0 ? (
+              <Empty
+                title="暂无成员"
+                description={
+                  isDeptNode
+                    ? '该部门下暂无在任员工'
+                    : '该单位下暂无直接在任员工'
+                }
+                style={{ padding: '16px 0' }}
+              />
+            ) : (
+              <div className="flex flex-col divide-y border rounded-md" style={{ borderColor: 'var(--semi-color-border)' }}>
+                {members.map((m) => (
+                  <div
+                    key={m.employee_id}
+                    className="flex items-center gap-3 px-3 py-2 text-sm"
+                  >
+                    <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                      <Text strong>{m.name}</Text>
+                      {m.position_name && (
+                        <Tag size="small" color="blue">
+                          {m.position_name}
+                        </Tag>
+                      )}
+                      {/* 对 campus/area 级展示部门（因为一个 campus 下员工跨多部门）；对 *_department 已知部门就不重复显示 */}
+                      {!isDeptNode && m.department_name && (
+                        <Tag size="small" color="cyan">
+                          {m.department_name}
+                        </Tag>
+                      )}
+                    </div>
+                    <div className="hidden md:flex flex-col items-end text-xs shrink-0" style={{ color: 'var(--semi-color-text-2)' }}>
+                      {m.phone && <span>{m.phone}</span>}
+                      {m.email && (
+                        <span className="truncate max-w-[200px]">{m.email}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

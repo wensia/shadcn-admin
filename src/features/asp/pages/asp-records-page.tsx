@@ -19,6 +19,7 @@ import { IconSearch } from '@douyinfe/semi-icons'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import type { SemiTagColor } from '@/lib/semi-types'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { formatTime } from '@/lib/utils/time'
 import { getAspRecords, getAspRecordDetail } from '../api'
@@ -41,7 +42,7 @@ function ScoreCell({ value }: { value: number | null }) {
 }
 
 function StageTag({ stage, label }: { stage: string; label: string }) {
-  const colorMap: Record<string, string> = {
+  const colorMap: Record<string, SemiTagColor> = {
     primary: 'green',
     junior: 'blue',
     'high-arts': 'pink',

@@ -238,7 +238,7 @@ function computeDateGranularities(values: number[]): GranularityOption[] {
   const YEAR = 365 * DAY
 
   const opts: GranularityOption[] = []
-  if (spanMs < 2 * YEAR) opts.push({ label: 'Hour', value: 'hour' })
+  if (spanMs < 48 * HOUR) opts.push({ label: 'Hour', value: 'hour' })
   if (spanMs >= 2 * DAY || spanMs < 2 * YEAR) opts.push({ label: 'Day', value: 'day' })
   if (spanMs >= 2 * MONTH) opts.push({ label: 'Month', value: 'month' })
   if (spanMs >= 2 * YEAR) opts.push({ label: 'Year', value: 'year' })
@@ -297,13 +297,6 @@ function bucketValue(value: unknown, type: ColumnDef['type'], granularity: strin
   }
 
   return String(value)
-}
-
-function defaultGranularity(type: ColumnDef['type'], options: GranularityOption[]): string {
-  if (!options.length) return 'exact'
-  if (type === 'date') return options.find((o) => o.value === 'day')?.value ?? options[0]!.value
-  // For numeric: pick the second option (first non-Exact) if available
-  return options.length > 1 ? options[1]!.value : options[0]!.value
 }
 
 // ── Error boundary ───────────────────────────────────────────────────────────
@@ -607,7 +600,7 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
               return (
                 <StyledDropdownMenuItem
                   key={`sort-${col.key}`}
-                  onSelect={(e) => { e.preventDefault(); handleSort(col.key) }}
+                  onClick={(e) => { e.preventDefault(); handleSort(col.key) }}
                 >
                   <span className={cn('flex-1', isActive && 'text-primary font-medium')}>{col.label}</span>
                   {isActive && <SortIcon dir={sortDir} />}
@@ -642,7 +635,7 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
                         return (
                           <StyledDropdownMenuItem
                             key={opt.value}
-                            onSelect={(e) => {
+                            onClick={(e) => {
                               e.preventDefault()
                               if (isActive && groupGranularity === opt.value) {
                                 setGroupKey(null)
@@ -667,7 +660,7 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
               return (
                 <StyledDropdownMenuItem
                   key={`group-${col.key}`}
-                  onSelect={(e) => {
+                  onClick={(e) => {
                     e.preventDefault()
                     if (isActive) {
                       setGroupKey(null)

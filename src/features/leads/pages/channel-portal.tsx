@@ -29,6 +29,7 @@ import { IconRefresh } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { FilterTag } from '@/components/semi/filter-tags-bar'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import type { SemiTagColor } from '@/lib/semi-types'
 import {
   validateChannelToken,
   fetchPortalLeads,
@@ -75,14 +76,14 @@ const centeredPageStyle: React.CSSProperties = {
 }
 
 /* ─── 有效性配色 ─── */
-const VALIDITY_CONFIG: Record<string, { label: string; color: string }> = {
+const VALIDITY_CONFIG: Record<string, { label: string; color: SemiTagColor }> = {
   valid: { label: '有效', color: 'green' },
   invalid: { label: '无效', color: 'red' },
   pending: { label: '待处理', color: 'grey' },
 }
 
 /* ─── 状态颜色 ─── */
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_COLOR: Record<string, SemiTagColor> = {
   pending_assign: 'grey',
   pending_followup: 'orange',
   following_up: 'blue',
@@ -442,7 +443,7 @@ function PortalLeadsView({ token }: { token: string }) {
         title: '备注',
         dataIndex: 'notes',
         width: 150,
-        ellipsis: { showTooltip: false },
+        ellipsis: { showTitle: false },
         render: (_: string, record: PortalLeadItem) => {
           const extra = record.source_extra_info || {}
           const extraText = Object.values(extra).filter(Boolean).join(' / ')
@@ -562,7 +563,7 @@ function PortalLeadsView({ token }: { token: string }) {
         title: '下步计划',
         dataIndex: 'next_action',
         width: 130,
-        ellipsis: { showTooltip: false },
+        ellipsis: { showTitle: false },
         render: (v: string) =>
           v ? (
             <span
@@ -601,8 +602,9 @@ function PortalLeadsView({ token }: { token: string }) {
   )
 
   const handleValidityChange = useCallback(
-    (val: string | number | undefined) => {
-      setValidity(typeof val === 'string' ? val : '')
+    (val: string | string[] | number | undefined) => {
+      const nextValue = Array.isArray(val) ? val[0] : val
+      setValidity(typeof nextValue === 'string' ? nextValue : '')
       setPage(1)
     },
     []

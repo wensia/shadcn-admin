@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BrainCircuit, Plus, Pencil, Trash2, Play, Star, Copy, MoreHorizontal, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import type { SemiTagColor } from '@/lib/semi-types'
 
 import { Button, Input, Modal, Form, Tag, Skeleton, Typography, Dropdown } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
@@ -60,7 +61,7 @@ const PROVIDER_DEFAULTS: Record<AIProvider, { base_url: string; default_model: s
 
 export function AIConfigContent() {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi>()
+  const formRef = useRef<FormApi | null>(null)
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -165,7 +166,7 @@ export function AIConfigContent() {
   const getProviderLabel = (provider: string) =>
     AI_PROVIDER_OPTIONS.find(opt => opt.value === provider)?.label || provider
 
-  const getProviderTagColor = (provider: string): string | undefined =>
+  const getProviderTagColor = (provider: string): SemiTagColor | undefined =>
     provider === 'doubao' ? 'blue' : provider === 'kimi' ? undefined : undefined
 
   const columns: ColumnProps<AIConfigItem>[] = [

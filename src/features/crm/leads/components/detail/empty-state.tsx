@@ -37,7 +37,7 @@ export function EmptyState({
     >
       {icon && (
         <div style={{ marginBottom: 16, color: 'var(--semi-color-text-2)' }}>
-          {React.cloneElement(icon as React.ReactElement, {
+          {React.cloneElement(icon as React.ReactElement<{ style?: React.CSSProperties }>, {
             style: { width: 48, height: 48 },
           })}
         </div>

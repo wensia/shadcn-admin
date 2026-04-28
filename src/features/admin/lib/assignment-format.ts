@@ -7,10 +7,11 @@
  * - scopeLabelByType: scopeType → 中文标签（作用域下拉用）
  */
 
+import type { SemiTagColor } from '@/lib/semi-types'
 import type { AssignmentItem, AssignmentRole } from '../types'
 
-export function roleTagColor(role: AssignmentRole | string): string {
-  const map: Record<string, string> = {
+export function roleTagColor(role: AssignmentRole | string): SemiTagColor {
+  const map: Record<string, SemiTagColor> = {
     principal: 'red',
     vice_principal: 'orange',
     area_director: 'purple',
@@ -77,17 +78,16 @@ export function orgNodeTypeLabel(type: string): string {
 }
 
 /** 组织架构树节点 type → Semi Tag 颜色 */
-export function orgNodeTypeColor(type: string): string {
-  return (
-    {
-      region: 'red',
-      district: 'orange',
-      area: 'amber',
-      area_office: 'purple',
-      campus: 'blue',
-      campus_department: 'cyan',
-      area_department: 'teal',
-      district_department: 'green',
-    }[type] || 'grey'
-  )
+export function orgNodeTypeColor(type: string): SemiTagColor {
+  const map: Record<string, SemiTagColor> = {
+    region: 'red',
+    district: 'orange',
+    area: 'amber',
+    area_office: 'purple',
+    campus: 'blue',
+    campus_department: 'cyan',
+    area_department: 'teal',
+    district_department: 'green',
+  }
+  return map[type] || 'grey'
 }

@@ -65,7 +65,7 @@ export function PaymentDialog({
   const [selectedLead, setSelectedLead] = useState<SelectedLead | null>(null)
   const [leadSelectOpen, setLeadSelectOpen] = useState(false)
   const [amountInput, setAmountInput] = useState('0')
-  const formApiRef = useRef<FormApi>()
+  const formApiRef = useRef<FormApi | null>(null)
 
   // 获取收款人列表
   const { data: employeesData } = useQuery({
@@ -179,13 +179,17 @@ export function PaymentDialog({
       Toast.warning({ content: '请选择线索' })
       return
     }
+    if (!values.payment_method || !values.payment_type || !values.payment_at || !values.status) {
+      Toast.warning({ content: '请完整填写缴费信息' })
+      return
+    }
     const amount = parseFloat(String(values.amount ?? '0'))
     if (!amount || amount <= 0) {
       Toast.warning({ content: '金额必须大于0' })
       return
     }
 
-    const data = {
+    const data: PaymentCreate = {
       lead_id: values.lead_id,
       amount: amount,
       payment_method: values.payment_method,
@@ -194,7 +198,7 @@ export function PaymentDialog({
       status: values.status,
       collector_id: values.collector_id || undefined,
       course_name: values.course_name || undefined,
-      course_hours: values.course_hours ? parseInt(values.course_hours) : undefined,
+      course_hours: values.course_hours ? parseInt(String(values.course_hours), 10) : undefined,
       receipt_no: values.receipt_no || undefined,
       contract_no: values.contract_no || undefined,
       remark: values.remark || undefined,

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-export function useVersionCheck(onNewVersion: () => void) {
+const noop = () => {}
+
+export function useVersionCheck(onNewVersion: () => void = noop) {
   const hasNotified = useRef(false)
 
   const check = useCallback(async () => {

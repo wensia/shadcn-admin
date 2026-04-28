@@ -244,7 +244,7 @@ export function LeadsPoolPage() {
       title: '来源渠道',
       dataIndex: 'source_channel_name',
       width: 120,
-      ellipsis: { showTooltip: false },
+      ellipsis: { showTitle: false },
       render: (_text: string, record: LeadPoolItem) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
         return <Text style={{ fontSize: 13 }}>{record.source_channel_name || '-'}</Text>

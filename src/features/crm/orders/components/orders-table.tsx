@@ -9,12 +9,13 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { formatTime } from '@/lib/utils/time'
+import type { SemiTagColor } from '@/lib/semi-types'
 import type { OrderListItem } from '../types'
 
 const { Text } = Typography
 
 // 支付状态颜色映射
-const paymentStatusColorMap: Record<string, string> = {
+const paymentStatusColorMap: Record<string, SemiTagColor> = {
   pending: 'orange',
   paid: 'green',
   partial: 'blue',
@@ -23,7 +24,7 @@ const paymentStatusColorMap: Record<string, string> = {
 }
 
 // 审批状态颜色映射
-const approvalStatusColorMap: Record<string, string> = {
+const approvalStatusColorMap: Record<string, SemiTagColor> = {
   pending: 'grey',
   leader_pending: 'blue',
   leader_rejected: 'red',
@@ -187,7 +188,7 @@ export function OrdersTable({
         title: '校区',
         dataIndex: 'campus_name',
         width: 100,
-        ellipsis: { showTooltip: false },
+        ellipsis: { showTitle: false },
         render: (_text: string, record: OrderListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
           return <Text style={{ fontSize: 13 }}>{record.campus_name || '-'}</Text>
