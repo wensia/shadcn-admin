@@ -571,6 +571,20 @@ export const callRecordsApi = {
     return unwrapData(response)
   },
 
+  /** 获取顾问30秒以上外呼排行（本地通话记录聚合） */
+  async getEffectiveOutboundRanking(params: {
+    start_date: string
+    end_date: string
+    campus_id?: string
+    min_duration?: number
+  }): Promise<EffectiveOutboundRankingData> {
+    const response = await apiClient.get<ApiResponse<EffectiveOutboundRankingData>>(
+      '/yunke/call-records/effective-outbound-ranking',
+      { params }
+    )
+    return unwrapData(response)
+  },
+
   /** 获取员工-校区映射关系 */
   async getEmployeeCampusMapping(): Promise<EmployeeCampusMapping> {
     const response = await apiClient.get<ApiResponse<EmployeeCampusMapping>>(
@@ -711,6 +725,23 @@ export interface AppCallAndMsgStatisticsRow {
   hcsc: number
   hrsc: number
   wjld: number
+}
+
+/** 顾问30秒以上外呼排行响应 */
+export interface EffectiveOutboundRankingData {
+  dateFrom: string
+  dateTo: string
+  minDuration: number
+  totalEffectiveOutboundCallCount: number
+  rows: EffectiveOutboundRankingRow[]
+}
+
+export interface EffectiveOutboundRankingRow {
+  staffName: string
+  employeeId: string | null
+  campusId: string | null
+  campusName: string
+  effectiveOutboundCallCount: number
 }
 
 /** 员工-校区映射关系 */

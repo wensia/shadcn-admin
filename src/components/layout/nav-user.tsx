@@ -3,9 +3,10 @@
  * 使用 Semi Dropdown + Avatar 替代 shadcn DropdownMenu
  */
 
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useCallback, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Dropdown, Avatar } from '@douyinfe/semi-ui-19'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   IconSetting,
   IconUser,
@@ -18,7 +19,17 @@ import { ChevronsUpDown } from 'lucide-react'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 import { ChangePasswordDialog } from '@/components/change-password-dialog'
 import { ConfigDrawer } from '@/components/config-drawer'
-import { useCurrentUser } from '@/stores/auth-store'
+import {
+  type IdentityInfo,
+  useAuthStore,
+  useAvailableIdentities,
+  useCurrentIdentity,
+  useCurrentUser,
+  useHasMultipleIdentities,
+} from '@/stores/auth-store'
+import { getIdentityScopeName } from '@/features/auth/select-identity/utils'
+import { IdentityCard } from '@/features/auth/select-identity/components/identity-card'
+import { toast } from '@/lib/toast'
 
 function getAvatarFallback(name?: string): string {
   if (!name) return 'U'
@@ -30,13 +41,76 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
   const [signOutOpen, setSignOutOpen] = useState(false)
   const [pwdOpen, setPwdOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
+  const [switchingId, setSwitchingId] = useState<string | null>(null)
 
   const currentUser = useCurrentUser()
+  const currentIdentity = useCurrentIdentity()
+  const availableIdentities = useAvailableIdentities()
+  const hasMultipleIdentities = useHasMultipleIdentities()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const displayName = currentUser?.name || currentUser?.username || '未登录'
-  const displayEmail = currentUser?.email || currentUser?.phone || ''
   const avatarFallback = getAvatarFallback(
     currentUser?.name || currentUser?.username
   )
+  const identityScopeName = currentIdentity
+    ? getIdentityScopeName(currentIdentity)
+    : ''
+  const identityDetail = currentIdentity
+    ? `${currentIdentity.department_name} · ${currentIdentity.position_name}`
+    : ''
+  const displayIdentity = currentIdentity
+    ? `${identityScopeName} · ${identityDetail}`
+    : currentUser?.position_name || currentUser?.phone || '暂无身份'
+  const sortedIdentities = useMemo(() => {
+    if (!currentIdentity) return availableIdentities
+    return [...availableIdentities].sort((a, b) => {
+      if (a.id === currentIdentity.id) return -1
+      if (b.id === currentIdentity.id) return 1
+      return 0
+    })
+  }, [availableIdentities, currentIdentity])
+
+  const handleSwitchIdentity = useCallback(async (identity: IdentityInfo) => {
+    if (switchingId) return
+    if (identity.id === currentIdentity?.id) return
+
+    setSwitchingId(identity.id)
+    try {
+      await useAuthStore.getState().selectIdentity(identity.id)
+
+      const updatedIdentities = availableIdentities.map((item) => ({
+        ...item,
+        is_last_used: item.id === identity.id,
+      }))
+      useAuthStore.getState().setAvailableIdentities(updatedIdentities)
+
+      toast.success(`已切换到 ${getIdentityScopeName(identity)}`)
+      queryClient.invalidateQueries()
+
+      const restrictedPaths = ['/crm/', '/admin/', '/yunke/', '/hr/']
+      const isRestricted = restrictedPaths.some((path) =>
+        location.pathname.startsWith(path)
+      )
+      if (isRestricted) {
+        navigate({ to: '/', replace: true })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '切换身份失败'
+      toast.error(message)
+    } finally {
+      setSwitchingId(null)
+    }
+  }, [
+    availableIdentities,
+    currentIdentity?.id,
+    location.pathname,
+    navigate,
+    queryClient,
+    switchingId,
+  ])
 
   return (
     <>
@@ -74,19 +148,72 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
                 >
                   {displayName}
                 </div>
+                {currentIdentity && (
+                  <>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--semi-color-text-1)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        marginTop: 2,
+                      }}
+                    >
+                      {identityScopeName}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--semi-color-text-2)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        marginTop: 1,
+                      }}
+                    >
+                      {identityDetail}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            {hasMultipleIdentities && (
+              <div
+                style={{
+                  padding: '6px 8px 8px',
+                  width: 300,
+                }}
+              >
                 <div
                   style={{
                     fontSize: 12,
+                    fontWeight: 600,
                     color: 'var(--semi-color-text-2)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    padding: '0 4px 6px',
                   }}
                 >
-                  {displayEmail}
+                  切换工作身份
+                </div>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+                >
+                  {sortedIdentities.map((identity) => (
+                    <IdentityCard
+                      key={identity.id}
+                      identity={identity}
+                      isActive={identity.id === currentIdentity?.id}
+                      isSelecting={switchingId === identity.id}
+                      disabled={
+                        switchingId !== null && switchingId !== identity.id
+                      }
+                      compact
+                      onClick={() => handleSwitchIdentity(identity)}
+                    />
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
             <Dropdown.Divider />
             <Dropdown.Item
               icon={<IconSetting />}
@@ -191,7 +318,7 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {displayEmail}
+                  {displayIdentity}
                 </div>
               </div>
               <ChevronsUpDown

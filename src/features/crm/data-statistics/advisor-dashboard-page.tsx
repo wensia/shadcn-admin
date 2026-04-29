@@ -31,18 +31,39 @@ import {
 import { useAdvisorCallData } from './hooks/use-advisor-call-data'
 import { useAdvisorConversionData, type AdvisorConversionRow } from './hooks/use-advisor-conversion-data'
 import { useAdvisorCurrentLoadData } from './hooks/use-advisor-current-load-data'
+import {
+  getEffectiveOutboundCountByName,
+  useAdvisorEffectiveOutboundData,
+} from './hooks/use-advisor-effective-outbound-data'
 import { formatDurationShort, type AdvisorCallRow } from './utils/advisor-call-stats'
 
 const { Text, Title } = Typography
 
 type DateMode = 'today' | 'week' | 'month' | 'single' | 'range'
 type ConversionMetric = 'promisedCount' | 'visitedCount' | 'visitRate' | 'paymentAmount'
-type CallMetric = 'callCount' | 'contactCount' | 'duration'
-type AppCallMetric = 'outboundCallCount' | 'inboundCallCount' | 'totalDuration'
+type CallMetric = 'callCount' | 'effectiveOutboundCallCount' | 'contactCount' | 'contactRate' | 'duration' | 'avgDuration'
+type AppCallMetric = 'outboundCallCount' | 'effectiveOutboundCallCount' | 'outboundDuration' | 'inboundCallCount' | 'inboundDuration' | 'totalDuration' | 'missedInboundCount'
+type TableSortOrder = 'ascend' | 'descend'
+
+const CALL_SORTABLE_METRICS = ['callCount', 'effectiveOutboundCallCount', 'contactCount', 'contactRate', 'duration', 'avgDuration'] as const satisfies readonly CallMetric[]
+const APP_CALL_SORTABLE_METRICS = ['outboundCallCount', 'effectiveOutboundCallCount', 'outboundDuration', 'inboundCallCount', 'inboundDuration', 'totalDuration', 'missedInboundCount'] as const satisfies readonly AppCallMetric[]
+
+interface TableSorterChange {
+  dataIndex?: string
+  sortOrder?: boolean | TableSortOrder
+}
 
 interface ConversionDetailRow extends AdvisorConversionRow {
   currentLeads: number
   pendingFollowup: number
+}
+
+interface CallPerformanceRow extends AdvisorCallRow {
+  effectiveOutboundCallCount: number
+}
+
+interface AppCallPerformanceRow extends AdvisorAppCallRankingRow {
+  effectiveOutboundCallCount: number
 }
 
 interface AppCallSummary {
@@ -104,34 +125,79 @@ function getConversionMetricValue(row: ConversionDetailRow, metric: ConversionMe
 }
 
 function getCallMetricValue(
-  row: {
-    callCount: number
-    contactCount: number
-    duration: number
-  },
+  row: CallPerformanceRow,
   metric: CallMetric,
 ) {
   switch (metric) {
     case 'callCount':
       return row.callCount
+    case 'effectiveOutboundCallCount':
+      return row.effectiveOutboundCallCount
     case 'contactCount':
       return row.contactCount
+    case 'contactRate':
+      return row.contactRate
     case 'duration':
       return row.duration
+    case 'avgDuration':
+      return row.avgDuration
   }
 }
 
 function getAppCallMetricValue(
-  row: Pick<AdvisorAppCallRankingRow, 'outboundCallCount' | 'inboundCallCount' | 'totalDuration'>,
+  row: AppCallPerformanceRow,
   metric: AppCallMetric,
 ) {
   switch (metric) {
     case 'outboundCallCount':
       return row.outboundCallCount
+    case 'effectiveOutboundCallCount':
+      return row.effectiveOutboundCallCount
+    case 'outboundDuration':
+      return row.outboundDuration
     case 'inboundCallCount':
       return row.inboundCallCount
+    case 'inboundDuration':
+      return row.inboundDuration
     case 'totalDuration':
       return row.totalDuration
+    case 'missedInboundCount':
+      return row.missedInboundCount
+  }
+}
+
+function compareMetricValues(a: number, b: number, sortOrder: TableSortOrder) {
+  const diff = a - b
+  return sortOrder === 'ascend' ? diff : -diff
+}
+
+function compareNames(a: string, b: string) {
+  return a.localeCompare(b, 'zh-Hans-CN')
+}
+
+function getNextMetricSortState<T extends string>(
+  sorter: TableSorterChange | undefined,
+  currentMetric: T,
+  currentSortOrder: TableSortOrder,
+  sortableMetrics: readonly T[],
+) {
+  const nextMetric = sorter?.dataIndex as T | undefined
+  if (!nextMetric || !sortableMetrics.includes(nextMetric)) {
+    return { metric: currentMetric, sortOrder: currentSortOrder }
+  }
+
+  if (nextMetric !== currentMetric) {
+    return { metric: nextMetric, sortOrder: 'descend' as const }
+  }
+
+  const nextSortOrder = sorter?.sortOrder
+  if (nextSortOrder === 'ascend' || nextSortOrder === 'descend') {
+    return { metric: nextMetric, sortOrder: nextSortOrder }
+  }
+
+  return {
+    metric: nextMetric,
+    sortOrder: currentSortOrder === 'descend' ? 'ascend' as const : 'descend' as const,
   }
 }
 
@@ -283,6 +349,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
   const [conversionMetric, setConversionMetric] = useState<ConversionMetric>('visitedCount')
   const [callMetric, setCallMetric] = useState<CallMetric>('callCount')
   const [appCallMetric, setAppCallMetric] = useState<AppCallMetric>('outboundCallCount')
+  const [callSortOrder, setCallSortOrder] = useState<TableSortOrder>('descend')
+  const [appCallSortOrder, setAppCallSortOrder] = useState<TableSortOrder>('descend')
 
   const selectedCampusId = externalFilter?.selectedCampusId ?? internalCampusId
   const setSelectedCampusId = (v: string) => { if (!externalFilter) setInternalCampusId(v) }
@@ -359,6 +427,12 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
     time: dateMode === 'today' ? '0' : dateFrom,
     enabled: shouldUseAppCallRanking,
   })
+  const effectiveOutboundData = useAdvisorEffectiveOutboundData({
+    dateFrom,
+    dateTo,
+    selectedCampusId,
+    minDuration: 30,
+  })
 
   const singleDayAppCallSummary = useMemo(
     () => summarizeAppCallRows(appCallRankingData.rows),
@@ -408,6 +482,26 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
     })
   }, [conversionData.rows, currentLoadData.summaryMap])
 
+  const callPerformanceRows = useMemo<CallPerformanceRow[]>(() => {
+    return callData.rows.map((row) => ({
+      ...row,
+      effectiveOutboundCallCount: getEffectiveOutboundCountByName(
+        effectiveOutboundData.countByAdvisorName,
+        row.name,
+      ),
+    }))
+  }, [callData.rows, effectiveOutboundData.countByAdvisorName])
+
+  const appCallPerformanceRows = useMemo<AppCallPerformanceRow[]>(() => {
+    return appCallRankingData.rows.map((row) => ({
+      ...row,
+      effectiveOutboundCallCount: getEffectiveOutboundCountByName(
+        effectiveOutboundData.countByAdvisorName,
+        row.name,
+      ),
+    }))
+  }, [appCallRankingData.rows, effectiveOutboundData.countByAdvisorName])
+
   const sortedConversionRows = useMemo(() => {
     return [...conversionDetailRows].sort((a, b) => {
       const metricDiff = getConversionMetricValue(b, conversionMetric) - getConversionMetricValue(a, conversionMetric)
@@ -419,24 +513,24 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
   }, [conversionDetailRows, conversionMetric])
 
   const sortedCallRows = useMemo(() => {
-    return [...callData.rows].sort((a, b) => {
-      const metricDiff = getCallMetricValue(b, callMetric) - getCallMetricValue(a, callMetric)
+    return [...callPerformanceRows].sort((a, b) => {
+      const metricDiff = compareMetricValues(getCallMetricValue(a, callMetric), getCallMetricValue(b, callMetric), callSortOrder)
       if (metricDiff !== 0) return metricDiff
-      const callDiff = b.callCount - a.callCount
+      const callDiff = compareMetricValues(a.callCount, b.callCount, 'descend')
       if (callDiff !== 0) return callDiff
-      return a.name.localeCompare(b.name, 'zh-Hans-CN')
+      return compareNames(a.name, b.name)
     })
-  }, [callData.rows, callMetric])
+  }, [callPerformanceRows, callMetric, callSortOrder])
 
   const sortedAppCallRows = useMemo(() => {
-    return [...appCallRankingData.rows].sort((a, b) => {
-      const metricDiff = getAppCallMetricValue(b, appCallMetric) - getAppCallMetricValue(a, appCallMetric)
+    return [...appCallPerformanceRows].sort((a, b) => {
+      const metricDiff = compareMetricValues(getAppCallMetricValue(a, appCallMetric), getAppCallMetricValue(b, appCallMetric), appCallSortOrder)
       if (metricDiff !== 0) return metricDiff
-      const outboundDiff = b.outboundCallCount - a.outboundCallCount
+      const outboundDiff = compareMetricValues(a.outboundCallCount, b.outboundCallCount, 'descend')
       if (outboundDiff !== 0) return outboundDiff
-      return a.name.localeCompare(b.name, 'zh-Hans-CN')
+      return compareNames(a.name, b.name)
     })
-  }, [appCallMetric, appCallRankingData.rows])
+  }, [appCallMetric, appCallPerformanceRows, appCallSortOrder])
 
   const conversionColumns = useMemo<ColumnProps<ConversionDetailRow>[]>(() => [
     {
@@ -521,13 +615,13 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
     },
   ], [])
 
-  const callPerformanceColumns = useMemo<ColumnProps<AdvisorCallRow>[]>(() => [
+  const callPerformanceColumns = useMemo<ColumnProps<CallPerformanceRow>[]>(() => [
     {
       title: '排名',
       dataIndex: 'rank',
       width: 60,
       align: 'center' as const,
-      render: (_: unknown, __: AdvisorCallRow, index: number) => (
+      render: (_: unknown, __: CallPerformanceRow, index: number) => (
         <span
           style={{
             display: 'inline-flex',
@@ -567,6 +661,17 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'callCount',
       width: 90,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: callMetric === 'callCount' ? callSortOrder : false,
+      render: (value: number) => formatCount(value),
+    },
+    {
+      title: '30s+外呼',
+      dataIndex: 'effectiveOutboundCallCount',
+      width: 95,
+      align: 'right' as const,
+      sorter: true,
+      sortOrder: callMetric === 'effectiveOutboundCallCount' ? callSortOrder : false,
       render: (value: number) => formatCount(value),
     },
     {
@@ -574,6 +679,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'contactCount',
       width: 90,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: callMetric === 'contactCount' ? callSortOrder : false,
       render: (value: number) => formatCount(value),
     },
     {
@@ -581,6 +688,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'contactRate',
       width: 80,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: callMetric === 'contactRate' ? callSortOrder : false,
       render: (value: number) => formatPercent(value),
     },
     {
@@ -588,6 +697,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'duration',
       width: 100,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: callMetric === 'duration' ? callSortOrder : false,
       render: (value: number) => formatDurationShort(value),
     },
     {
@@ -595,17 +706,19 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'avgDuration',
       width: 100,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: callMetric === 'avgDuration' ? callSortOrder : false,
       render: (value: number) => formatDurationShort(value),
     },
-  ], [])
+  ], [callMetric, callSortOrder])
 
-  const appCallPerformanceColumns = useMemo<ColumnProps<AdvisorAppCallRankingRow>[]>(() => [
+  const appCallPerformanceColumns = useMemo<ColumnProps<AppCallPerformanceRow>[]>(() => [
     {
       title: '排名',
       dataIndex: 'rank',
       width: 60,
       align: 'center' as const,
-      render: (_: unknown, __: AdvisorAppCallRankingRow, index: number) => (
+      render: (_: unknown, __: AppCallPerformanceRow, index: number) => (
         <span
           style={{
             display: 'inline-flex',
@@ -645,6 +758,17 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'outboundCallCount',
       width: 80,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: appCallMetric === 'outboundCallCount' ? appCallSortOrder : false,
+      render: (value: number) => formatCount(value),
+    },
+    {
+      title: '30s+外呼',
+      dataIndex: 'effectiveOutboundCallCount',
+      width: 95,
+      align: 'right' as const,
+      sorter: true,
+      sortOrder: appCallMetric === 'effectiveOutboundCallCount' ? appCallSortOrder : false,
       render: (value: number) => formatCount(value),
     },
     {
@@ -652,6 +776,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'outboundDuration',
       width: 90,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: appCallMetric === 'outboundDuration' ? appCallSortOrder : false,
       render: (value: number) => formatDurationShort(value),
     },
     {
@@ -659,6 +785,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'inboundCallCount',
       width: 80,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: appCallMetric === 'inboundCallCount' ? appCallSortOrder : false,
       render: (value: number) => formatCount(value),
     },
     {
@@ -666,6 +794,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'inboundDuration',
       width: 90,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: appCallMetric === 'inboundDuration' ? appCallSortOrder : false,
       render: (value: number) => formatDurationShort(value),
     },
     {
@@ -673,6 +803,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'totalDuration',
       width: 100,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: appCallMetric === 'totalDuration' ? appCallSortOrder : false,
       render: (value: number) => formatDurationShort(value),
     },
     {
@@ -680,15 +812,40 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
       dataIndex: 'missedInboundCount',
       width: 80,
       align: 'right' as const,
+      sorter: true,
+      sortOrder: appCallMetric === 'missedInboundCount' ? appCallSortOrder : false,
       render: (value: number) => formatCount(value),
     },
-  ], [])
+  ], [appCallMetric, appCallSortOrder])
+
+  const handleCallTableChange = (changeInfo: { sorter?: TableSorterChange }) => {
+    const nextState = getNextMetricSortState(
+      changeInfo.sorter,
+      callMetric,
+      callSortOrder,
+      CALL_SORTABLE_METRICS,
+    )
+    setCallMetric(nextState.metric)
+    setCallSortOrder(nextState.sortOrder)
+  }
+
+  const handleAppCallTableChange = (changeInfo: { sorter?: TableSorterChange }) => {
+    const nextState = getNextMetricSortState(
+      changeInfo.sorter,
+      appCallMetric,
+      appCallSortOrder,
+      APP_CALL_SORTABLE_METRICS,
+    )
+    setAppCallMetric(nextState.metric)
+    setAppCallSortOrder(nextState.sortOrder)
+  }
 
   const handleRefresh = async () => {
     await Promise.all([
       conversionData.refetch(),
       callData.refetch(),
       appCallRankingData.refetch(),
+      effectiveOutboundData.refetch(),
       currentLoadData.refetch(),
     ])
   }
@@ -696,6 +853,7 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
   const isRefreshing = conversionData.isRefetching
     || callData.isRefetching
     || appCallRankingData.isRefetching
+    || effectiveOutboundData.isRefetching
     || currentLoadData.isRefetching
 
   /* ── 主内容区（嵌入和独立模式共用） ── */
@@ -797,11 +955,15 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
               <MetricToggle
                 options={[
                   { key: 'outboundCallCount' as AppCallMetric, label: '呼出量' },
+                  { key: 'outboundDuration' as AppCallMetric, label: '呼出时长' },
                   { key: 'inboundCallCount' as AppCallMetric, label: '呼入量' },
                   { key: 'totalDuration' as AppCallMetric, label: '总通话时长' },
                 ]}
                 active={appCallMetric}
-                onChange={(key) => setAppCallMetric(key as AppCallMetric)}
+                onChange={(key) => {
+                  setAppCallMetric(key as AppCallMetric)
+                  setAppCallSortOrder('descend')
+                }}
               />
             ) : (
               <MetricToggle
@@ -811,7 +973,10 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
                   { key: 'duration' as CallMetric, label: '通话时长' },
                 ]}
                 active={callMetric}
-                onChange={(key) => setCallMetric(key as CallMetric)}
+                onChange={(key) => {
+                  setCallMetric(key as CallMetric)
+                  setCallSortOrder('descend')
+                }}
               />
             )}
           </div>
@@ -825,7 +990,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
             pagination={false}
             size="small"
             scroll={{ y: 380 }}
-            loading={appCallRankingData.isLoading}
+            loading={appCallRankingData.isLoading || effectiveOutboundData.isLoading}
+            onChange={handleAppCallTableChange}
             empty={
               <div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>
                 {callData.hasAccounts ? '当前筛选下暂无手机统计数据' : '未配置云客账号'}
@@ -840,7 +1006,8 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
             pagination={false}
             size="small"
             scroll={{ y: 380 }}
-            loading={callData.isLoading}
+            loading={callData.isLoading || effectiveOutboundData.isLoading}
+            onChange={handleCallTableChange}
             empty={
               <div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>
                 {callData.hasAccounts ? '当前筛选下暂无外呼数据' : '未配置云客账号'}

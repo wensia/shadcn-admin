@@ -46,6 +46,7 @@ import { TodayStatsBlock } from './today-stats'
 const { Title, Text, Paragraph } = Typography
 
 const XIADITUI_LOGIN_URL = 'https://push.shenhudong.com/login'
+const pageClassName = 'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6'
 
 function formatDateTime(value?: string | null): string {
   if (!value) return '—'
@@ -74,8 +75,12 @@ export function XiaoditangPage() {
   useDocumentTitle('小地推')
   const queryClient = useQueryClient()
   const [updateOpen, setUpdateOpen] = useState(false)
-  const bindFormRef = useRef<FormApi<{ phone: string; password: string }>>()
-  const updateFormRef = useRef<FormApi<{ phone: string; password: string }>>()
+  const bindFormRef = useRef<FormApi<{ phone: string; password: string }> | null>(
+    null,
+  )
+  const updateFormRef = useRef<FormApi<{ phone: string; password: string }> | null>(
+    null,
+  )
 
   const statusQuery = useQuery({
     queryKey: ['xiaoditui', 'status'],
@@ -88,13 +93,8 @@ export function XiaoditangPage() {
   const bound = !!status?.bound
   const valid = !!status?.valid
   const autoReloggedJustNow = !!status?.auto_relogin && valid
-
-  // 失效时自动展开「更新账号」面板
-  useEffect(() => {
-    if (bound && !valid && !statusQuery.isPending) {
-      setUpdateOpen(true)
-    }
-  }, [bound, valid, statusQuery.isPending])
+  const updatePanelOpen =
+    updateOpen || (bound && !valid && !statusQuery.isPending)
 
   // 自动重登提示（一次性）
   useEffect(() => {
@@ -108,13 +108,13 @@ export function XiaoditangPage() {
 
   // 编辑模式下，每次打开/状态刷新填充手机号
   useEffect(() => {
-    if (updateOpen && status?.phone) {
+    if (updatePanelOpen && status?.phone) {
       updateFormRef.current?.setValues({
         phone: status.phone,
         password: '',
       })
     }
-  }, [updateOpen, status?.phone])
+  }, [updatePanelOpen, status?.phone])
 
   const bindMutation = useMutation({
     mutationFn: (payload: XiaoditangBindRequest) =>
@@ -207,7 +207,7 @@ export function XiaoditangPage() {
   // ---------- Loading ----------
   if (statusQuery.isPending) {
     return (
-      <div className='flex flex-col gap-4 p-6'>
+      <div className={pageClassName}>
         {Header}
         <Card bordered>
           <div
@@ -230,7 +230,7 @@ export function XiaoditangPage() {
   // ---------- 未绑定 ----------
   if (!bound) {
     return (
-      <div className='flex flex-col gap-4 p-6'>
+      <div className={pageClassName}>
         {Header}
         <Card
           bordered
@@ -284,7 +284,7 @@ export function XiaoditangPage() {
 
   // ---------- 已绑定 ----------
   return (
-    <div className='flex flex-col gap-4 p-6'>
+    <div className={pageClassName}>
       {Header}
 
       {/* 仅失效时才显示告警 Banner（成功状态由摘要条本身传达） */}
@@ -482,7 +482,7 @@ export function XiaoditangPage() {
       <TodayStatsBlock enabled={valid} />
 
       {/* 更新账号 - 默认折叠，失效时自动展开（用 hidden 而非卸载，保留 form ref） */}
-      <div style={{ display: updateOpen ? 'block' : 'none' }}>
+      <div style={{ display: updatePanelOpen ? 'block' : 'none' }}>
         <Card
           bordered
           title='更新账号'
