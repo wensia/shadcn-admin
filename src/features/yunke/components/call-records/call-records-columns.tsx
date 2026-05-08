@@ -5,8 +5,10 @@
 import { Skeleton, Tag, Button, Tooltip } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { TagColor } from '@douyinfe/semi-ui-19/lib/es/tag/interface'
-import { Play, FileText, UserRound } from 'lucide-react'
+import { Play, FileText, UserRound, Copy } from 'lucide-react'
+import { toast } from '@/lib/toast'
 import { isSkeletonRow } from '@/lib/table-utils'
+import { copyToClipboard } from '@/lib/utils'
 import { formatTime } from '@/lib/utils/time'
 import type { CallRecord } from '../../types'
 
@@ -73,6 +75,47 @@ function getCallResultStyle(result: string | null, duration: number | null): {
       return { label: '拒接', color: 'red' }
     default:
       return { label: '未接通', color: 'grey' }
+  }
+}
+
+/**
+ * 获取 ASR 筛查标签样式
+ */
+function getScreeningStatusStyle(
+  status: string | null | undefined,
+  asrEligible: boolean | undefined
+): {
+  label: string
+  color: TagColor
+} {
+  switch (status) {
+    case 'asr_candidate':
+      return { label: 'ASR候选', color: 'green' }
+    case 'customer_service_number':
+      return { label: '运营商客服', color: 'red' }
+    case 'enterprise_service_number':
+      return { label: '企业客服', color: 'orange' }
+    case 'no_recording':
+      return { label: '无录音', color: 'grey' }
+    case 'zero_duration':
+      return { label: '0秒通话', color: 'grey' }
+    case 'short_call':
+      return { label: '少于10秒', color: 'yellow' }
+    case 'low_value_short_call':
+      return { label: '少于30秒', color: 'yellow' }
+    default:
+      return asrEligible === false
+        ? { label: '已跳过', color: 'grey' }
+        : { label: '待筛查', color: 'grey' }
+  }
+}
+
+async function copyRecordId(record: CallRecord) {
+  const ok = await copyToClipboard(record.id)
+  if (ok) {
+    toast.success('通话记录 ID 已复制')
+  } else {
+    toast.error('复制失败')
   }
 }
 
@@ -184,6 +227,20 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
       },
     },
     {
+      title: '筛查',
+      dataIndex: 'screening_status',
+      width: 120,
+      render: (_text: string, record: CallRecord) => {
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 72 }} />
+        const { label, color } = getScreeningStatusStyle(record.screening_status, record.asr_eligible)
+        return (
+          <Tooltip content={record.screening_reason || label}>
+            <Tag color={color} type="light">{label}</Tag>
+          </Tooltip>
+        )
+      },
+    },
+    {
       title: '部门',
       dataIndex: 'department',
       width: 100,
@@ -272,30 +329,42 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
     {
       title: '操作',
       dataIndex: 'actions',
-      width: 60,
+      width: 92,
       fixed: 'right' as const,
       render: (_: unknown, record: CallRecord) => {
-        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 32 }} />
+        if (isSkeletonRow(record.id)) return <Skeleton.Paragraph rows={1} style={{ width: 64 }} />
 
-        if (!record.has_recording || !onPlayRecord) {
-          return <span style={{ fontSize: 12, color: 'var(--semi-color-text-3)' }}>-</span>
-        }
-
-        const hasTranscript = record.has_transcript
         return (
-          <Tooltip content={hasTranscript ? '录音与转写' : '播放录音'}>
-            <span>
-              <Button
-                theme="borderless"
-                icon={hasTranscript
-                  ? <FileText style={{ width: 16, height: 16 }} />
-                  : <Play style={{ width: 16, height: 16 }} />
-                }
-                size="small"
-                onClick={() => onPlayRecord(record)}
-              />
-            </span>
-          </Tooltip>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+            {record.has_recording && onPlayRecord && (
+              <Tooltip content={record.has_transcript ? '录音与转写' : '播放录音'}>
+                <span>
+                  <Button
+                    theme="borderless"
+                    icon={record.has_transcript
+                      ? <FileText style={{ width: 16, height: 16 }} />
+                      : <Play style={{ width: 16, height: 16 }} />
+                    }
+                    size="small"
+                    onClick={() => onPlayRecord(record)}
+                  />
+                </span>
+              </Tooltip>
+            )}
+            <Tooltip content="复制记录 ID">
+              <span>
+                <Button
+                  theme="borderless"
+                  icon={<Copy style={{ width: 15, height: 15 }} />}
+                  size="small"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    void copyRecordId(record)
+                  }}
+                />
+              </span>
+            </Tooltip>
+          </div>
         )
       },
     },

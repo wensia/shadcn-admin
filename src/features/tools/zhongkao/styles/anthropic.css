@@ -26,7 +26,7 @@
   --chart-5: #e8e6dc;
   --radius: 0.75rem;
 
-  font-family: 'Lora', Georgia, serif;
+  font-family: var(--font-serif-local);
   background-color: var(--background);
   color: var(--foreground);
 }
@@ -37,17 +37,17 @@
 .tools-anthropic h4,
 .tools-anthropic h5,
 .tools-anthropic h6 {
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: var(--font-display-local);
 }
 
 /* Anthropic: heading font */
 .tools-anthropic .font-display {
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: var(--font-display-local);
 }
 
 /* Anthropic: form label */
 .tools-anthropic .ant-label {
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: var(--font-display-local);
   font-size: 13px;
   font-weight: 500;
   color: #141413;
@@ -57,7 +57,7 @@
 /* Anthropic: branded button */
 .tools-anthropic .ant-btn {
   border-radius: 10px;
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: var(--font-display-local);
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.01em;
@@ -68,7 +68,7 @@
   border: 1px solid #e8e6dc;
   border-radius: 10px;
   background: #FFFFFF;
-  font-family: 'Lora', Georgia, serif;
+  font-family: var(--font-serif-local);
   padding: 0 14px;
   transition: border-color 0.2s;
 }
@@ -82,7 +82,7 @@
 
 /* Anthropic: stat number */
 .tools-anthropic .ant-stat {
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: var(--font-display-local);
   font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -92,7 +92,7 @@
 
 /* Anthropic: school score */
 .tools-anthropic .ant-score {
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: var(--font-display-local);
   font-size: 20px;
   font-weight: 600;
   color: #141413;
@@ -100,7 +100,7 @@
 
 /* Anthropic: section label */
 .tools-anthropic .ant-section-label {
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: var(--font-display-local);
   font-size: 12px;
   font-weight: 500;
   color: #b0aea5;

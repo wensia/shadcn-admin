@@ -3,7 +3,7 @@
  * 按凭证分 Tab 展示子账号
  */
 
-import { useState, useMemo, type ComponentProps } from 'react'
+import { useState, useMemo, useEffect, type ComponentProps } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   User,
@@ -19,11 +19,12 @@ import {
   AlertCircle,
   Check,
   UserPlus,
+  Smartphone,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
-import { Table, Button, Input, Tag, Modal, Tabs, TabPane, Typography, Banner, Dropdown } from '@douyinfe/semi-ui-19'
+import { Table, Button, Input, Tag, Modal, Tabs, TabPane, Typography, Banner, Dropdown, TextArea, Select } from '@douyinfe/semi-ui-19'
 import { IconSearch, IconMore } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
@@ -32,17 +33,38 @@ import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { yunkeApi, yunkeCredentialsApi, yunkeOnboardingApi } from '../api'
 import type { YunkeSubAccount, YunkeAvailableEmployee, YunkePasswordResetResponse, YunkeCredential } from '../types'
 import { CreateConsultantDialog } from '../components/create-consultant-dialog'
+import { adminApi } from '@/features/admin/api'
 
 const { Text } = Typography
 const EMPTY_EMPLOYEES: YunkeAvailableEmployee[] = []
+
+type SubAccountFilters = {
+  crmBindingStatus: '' | 'bound' | 'unbound'
+  campusId: string
+  departmentId: string
+}
+
+function normalizeDeviceIdInput(value: string) {
+  const seen = new Set<string>()
+  return value
+    .split(/[\s,，;；]+/)
+    .map((item) => item.trim())
+    .filter((item) => {
+      if (!item || seen.has(item)) return false
+      seen.add(item)
+      return true
+    })
+}
 
 // 子账号表格组件
 function SubAccountsTable({
   credential,
   searchValue,
+  filters,
 }: {
   credential: YunkeCredential
   searchValue: string
+  filters: SubAccountFilters
 }) {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
@@ -62,15 +84,38 @@ function SubAccountsTable({
   const [selectedAccount, setSelectedAccount] = useState<YunkeSubAccount | null>(null)
   const [passwordResult, setPasswordResult] = useState<YunkePasswordResetResponse | null>(null)
 
+  useEffect(() => {
+    setPage(1)
+  }, [credential.id, searchValue, filters.crmBindingStatus, filters.campusId, filters.departmentId])
+
   // 查询子账号列表
   const { data, isLoading } = useQuery({
-    queryKey: ['yunke-sub-accounts', credential.id, page, pageSize, searchValue],
+    queryKey: [
+      'yunke-sub-accounts',
+      credential.id,
+      page,
+      pageSize,
+      searchValue,
+      filters.crmBindingStatus,
+      filters.campusId,
+      filters.departmentId,
+    ],
     queryFn: async () => {
-      const params: { page?: number; page_size?: number; real_name?: string } = {
+      const params: {
+        page?: number
+        page_size?: number
+        real_name?: string
+        crm_binding_status?: 'bound' | 'unbound'
+        campus_id?: string
+        department_id?: string
+      } = {
         page,
         page_size: pageSize,
       }
       if (searchValue) params.real_name = searchValue
+      if (filters.crmBindingStatus) params.crm_binding_status = filters.crmBindingStatus
+      if (filters.campusId) params.campus_id = filters.campusId
+      if (filters.departmentId) params.department_id = filters.departmentId
       return yunkeCredentialsApi.getSubAccountsByCredential(credential.id, params)
     },
     enabled: credential.status === 1,
@@ -252,23 +297,31 @@ function SubAccountsTable({
       {
         title: '绑定用户',
         dataIndex: 'bound_employee',
-        width: 180,
+        width: 220,
         render: (_: unknown, record: YunkeSubAccount) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={128} />
           const bound = record.bound_employee
           if (bound) {
+            const crmScopeText = [bound.campus_name, bound.department_name].filter(Boolean).join(' / ')
             return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Tag color="grey" type="light" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Link style={{ width: 12, height: 12 }} />
-                  {bound.name}
-                </Tag>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <div style={{ minWidth: 0 }}>
+                  <Tag color="grey" type="light" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Link style={{ width: 12, height: 12 }} />
+                    {bound.name}
+                  </Tag>
+                  {crmScopeText && (
+                    <div style={{ marginTop: 4, fontSize: 12, color: 'var(--semi-color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {crmScopeText}
+                    </div>
+                  )}
+                </div>
                 <Button
                   theme="borderless"
                   type="tertiary"
                   size="small"
                   icon={<Unlink style={{ width: 12, height: 12 }} />}
-                  style={{ width: 24, height: 24, padding: 0 }}
+                  style={{ width: 24, height: 24, padding: 0, flex: '0 0 auto' }}
                   onClick={() => handleUnbindClick(record)}
                 />
               </div>
@@ -832,7 +885,14 @@ export function YunkeAccountsPage() {
   const [searchValue, setSearchValue] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [activeTab, setActiveTab] = useState<string>('')
+  const [filters, setFilters] = useState<SubAccountFilters>({
+    crmBindingStatus: '',
+    campusId: '',
+    departmentId: '',
+  })
   const [onboardingCred, setOnboardingCred] = useState<YunkeCredential | null>(null)
+  const [deviceUnbindDialogOpen, setDeviceUnbindDialogOpen] = useState(false)
+  const [deviceUnbindInput, setDeviceUnbindInput] = useState('')
 
   // 查询凭证列表
   const { data: credentialsData, isLoading: credentialsLoading } = useQuery({
@@ -840,18 +900,103 @@ export function YunkeAccountsPage() {
     queryFn: () => yunkeCredentialsApi.getCredentials({ limit: 100 }),
   })
 
+  const { data: campusOptions = [], isLoading: isCampusOptionsLoading } = useQuery({
+    queryKey: ['yunke-accounts-campus-options'],
+    queryFn: async () => {
+      const response = await adminApi.getCampusesSimple()
+      return response.data || []
+    },
+  })
+
+  const { data: departmentOptions = [], isLoading: isDepartmentOptionsLoading } = useQuery({
+    queryKey: ['yunke-accounts-department-options'],
+    queryFn: async () => {
+      const response = await adminApi.getDepartmentsSimple()
+      return response.data || []
+    },
+  })
+
   const credentials = credentialsData?.items ?? []
   const resolvedActiveTab = credentials.some((credential) => credential.id === activeTab)
     ? activeTab
     : (credentials[0]?.id ?? '')
+  const activeCredential = credentials.find((credential) => credential.id === resolvedActiveTab) ?? null
+  const parsedDeviceIds = useMemo(
+    () => normalizeDeviceIdInput(deviceUnbindInput),
+    [deviceUnbindInput]
+  )
+  const campusSelectOptions = useMemo(
+    () => campusOptions.map((campus) => ({ label: campus.name, value: campus.id })),
+    [campusOptions]
+  )
+  const departmentSelectOptions = useMemo(
+    () => departmentOptions.map((department) => ({ label: department.name, value: department.id })),
+    [departmentOptions]
+  )
+  const hasFilters = Boolean(filters.crmBindingStatus || filters.campusId || filters.departmentId)
 
   const handleSearch = () => {
     setSearchValue(searchInput)
   }
 
+  const handleFilterChange = <K extends keyof SubAccountFilters>(
+    key: K,
+    value: SubAccountFilters[K]
+  ) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleClearFilters = () => {
+    setFilters({
+      crmBindingStatus: '',
+      campusId: '',
+      departmentId: '',
+    })
+  }
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts'] })
     queryClient.invalidateQueries({ queryKey: ['yunke-credentials-for-tabs'] })
+  }
+
+  const deviceUnbindMutation = useMutation({
+    mutationFn: (payload: { yunke_admin_account_id: string; device_ids: string[] }) =>
+      yunkeOnboardingApi.unbindDevices(payload),
+    onSuccess: (res) => {
+      toast.success(`已提交 ${res.count} 个设备解绑`)
+      setDeviceUnbindDialogOpen(false)
+      setDeviceUnbindInput('')
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '设备解绑失败')
+    },
+  })
+
+  const handleOpenDeviceUnbindDialog = () => {
+    if (!activeCredential) {
+      toast.warning('请先选择云客凭证')
+      return
+    }
+    if (activeCredential.status !== 1) {
+      toast.warning('当前云客凭证未登录，请先刷新登录')
+      return
+    }
+    setDeviceUnbindDialogOpen(true)
+  }
+
+  const handleSubmitDeviceUnbind = () => {
+    if (!activeCredential) {
+      toast.warning('请先选择云客凭证')
+      return
+    }
+    if (parsedDeviceIds.length === 0) {
+      toast.warning('请填写至少一个 IMEI 码')
+      return
+    }
+    deviceUnbindMutation.mutate({
+      yunke_admin_account_id: activeCredential.id,
+      device_ids: parsedDeviceIds,
+    })
   }
 
   // 加载状态
@@ -892,7 +1037,7 @@ export function YunkeAccountsPage() {
       title="云客子账号管理"
       onRefresh={handleRefresh}
       toolbar={
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Input
             prefix={<IconSearch />}
             placeholder="输入姓名搜索..."
@@ -902,6 +1047,55 @@ export function YunkeAccountsPage() {
             onEnterPress={handleSearch}
           />
           <Button theme="outline" onClick={handleSearch}>搜索</Button>
+          <Select
+            placeholder="绑定状态"
+            value={filters.crmBindingStatus || undefined}
+            onChange={(value) =>
+              handleFilterChange(
+                'crmBindingStatus',
+                (value as SubAccountFilters['crmBindingStatus']) || ''
+              )
+            }
+            optionList={[
+              { label: '已绑定 CRM', value: 'bound' },
+              { label: '未绑定 CRM', value: 'unbound' },
+            ]}
+            showClear
+            style={{ width: 130 }}
+          />
+          <Select
+            placeholder="校区"
+            value={filters.campusId || undefined}
+            onChange={(value) => handleFilterChange('campusId', (value as string) || '')}
+            optionList={campusSelectOptions}
+            loading={isCampusOptionsLoading}
+            filter
+            showClear
+            style={{ width: 160 }}
+          />
+          <Select
+            placeholder="部门"
+            value={filters.departmentId || undefined}
+            onChange={(value) => handleFilterChange('departmentId', (value as string) || '')}
+            optionList={departmentSelectOptions}
+            loading={isDepartmentOptionsLoading}
+            filter
+            showClear
+            style={{ width: 140 }}
+          />
+          {hasFilters && (
+            <Button theme="borderless" type="tertiary" onClick={handleClearFilters}>
+              清空筛选
+            </Button>
+          )}
+          <Button
+            theme="outline"
+            icon={<Smartphone style={{ width: 14, height: 14 }} />}
+            disabled={!activeCredential || activeCredential.status !== 1 || deviceUnbindMutation.isPending}
+            onClick={handleOpenDeviceUnbindDialog}
+          >
+            解绑设备
+          </Button>
         </div>
       }
     >
@@ -963,7 +1157,7 @@ export function YunkeAccountsPage() {
               </div>
 
               {/* 子账号表格 */}
-              <SubAccountsTable credential={cred} searchValue={searchValue} />
+              <SubAccountsTable credential={cred} searchValue={searchValue} filters={filters} />
             </div>
           </TabPane>
         ))}
@@ -985,6 +1179,51 @@ export function YunkeAccountsPage() {
           }}
         />
       )}
+
+      <Modal
+        title="设备解绑"
+        visible={deviceUnbindDialogOpen}
+        onCancel={() => {
+          if (!deviceUnbindMutation.isPending) {
+            setDeviceUnbindDialogOpen(false)
+          }
+        }}
+        width={520}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button
+              theme="outline"
+              disabled={deviceUnbindMutation.isPending}
+              onClick={() => setDeviceUnbindDialogOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              type="danger"
+              loading={deviceUnbindMutation.isPending}
+              disabled={parsedDeviceIds.length === 0}
+              onClick={handleSubmitDeviceUnbind}
+            >
+              确认解绑{parsedDeviceIds.length > 0 ? `（${parsedDeviceIds.length}）` : ''}
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Text type="tertiary">
+            当前凭证：{activeCredential?.company_name || activeCredential?.phone || '-'}
+          </Text>
+          <TextArea
+            value={deviceUnbindInput}
+            onChange={setDeviceUnbindInput}
+            placeholder="输入 IMEI 码，多个可换行或用逗号分隔"
+            autosize={{ minRows: 5, maxRows: 8 }}
+          />
+          <Text type="tertiary" size="small">
+            已识别 {parsedDeviceIds.length} 个设备码
+          </Text>
+        </div>
+      </Modal>
     </DataTableLayout>
   )
 }

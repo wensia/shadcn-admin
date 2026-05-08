@@ -170,7 +170,7 @@ function ToolCard({ tool }: { tool: ToolItem }) {
       {!isActive && (
         <span
           className="absolute top-4 right-4 rounded-md bg-[#e8e6dc] px-2 py-0.5 text-[11px] text-[#b0aea5]"
-          style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+          style={{ fontFamily: "var(--font-display-local)" }}
         >
           即将上线
         </span>
@@ -178,7 +178,7 @@ function ToolCard({ tool }: { tool: ToolItem }) {
       {isActive && tool.requiresCode && (
         <span
           className="absolute top-4 right-4 inline-flex items-center gap-1 rounded-md bg-[#d97757]/10 px-2 py-0.5 text-[11px] text-[#d97757]"
-          style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+          style={{ fontFamily: "var(--font-display-local)" }}
         >
           <KeyRound size={11} />
           需要兑换码
@@ -196,7 +196,7 @@ function ToolCard({ tool }: { tool: ToolItem }) {
       {/* Title */}
       <h3
         className="mb-2 text-[18px] font-semibold text-[#141413]"
-        style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+        style={{ fontFamily: "var(--font-display-local)" }}
       >
         {tool.title}
       </h3>
@@ -204,7 +204,7 @@ function ToolCard({ tool }: { tool: ToolItem }) {
       {/* Description — 单行，溢出原生悬浮提示 */}
       <p
         className="mb-4 truncate text-[14px] leading-relaxed text-[#b0aea5]"
-        style={{ fontFamily: "'Lora', Georgia, serif" }}
+        style={{ fontFamily: "var(--font-serif-local)" }}
         title={tool.description}
       >
         {tool.description}
@@ -227,7 +227,7 @@ function ToolCard({ tool }: { tool: ToolItem }) {
         <div className="flex items-center justify-between">
           <div
             className="flex items-center gap-1 text-[13px] font-medium transition-colors group-hover:gap-2"
-            style={{ color: tool.color, fontFamily: "'Poppins', Arial, sans-serif" }}
+            style={{ color: tool.color, fontFamily: "var(--font-display-local)" }}
           >
             {tool.category === 'admin' ? '进入管理' : '开始使用'}
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
@@ -238,7 +238,7 @@ function ToolCard({ tool }: { tool: ToolItem }) {
             title={copied ? '已复制' : '复制链接'}
             aria-label="复制链接"
             className="inline-flex items-center gap-1 rounded-md border border-[#e8e6dc] px-2 py-1 text-[11px] text-[#b0aea5] transition-colors hover:border-[#b0aea5] hover:text-[#141413]"
-            style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+            style={{ fontFamily: "var(--font-display-local)" }}
           >
             {copied ? (
               <>
@@ -263,17 +263,17 @@ function SectionHeader({ kicker, title, desc }: { kicker: string; title: string;
     <div className="mb-6">
       <p
         className="mb-1 text-[11px] font-medium tracking-wide uppercase text-[#b0aea5]"
-        style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+        style={{ fontFamily: "var(--font-display-local)" }}
       >
         {kicker}
       </p>
       <h2
         className="mb-1 text-[22px] font-semibold text-[#141413]"
-        style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+        style={{ fontFamily: "var(--font-display-local)" }}
       >
         {title}
       </h2>
-      <p className="text-[13px] text-[#b0aea5]" style={{ fontFamily: "'Lora', Georgia, serif" }}>
+      <p className="text-[13px] text-[#b0aea5]" style={{ fontFamily: "var(--font-serif-local)" }}>
         {desc}
       </p>
     </div>
@@ -293,17 +293,17 @@ export function ToolsHubPage() {
         <div className="mb-14">
           <p
             className="mb-2 text-[12px] font-medium tracking-wide text-[#b0aea5]"
-            style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+            style={{ fontFamily: "var(--font-display-local)" }}
           >
             工具中心
           </p>
           <h1
             className="mb-4 text-[36px] font-semibold leading-tight tracking-tight text-[#141413] sm:text-[42px]"
-            style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+            style={{ fontFamily: "var(--font-display-local)" }}
           >
             选择一个工具开始
           </h1>
-          <p className="text-[16px] text-[#b0aea5]" style={{ fontFamily: "'Lora', Georgia, serif" }}>
+          <p className="text-[16px] text-[#b0aea5]" style={{ fontFamily: "var(--font-serif-local)" }}>
             {activeCount} 个工具可用，更多工具持续开发中
           </p>
         </div>
@@ -338,7 +338,7 @@ export function ToolsHubPage() {
 
         {/* Footer */}
         <div className="mt-16 text-center">
-          <p className="text-[13px] text-[#b0aea5]" style={{ fontFamily: "'Lora', Georgia, serif" }}>
+          <p className="text-[13px] text-[#b0aea5]" style={{ fontFamily: "var(--font-serif-local)" }}>
             由 RuiMF 提供技术支持
           </p>
         </div>

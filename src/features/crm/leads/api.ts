@@ -17,6 +17,7 @@ import type {
   LeadListParams,
   LeadStatus,
   MarketStatisticsResponse,
+  MarketStaffDetailResponse,
   DituiFirstFollowupStats,
   DituiPendingStats,
   DituiCollectionTimeStat,
@@ -294,6 +295,15 @@ const leadsApi = {
     campus_id?: string
   }): Promise<ApiResponse<MarketStatisticsResponse>> {
     return apiClient.get('/leads/statistics/market', { params })
+  },
+
+  /** 获取市场专员点击明细统计 */
+  getMarketStaffDetail(staffId: string, params: {
+    date_from: string
+    date_to: string
+    campus_id?: string
+  }): Promise<ApiResponse<MarketStaffDetailResponse>> {
+    return apiClient.get(`/leads/statistics/market/${staffId}/detail`, { params })
   },
 
   /** 获取地推采单人统计 */

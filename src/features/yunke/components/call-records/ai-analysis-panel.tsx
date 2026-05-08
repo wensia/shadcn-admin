@@ -1,32 +1,40 @@
 /**
- * AI 分析结果展示面板
- * 使用 Semi Design CSS 变量作为配色
+ * 通话详情 AI 分析面板
+ * 兼容旧版分析结果，并优先展示“通话分析-K12结构化质检 v2”的结构化输出。
  */
 
-import { useEffect, useMemo, useState } from 'react'
 import { Button, Tag, Tabs, TabPane, Spin } from '@douyinfe/semi-ui-19'
 import { IconAlertCircle } from '@douyinfe/semi-icons'
 import {
+  AlertTriangle,
+  Award,
   BrainCircuit,
-  Lightbulb,
-  ShieldAlert,
+  CheckCircle2,
+  ClipboardList,
   FileSearch,
+  FileText,
+  Lightbulb,
+  ListChecks,
+  MessageSquare,
   MessageSquareQuote,
-  ChevronDown,
+  Route,
+  ShieldAlert,
+  ShieldCheck,
+  Tags,
+  Target,
+  UserRound,
+  XCircle,
 } from 'lucide-react'
-import {
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-  ResponsiveContainer,
-} from 'recharts'
+import type { ReactNode } from 'react'
 import type {
   AIAnalysisResult,
   AIAnalysisSupport,
   CallRecord,
 } from '../../types'
+import {
+  CallAnalysisMappingModel,
+  type CallAnalysisTone,
+} from './call-analysis-mapping'
 
 interface AIAnalysisPanelProps {
   record: CallRecord
@@ -34,53 +42,181 @@ interface AIAnalysisPanelProps {
   onAnalyze: () => void
 }
 
-const intentConfig = {
-  high: { label: '高意向', color: 'var(--semi-color-success)', bg: 'var(--semi-color-success-light-default)' },
-  medium: { label: '中等意向', color: 'var(--semi-color-warning)', bg: 'var(--semi-color-warning-light-default)' },
-  low: { label: '低意向', color: 'var(--semi-color-text-2)', bg: 'var(--semi-color-fill-0)' },
-  none: { label: '无意向', color: 'var(--semi-color-text-2)', bg: 'var(--semi-color-fill-0)' },
+type AnyRecord = Record<string, unknown>
+type Tone = CallAnalysisTone
+
+const toneStyle: Record<Tone, { bg: string; fg: string; border: string }> = {
+  success: {
+    bg: 'var(--semi-color-success-light-default)',
+    fg: 'var(--semi-color-success)',
+    border: 'var(--semi-color-success-light-active)',
+  },
+  warning: {
+    bg: 'var(--semi-color-warning-light-default)',
+    fg: 'var(--semi-color-warning)',
+    border: 'var(--semi-color-warning-light-active)',
+  },
+  danger: {
+    bg: 'var(--semi-color-danger-light-default)',
+    fg: 'var(--semi-color-danger)',
+    border: 'var(--semi-color-danger-light-active)',
+  },
+  info: {
+    bg: 'var(--semi-color-primary-light-default)',
+    fg: 'var(--semi-color-primary)',
+    border: 'var(--semi-color-primary-light-active)',
+  },
+  neutral: {
+    bg: 'var(--semi-color-fill-0)',
+    fg: 'var(--semi-color-text-2)',
+    border: 'var(--semi-color-border)',
+  },
 }
 
-const riskSeverityConfig = {
-  high: { label: '高风险', color: '#fff', bg: '#ef4444' },
-  medium: { label: '中风险', color: '#fff', bg: '#f97316' },
-  low: { label: '低风险', color: '#fff', bg: '#f59e0b' },
+const intentLabelMap: Record<string, string> = {
+  A_STRONG: '强意向',
+  B_MEDIUM: '中意向',
+  C_WEAK: '弱意向',
+  D_LOW: '低意向',
+  X_INVALID: '无效',
+  high: '高意向',
+  medium: '中等意向',
+  low: '低意向',
+  none: '无意向',
 }
 
-const riskBorderConfig: Record<string, string> = {
-  high: '#ef4444',
-  medium: '#f97316',
-  low: '#f59e0b',
+function asRecord(value: unknown): AnyRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as AnyRecord
+    : null
 }
 
-const scoreDimensions = [
-  { key: 'opening', label: '开场白', max: 10 },
-  { key: 'needs_discovery', label: '需求挖掘', max: 20 },
-  { key: 'product_intro', label: '产品介绍', max: 15 },
-  { key: 'objection_handling', label: '异议处理', max: 15 },
-  { key: 'closing', label: '促成邀约', max: 15 },
-  { key: 'communication', label: '沟通技巧', max: 10 },
-  { key: 'compliance', label: '合规性', max: 10 },
-  { key: 'ending', label: '结束语', max: 5 },
-] as const
-
-function getScoreColor(percent: number) {
-  if (percent >= 80) return 'var(--semi-color-success)'
-  if (percent >= 60) return 'var(--semi-color-warning)'
-  if (percent >= 40) return 'var(--semi-color-text-2)'
-  return 'var(--semi-color-danger)'
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : []
 }
 
-/**
- * SVG 环形进度指示器
- */
-function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
-  const strokeWidth = 6
+function recordArray(value: unknown): AnyRecord[] {
+  return asArray(value).map(asRecord).filter((item): item is AnyRecord => !!item)
+}
+
+function textValue(value: unknown, fallback = '未知'): string {
+  if (value === null || value === undefined || value === '') return fallback
+  if (typeof value === 'string') return CallAnalysisMappingModel.label(value, fallback)
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : fallback
+  if (typeof value === 'boolean') return value ? '是' : '否'
+  if (Array.isArray(value)) {
+    const rendered = value.map((item) => textValue(item, '')).filter(Boolean)
+    return rendered.length ? rendered.join('、') : fallback
+  }
+  const record = asRecord(value)
+  if (record) {
+    const preferred = record.name ?? record.status_name ?? record.code ?? record.action_name ?? record.field_name ?? record.reason
+    if (preferred !== undefined) return textValue(preferred, fallback)
+  }
+  return fallback
+}
+
+function optionalText(value: unknown): string {
+  const rendered = textValue(value, '')
+  return rendered === '未知' ? '' : rendered
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function booleanValue(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null
+}
+
+function getRecord(parent: AnyRecord | null, key: string): AnyRecord | null {
+  return parent ? asRecord(parent[key]) : null
+}
+
+function getStructuredAnalysis(analysis: AIAnalysisResult): AnyRecord | null {
+  const direct = asRecord(analysis.structured_analysis)
+  if (direct && Object.keys(direct).length > 0) return direct
+
+  const firstStructuredResult = recordArray(analysis.structured_results)[0]
+  if (firstStructuredResult) return firstStructuredResult
+
+  const promptResult = recordArray((analysis as unknown as AnyRecord).results)[0]
+  if (promptResult) return promptResult
+
+  const self = analysis as unknown as AnyRecord
+  if (self.analysis_version || self.stage_action_audit || self.followup_boundary_analysis) return self
+  return null
+}
+
+function confidenceText(value: unknown): string {
+  const number = numberValue(value)
+  if (number === null) return ''
+  return `置信 ${Math.round(number * 100)}%`
+}
+
+function percentText(value: unknown): string {
+  const number = numberValue(value)
+  if (number === null) return '未知'
+  return `${Math.round(Math.max(0, Math.min(1, number)) * 100)}%`
+}
+
+function scoreTone(score: number | null): Tone {
+  if (score === null) return 'neutral'
+  if (score >= 80) return 'success'
+  if (score >= 60) return 'warning'
+  return 'danger'
+}
+
+function riskTone(level: unknown): Tone {
+  return CallAnalysisMappingModel.riskTone(level)
+}
+
+function statusTone(value: unknown): Tone {
+  const text = textValue(value, '').toUpperCase()
+  if (text.includes('PASS') || text.includes('CONFIRMED') || text.includes('CLOSED') || text.includes('明确且客户确认') || text === '是') return 'success'
+  if (text.includes('RISK') || text.includes('FAILED') || text.includes('LOST') || text.includes('REFUND') || text.includes('勿扰') || text.includes('不合格') || text === 'HIGH') return 'danger'
+  if (text.includes('PENDING') || text.includes('考虑') || text.includes('待') || text.includes('模糊') || text.includes('软拒绝') || text.includes('暂缓') || text === 'MEDIUM') return 'warning'
+  return 'neutral'
+}
+
+function stageName(stage: AnyRecord | null): string {
+  if (!stage) return '未知'
+  const name = optionalText(stage.name)
+  const code = optionalText(stage.code)
+  if (name) return name
+  return name || code || '未知'
+}
+
+function tagLabel(item: AnyRecord): string {
+  return optionalText(item.name)
+    || optionalText(item.status_name)
+    || optionalText(item.action_name)
+    || optionalText(item.field_name)
+    || CallAnalysisMappingModel.codeLabel(item.code, '')
+    || '未命名'
+}
+
+function tagSubLabel(item: AnyRecord): string {
+  const parts = [
+    CallAnalysisMappingModel.codeLabel(item.code, ''),
+    item.severity !== undefined ? CallAnalysisMappingModel.riskLevelLabel(item.severity, '') : '',
+    confidenceText(item.confidence),
+    typeof item.deduction === 'number' ? `扣 ${item.deduction}` : '',
+    optionalText(item.handling_quality),
+    optionalText(item.owner),
+    optionalText(item.deadline),
+  ].filter(Boolean)
+  return Array.from(new Set(parts)).join(' · ')
+}
+
+function ScoreRing({ score, size = 86 }: { score: number | null; size?: number }) {
+  const strokeWidth = 7
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
-  const percent = Math.min(100, Math.max(0, score))
+  const percent = Math.min(100, Math.max(0, score ?? 0))
   const offset = circumference - (percent / 100) * circumference
-  const color = score >= 80 ? 'var(--semi-color-success)' : score >= 60 ? 'var(--semi-color-warning)' : score >= 40 ? 'var(--semi-color-text-2)' : 'var(--semi-color-danger)'
+  const tone = scoreTone(score)
+  const color = toneStyle[tone].fg
 
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
@@ -90,7 +226,7 @@ function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(0,0,0,0.06)"
+          stroke="var(--semi-color-fill-1)"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -103,7 +239,6 @@ function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
         />
       </svg>
       <div
@@ -116,83 +251,314 @@ function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
           justifyContent: 'center',
         }}
       >
-        <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1 }}>
-          {Math.round(score)}
+        <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1 }}>
+          {score === null ? '-' : Math.round(score)}
         </span>
-        <span style={{ fontSize: 9, color: 'var(--semi-color-text-2)' }}>/100</span>
+        <span style={{ fontSize: 10, color: 'var(--semi-color-text-2)' }}>/100</span>
       </div>
     </div>
   )
 }
 
-function MiniScoreRow({ label, score, max, percent }: {
-  label: string
-  score: number | null
-  max: number
-  percent: number
+function EmptyText({ children = '暂无数据' }: { children?: string }) {
+  return (
+    <p style={{ margin: 0, fontSize: 13, color: 'var(--semi-color-text-2)', lineHeight: 1.6 }}>
+      {children}
+    </p>
+  )
+}
+
+function Section({
+  title,
+  icon,
+  children,
+  right,
+}: {
+  title: string
+  icon?: ReactNode
+  children: ReactNode
+  right?: ReactNode
 }) {
-  const color = getScoreColor(percent)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-      <div style={{ display: 'flex', minWidth: 0, alignItems: 'center', gap: 6 }}>
-        <span style={{ height: 6, width: 6, flexShrink: 0, borderRadius: '50%', backgroundColor: color }} />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, color: 'var(--semi-color-text-2)' }}>{label}</span>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          {icon}
+          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
+            {title}
+          </h4>
+        </div>
+        {right}
       </div>
-      <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-        {score ?? '-'}/{max}
-      </span>
+      {children}
+    </section>
+  )
+}
+
+function ToneTag({ tone, children }: { tone: Tone; children: ReactNode }) {
+  const style = toneStyle[tone]
+  return (
+    <Tag
+      size="small"
+      style={{
+        color: style.fg,
+        background: style.bg,
+        borderColor: style.border,
+        fontWeight: 500,
+      }}
+    >
+      {children}
+    </Tag>
+  )
+}
+
+function MetricCard({
+  label,
+  value,
+  detail,
+  tone = 'neutral',
+}: {
+  label: string
+  value: ReactNode
+  detail?: ReactNode
+  tone?: Tone
+}) {
+  const style = toneStyle[tone]
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        borderRadius: 8,
+        border: `1px solid ${style.border}`,
+        background: style.bg,
+        padding: '10px 12px',
+      }}
+    >
+      <p style={{ margin: 0, fontSize: 12, color: style.fg, lineHeight: 1.4 }}>{label}</p>
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 16,
+          fontWeight: 700,
+          color: 'var(--semi-color-text-0)',
+          lineHeight: 1.35,
+          wordBreak: 'break-word',
+        }}
+      >
+        {value}
+      </div>
+      {detail && (
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--semi-color-text-2)', lineHeight: 1.5 }}>
+          {detail}
+        </p>
+      )}
     </div>
   )
 }
 
-function TagList({ label, items }: { label: string; items: string[] }) {
-  if (!items || items.length === 0) return null
+function KeyValueGrid({
+  items,
+  columns = 2,
+}: {
+  items: Array<{ label: string; value: unknown; tone?: Tone }>
+  columns?: 1 | 2
+}) {
+  const visibleItems = items.filter((item) => textValue(item.value, '') !== '')
+  if (!visibleItems.length) return <EmptyText />
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>{label}</p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {items.map((item, i) => (
-          <Tag key={i} size="small" style={{ fontSize: 12 }}>{item}</Tag>
-        ))}
-      </div>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: columns === 1 ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: 8,
+      }}
+    >
+      {visibleItems.map((item) => {
+        const tone = item.tone || 'neutral'
+        const style = toneStyle[tone]
+        return (
+          <div
+            key={item.label}
+            style={{
+              borderRadius: 6,
+              border: '1px solid var(--semi-color-border)',
+              background: 'var(--semi-color-fill-0)',
+              padding: '8px 10px',
+              minWidth: 0,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--semi-color-text-2)', lineHeight: 1.4 }}>
+              {item.label}
+            </p>
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: 13,
+                fontWeight: 500,
+                color: tone === 'neutral' ? 'var(--semi-color-text-0)' : style.fg,
+                lineHeight: 1.5,
+                wordBreak: 'break-word',
+              }}
+            >
+              {textValue(item.value)}
+            </p>
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-function EvidenceRefs({ supportIds, supportMap }: { supportIds: string[]; supportMap: Map<string, AIAnalysisSupport> }) {
-  if (!supportIds.length) return null
+function EvidenceList({
+  items,
+  empty = '暂无证据',
+}: {
+  items: unknown
+  empty?: string
+}) {
+  const list = asArray(items)
+  if (!list.length) return <EmptyText>{empty}</EmptyText>
 
   return (
-    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <p style={{ fontSize: 12, color: 'var(--semi-color-text-2)', margin: 0 }}>证据引用</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {supportIds.map((id) => {
-          const support = supportMap.get(id)
-          if (!support) {
-            return (
-              <div key={id} style={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.06)', background: 'var(--semi-color-fill-0)', padding: '4px 8px', fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-                <span style={{ fontFamily: 'monospace', color: 'var(--semi-color-primary)' }}>#{id}</span>（未找到对应证据片段）
-              </div>
-            )
-          }
-
-          return (
-            <div key={id} style={{ borderRadius: 4, border: '1px solid rgba(0,0,0,0.06)', background: 'var(--semi-color-fill-0)', padding: '6px 8px', fontSize: 12 }}>
-              <div style={{ marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--semi-color-text-2)' }}>
-                <span style={{ fontFamily: 'monospace', color: 'var(--semi-color-primary)', fontWeight: 500 }}>#{support.id}</span>
-                {support.time_range && <span>{support.time_range}</span>}
-                {support.speaker && <span>· {support.speaker}</span>}
-              </div>
-              <p style={{
-                lineHeight: 1.6,
-                margin: 0,
-                fontStyle: 'italic',
-                borderLeft: '2px solid var(--semi-color-primary-light-default)',
-                paddingLeft: 8,
-                color: 'var(--semi-color-text-1)',
-              }}>
-                {support.quote || '（无摘录）'}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {list.map((item, index) => {
+        const record = asRecord(item)
+        const text = record
+          ? optionalText(record.evidence) || optionalText(record.quote) || optionalText(record.claim) || textValue(record)
+          : textValue(item)
+        const meta = record
+          ? [optionalText(record.time_range), optionalText(record.speaker), optionalText(record.code)].filter(Boolean).join(' · ')
+          : ''
+        return (
+          <div
+            key={index}
+            style={{
+              borderLeft: '3px solid var(--semi-color-primary-light-default)',
+              background: 'var(--semi-color-fill-0)',
+              borderRadius: 6,
+              padding: '8px 10px',
+            }}
+          >
+            {meta && (
+              <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                {meta}
               </p>
+            )}
+            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.65, color: 'var(--semi-color-text-1)' }}>
+              {text}
+            </p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ScoreDimensions({ dimensions }: { dimensions: unknown }) {
+  const items = recordArray(dimensions)
+  if (!items.length) return <EmptyText>暂无维度评分</EmptyText>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {items.map((item, index) => {
+        const score = numberValue(item.score)
+        const weight = numberValue(item.weight) ?? 100
+        const percent = score === null || weight <= 0 ? 0 : Math.round((score / weight) * 100)
+        const color = toneStyle[scoreTone(percent)].fg
+        return (
+          <div
+            key={`${textValue(item.dimension, 'dimension')}-${index}`}
+            style={{
+              borderRadius: 8,
+              border: '1px solid var(--semi-color-border)',
+              background: 'var(--semi-color-fill-0)',
+              padding: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
+                  {textValue(item.name, textValue(item.dimension))}
+                </p>
+                {item.reason !== undefined && (
+                  <p style={{ margin: '4px 0 0', fontSize: 12, lineHeight: 1.55, color: 'var(--semi-color-text-2)' }}>
+                    {textValue(item.reason)}
+                  </p>
+                )}
+              </div>
+              <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color }}>
+                {score ?? '-'}/{weight}
+              </span>
+            </div>
+            <div style={{ marginTop: 8, height: 6, overflow: 'hidden', borderRadius: 999, background: 'var(--semi-color-fill-1)' }}>
+              <div style={{ height: '100%', width: `${Math.max(0, Math.min(100, percent))}%`, borderRadius: 999, background: color }} />
+            </div>
+            {asArray(item.evidence).length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <EvidenceList items={item.evidence} />
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function StructuredTagList({
+  title,
+  items,
+  empty = '暂无标签',
+}: {
+  title: string
+  items: unknown
+  empty?: string
+}) {
+  const list = recordArray(items)
+  if (!list.length) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{title}</p>
+        <EmptyText>{empty}</EmptyText>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{title}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {list.map((item, index) => {
+          const severity = typeof item.severity === 'string' ? item.severity : ''
+          const tone = severity ? riskTone(severity) : statusTone(item.status_code ?? item.code)
+          const handled = booleanValue(item.handled)
+          return (
+            <div
+              key={`${tagLabel(item)}-${index}`}
+              style={{
+                borderRadius: 8,
+                border: '1px solid var(--semi-color-border)',
+                borderLeft: `3px solid ${toneStyle[tone].fg}`,
+                background: 'var(--semi-color-fill-0)',
+                padding: 10,
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                <ToneTag tone={tone}>{tagLabel(item)}</ToneTag>
+                {tagSubLabel(item) && <Tag size="small" color="grey">{tagSubLabel(item)}</Tag>}
+                {handled !== null && <ToneTag tone={handled ? 'success' : 'warning'}>{handled ? '已处理' : '未处理'}</ToneTag>}
+              </div>
+              {item.evidence !== undefined && (
+                <p style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-1)' }}>
+                  证据：{textValue(item.evidence)}
+                </p>
+              )}
+              {(item.explanation !== undefined || item.better_response !== undefined || item.suggested_rewrite !== undefined) && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-2)' }}>
+                  {optionalText(item.explanation) || optionalText(item.better_response) || optionalText(item.suggested_rewrite)}
+                </p>
+              )}
             </div>
           )
         })}
@@ -201,478 +567,788 @@ function EvidenceRefs({ supportIds, supportMap }: { supportIds: string[]; suppor
   )
 }
 
-function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
-  const intent = intentConfig[analysis.customer_intent] || intentConfig.none
-  const supports = analysis.supports || []
-  const evidence = analysis.evidence || []
-  const riskFlags = analysis.risk_flags || []
-  const complianceAdjustment = analysis.compliance_adjustment
+function BetterScriptList({ items }: { items: unknown }) {
+  const list = recordArray(items)
+    .map((item, index) => {
+      const scenario = optionalText(item.scenario) || optionalText(item.name) || optionalText(item.title)
+      const originalIssue = optionalText(item.original_issue) || optionalText(item.issue)
+      const betterScript = optionalText(item.better_script)
+        || optionalText(item.suggested_script)
+        || optionalText(item.better_response)
+        || optionalText(item.suggested_rewrite)
+      const evidence = optionalText(item.evidence)
 
-  const scorecardKeys = useMemo(() => scoreDimensions.map((d) => d.key), [])
-  const [scorecardExpanded, setScorecardExpanded] = useState<Record<string, boolean>>({})
-  useEffect(() => {
-    const resetTimer = window.setTimeout(() => {
-      setScorecardExpanded({})
-    }, 0)
-    return () => window.clearTimeout(resetTimer)
-  }, [analysis.scorecard, analysis.prompt_version, analysis.version])
+      return { scenario, originalIssue, betterScript, evidence, index }
+    })
+    .filter((item) => item.scenario || item.originalIssue || item.betterScript || item.evidence)
 
-  const scoreItems = scoreDimensions.map((item) => {
-    const scItem = analysis.scorecard?.[item.key]
-    const max = typeof scItem?.max_score === 'number' ? scItem.max_score : item.max
-    const raw = typeof scItem?.score === 'number' ? scItem.score : analysis.scores?.[item.key]
-    const score = typeof raw === 'number' ? Math.max(0, Math.min(max, Math.round(raw))) : null
-    const percent = score === null ? 0 : Math.round((score / max) * 100)
-    const rationale = typeof scItem?.rationale === 'string' ? scItem.rationale : ''
-    const supportIds = Array.isArray(scItem?.support_ids) ? scItem.support_ids : []
-    return { ...item, max, score, percent, rationale, supportIds }
-  })
-  const hasScoreContent = scoreItems.some((item) => item.score !== null)
-  const radarData = scoreItems.map((item) => ({
-    dimension: item.label,
-    value: item.percent,
-  }))
-  const supportMap = new Map(supports.map((item) => [item.id, item]))
-  const hasOverviewContent = !!analysis.quality_feedback || (analysis.improvements?.length || 0) > 0
-  const hasKeyInfo =
-    analysis.key_info.customer_needs.length > 0 ||
-    analysis.key_info.objections.length > 0 ||
-    analysis.key_info.follow_up_times.length > 0 ||
-    analysis.key_info.competitors_mentioned.length > 0 ||
-    analysis.key_info.decision_makers.length > 0
-  const hasRiskContent = !!complianceAdjustment || riskFlags.length > 0
-  const hasEvidenceContent = evidence.length > 0 || supports.length > 0
-  const hasScorecard = !!analysis.scorecard && (analysis.version ?? 0) >= 3
-  const defaultTab = hasRiskContent ? 'risk' : hasScorecard ? 'scorecard' : hasEvidenceContent ? 'evidence' : 'overview'
+  if (!list.length) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>更好话术</p>
+        <EmptyText>暂无话术建议</EmptyText>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20 }}>
-      {/* 通话摘要 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-2)', margin: 0 }}>通话摘要</p>
-        <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{analysis.summary}</p>
-      </div>
-
-      {/* 评分总览：环形进度 + 意向 + 雷达图 + 8维度分数（紧凑） */}
-      <div style={{ borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)', background: 'var(--semi-color-fill-0)', padding: 16 }}>
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0,1fr) 240px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 14, rowGap: 8 }}>
-              {/* 环形进度指示器 */}
-              <ScoreRing score={analysis.quality_score} size={80} />
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  borderRadius: 999,
-                  padding: '5px 12px',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: intent.color,
-                  backgroundColor: intent.bg,
-                }}
-              >
-                <span
-                  style={{ height: 6, width: 6, borderRadius: '50%', backgroundColor: intent.color }}
-                />
-                {intent.label}
-              </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>更好话术</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {list.map((item) => (
+          <div
+            key={`${item.scenario || item.originalIssue || 'better-script'}-${item.index}`}
+            style={{
+              borderRadius: 8,
+              border: '1px solid var(--semi-color-border)',
+              borderLeft: '3px solid var(--semi-color-primary)',
+              background: 'var(--semi-color-fill-0)',
+              padding: 10,
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+              <ToneTag tone="info">{item.scenario || `话术建议 ${item.index + 1}`}</ToneTag>
             </div>
-            {analysis.quality_feedback && (
-              <p style={{ fontSize: 12, color: 'var(--semi-color-text-2)', lineHeight: 1.6, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                {analysis.quality_feedback}
+            {item.originalIssue && (
+              <p style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-2)' }}>
+                原问题：{item.originalIssue}
               </p>
             )}
-
-            {hasScoreContent ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16, rowGap: 6, paddingTop: 4 }}>
-                {scoreItems.map((item) => (
-                  <MiniScoreRow
-                    key={item.key}
-                    label={item.label}
-                    score={item.score}
-                    max={item.max}
-                    percent={item.percent}
-                  />
-                ))}
+            {item.evidence && (
+              <p style={{ margin: '6px 0 0', fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-2)' }}>
+                证据：{item.evidence}
+              </p>
+            )}
+            {item.betterScript && (
+              <div
+                style={{
+                  marginTop: 8,
+                  borderRadius: 6,
+                  background: 'var(--semi-color-bg-0)',
+                  border: '1px solid var(--semi-color-primary-light-active)',
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  color: 'var(--semi-color-text-0)',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {item.betterScript}
               </div>
-            ) : (
-              <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>暂无维度评分</p>
             )}
           </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
-          <div style={{ height: 210, width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-              <RadarChart data={radarData} margin={{ top: 14, right: 14, bottom: 14, left: 14 }}>
-                <PolarGrid gridType="polygon" radialLines={false} stroke="rgba(0,0,0,0.06)" />
-                <PolarAngleAxis
-                  dataKey="dimension"
-                  tick={{ fontSize: 10, fill: 'rgba(0,0,0,0.55)' }}
-                />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar
-                  dataKey="value"
-                  stroke="var(--semi-color-primary)"
-                  fill="var(--semi-color-primary)"
-                  fillOpacity={0.18}
-                  strokeWidth={2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+function RequiredActionList({ items }: { items: unknown }) {
+  const list = recordArray(items)
+  if (!list.length) return <EmptyText>暂无动作审计</EmptyText>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {list.map((item, index) => {
+        const completed = booleanValue(item.completed) === true
+        const requiredLevel = String(item.required_level ?? 'SHOULD').toUpperCase()
+        const isMust = requiredLevel === 'MUST'
+        return (
+          <div
+            key={`${textValue(item.action_code, 'action')}-${index}`}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '20px minmax(0,1fr)',
+              gap: 8,
+              borderRadius: 8,
+              border: '1px solid var(--semi-color-border)',
+              background: 'var(--semi-color-fill-0)',
+              padding: 10,
+            }}
+          >
+            {completed ? (
+              <CheckCircle2 style={{ marginTop: 2, width: 16, height: 16, color: 'var(--semi-color-success)' }} />
+            ) : (
+              <XCircle style={{ marginTop: 2, width: 16, height: 16, color: isMust ? 'var(--semi-color-danger)' : 'var(--semi-color-warning)' }} />
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
+                  {textValue(item.action_name, textValue(item.action_code))}
+                </p>
+                <ToneTag tone={isMust ? 'danger' : 'neutral'}>
+                  {CallAnalysisMappingModel.requiredLevelLabel(requiredLevel)}
+                </ToneTag>
+                {confidenceText(item.confidence) && <Tag size="small" color="grey">{confidenceText(item.confidence)}</Tag>}
+              </div>
+              {(item.evidence !== undefined || item.reason_if_missing !== undefined) && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-1)' }}>
+                  {completed ? `证据：${textValue(item.evidence)}` : `缺失原因：${textValue(item.reason_if_missing)}`}
+                </p>
+              )}
+              {item.impact_if_missing !== undefined && !completed && (
+                <p style={{ margin: '4px 0 0', fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-2)' }}>
+                  影响：{textValue(item.impact_if_missing)}
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function MissingActions({ items }: { items: unknown }) {
+  const list = recordArray(items)
+  if (!list.length) return <EmptyText>没有明显缺失动作</EmptyText>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {list.map((item, index) => {
+        const severity = optionalText(item.severity).toUpperCase()
+        const tone = severity === 'HIGH' ? 'danger' : severity === 'MEDIUM' ? 'warning' : 'neutral'
+        return (
+          <div
+            key={`${textValue(item.action_code, 'missing')}-${index}`}
+            style={{
+              borderRadius: 8,
+              border: '1px solid var(--semi-color-border)',
+              borderLeft: `3px solid ${toneStyle[tone].fg}`,
+              background: 'var(--semi-color-fill-0)',
+              padding: 10,
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+              <ToneTag tone={tone}>{textValue(item.action_name, textValue(item.action_code))}</ToneTag>
+              <Tag size="small" color="grey">
+                {CallAnalysisMappingModel.requiredLevelLabel(item.required_level, '必做')}
+              </Tag>
+            </div>
+            {item.why_important !== undefined && (
+              <p style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.6 }}>
+                {textValue(item.why_important)}
+              </p>
+            )}
+            {item.suggested_script !== undefined && (
+              <p style={{ margin: '6px 0 0', fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-2)' }}>
+                建议话术：{textValue(item.suggested_script)}
+              </p>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function CrmFieldAudit({ fields, missingFields }: { fields: unknown; missingFields: unknown }) {
+  const fieldList = recordArray(fields)
+  const missingList = recordArray(missingFields)
+  if (!fieldList.length && !missingList.length) return <EmptyText>暂无 CRM 字段审计</EmptyText>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {fieldList.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 8,
+          }}
+        >
+          {fieldList.map((field, index) => {
+            const captured = booleanValue(field.captured) === true
+            return (
+              <div
+                key={`${textValue(field.field_name, 'field')}-${index}`}
+                style={{
+                  borderRadius: 6,
+                  border: '1px solid var(--semi-color-border)',
+                  background: 'var(--semi-color-fill-0)',
+                  padding: 8,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--semi-color-text-2)' }}>{textValue(field.field_name)}</p>
+                  <ToneTag tone={captured ? 'success' : 'warning'}>{captured ? '已沉淀' : '缺失'}</ToneTag>
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.5 }}>
+                  {textValue(field.field_value, captured ? '未知' : '未捕获')}
+                </p>
+                {field.evidence !== undefined && (
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--semi-color-text-2)', lineHeight: 1.5 }}>
+                    {textValue(field.evidence)}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {missingList.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>缺失 CRM 字段</p>
+          {missingList.map((field, index) => (
+            <div
+              key={`${textValue(field.field_name, 'missing-field')}-${index}`}
+              style={{
+                borderRadius: 6,
+                border: '1px solid var(--semi-color-warning-light-active)',
+                background: 'var(--semi-color-warning-light-default)',
+                padding: 8,
+              }}
+            >
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{textValue(field.field_name)}</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, lineHeight: 1.5, color: 'var(--semi-color-text-2)' }}>
+                {textValue(field.why_important)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LegacyEvidenceRefs({ supportIds, supportMap }: { supportIds: string[]; supportMap: Map<string, AIAnalysisSupport> }) {
+  if (!supportIds.length) return null
+
+  return (
+    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {supportIds.map((id) => {
+        const support = supportMap.get(id)
+        return (
+          <div
+            key={id}
+            style={{
+              borderRadius: 6,
+              border: '1px solid var(--semi-color-border)',
+              background: 'var(--semi-color-fill-0)',
+              padding: 8,
+            }}
+          >
+            <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+              #{id}{support?.time_range ? ` · ${support.time_range}` : ''}{support?.speaker ? ` · ${support.speaker}` : ''}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6 }}>{support?.quote || '未找到对应证据片段'}</p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function StructuredOverview({ analysis, structured }: { analysis: AIAnalysisResult; structured: AnyRecord }) {
+  const scores = getRecord(structured, 'scores')
+  const stage = getRecord(getRecord(structured, 'stage'), 'primary_stage')
+  const dealStatus = getRecord(structured, 'deal_status')
+  const intent = getRecord(structured, 'intent')
+  const riskSummary = getRecord(structured, 'risk_summary')
+  const actionAudit = getRecord(structured, 'stage_action_audit')
+  const stagePass = getRecord(actionAudit, 'stage_pass')
+  const coaching = getRecord(structured, 'coaching')
+  const score = numberValue(scores?.total_score) ?? numberValue(analysis.quality_score)
+  const riskLevel = riskSummary?.overall_risk_level ?? 'NONE'
+  const completionRate = actionAudit ? percentText(actionAudit.stage_completion_rate) : '未知'
+  const pass = booleanValue(stagePass?.passed)
+  const intentLevel = textValue(intent?.intent_level, analysis.customer_intent)
+  const analysisVersion = optionalText(structured.analysis_version)
+  const promptLabel = [
+    analysis.prompt_name,
+    analysis.prompt_version ? `v${analysis.prompt_version}` : '',
+    analysis.model_config,
+  ].filter(Boolean).join(' · ')
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div
+        style={{
+          borderRadius: 10,
+          border: '1px solid var(--semi-color-border)',
+          background: 'var(--semi-color-bg-0)',
+          padding: 14,
+        }}
+      >
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <ScoreRing score={score} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+              <ToneTag tone={scoreTone(score)}>{textValue(scores?.score_level, score === null ? '未评分' : '评分')}</ToneTag>
+              <ToneTag tone={riskTone(riskLevel)}>
+                风险 {CallAnalysisMappingModel.riskLevelLabel(riskLevel)}
+              </ToneTag>
+              {scores?.manual_review_required === true && <ToneTag tone="danger">需人工复核</ToneTag>}
+              {promptLabel && <Tag size="small" color="grey">{promptLabel}</Tag>}
+              {analysisVersion && <Tag size="small" color="grey">{analysisVersion}</Tag>}
+            </div>
+            <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.7, color: 'var(--semi-color-text-1)' }}>
+              {optionalText(coaching?.one_sentence_summary)
+                || optionalText(analysis.summary)
+                || optionalText(stage?.reason)
+                || '暂无摘要'}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* 结构化分析标签页 */}
-      <Tabs defaultActiveKey={defaultTab} size="small" style={{ gap: 12 }}>
-        <TabPane tab="洞察" itemKey="overview">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4 }}>
-            {/* 改进建议 */}
-            {analysis.improvements && analysis.improvements.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Lightbulb style={{ height: 16, width: 16, color: 'var(--semi-color-primary)' }} aria-hidden="true" />
-                  <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>改进建议</p>
-                  <span style={{ fontSize: 10, color: 'var(--semi-color-text-2)' }}>
-                    {analysis.improvements.length} 项
-                  </span>
-                </div>
-                <div>
-                  {analysis.improvements.map((item, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: 'flex',
-                        gap: 12,
-                        borderLeft: '2px solid var(--semi-color-primary)',
-                        padding: '10px 4px 10px 12px',
-                        transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-                    >
-                      <span
-                        style={{
-                          marginTop: 2,
-                          display: 'flex',
-                          height: 20,
-                          width: 20,
-                          flexShrink: 0,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '50%',
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: '#fff',
-                          backgroundColor: 'var(--semi-color-primary)',
-                        }}
-                      >
-                        {i + 1}
-                      </span>
-                      {typeof item === 'string' ? (
-                        <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{item}</p>
-                      ) : (
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ marginBottom: 4, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                            <Tag size="small" style={{ fontSize: 10 }}>
-                              {scoreDimensions.find((d) => d.key === item.dimension)?.label || item.dimension}
-                            </Tag>
-                            <Tag size="small" color="grey" style={{ fontSize: 10 }}>
-                              {item.priority === 'high' ? '高优先' : item.priority === 'medium' ? '中优先' : '低优先'}
-                            </Tag>
-                          </div>
-                          <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{item.suggestion}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: 8,
+        }}
+      >
+        <MetricCard label="电话阶段" value={stageName(stage)} detail={stage?.reason ? textValue(stage.reason) : undefined} tone="info" />
+        <MetricCard label="客户意向" value={intentLabelMap[intentLevel] || intentLevel} detail={intent?.reason ? textValue(intent.reason) : undefined} tone={statusTone(intentLevel)} />
+        <MetricCard label="成交状态" value={textValue(dealStatus?.status_name, textValue(dealStatus?.status_code))} detail={dealStatus?.reason ? textValue(dealStatus.reason) : undefined} tone={statusTone(dealStatus?.status_code)} />
+        <MetricCard label="动作完成率" value={completionRate} detail={`阶段动作分 ${textValue(actionAudit?.stage_action_score, '未知')}/20`} tone={pass === false ? 'danger' : pass === true ? 'success' : 'neutral'} />
+        <MetricCard label="阶段是否合格" value={pass === null ? '未知' : pass ? '合格' : '不合格'} detail={stagePass?.reason ? textValue(stagePass.reason) : undefined} tone={pass === false ? 'danger' : pass === true ? 'success' : 'neutral'} />
+        <MetricCard label="风险扣分" value={textValue(scores?.risk_deduction, '0')} detail={scores?.score_cap_applied ? `分数上限 ${textValue(scores.score_cap_applied)}` : '无上限'} tone={(numberValue(scores?.risk_deduction) ?? 0) > 0 ? 'warning' : 'success'} />
+      </div>
+
+      <Section title="阶段判断证据" icon={<Target style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <EvidenceList items={stage?.evidence} empty="暂无阶段证据" />
+      </Section>
+
+      <Section title="评分维度" icon={<Award style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <ScoreDimensions dimensions={scores?.dimensions} />
+      </Section>
+    </div>
+  )
+}
+
+function ActionAuditView({ structured }: { structured: AnyRecord }) {
+  const audit = getRecord(structured, 'stage_action_audit')
+  if (!audit) return <EmptyText>当前结果没有阶段动作审计数据</EmptyText>
+
+  const stagePass = getRecord(audit, 'stage_pass')
+  const nextStepQuality = getRecord(audit, 'next_step_quality')
+  const nextBestAction = getRecord(audit, 'next_best_action')
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Section
+        title="阶段目标"
+        icon={<Route style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}
+        right={<ToneTag tone={booleanValue(stagePass?.passed) === false ? 'danger' : booleanValue(stagePass?.passed) === true ? 'success' : 'neutral'}>{booleanValue(stagePass?.passed) === false ? '不合格' : booleanValue(stagePass?.passed) === true ? '合格' : '未知'}</ToneTag>}
+      >
+        <KeyValueGrid
+          items={[
+            { label: '阶段目标', value: audit.stage_goal },
+            { label: '完成率', value: percentText(audit.stage_completion_rate) },
+            { label: '动作分', value: `${textValue(audit.stage_action_score, '-')}/20` },
+            { label: '合格判断', value: stagePass?.reason },
+          ]}
+        />
+      </Section>
+
+      <Section title="MUST / SHOULD 动作完成情况" icon={<ListChecks style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <RequiredActionList items={audit.required_actions} />
+      </Section>
+
+      <Section title="缺失关键动作" icon={<AlertTriangle style={{ width: 16, height: 16, color: 'var(--semi-color-warning)' }} />}>
+        <MissingActions items={audit.missing_actions} />
+      </Section>
+
+      <Section title="下一步质量与建议动作" icon={<Target style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <KeyValueGrid
+          items={[
+            {
+              label: '下一步质量',
+              value: CallAnalysisMappingModel.nextStepQualityLabel(nextStepQuality?.level),
+              tone: statusTone(nextStepQuality?.level),
+            },
+            { label: '有具体动作', value: nextStepQuality?.has_specific_action },
+            { label: '有具体时间', value: nextStepQuality?.has_specific_time },
+            { label: '客户确认', value: nextStepQuality?.customer_confirmed },
+            { label: '改进建议', value: nextStepQuality?.improvement },
+            { label: '最佳动作', value: textValue(nextBestAction?.action_name, textValue(nextBestAction?.action_code)) },
+            { label: '负责人', value: nextBestAction?.owner },
+            { label: '期限', value: nextBestAction?.deadline },
+            { label: '原因', value: nextBestAction?.reason },
+          ]}
+        />
+        {nextBestAction?.suggested_script !== undefined && (
+          <div style={{ marginTop: 8 }}>
+            <EvidenceList items={[`建议话术：${textValue(nextBestAction.suggested_script)}`]} />
+          </div>
+        )}
+      </Section>
+
+      <Section title="CRM 字段沉淀审计" icon={<ClipboardList style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <CrmFieldAudit fields={audit.required_crm_fields} missingFields={audit.missing_crm_fields} />
+      </Section>
+    </div>
+  )
+}
+
+function BoundaryAndBonusView({ structured }: { structured: AnyRecord }) {
+  const boundary = getRecord(structured, 'followup_boundary_analysis')
+  const scores = getRecord(structured, 'scores')
+  const bonus = getRecord(scores, 'responsible_persistence_bonus')
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Section title="跟进边界判断" icon={<ShieldCheck style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <KeyValueGrid
+          items={[
+            {
+              label: '拒绝类型',
+              value: CallAnalysisMappingModel.refusalTypeLabel(boundary?.customer_refusal_type),
+              tone: statusTone(boundary?.customer_refusal_type),
+            },
+            { label: '明确勿扰', value: boundary?.explicit_do_not_contact, tone: boundary?.explicit_do_not_contact === true ? 'danger' : 'success' },
+            { label: '软拒绝', value: boundary?.soft_refusal_detected },
+            { label: '强拒绝', value: boundary?.strong_refusal_detected },
+            { label: '允许后续联系', value: boundary?.customer_allowed_future_contact },
+            { label: '跟进是否尊重边界', value: boundary?.followup_was_respectful, tone: boundary?.followup_was_respectful === false ? 'danger' : 'success' },
+            { label: '拒绝后继续推进', value: boundary?.consultant_persisted_after_refusal },
+            { label: '推进质量', value: boundary?.persistence_quality, tone: statusTone(boundary?.persistence_quality) },
+            { label: '风险/加分判断', value: boundary?.risk_or_bonus_judgment, tone: statusTone(boundary?.risk_or_bonus_judgment) },
+          ]}
+        />
+        {boundary?.evidence !== undefined && (
+          <div style={{ marginTop: 8 }}>
+            <EvidenceList items={[boundary.evidence]} />
+          </div>
+        )}
+        {boundary?.notes !== undefined && (
+          <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.6, color: 'var(--semi-color-text-2)' }}>
+            {textValue(boundary.notes)}
+          </p>
+        )}
+      </Section>
+
+      <Section title="销售韧性加分" icon={<Award style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <KeyValueGrid
+          items={[
+            { label: '加分', value: `${textValue(bonus?.bonus_score, '0')}/${textValue(bonus?.max_bonus, '6')}`, tone: (numberValue(bonus?.bonus_score) ?? 0) > 0 ? 'success' : 'neutral' },
+            { label: '是否符合加分条件', value: bonus?.eligible },
+            { label: '加分原因', value: bonus?.reason },
+            { label: '证据', value: bonus?.evidence },
+          ]}
+          columns={1}
+        />
+        <div style={{ marginTop: 10 }}>
+          <StructuredTagList title="加分项" items={bonus?.bonus_items} empty="没有销售韧性加分项" />
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function RiskAndTagsView({ structured }: { structured: AnyRecord }) {
+  const tagging = getRecord(structured, 'tagging')
+  const riskSummary = getRecord(structured, 'risk_summary')
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Section title="风险摘要" icon={<ShieldAlert style={{ width: 16, height: 16, color: 'var(--semi-color-danger)' }} />}>
+        <KeyValueGrid
+          items={[
+            { label: '整体风险', value: CallAnalysisMappingModel.riskLevelLabel(riskSummary?.overall_risk_level), tone: riskTone(riskSummary?.overall_risk_level) },
+            { label: '风险数量', value: riskSummary?.risk_count },
+            { label: '严重风险', value: riskSummary?.critical_count, tone: (numberValue(riskSummary?.critical_count) ?? 0) > 0 ? 'danger' : 'neutral' },
+            { label: '高风险', value: riskSummary?.high_count, tone: (numberValue(riskSummary?.high_count) ?? 0) > 0 ? 'danger' : 'neutral' },
+            { label: '中风险', value: riskSummary?.medium_count, tone: (numberValue(riskSummary?.medium_count) ?? 0) > 0 ? 'warning' : 'neutral' },
+            { label: '低风险', value: riskSummary?.low_count },
+            { label: '复核原因', value: riskSummary?.manual_review_reason },
+          ]}
+        />
+      </Section>
+
+      <Section title="风险明细" icon={<AlertTriangle style={{ width: 16, height: 16, color: 'var(--semi-color-warning)' }} />}>
+        <StructuredTagList title="risk_tags" items={tagging?.risk_tags} empty="暂无风险标签" />
+      </Section>
+
+      <Section title="业务标签" icon={<Tags style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+          <StructuredTagList title="通话目的" items={tagging?.purpose_tags} />
+          <StructuredTagList title="客户画像" items={tagging?.customer_tags} />
+          <StructuredTagList title="科目标签" items={tagging?.subject_tags} />
+          <StructuredTagList title="客户异议" items={tagging?.objection_tags} />
+          <StructuredTagList title="转化标签" items={tagging?.conversion_tags} />
+          <StructuredTagList title="下一步动作" items={tagging?.next_action_tags} />
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function CrmAndCoachingView({ structured }: { structured: AnyRecord }) {
+  const customerProfile = getRecord(structured, 'customer_profile')
+  const conversion = getRecord(structured, 'conversion_analysis')
+  const crmOutput = getRecord(structured, 'crm_output')
+  const communication = getRecord(structured, 'communication_analysis')
+  const coaching = getRecord(structured, 'coaching')
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Section title="客户画像" icon={<UserRound style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <KeyValueGrid
+          items={[
+            { label: '接听人身份', value: customerProfile?.role_of_answerer },
+            { label: '是否直接联系未成年人', value: customerProfile?.is_minor_directly_contacted, tone: customerProfile?.is_minor_directly_contacted === true ? 'danger' : 'neutral' },
+            { label: '学生年级', value: customerProfile?.student_grade },
+            { label: '学段', value: customerProfile?.school_stage },
+            { label: '学校', value: customerProfile?.school_name },
+            { label: '提及科目', value: customerProfile?.subjects_mentioned },
+            { label: '成绩/考试', value: customerProfile?.scores_or_exam_info },
+            { label: '主要痛点', value: customerProfile?.main_pain_points },
+            { label: '学习习惯', value: customerProfile?.learning_habits },
+            { label: '家长顾虑', value: customerProfile?.parent_concerns },
+            { label: '孩子态度', value: customerProfile?.child_attitude },
+            { label: '已有补习', value: customerProfile?.existing_training },
+            { label: '决策人', value: customerProfile?.decision_makers },
+            { label: '预算敏感度', value: customerProfile?.budget_or_price_sensitivity },
+            { label: '时间可用性', value: customerProfile?.time_availability },
+          ]}
+        />
+      </Section>
+
+      <Section title="转化与 CRM 输出" icon={<FileText style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <KeyValueGrid
+          items={[
+            { label: '是否存在下一步', value: conversion?.next_action_exists },
+            { label: '下一步动作', value: conversion?.next_action },
+            { label: '下一步时间', value: conversion?.next_action_time },
+            { label: '负责人', value: conversion?.next_action_owner },
+            { label: '预约时间', value: conversion?.appointment_time },
+            { label: '预约地点', value: conversion?.appointment_location },
+            { label: '付款金额', value: conversion?.payment_amount },
+            { label: '付款截止', value: conversion?.payment_deadline },
+            { label: '微信跟进', value: conversion?.wechat_follow_up },
+            { label: '待发送资料', value: conversion?.materials_to_send },
+            { label: '主要阻碍', value: conversion?.main_blockers },
+            { label: '推荐下一步', value: conversion?.recommended_next_step },
+            { label: '线索温度', value: crmOutput?.lead_temperature, tone: statusTone(crmOutput?.lead_temperature) },
+            { label: '通话结果', value: crmOutput?.call_result },
+            { label: '跟进优先级', value: crmOutput?.follow_up_priority, tone: statusTone(crmOutput?.follow_up_priority) },
+            { label: '跟进期限', value: crmOutput?.follow_up_deadline },
+            { label: '建议分配部门', value: crmOutput?.assigned_department_suggestion },
+          ]}
+        />
+        <div style={{ marginTop: 10 }}>
+          <KeyValueGrid
+            columns={1}
+            items={[
+              { label: 'CRM 备注', value: crmOutput?.crm_note },
+              { label: 'CRM 任务标题', value: crmOutput?.crm_task_title },
+              { label: 'CRM 任务描述', value: crmOutput?.crm_task_description },
+            ]}
+          />
+        </div>
+      </Section>
+
+      <Section title="沟通质量" icon={<MessageSquare style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <KeyValueGrid
+          items={[
+            { label: '顾问话量占比', value: communication?.consultant_talk_ratio_estimate === null ? '未知' : percentText(communication?.consultant_talk_ratio_estimate) },
+            { label: '打断/压制', value: communication?.interruption_or_over_talking },
+            { label: '倾听质量', value: communication?.listening_quality, tone: statusTone(communication?.listening_quality) },
+            {
+              label: '情绪压力',
+              value: CallAnalysisMappingModel.pressureLevelLabel(communication?.emotional_pressure_level),
+              tone: statusTone(communication?.emotional_pressure_level),
+            },
+            { label: '客户情绪', value: communication?.customer_emotion, tone: statusTone(communication?.customer_emotion) },
+            { label: '备注', value: communication?.notes },
+          ]}
+        />
+      </Section>
+
+      <Section title="教练建议" icon={<Lightbulb style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <KeyValueGrid
+          columns={1}
+          items={[
+            { label: '一句话总结', value: coaching?.one_sentence_summary },
+            { label: '优势', value: coaching?.strengths },
+            { label: '改进点', value: coaching?.improvement_points },
+            { label: '训练主题', value: coaching?.best_next_training_topic },
+          ]}
+        />
+        <div style={{ marginTop: 10 }}>
+          <BetterScriptList items={coaching?.suggested_better_script} />
+        </div>
+      </Section>
+    </div>
+  )
+}
+
+function EvidenceView({ analysis, structured }: { analysis: AIAnalysisResult; structured: AnyRecord }) {
+  const evidenceSummary = getRecord(structured, 'evidence_summary')
+  const supports = analysis.supports || []
+  const evidence = analysis.evidence || []
+  const supportMap = new Map(supports.map((item) => [item.id, item]))
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Section title="关键原话" icon={<MessageSquareQuote style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <EvidenceList items={evidenceSummary?.key_quotes} empty="暂无关键原话" />
+      </Section>
+
+      <Section title="不确定信息" icon={<FileSearch style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+        <EvidenceList items={evidenceSummary?.uncertain_points} empty="暂无不确定项" />
+      </Section>
+
+      {(evidence.length > 0 || supports.length > 0) && (
+        <Section title="旧版证据引用" icon={<FileSearch style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {evidence.map((item, index) => (
+              <div key={index} style={{ borderRadius: 8, border: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)', padding: 10 }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>{item.claim}</p>
+                <LegacyEvidenceRefs supportIds={item.support_ids || []} supportMap={supportMap} />
               </div>
-            )}
+            ))}
+            {supports.map((item) => (
+              <div key={item.id} style={{ borderRadius: 8, border: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)', padding: 10 }}>
+                <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                  #{item.id}{item.time_range ? ` · ${item.time_range}` : ''}{item.speaker ? ` · ${item.speaker}` : ''}
+                </p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>{item.quote || '无摘录'}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+    </div>
+  )
+}
 
-            {/* 关键信息 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)', background: 'var(--semi-color-fill-0)', padding: 12 }}>
-              <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>关键信息</p>
-              <TagList label="客户需求" items={analysis.key_info.customer_needs} />
-              <TagList label="客户异议" items={analysis.key_info.objections} />
-              <TagList label="跟进时间" items={analysis.key_info.follow_up_times} />
-              <TagList label="提及竞品" items={analysis.key_info.competitors_mentioned} />
-              <TagList label="决策人" items={analysis.key_info.decision_makers} />
-              {!hasKeyInfo && (
-                <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>未提取到关键信息</p>
-              )}
-            </div>
+function StructuredAnalysisContent({ analysis, structured }: { analysis: AIAnalysisResult; structured: AnyRecord }) {
+  const riskSummary = getRecord(structured, 'risk_summary')
+  const riskCount = numberValue(riskSummary?.risk_count) ?? 0
+  const defaultTab = riskCount > 0 ? 'risk-tags' : 'overview'
 
-            {!hasOverviewContent && !hasKeyInfo && (
-              <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>暂无可展示的洞察内容</p>
-            )}
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 18 }}>
+      <Tabs defaultActiveKey={defaultTab} size="small" lazyRender>
+        <TabPane tab="总览" itemKey="overview">
+          <div style={{ paddingTop: 6 }}>
+            <StructuredOverview analysis={analysis} structured={structured} />
           </div>
         </TabPane>
+        <TabPane tab="动作审计" itemKey="actions">
+          <div style={{ paddingTop: 6 }}>
+            <ActionAuditView structured={structured} />
+          </div>
+        </TabPane>
+        <TabPane tab="边界/韧性" itemKey="boundary">
+          <div style={{ paddingTop: 6 }}>
+            <BoundaryAndBonusView structured={structured} />
+          </div>
+        </TabPane>
+        <TabPane tab="标签/风险" itemKey="risk-tags">
+          <div style={{ paddingTop: 6 }}>
+            <RiskAndTagsView structured={structured} />
+          </div>
+        </TabPane>
+        <TabPane tab="CRM/教练" itemKey="crm">
+          <div style={{ paddingTop: 6 }}>
+            <CrmAndCoachingView structured={structured} />
+          </div>
+        </TabPane>
+        <TabPane tab="证据" itemKey="evidence">
+          <div style={{ paddingTop: 6 }}>
+            <EvidenceView analysis={analysis} structured={structured} />
+          </div>
+        </TabPane>
+      </Tabs>
+    </div>
+  )
+}
 
-        <TabPane tab="评分" itemKey="scorecard">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4 }}>
-            {(!analysis.scorecard || (analysis.version ?? 0) < 3) && (
-              <div style={{ borderRadius: 8, border: '1px solid #fbbf24', background: 'rgba(251,191,36,0.08)', padding: 12 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: '#92400e', margin: 0 }}>旧版本结果</p>
-                <p style={{ marginTop: 4, fontSize: 12, lineHeight: 1.6, color: '#b45309', marginBottom: 0 }}>
-                  当前分析结果缺少新版评分依据与证据引用。请点击"重新分析"生成新版结果。
-                </p>
-              </div>
-            )}
+function LegacyAnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
+  const intentLabel = intentLabelMap[analysis.customer_intent] || '未知意向'
+  const supports = analysis.supports || []
+  const supportMap = new Map(supports.map((item) => [item.id, item]))
+  const riskFlags = analysis.risk_flags || []
+  const keyInfo = analysis.key_info || {
+    customer_needs: [],
+    objections: [],
+    follow_up_times: [],
+    competitors_mentioned: [],
+    decision_makers: [],
+  }
 
-            {analysis.scorecard ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <p style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--semi-color-text-2)', margin: 0 }}>评分依据</p>
-                  <Button
-                    type="tertiary"
-                    theme="borderless"
-                    size="small"
-                    style={{ height: 24, padding: '0 8px', fontSize: 10, color: 'var(--semi-color-text-2)' }}
-                    onClick={() => {
-                      const allExpanded = scorecardKeys.every((k) => scorecardExpanded[k])
-                      const nextState: Record<string, boolean> = {}
-                      for (const k of scorecardKeys) nextState[k] = !allExpanded
-                      setScorecardExpanded(nextState)
-                    }}
-                  >
-                    {scorecardKeys.every((k) => scorecardExpanded[k]) ? '收起全部' : '展开全部'}
-                  </Button>
-                </div>
-                {scoreItems.map((item) => {
-                  const scItem = analysis.scorecard?.[item.key]
-                  if (!scItem) return null
-                  const color = getScoreColor(item.percent)
-                  const isOpen = !!scorecardExpanded[item.key]
-                  return (
-                    <div
-                      key={item.key}
-                      style={{
-                        overflow: 'hidden',
-                        borderRadius: 8,
-                        border: '1px solid rgba(0,0,0,0.06)',
-                        borderLeftWidth: 3,
-                        borderLeftColor: color,
-                        background: 'var(--semi-color-fill-0)',
-                        transition: 'background 0.15s',
-                      }}
-                    >
-                      {!isOpen ? (
-                        <Button
-                          theme="borderless"
-                          style={{
-                            display: 'flex',
-                            width: '100%',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '10px 12px',
-                            textAlign: 'left',
-                            transition: 'background 0.15s',
-                            font: 'inherit',
-                            justifyContent: 'space-between',
-                          }}
-                          onClick={() => setScorecardExpanded((prev) => ({ ...prev, [item.key]: true }))}
-                          className="hover:!bg-black/5"
-                        >
-                          <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 500 }}>{item.label}</span>
-                              <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color }}>{item.score ?? '-'}/{item.max}</span>
-                            </div>
-                            <div style={{ height: 6, width: '100%', overflow: 'hidden', borderRadius: 999, background: 'rgba(0,0,0,0.04)' }}>
-                              <div style={{ height: '100%', borderRadius: 999, transition: 'width 0.5s', width: `${item.percent}%`, backgroundColor: color }} />
-                            </div>
-                          </div>
-                          <ChevronDown style={{ height: 14, width: 14, flexShrink: 0, color: 'var(--semi-color-text-2)' }} />
-                        </Button>
-                      ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, padding: 12 }}>
-                          {/* 左 1/3：维度名 + 分数 + 进度条 + 收起 */}
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--semi-color-text-2)' }}>{item.label}</span>
-                            <span style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color }}>
-                              {item.score ?? '-'}
-                            </span>
-                            <span style={{ fontSize: 10, color: 'var(--semi-color-text-2)' }}>满分 {item.max}</span>
-                            <div style={{ height: 6, width: '100%', overflow: 'hidden', borderRadius: 999, background: 'rgba(0,0,0,0.04)' }}>
-                              <div style={{ height: '100%', borderRadius: 999, width: `${item.percent}%`, backgroundColor: color }} />
-                            </div>
-                            <Button
-                              theme="borderless"
-                              style={{
-                                marginTop: 4,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontSize: 10,
-                                color: 'var(--semi-color-text-2)',
-                                padding: 0,
-                                font: 'inherit',
-                                minWidth: 'auto',
-                                height: 'auto',
-                              }}
-                              onClick={() => setScorecardExpanded((prev) => ({ ...prev, [item.key]: false }))}
-                              className="hover:!text-[var(--semi-color-text-0)]"
-                            >
-                              <ChevronDown style={{ height: 12, width: 12, transform: 'rotate(180deg)' }} />
-                              收起
-                            </Button>
-                          </div>
-                          {/* 右 2/3：文字说明 + 证据 */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {scItem.rationale && (
-                              <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--semi-color-text-2)', margin: 0 }}>{scItem.rationale}</p>
-                            )}
-                            <EvidenceRefs supportIds={scItem.support_ids || []} supportMap={supportMap} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>暂无评分依据</p>
-            )}
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 18 }}>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center', borderRadius: 10, border: '1px solid var(--semi-color-border)', padding: 14 }}>
+        <ScoreRing score={numberValue(analysis.quality_score)} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <ToneTag tone={scoreTone(numberValue(analysis.quality_score))}>旧版结果</ToneTag>
+            <ToneTag tone={statusTone(analysis.customer_intent)}>{intentLabel}</ToneTag>
+            {analysis.prompt_name && <Tag size="small" color="grey">{analysis.prompt_name}{analysis.prompt_version ? ` v${analysis.prompt_version}` : ''}</Tag>}
+          </div>
+          <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.7 }}>
+            {analysis.summary || '暂无摘要'}
+          </p>
+        </div>
+      </div>
+
+      <Tabs defaultActiveKey={riskFlags.length > 0 ? 'risk' : 'overview'} size="small">
+        <TabPane tab="洞察" itemKey="overview">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 6 }}>
+            <Section title="质量反馈" icon={<Lightbulb style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7 }}>
+                {analysis.quality_feedback || '暂无质量反馈'}
+              </p>
+            </Section>
+            <Section title="关键信息" icon={<Tags style={{ width: 16, height: 16, color: 'var(--semi-color-primary)' }} />}>
+              <KeyValueGrid
+                items={[
+                  { label: '客户需求', value: keyInfo.customer_needs },
+                  { label: '客户异议', value: keyInfo.objections },
+                  { label: '跟进时间', value: keyInfo.follow_up_times },
+                  { label: '提及竞品', value: keyInfo.competitors_mentioned },
+                  { label: '决策人', value: keyInfo.decision_makers },
+                ]}
+              />
+            </Section>
           </div>
         </TabPane>
 
         <TabPane tab="风险" itemKey="risk">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4 }}>
-            {/* 合规自动扣分 */}
-            {complianceAdjustment && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)', background: 'var(--semi-color-fill-0)', padding: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ShieldAlert style={{ height: 16, width: 16, color: 'var(--semi-color-text-2)' }} aria-hidden="true" />
-                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-2)', margin: 0 }}>合规自动扣分</p>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
-                  <Tag size="small">基础分：{complianceAdjustment.base_score}</Tag>
-                  <Tag size="small">自动扣分：-{complianceAdjustment.auto_deduction}</Tag>
-                  <Tag size="small" color="grey">最终分：{complianceAdjustment.final_score}</Tag>
-                </div>
-                {complianceAdjustment.reasons?.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {complianceAdjustment.reasons.map((reason: string, index: number) => (
-                      <p key={index} style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--semi-color-text-2)', margin: 0 }}>
-                        {index + 1}. {reason}
-                      </p>
-                    ))}
+          <div style={{ paddingTop: 6 }}>
+            {riskFlags.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {riskFlags.map((risk, index) => (
+                  <div key={index} style={{ borderRadius: 8, border: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)', padding: 10 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      <ToneTag tone={riskTone(risk.severity)}>
+                        {CallAnalysisMappingModel.riskLevelLabel(risk.severity)}
+                      </ToneTag>
+                      <Tag size="small">{CallAnalysisMappingModel.codeLabel(risk.type)}</Tag>
+                      {typeof risk.deduction === 'number' && <Tag size="small" color="grey">扣 {risk.deduction}</Tag>}
+                    </div>
+                    <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.6 }}>{risk.detail}</p>
+                    <LegacyEvidenceRefs supportIds={risk.support_ids || []} supportMap={supportMap} />
                   </div>
-                ) : (
-                  <p style={{ fontSize: 12, color: 'var(--semi-color-text-2)', margin: 0 }}>无自动扣分记录</p>
-                )}
-                {(complianceAdjustment.ignored_without_evidence || 0) > 0 && (
-                  <p style={{ fontSize: 12, color: '#d97706', margin: 0 }}>
-                    {complianceAdjustment.ignored_without_evidence} 条风险因缺少证据已忽略
-                  </p>
-                )}
+                ))}
               </div>
-            )}
-
-            {/* 风险标记 */}
-            {riskFlags.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-2)', margin: 0 }}>风险标记</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {riskFlags.map((risk, index) => {
-                    const severity = riskSeverityConfig[risk.severity as keyof typeof riskSeverityConfig]
-                    const borderColor = riskBorderConfig[risk.severity as string] || 'rgba(0,0,0,0.06)'
-                    return (
-                      <div
-                        key={index}
-                        style={{
-                          borderRadius: 8,
-                          border: '1px solid rgba(0,0,0,0.06)',
-                          borderLeft: `3px solid ${borderColor}`,
-                          background: 'var(--semi-color-fill-0)',
-                          padding: 12,
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                          <Tag size="small">{risk.type}</Tag>
-                          {severity ? (
-                            <Tag size="small" style={{ color: severity.color, backgroundColor: severity.bg }}>{severity.label}</Tag>
-                          ) : (
-                            <Tag size="small" color="grey">{risk.severity}</Tag>
-                          )}
-                          {typeof risk.deduction === 'number' && risk.deduction > 0 && (
-                            <Tag size="small">合规扣分 -{risk.deduction}</Tag>
-                          )}
-                        </div>
-                        {risk.detail && (
-                          <p style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6, marginBottom: 0 }}>{risk.detail}</p>
-                        )}
-                        <EvidenceRefs supportIds={risk.support_ids || []} supportMap={supportMap} />
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {!hasRiskContent && (
-              <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>暂无风险信息</p>
+            ) : (
+              <EmptyText>暂无风险信息</EmptyText>
             )}
           </div>
         </TabPane>
 
         <TabPane tab="证据" itemKey="evidence">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4 }}>
-            {/* 结论证据映射 */}
-            {evidence.length > 0 && (
+          <div style={{ paddingTop: 6 }}>
+            {supports.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <FileSearch style={{ height: 16, width: 16, color: 'var(--semi-color-text-2)' }} aria-hidden="true" />
-                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-2)', margin: 0 }}>结论证据映射</p>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {evidence.map((item, index) => (
-                    <div key={index} style={{ borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)', background: 'var(--semi-color-fill-0)', padding: 12 }}>
-                      <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{item.claim}</p>
-                      <EvidenceRefs supportIds={item.support_ids || []} supportMap={supportMap} />
-                    </div>
-                  ))}
-                </div>
+                {supports.map((item) => (
+                  <div key={item.id} style={{ borderRadius: 8, border: '1px solid var(--semi-color-border)', background: 'var(--semi-color-fill-0)', padding: 10 }}>
+                    <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                      #{item.id}{item.time_range ? ` · ${item.time_range}` : ''}{item.speaker ? ` · ${item.speaker}` : ''}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>{item.quote || '无摘录'}</p>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {/* 证据池 */}
-            {supports.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <MessageSquareQuote style={{ height: 16, width: 16, color: 'var(--semi-color-text-2)' }} aria-hidden="true" />
-                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--semi-color-text-2)', margin: 0 }}>证据池（supports）</p>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {supports.map((item) => (
-                    <div key={item.id} style={{ borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)', background: 'var(--semi-color-fill-0)', padding: 12 }}>
-                      <div style={{ marginBottom: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-                        <span style={{ fontFamily: 'monospace', color: 'var(--semi-color-primary)', fontWeight: 500 }}>#{item.id}</span>
-                        {item.time_range && <span>{item.time_range}</span>}
-                        {item.speaker && <span>· {item.speaker}</span>}
-                        <span>turn={item.turn_index}</span>
-                      </div>
-                      <p style={{
-                        fontSize: 14,
-                        lineHeight: 1.6,
-                        margin: 0,
-                        fontStyle: 'italic',
-                        borderLeft: '2px solid var(--semi-color-primary-light-default)',
-                        paddingLeft: 8,
-                        color: 'var(--semi-color-text-1)',
-                      }}>
-                        {item.quote || '（无摘录）'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!hasEvidenceContent && (
-              <p style={{ fontSize: 14, color: 'var(--semi-color-text-2)', margin: 0 }}>暂无证据片段</p>
+            ) : (
+              <EmptyText>暂无证据片段</EmptyText>
             )}
           </div>
         </TabPane>
@@ -681,10 +1357,17 @@ function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
   )
 }
 
+function AnalysisContent({ analysis }: { analysis: AIAnalysisResult }) {
+  const structured = getStructuredAnalysis(analysis)
+  if (structured) {
+    return <StructuredAnalysisContent analysis={analysis} structured={structured} />
+  }
+  return <LegacyAnalysisContent analysis={analysis} />
+}
+
 export function AIAnalysisPanel({ record, isAnalyzing, onAnalyze }: AIAnalysisPanelProps) {
   const { ai_analysis, ai_analysis_status } = record
 
-  // 已有分析结果
   if (ai_analysis && ai_analysis_status === 'completed') {
     return (
       <div style={{ height: '100%', overflowY: 'auto', overscrollBehavior: 'contain' }}>
@@ -693,17 +1376,15 @@ export function AIAnalysisPanel({ record, isAnalyzing, onAnalyze }: AIAnalysisPa
     )
   }
 
-  // 分析中
   if (ai_analysis_status === 'processing' || isAnalyzing) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--semi-color-text-2)' }}>
         <Spin size="large" />
-        <p style={{ fontSize: 14, margin: 0 }}>AI 正在分析中...</p>
+        <p style={{ fontSize: 14, margin: 0 }}>AI 正在分析中，页面会自动刷新结果...</p>
       </div>
     )
   }
 
-  // 分析失败
   if (ai_analysis_status === 'failed') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
@@ -722,7 +1403,6 @@ export function AIAnalysisPanel({ record, isAnalyzing, onAnalyze }: AIAnalysisPa
     )
   }
 
-  // 未分析 - 检查是否可以分析
   const canAnalyze = record.transcript_status === 'completed' && record.transcript && record.transcript.length > 0
 
   return (

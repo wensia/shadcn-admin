@@ -143,7 +143,7 @@ export interface RenderOptions {
   /** Node/group stroke color → CSS variable --border */
   border?: string
 
-  /** Font family for all text. Default: 'Inter' */
+  /** Font family for all text. Default: local system sans stack */
   font?: string
   /** Canvas padding in px. Default: 40 */
   padding?: number

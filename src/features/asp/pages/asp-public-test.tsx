@@ -39,9 +39,9 @@ const N = {
 } as const
 
 const FONT = {
-  display: '"Doto", "Space Mono", monospace',
-  body: '"Space Grotesk", "DM Sans", system-ui, sans-serif',
-  mono: '"Space Mono", "JetBrains Mono", monospace',
+  display: 'var(--font-mono-local)',
+  body: 'var(--font-sans-local)',
+  mono: 'var(--font-mono-local)',
 } as const
 
 /* ═══════════════════════════════════════════════════════════════ */
@@ -287,12 +287,6 @@ export function AspPublicTest() {
   useDocumentTitle('ASP 学习风格测评')
 
   useEffect(() => {
-    if (!document.getElementById('nothing-fonts')) {
-      const link = document.createElement('link')
-      link.id = 'nothing-fonts'; link.rel = 'stylesheet'
-      link.href = 'https://fonts.googleapis.com/css2?family=Doto:wght@400;700&family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap'
-      document.head.appendChild(link)
-    }
     if (!document.getElementById('nothing-keyframes')) {
       const style = document.createElement('style')
       style.id = 'nothing-keyframes'

@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { ClerkProvider } from '@clerk/clerk-react'
-import { ExternalLink, Key, PanelLeftIcon } from 'lucide-react'
 import { Banner, Divider, Button as SemiButton } from '@douyinfe/semi-ui-19'
+import { ExternalLink, Key, PanelLeftIcon } from 'lucide-react'
 import { useSidebar } from '@/context/sidebar-context'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
@@ -113,10 +113,10 @@ function MissingClerkPubKey() {
               <div>
                 <p className='text-balance'>
                   The Clerk integration lives entirely inside{' '}
-                  <code className={codeBlock}>src/routes/clerk</code>. If you plan
-                  to use Clerk as your auth service, you might want to place{' '}
-                  <code className={codeBlock}>ClerkProvider</code> at the root
-                  route.
+                  <code className={codeBlock}>src/routes/clerk</code>. If you
+                  plan to use Clerk as your auth service, you might want to
+                  place <code className={codeBlock}>ClerkProvider</code> at the
+                  root route.
                 </p>
                 <p>
                   However, if you don't plan to use Clerk, you can safely remove
@@ -124,8 +124,8 @@ function MissingClerkPubKey() {
                   <code className={codeBlock}>@clerk/clerk-react</code>.
                 </p>
                 <p className='mt-2 text-sm'>
-                  This setup is modular by design and won't affect the rest of the
-                  application.
+                  This setup is modular by design and won't affect the rest of
+                  the application.
                 </p>
               </div>
             }
@@ -142,7 +142,7 @@ function ClerkSidebarTrigger() {
     <SemiButton
       theme='outline'
       onClick={toggleSidebar}
-      className='inline-flex items-center justify-center rounded-md border border-input bg-background p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground scale-125 sm:scale-100'
+      className='inline-flex scale-125 items-center justify-center rounded-md border border-input bg-background p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground sm:scale-100'
     >
       <PanelLeftIcon className='size-4' />
       <span className='sr-only'>Toggle Sidebar</span>

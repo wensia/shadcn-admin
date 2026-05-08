@@ -143,7 +143,7 @@ export function RedemptionManagePage() {
         return (
           <Text
             copyable
-            style={{ fontFamily: "'Fira Code', 'Courier New', monospace", fontSize: 13 }}
+            style={{ fontFamily: "var(--font-mono-local)", fontSize: 13 }}
           >
             {record.code}
           </Text>
@@ -216,7 +216,7 @@ export function RedemptionManagePage() {
         return (
           <Tag
             size="small"
-            style={{ cursor: 'pointer', fontFamily: "'Fira Code', monospace", fontSize: 11 }}
+            style={{ cursor: 'pointer', fontFamily: "var(--font-mono-local)", fontSize: 11 }}
             onClick={(e) => {
               e.stopPropagation()
               setBatchFilter(record.batch_id!)
@@ -318,7 +318,7 @@ export function RedemptionManagePage() {
               closable
               onClose={() => { setBatchFilter(''); setPage(1) }}
               color="blue"
-              style={{ fontFamily: "'Fira Code', monospace" }}
+              style={{ fontFamily: "var(--font-mono-local)" }}
             >
               批次: {batchFilter.slice(0, 8)}
             </Tag>
@@ -411,7 +411,7 @@ export function RedemptionManagePage() {
       >
         <div style={{ marginBottom: 12 }}>
           确定要撤销兑换码{' '}
-          <Text strong style={{ fontFamily: "'Fira Code', monospace" }}>
+          <Text strong style={{ fontFamily: "var(--font-mono-local)" }}>
             {revokeTarget?.code}
           </Text>{' '}
           吗？撤销后该兑换码将无法再使用。
@@ -474,7 +474,7 @@ export function RedemptionManagePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* 摘要信息 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', padding: 12, background: 'var(--semi-color-fill-0)', borderRadius: 8, fontSize: 13 }}>
-              <div><Text type="tertiary">批次ID：</Text><Text style={{ fontFamily: "'Fira Code', monospace" }}>{batchResult.batch_id.slice(0, 8)}</Text></div>
+              <div><Text type="tertiary">批次ID：</Text><Text style={{ fontFamily: "var(--font-mono-local)" }}>{batchResult.batch_id.slice(0, 8)}</Text></div>
               <div><Text type="tertiary">工具：</Text><Text>{TOOL_NAMES[batchResult.tool_id] || batchResult.tool_id}</Text></div>
               <div><Text type="tertiary">数量：</Text><Text strong>{batchResult.created}</Text></div>
               <div><Text type="tertiary">最大使用次数：</Text><Text>{batchResult.max_uses}</Text></div>
@@ -498,7 +498,7 @@ export function RedemptionManagePage() {
                   >
                     <Text
                       copyable
-                      style={{ fontFamily: "'Fira Code', 'Courier New', monospace", fontSize: 13, letterSpacing: 1 }}
+                      style={{ fontFamily: "var(--font-mono-local)", fontSize: 13, letterSpacing: 1 }}
                     >
                       {code}
                     </Text>

@@ -28,7 +28,7 @@ import { renderMultilineText, escapeXml as escapeXmlUtil } from '../multiline-ut
 export function renderSequenceSvg(
   diagram: PositionedSequenceDiagram,
   colors: DiagramColors,
-  font: string = 'Inter',
+  font: string = '',
   transparent: boolean = false
 ): string {
   const parts: string[] = []

@@ -184,7 +184,7 @@ export function ZhongkaoPublicPage() {
             {school.name}
           </span>
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground" style={{ fontFamily: "'Lora', Georgia, serif" }}>
+            <span className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground" style={{ fontFamily: "var(--font-serif-local)" }}>
               {school.district}
             </span>
             {school.is_my_district && (
@@ -215,7 +215,7 @@ export function ZhongkaoPublicPage() {
         <div className="flex items-center gap-3">
           <span
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium ${config.bg}`}
-            style={{ color: config.color, fontFamily: "'Poppins', Arial, sans-serif" }}
+            style={{ color: config.color, fontFamily: "var(--font-display-local)" }}
           >
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: config.color }} />
             {config.label}
@@ -373,7 +373,7 @@ export function ZhongkaoPublicPage() {
           <h1 className="font-display text-[36px] font-semibold leading-tight tracking-tight text-foreground sm:text-[42px]">
             输入成绩获取市排名<br />及对标高中志愿
           </h1>
-          <p className="mt-3 text-[15px] text-muted-foreground" style={{ fontFamily: "'Lora', Georgia, serif" }}>
+          <p className="mt-3 text-[15px] text-muted-foreground" style={{ fontFamily: "var(--font-serif-local)" }}>
             基于一模成绩，智能推荐适合的高中学校
           </p>
         </div>

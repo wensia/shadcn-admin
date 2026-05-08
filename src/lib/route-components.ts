@@ -98,7 +98,7 @@ export const routeComponents: Record<string, RouteConfig> = {
     title: '显示',
   },
   '/help-center': {
-    component: lazy(() => import('@/components/coming-soon').then(m => ({ default: m.ComingSoon }))),
+    component: lazy(() => import('@/features/help-center').then(m => ({ default: m.HelpCenterPage }))),
     title: '帮助中心',
   },
 }

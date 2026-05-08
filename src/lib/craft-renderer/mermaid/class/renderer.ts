@@ -35,7 +35,7 @@ const CLS_FONT = {
 export function renderClassSvg(
   diagram: PositionedClassDiagram,
   colors: DiagramColors,
-  font: string = 'Inter',
+  font: string = '',
   transparent: boolean = false
 ): string {
   const parts: string[] = []

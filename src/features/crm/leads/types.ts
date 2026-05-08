@@ -451,6 +451,7 @@ export interface ChannelStatItem {
   channel_id: string
   channel_name: string
   lead_count: number
+  percentage: number
   category?: string
 }
 
@@ -459,7 +460,11 @@ export interface MarketStaffStatItem {
   staff_name: string
   campus_name?: string
   total_count: number
+  pending_followup_count: number
+  pending_assign_count: number
   channels: ChannelStatItem[]
+  pending_followup_channels: ChannelStatItem[]
+  pending_assign_channels: ChannelStatItem[]
 }
 
 export interface ChannelTotalItem {
@@ -475,6 +480,82 @@ export interface MarketStatisticsResponse {
   total_staff: number
   date_from?: string
   date_to?: string
+}
+
+export interface MarketStaffDetailStaff {
+  staff_id: string
+  staff_name: string
+  campus_id?: string
+  campus_name?: string
+}
+
+export interface MarketStaffDetailSummary {
+  total_count: number
+  pending_followup_count: number
+  channel_count: number
+}
+
+export interface MarketStaffDailyDistributionItem {
+  date: string
+  count: number
+}
+
+export interface MarketStaffPendingChannelItem {
+  channel_id?: string
+  channel_name: string
+  category?: string
+  count: number
+}
+
+export interface MarketStaffPendingFollowup {
+  total_count: number
+  channels: MarketStaffPendingChannelItem[]
+}
+
+export interface MarketStaffChannelBreakdownItem {
+  channel_id?: string
+  channel_name: string
+  category?: string
+  total_count: number
+  pending_followup_count: number
+  pending_assign_count: number
+  invalid_count: number
+  paid_count: number
+}
+
+export interface MarketStaffRecentImportBatchChannelItem {
+  channel_id?: string
+  channel_name: string
+  category?: string
+  count: number
+}
+
+export interface MarketStaffRecentImportBatchItem {
+  batch_id: string
+  batch_name: string
+  batch_description?: string
+  import_method: string
+  status: string
+  started_at: string
+  completed_at?: string
+  total_count: number
+  success_count: number
+  activated_count: number
+  failed_count: number
+  lead_count: number
+  channel_count: number
+  channels: MarketStaffRecentImportBatchChannelItem[]
+}
+
+export interface MarketStaffDetailResponse {
+  staff: MarketStaffDetailStaff
+  summary: MarketStaffDetailSummary
+  daily_distribution: MarketStaffDailyDistributionItem[]
+  pending_followup: MarketStaffPendingFollowup
+  channel_breakdown: MarketStaffChannelBreakdownItem[]
+  recent_import_batches: MarketStaffRecentImportBatchItem[]
+  date_from: string
+  date_to: string
 }
 
 export interface DituiFirstFollowupStats {

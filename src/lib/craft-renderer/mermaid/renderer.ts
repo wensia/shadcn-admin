@@ -21,7 +21,7 @@ import { renderMultilineText, renderMultilineTextWithBackground, escapeXml } fro
 // - Stroke widths: outer box 1px, inner box 0.75px, connectors 0.75px
 // - Arrow heads: filled triangles, 8px wide × 4.8px tall
 // - Dashed edges: stroke-dasharray="4 4"
-// - Font: Inter with weight per element type
+// - Font: local system sans stack with weight per element type
 // ============================================================================
 
 /**
@@ -35,7 +35,7 @@ import { renderMultilineText, renderMultilineTextWithBackground, escapeXml } fro
 export function renderSvg(
   graph: PositionedGraph,
   colors: DiagramColors,
-  font: string = 'Inter',
+  font: string = '',
   transparent: boolean = false
 ): string {
   const parts: string[] = []

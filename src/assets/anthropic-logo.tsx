@@ -89,7 +89,7 @@ export function AnthropicWordmark({
         x='52'
         y='28'
         fill='currentColor'
-        fontFamily='Poppins, Arial, sans-serif'
+        fontFamily='var(--font-display-local)'
         fontSize='20'
         fontWeight='600'
         letterSpacing='-0.02em'

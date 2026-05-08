@@ -20,6 +20,7 @@ import { showApiErrorToast } from '@/lib/api/error-toast'
 import { callRecordsApi } from '../../api'
 import { TranscriptViewer } from './transcript-viewer'
 import { AIAnalysisPanel } from './ai-analysis-panel'
+import { getTranscriptRoleTextLabel } from './transcript-role'
 import type { CallRecord, TranscriptSegment } from '../../types'
 
 interface RecordDetailModalProps {
@@ -36,6 +37,9 @@ const BRAND = {
 
 /** 倍速选项 */
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
+const CALL_DETAIL_ANALYSIS_MODEL = 'gpt5.4 mini'
+const CALL_DETAIL_ANALYSIS_PROMPT_NAME = '通话分析-K12结构化质检'
+const CALL_DETAIL_ANALYSIS_PROMPT_VERSION = 2
 type AnalysisStatusResponse = {
   status: string
   analysis: unknown
@@ -47,18 +51,52 @@ type SemiTagColor = 'grey' | 'green' | 'orange' | 'blue' | 'red'
 /**
  * 将转写文本格式化为可读对话文本
  */
-function formatTranscriptText(transcript: TranscriptSegment[]): string {
+function formatTranscriptText(transcript: TranscriptSegment[], staffName?: string | null): string {
   return transcript.map((seg) => {
-    const speaker = seg.speaker.toLowerCase()
-    const role =
-      speaker.includes('agent') || speaker.includes('员工') || speaker.includes('staff') || speaker === '0'
-        ? '员工'
-        : '客户'
+    const role = getTranscriptRoleTextLabel(seg, staffName)
     const mins = Math.floor(seg.start_time / 60)
     const secs = Math.floor(seg.start_time % 60)
     const time = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
     return `${role} [${time}]: ${seg.text}`
   }).join('\n')
+}
+
+function sanitizeFileName(value: string): string {
+  return value
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 120)
+}
+
+function buildTranscriptFileName(record: CallRecord): string {
+  const staffName = sanitizeFileName(record.staff_name || '未知员工')
+  const phone = sanitizeFileName(record.callee || record.caller || record.record_id || '未知号码')
+  const callDate = sanitizeFileName((record.call_time || '').slice(0, 19).replace('T', '_')) || '未知时间'
+  return `通话转录_${staffName}_${phone}_${callDate}.txt`
+}
+
+function buildTranscriptTextFile(record: CallRecord, transcript: TranscriptSegment[]): string {
+  const lines = [
+    '通话转录文本',
+    '',
+    `员工：${record.staff_name || '-'}`,
+    `客户/号码：${record.customer_name || record.callee || record.caller || '-'}`,
+    `主叫：${record.caller || '-'}`,
+    `被叫：${record.callee || '-'}`,
+    `通话时间：${formatTime(record.call_time) || '-'}`,
+    `通话时长：${formatDurationDisplay(record.duration)}`,
+    `通话类型：${record.call_type || '-'}`,
+    `通话结果：${record.call_result || '-'}`,
+    `部门：${record.department || '-'}`,
+    '',
+    '----------------------------------------',
+    '',
+    formatTranscriptText(transcript, record.staff_name),
+  ]
+
+  return lines.join('\n')
 }
 
 /**
@@ -137,6 +175,16 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
 
   const record = recordProp
 
+  const handleCopyRecordId = useCallback(async () => {
+    if (!record?.id) return
+    const ok = await copyToClipboard(record.id)
+    if (ok) {
+      Toast.success('通话 ID 已复制')
+    } else {
+      Toast.error('复制失败')
+    }
+  }, [record?.id])
+
   // 是否正在轮询分析状态
   const isPolling = (fullRecord?.ai_analysis_status ?? record?.ai_analysis_status) === 'processing'
 
@@ -177,7 +225,12 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const audioUrl = recordUrlData?.url || ''
 
   const analyzeMutation = useMutation({
-    mutationFn: () => callRecordsApi.analyzeCallRecord(record!.id),
+    mutationFn: () => callRecordsApi.analyzeCallRecord(record!.id, {
+      config_name: CALL_DETAIL_ANALYSIS_MODEL,
+      model_name: CALL_DETAIL_ANALYSIS_MODEL,
+      prompt_name: CALL_DETAIL_ANALYSIS_PROMPT_NAME,
+      prompt_version: CALL_DETAIL_ANALYSIS_PROMPT_VERSION,
+    }),
     onSuccess: () => {
       setFullRecord((prev) => prev ? { ...prev, ai_analysis_status: 'processing' } : prev)
     },
@@ -227,6 +280,23 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
       setDownloading(false)
     }
   }, [voiceId, record?.staff_name, record?.callee, record?.caller])
+
+  const handleDownloadTranscriptTxt = useCallback(() => {
+    const transcript = fullRecord?.transcript
+    if (!record || !transcript || transcript.length === 0) return
+
+    const content = buildTranscriptTextFile(record, transcript)
+    const blob = new Blob(['\ufeff', content], { type: 'text/plain;charset=utf-8' })
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = buildTranscriptFileName(record)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+    Toast.success('已下载转录文本')
+  }, [record, fullRecord?.transcript])
 
   const togglePlay = () => {
     if (!audioRef.current) return
@@ -296,6 +366,8 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const hasRecording = record?.has_recording || hasTranscript
   const fullTranscript = fullRecord?.transcript
   const hasFullTranscript = fullTranscript && fullTranscript.length > 0
+  const transcriptStatus = fullRecord?.transcript_status ?? record?.transcript_status
+  const canDownloadTranscript = Boolean(hasFullTranscript && transcriptStatus === 'completed')
   const analysisStatus = fullRecord?.ai_analysis_status ?? record?.ai_analysis_status
 
   const handleAnalyzeClick = useCallback(() => {
@@ -355,6 +427,31 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               <Clock style={{ height: 12, width: 12, flexShrink: 0 }} />
               <span>{formatTime(record.call_time) || '-'}</span>
             </div>
+            <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+              <span style={{ flexShrink: 0 }}>ID</span>
+              <code
+                style={{
+                  maxWidth: 240,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontSize: 12,
+                  color: 'var(--semi-color-text-1)',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                }}
+              >
+                {record.id}
+              </code>
+              <Button
+                theme="borderless"
+                size="small"
+                icon={<Copy style={{ height: 12, width: 12 }} />}
+                onClick={handleCopyRecordId}
+                title="复制通话 ID"
+                style={{ height: 20, padding: '0 4px', color: 'var(--semi-color-text-2)' }}
+              />
+            </div>
             {record.lead_child_name && (
               <>
                 <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--semi-color-text-3)', flexShrink: 0 }} />
@@ -398,52 +495,83 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               <FileText style={{ height: 14, width: 14 }} aria-hidden="true" />
               转写文本
             </span>
-            {/* 复制按钮 */}
-            {hasFullTranscript && (
-              <Dropdown
-                trigger="click"
-                position="bottomRight"
-                clickToHide
-                render={
-                  <Dropdown.Menu>
-                    <Dropdown.Item
-                      onClick={async () => {
-                        const text = formatTranscriptText(fullTranscript || [])
-                        const ok = await copyToClipboard(text)
-                        if (ok) Toast.success('已复制格式化对话文本')
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <FileType style={{ height: 14, width: 14 }} aria-hidden="true" />
-                        复制对话文本
-                      </span>
-                    </Dropdown.Item>
-                    <Dropdown.Item
-                      onClick={async () => {
-                        const json = JSON.stringify(fullTranscript || [], null, 2)
-                        const ok = await copyToClipboard(json)
-                        if (ok) Toast.success('已复制原始 JSON')
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <FileJson style={{ height: 14, width: 14 }} aria-hidden="true" />
-                        复制原始 JSON
-                      </span>
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                }
-              >
-                <span>
+            {(hasRecording || hasFullTranscript) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {hasRecording && (
                   <Button
                     theme="borderless"
                     size="small"
-                    icon={<Copy style={{ height: 12, width: 12 }} />}
+                    icon={
+                      downloading
+                        ? <Loader2 className="animate-spin" style={{ height: 12, width: 12 }} />
+                        : <Download style={{ height: 12, width: 12 }} />
+                    }
+                    disabled={!voiceId || downloading}
+                    onClick={handleDownloadRecord}
+                    aria-label="下载录音"
                     style={{ height: 24, padding: '0 8px', fontSize: 11 }}
                   >
-                    复制
+                    下载录音
                   </Button>
-                </span>
-              </Dropdown>
+                )}
+                {canDownloadTranscript && (
+                  <Button
+                    theme="borderless"
+                    size="small"
+                    icon={<Download style={{ height: 12, width: 12 }} />}
+                    onClick={handleDownloadTranscriptTxt}
+                    style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                  >
+                    下载 TXT
+                  </Button>
+                )}
+                {hasFullTranscript && (
+                  <Dropdown
+                    trigger="click"
+                    position="bottomRight"
+                    clickToHide
+                    render={
+                      <Dropdown.Menu>
+                        <Dropdown.Item
+                          onClick={async () => {
+                        const text = formatTranscriptText(fullTranscript || [], record?.staff_name)
+                            const ok = await copyToClipboard(text)
+                            if (ok) Toast.success('已复制格式化对话文本')
+                          }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <FileType style={{ height: 14, width: 14 }} aria-hidden="true" />
+                            复制对话文本
+                          </span>
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          onClick={async () => {
+                            const json = JSON.stringify(fullTranscript || [], null, 2)
+                            const ok = await copyToClipboard(json)
+                            if (ok) Toast.success('已复制原始 JSON')
+                          }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <FileJson style={{ height: 14, width: 14 }} aria-hidden="true" />
+                            复制原始 JSON
+                          </span>
+                        </Dropdown.Item>
+                      </Dropdown.Menu>
+                    }
+                  >
+                    <span>
+                      <Button
+                        theme="borderless"
+                        size="small"
+                        icon={<Copy style={{ height: 12, width: 12 }} />}
+                        style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                      >
+                        复制
+                      </Button>
+                    </span>
+                  </Dropdown>
+                )}
+              </div>
             )}
           </div>
 
@@ -569,23 +697,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                         theme="borderless"
                         type="tertiary"
                         size="small"
-                        icon={
-                          downloading
-                            ? <Loader2 className="animate-spin" style={{ height: 13, width: 13 }} />
-                            : <Download style={{ height: 13, width: 13 }} />
-                        }
-                        disabled={!voiceId || downloading}
-                        onClick={handleDownloadRecord}
-                        aria-label="下载录音"
-                        style={{ height: 26, padding: '0 6px', fontSize: 11 }}
-                      >
-                        下载
-                      </Button>
-                      <div style={{ height: 14, width: 1, background: 'var(--semi-color-border)', margin: '0 4px' }} />
-                      <Button
-                        theme="borderless"
-                        type="tertiary"
-                        size="small"
                         icon={isMuted || volume === 0 ? <VolumeX style={{ height: 13, width: 13 }} /> : <Volume2 style={{ height: 13, width: 13 }} />}
                         onClick={toggleMute}
                         aria-label={isMuted || volume === 0 ? '取消静音' : '静音'}
@@ -628,6 +739,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               <TranscriptViewer
                 transcript={fullTranscript || []}
                 currentTime={currentTime}
+                staffName={record?.staff_name}
                 onSeek={handleTranscriptSeek}
               />
             ) : (

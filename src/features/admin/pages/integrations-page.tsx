@@ -5,7 +5,7 @@
 
 import { useSearch, useNavigate } from '@tanstack/react-router'
 import { useDocumentTitle } from '@/hooks/use-document-title'
-import { Mic, Bot, Webhook, CloudCog, KeyRound, Settings2 } from 'lucide-react'
+import { Mic, Bot, Webhook, KeyRound, Settings2 } from 'lucide-react'
 
 import { Main } from '@/components/layout/main'
 import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
@@ -14,7 +14,6 @@ import { Tabs, TabPane } from '@douyinfe/semi-ui-19'
 import { ASRConfigContent } from '../components/integrations/asr-config-content'
 import { DingtalkRobotsContent } from '../components/integrations/dingtalk-robots-content'
 import { WebhookHooksContent } from '../components/integrations/webhook-hooks-content'
-import { YunkeAccountsContent } from '../components/integrations/yunke-accounts-content'
 import { ApiKeysContent } from '../components/integrations/api-keys-content'
 
 // Tab 配置
@@ -22,7 +21,6 @@ const TABS = [
   { id: 'asr', label: 'ASR 配置', icon: Mic, description: '语音识别服务' },
   { id: 'dingtalk', label: '钉钉机器人', icon: Bot, description: '钉钉群通知' },
   { id: 'webhook', label: 'Webhook', icon: Webhook, description: '外部回调钩子' },
-  { id: 'yunke', label: '云客账号', icon: CloudCog, description: '外呼系统' },
   { id: 'apikeys', label: 'API 密钥', icon: KeyRound, description: '系统接口密钥' },
 ] as const
 
@@ -32,7 +30,8 @@ export function IntegrationsPage() {
   useDocumentTitle('集成配置')
   const navigate = useNavigate()
   const search = useSearch({ from: '/_authenticated/admin/integrations' })
-  const currentTab = (search.tab as TabId) || 'asr'
+  const tabFromSearch = search.tab as TabId
+  const currentTab = TABS.some((tab) => tab.id === tabFromSearch) ? tabFromSearch : 'asr'
 
   // Tab 切换时更新 URL
   const handleTabChange = (value: string) => {
@@ -73,7 +72,6 @@ export function IntegrationsPage() {
                 {tab.id === 'asr' && <ASRConfigContent />}
                 {tab.id === 'dingtalk' && <DingtalkRobotsContent />}
                 {tab.id === 'webhook' && <WebhookHooksContent />}
-                {tab.id === 'yunke' && <YunkeAccountsContent />}
                 {tab.id === 'apikeys' && <ApiKeysContent />}
               </div>
             </TabPane>

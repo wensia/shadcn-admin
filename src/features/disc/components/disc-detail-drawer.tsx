@@ -5,7 +5,7 @@
  * 旧版 JSON 格式和未分析状态有降级展示。
  */
 
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo, type ReactNode, type RefObject } from 'react'
 import { toBlob, toPng } from 'html-to-image'
 import { Copy, Download, Image, Loader2, Sparkles, Map, History } from 'lucide-react'
 import { toast } from '@/lib/toast'
@@ -38,7 +38,12 @@ interface DiscDetailDrawerProps {
   detail: TempDISCRecordDetail | null
   loading: boolean
   onDetailUpdate?: (updated: TempDISCRecordDetail) => void
-  onReanalyzeStart?: (payload: { recordId: string; previousAnalyzedAt?: string | null }) => void
+  onReanalyzeStart?: (payload: {
+    recordId: string
+    previousAnalyzedAt?: string | null
+    previousStatus?: string | null
+    startedAt: number
+  }) => void
 }
 
 // ─── 辅助函数 ────────────────────────────────────────────
@@ -71,6 +76,49 @@ function triggerDownload(url: string, filename: string) {
   a.href = url
   a.download = filename
   a.click()
+}
+
+const REPORT_OUTLINE_ITEMS = [
+  { id: 'profile', label: '深度洞察' },
+  { id: 'dimensions', label: '四维解读' },
+  { id: 'behavior', label: '行为模式' },
+  { id: 'job-fit', label: '岗位适配' },
+  { id: 'best-match', label: '最佳匹配' },
+  { id: 'advice', label: '管理建议' },
+  { id: 'team', label: '团队协作' },
+] as const
+
+type ReportOutlineId = typeof REPORT_OUTLINE_ITEMS[number]['id']
+type ReportOutlineItem = {
+  id: ReportOutlineId
+  label: string
+  visible: boolean
+}
+
+const REPORT_SECTION_SCROLL_MARGIN = 96
+const REPORT_ACTIVE_SECTION_OFFSET = REPORT_SECTION_SCROLL_MARGIN + 72
+
+function isReportSectionVisible(report: ParsedDiscReport, id: ReportOutlineId) {
+  switch (id) {
+    case 'profile':
+      return Boolean(report.profile)
+    case 'dimensions':
+      return report.dimensions.length > 0
+    case 'behavior':
+      return Boolean(report.behaviorTable || report.behaviorInsight)
+    case 'job-fit':
+      return Boolean(report.jobFitTable)
+    case 'best-match':
+      return Boolean(report.bestMatchAnalysis)
+    case 'advice':
+      return (
+        report.communicationStrategies.length > 0 ||
+        report.riskConcerns.length > 0 ||
+        report.developmentDirections.length > 0
+      )
+    case 'team':
+      return Boolean(report.teamAdvice)
+  }
 }
 
 // ─── 主组件 ──────────────────────────────────────────────
@@ -114,12 +162,12 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
 
     analyzingRef.current = true
     const prevAI = cachedAI // 保存当前状态，出错时回滚
-    if (hasAI) {
-      onReanalyzeStart?.({
-        recordId: detail.id,
-        previousAnalyzedAt: cachedAI?.analyzedAt ?? null,
-      })
-    }
+    onReanalyzeStart?.({
+      recordId: detail.id,
+      previousAnalyzedAt: cachedAI?.analyzedAt ?? null,
+      previousStatus: cachedAI?.status ?? null,
+      startedAt: Date.now(),
+    })
     setAnalyzing(true)
 
     // 立即乐观更新：抽屉显示"分析中"，列表也同步刷新
@@ -221,7 +269,7 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
       visible={open}
       onCancel={() => onOpenChange(false)}
       placement="right"
-      width={780}
+      width={920}
       title={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>DISC 测评报告</span>
@@ -382,7 +430,11 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
                   {isAnalyzing ? (
                     <AnalyzingState />
                   ) : parsedReport ? (
-                    <DiscReportContent report={parsedReport} scores={result.scores} />
+                    <DiscReportContent
+                      report={parsedReport}
+                      scores={result.scores}
+                      scrollRootRef={bodyRef}
+                    />
                   ) : hasAI && !isCraftMd ? (
                     <LegacyFormatPrompt
                       analyzing={analyzing}
@@ -421,24 +473,221 @@ export function DiscDetailDrawer({ open, onOpenChange, detail, loading, onDetail
 
 // ─── AI 报告渲染组件 ─────────────────────────────────────
 
-function DiscReportContent({ report, scores }: { report: ParsedDiscReport; scores?: Record<DISCDimension, number> }) {
+function DiscReportContent({
+  report,
+  scores,
+  scrollRootRef,
+}: {
+  report: ParsedDiscReport
+  scores?: Record<DISCDimension, number>
+  scrollRootRef: RefObject<HTMLDivElement | null>
+}) {
+  const sectionRefs = useRef<Record<ReportOutlineId, HTMLElement | null>>({
+    profile: null,
+    dimensions: null,
+    behavior: null,
+    'job-fit': null,
+    'best-match': null,
+    advice: null,
+    team: null,
+  })
+  const outlineItems = useMemo<ReportOutlineItem[]>(() => [
+    ...REPORT_OUTLINE_ITEMS.map((item) => ({
+      ...item,
+      visible: isReportSectionVisible(report, item.id),
+    })),
+  ], [report])
+  const visibleOutlineItems = useMemo(
+    () => outlineItems.filter((item) => item.visible),
+    [outlineItems],
+  )
+  const [activeSection, setActiveSection] = useState<ReportOutlineId>(
+    visibleOutlineItems[0]?.id ?? 'profile',
+  )
+  const activeOutlineId = visibleOutlineItems.some((item) => item.id === activeSection)
+    ? activeSection
+    : visibleOutlineItems[0]?.id ?? 'profile'
+
+  useEffect(() => {
+    const root = scrollRootRef.current
+    if (!root || visibleOutlineItems.length === 0) return
+
+    const updateActiveSection = () => {
+      const rootRect = root.getBoundingClientRect()
+      const anchorY = rootRect.top + REPORT_ACTIVE_SECTION_OFFSET
+      let current = visibleOutlineItems[0].id
+
+      for (const item of visibleOutlineItems) {
+        const section = sectionRefs.current[item.id]
+        if (!section) continue
+        if (section.getBoundingClientRect().top <= anchorY) {
+          current = item.id
+        }
+      }
+
+      setActiveSection(current)
+    }
+
+    updateActiveSection()
+    root.addEventListener('scroll', updateActiveSection, { passive: true })
+    window.addEventListener('resize', updateActiveSection)
+    return () => {
+      root.removeEventListener('scroll', updateActiveSection)
+      window.removeEventListener('resize', updateActiveSection)
+    }
+  }, [scrollRootRef, visibleOutlineItems])
+
+  const scrollToSection = useCallback((id: ReportOutlineId) => {
+    const section = sectionRefs.current[id]
+    if (!section) return
+    setActiveSection(id)
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const setSectionRef = useCallback(
+    (id: ReportOutlineId) => (node: HTMLElement | null) => {
+      sectionRefs.current[id] = node
+    },
+    [],
+  )
+
   return (
-    <div style={{ fontSize: 14 }}>
-      <SectionProfile profile={report.profile} />
-      <SectionDimensions dimensions={report.dimensions} scores={scores} />
-      <SectionBehavior
-        behaviorTable={report.behaviorTable}
-        behaviorInsight={report.behaviorInsight}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '128px minmax(0, 1fr)',
+        gap: 20,
+        alignItems: 'start',
+        fontSize: 14,
+      }}
+    >
+      <ReportOutline
+        items={visibleOutlineItems}
+        activeId={activeOutlineId}
+        onSelect={scrollToSection}
       />
-      <SectionJobFit jobFitTable={report.jobFitTable} />
-      <SectionBestMatch bestMatchAnalysis={report.bestMatchAnalysis} />
-      <SectionAdvice
-        communicationStrategies={report.communicationStrategies}
-        riskConcerns={report.riskConcerns}
-        developmentDirections={report.developmentDirections}
-      />
-      <SectionTeam teamAdvice={report.teamAdvice} />
+
+      <div style={{ minWidth: 0 }}>
+        <ReportSection id="profile" refSetter={setSectionRef} visible={Boolean(report.profile)}>
+          <SectionProfile profile={report.profile} />
+        </ReportSection>
+        <ReportSection id="dimensions" refSetter={setSectionRef} visible={report.dimensions.length > 0}>
+          <SectionDimensions dimensions={report.dimensions} scores={scores} />
+        </ReportSection>
+        <ReportSection id="behavior" refSetter={setSectionRef} visible={Boolean(report.behaviorTable || report.behaviorInsight)}>
+          <SectionBehavior
+            behaviorTable={report.behaviorTable}
+            behaviorInsight={report.behaviorInsight}
+          />
+        </ReportSection>
+        <ReportSection id="job-fit" refSetter={setSectionRef} visible={Boolean(report.jobFitTable)}>
+          <SectionJobFit jobFitTable={report.jobFitTable} />
+        </ReportSection>
+        <ReportSection id="best-match" refSetter={setSectionRef} visible={Boolean(report.bestMatchAnalysis)}>
+          <SectionBestMatch bestMatchAnalysis={report.bestMatchAnalysis} />
+        </ReportSection>
+        <ReportSection
+          id="advice"
+          refSetter={setSectionRef}
+          visible={
+            report.communicationStrategies.length > 0 ||
+            report.riskConcerns.length > 0 ||
+            report.developmentDirections.length > 0
+          }
+        >
+          <SectionAdvice
+            communicationStrategies={report.communicationStrategies}
+            riskConcerns={report.riskConcerns}
+            developmentDirections={report.developmentDirections}
+          />
+        </ReportSection>
+        <ReportSection id="team" refSetter={setSectionRef} visible={Boolean(report.teamAdvice)}>
+          <SectionTeam teamAdvice={report.teamAdvice} />
+        </ReportSection>
+      </div>
     </div>
+  )
+}
+
+function ReportSection({
+  id,
+  visible,
+  refSetter,
+  children,
+}: {
+  id: ReportOutlineId
+  visible: boolean
+  refSetter: (id: ReportOutlineId) => (node: HTMLElement | null) => void
+  children: ReactNode
+}) {
+  if (!visible) return null
+
+  return (
+    <section
+      ref={refSetter(id)}
+      style={{ scrollMarginTop: REPORT_SECTION_SCROLL_MARGIN }}
+    >
+      {children}
+    </section>
+  )
+}
+
+function ReportOutline({
+  items,
+  activeId,
+  onSelect,
+}: {
+  items: ReportOutlineItem[]
+  activeId: ReportOutlineId
+  onSelect: (id: ReportOutlineId) => void
+}) {
+  if (items.length === 0) return null
+
+  return (
+    <nav
+      aria-label="DISC 报告大纲"
+      style={{
+        position: 'sticky',
+        top: 88,
+        paddingTop: 4,
+      }}
+    >
+      <div
+        style={{
+          borderLeft: '1px solid var(--semi-color-border)',
+          paddingLeft: 10,
+        }}
+      >
+        {items.map((item) => {
+          const active = item.id === activeId
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-current={active ? 'true' : undefined}
+              onClick={() => onSelect(item.id)}
+              style={{
+                display: 'block',
+                width: '100%',
+                border: 0,
+                borderRadius: 6,
+                background: active ? 'var(--semi-color-primary-light-default)' : 'transparent',
+                color: active ? 'var(--semi-color-primary)' : 'var(--semi-color-text-2)',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: active ? 600 : 500,
+                lineHeight: '18px',
+                marginBottom: 4,
+                padding: '6px 8px',
+                textAlign: 'left',
+              }}
+            >
+              {item.label}
+            </button>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
 

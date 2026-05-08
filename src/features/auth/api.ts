@@ -98,5 +98,19 @@ export const authApi = {
     confirm_password: string
   }): Promise<ApiResponse<void>> {
     return apiClient.post<ApiResponse<void>>('/auth/change-password', data)
-  }
+  },
+
+  /** 请求重置密码邮件 */
+  resetPassword(data: { email: string }): Promise<ApiResponse<void>> {
+    return apiClient.post<ApiResponse<void>>('/auth/reset-password', data)
+  },
+
+  /** 确认重置/设置密码 */
+  confirmResetPassword(data: {
+    token: string
+    new_password: string
+    confirm_password: string
+  }): Promise<ApiResponse<void>> {
+    return apiClient.post<ApiResponse<void>>('/auth/reset-password/confirm', data)
+  },
 }

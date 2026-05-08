@@ -41,6 +41,27 @@ type SelectOptionNode = {
   label?: React.ReactNode
 }
 
+const screeningStatusOptions = [
+  { value: 'asr_candidate', label: 'ASR候选' },
+  { value: 'customer_service_number', label: '运营商客服' },
+  { value: 'enterprise_service_number', label: '企业客服' },
+  { value: 'no_recording', label: '无录音' },
+  { value: 'zero_duration', label: '0秒通话' },
+  { value: 'short_call', label: '少于10秒' },
+  { value: 'low_value_short_call', label: '少于30秒' },
+]
+
+const rangePopoverContentStyle = {
+  boxSizing: 'border-box',
+  width: 320,
+  maxWidth: 'calc(100vw - 32px)',
+  padding: '16px 20px',
+} as const
+
+const rangePopoverLayerStyle = {
+  maxWidth: 'calc(100vw - 24px)',
+} as const
+
 export function CallRecordsToolbar({
   filters,
   onFilterChange,
@@ -103,6 +124,8 @@ export function CallRecordsToolbar({
     filters.call_result ||
     filters.has_recording !== undefined ||
     filters.transcript_status ||
+    filters.screening_status ||
+    filters.asr_eligible !== undefined ||
     hasDurationFilter ||
     filters.search ||
     filters.ai_analysis_status ||
@@ -132,10 +155,10 @@ export function CallRecordsToolbar({
 
   // 通话时长弹出内容（拖拽条）
   const durationContent = (
-    <div style={{ padding: '16px 20px', width: 280 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <span style={{ fontSize: 14, fontWeight: 500 }}>通话时长筛选</span>
-        <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+    <div style={rangePopoverContentStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap' }}>通话时长筛选</span>
+        <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', textAlign: 'right' }}>
           {formatDuration(durationSliderValue[0])} - {durationSliderValue[1] >= 600 ? '不限' : formatDuration(durationSliderValue[1])}
         </span>
       </div>
@@ -181,10 +204,10 @@ export function CallRecordsToolbar({
 
   // AI 评分弹出内容（拖拽条）
   const scoreContent = (
-    <div style={{ padding: '16px 20px', width: 280 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <span style={{ fontSize: 14, fontWeight: 500 }}>AI 分析评分筛选</span>
-        <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+    <div style={rangePopoverContentStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap' }}>AI 分析评分筛选</span>
+        <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', textAlign: 'right' }}>
           {scoreSliderValue[0]} - {scoreSliderValue[1]} 分
         </span>
       </div>
@@ -234,7 +257,7 @@ export function CallRecordsToolbar({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Input
           prefix={<IconSearch />}
-          placeholder="搜索号码/客户名..."
+          placeholder="搜索ID/号码/客户名..."
           value={searchInput}
           onChange={(val) => setSearchInput(val)}
           onKeyDown={handleKeyDown}
@@ -346,10 +369,22 @@ export function CallRecordsToolbar({
         style={{ width: 110 }}
       />
 
+      {/* ASR 筛查结果 */}
+      <Select
+        placeholder="筛查结果"
+        value={filters.screening_status || undefined}
+        onChange={(val) => onFilterChange('screening_status', (val as string) || undefined)}
+        optionList={screeningStatusOptions}
+        showClear
+        style={{ width: 130 }}
+      />
+
       {/* 通话时长筛选 */}
       <Popover
         trigger="click"
-        position="bottomLeft"
+        position="bottomRight"
+        margin={12}
+        style={rangePopoverLayerStyle}
         content={durationContent}
       >
         <span>
@@ -381,7 +416,9 @@ export function CallRecordsToolbar({
       {/* AI 分析评分筛选 */}
       <Popover
         trigger="click"
-        position="bottomLeft"
+        position="bottomRight"
+        margin={12}
+        style={rangePopoverLayerStyle}
         content={scoreContent}
       >
         <span>

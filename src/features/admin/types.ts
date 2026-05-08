@@ -601,6 +601,8 @@ export interface EmployeeYunkeUpdate {
 /** 快速创建员工 */
 export interface QuickCreateEmployeeData {
   name: string
+  email?: string
+  phone?: string
   scope_type?: string
   campus_id?: string
   region_id?: string
@@ -992,6 +994,7 @@ export interface AdvisorAccessStatistics {
   user_name: string
   username: string
   campus_name: string
+  department_name?: string
   area_name?: string
   district_name?: string
   region_name?: string
@@ -1037,6 +1040,7 @@ export interface UserAccessLimit {
 export interface AccessStatsFilters {
   time_range?: string
   campus_id?: string
+  department_id?: string
   area_id?: string
   district_id?: string
   region_id?: string
@@ -1380,20 +1384,27 @@ export interface ASRConfigListResponse {
 
 /** ASR 任务参数 */
 export interface ASRTaskParams {
-  asr_config_id: string  // UUID 格式
-  time_range_type: 'yesterday' | 'last_7_days' | 'last_30_days' | 'custom'
+  asr_config_id?: string  // 兼容旧参数，云客转写会忽略
+  time_range_type: 'today' | 'yesterday_to_now' | 'yesterday' | 'last_7_days' | 'last_30_days' | 'custom'
   custom_start_time?: string
   custom_end_time?: string
   skip_existing: boolean
   min_duration: number
   batch_size: number
   max_records: number
+  max_duration_seconds?: number
   concurrency: number
+  department_ids?: string[]
+  department_names?: string[]
+  campus_ids?: string[]
+  dry_run?: boolean
+  allow_unscoped?: boolean
 }
 
 /** 时间范围预设选项 */
 export const TIME_RANGE_PRESETS = [
   { label: '今天', value: 'today', start: '{{today_start}}', end: '{{now}}' },
+  { label: '昨天至当前', value: 'yesterday_to_now', start: '{{yesterday_start}}', end: '{{now}}' },
   { label: '昨天', value: 'yesterday', start: '{{yesterday_start}}', end: '{{yesterday_end}}' },
   { label: '过去7天', value: 'last_7_days', start: '{{last_7_days_start}}', end: '{{last_7_days_end}}' },
   { label: '过去30天', value: 'last_30_days', start: '{{last_30_days_start}}', end: '{{last_30_days_end}}' },
@@ -1489,6 +1500,75 @@ export interface AIPromptUpdate {
   name?: string
   content?: string
   description?: string
+}
+
+/** 通话分析 Prompt 测试可选通话记录 */
+export interface CallAnalysisTestRecordItem {
+  id: string
+  record_id: string | null
+  call_time: string | null
+  duration: number | null
+  customer_name: string | null
+  staff_name: string | null
+  department: string | null
+  caller: string | null
+  callee: string | null
+  call_type: string | null
+  transcript_status: string
+  has_recording: boolean
+  has_transcript: boolean
+}
+
+/** 通话分析 Prompt 测试请求 */
+export interface CallAnalysisPromptTestRequest {
+  config_id: string
+  prompt_id: string
+  call_record_id: string
+  temperature?: number
+}
+
+/** 通话分析 Prompt 测试结果 */
+export interface CallAnalysisPromptTestResult {
+  success: boolean
+  raw_content: string
+  parsed: unknown | null
+  parse_error: string | null
+  schema_warning?: string | null
+  duration_ms: number
+  model: string
+  prompt: {
+    id: string
+    name: string
+    version: number
+    is_active: boolean
+  }
+  config: {
+    id: string
+    name: string
+    provider: string
+    model: string
+  }
+  record: CallAnalysisTestRecordItem
+}
+
+export type CallAnalysisPromptTestJobStatus = 'queued' | 'running' | 'completed' | 'failed'
+
+/** 通话分析 Prompt 测试任务状态 */
+export interface CallAnalysisPromptTestJob {
+  job_id: string
+  status: CallAnalysisPromptTestJobStatus
+  created_at: string
+  updated_at: string
+  started_at: string | null
+  finished_at: string | null
+  result: CallAnalysisPromptTestResult | null
+  error_message: string | null
+  request: {
+    config_id: string
+    prompt_id: string
+    call_record_id: string
+    temperature: number
+  }
 }
 
 // ============================================================================

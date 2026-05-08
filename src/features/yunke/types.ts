@@ -35,6 +35,19 @@ export interface YunkeSubAccount {
     id: string
     name: string
     username: string
+    campus_name?: string | null
+    department_name?: string | null
+    campus_ids?: string[]
+    campus_names?: string[]
+    department_ids?: string[]
+    department_names?: string[]
+    identity_refs?: Array<{
+      scope_type?: string | null
+      campus_id?: string | null
+      campus_name?: string | null
+      department_id?: string | null
+      department_name?: string | null
+    }>
   }
   // 登录状态（基于绑定员工的 cookies）
   login_status?: {
@@ -218,6 +231,10 @@ export interface AIAnalysisResult {
   evidence?: AIAnalysisEvidence[]
   risk_flags?: AIAnalysisRiskFlag[]
   compliance_adjustment?: AIAnalysisComplianceAdjustment
+  structured_results?: Array<Record<string, unknown>>
+  structured_analysis?: Record<string, unknown> | null
+  risk_summary?: Record<string, unknown>
+  analysis_schema?: string
   validation_warnings?: string[]
   validation_errors?: string[]
   prompt_name?: string
@@ -233,6 +250,8 @@ export interface TranscriptSegment {
   start_time: number
   end_time: number
   text: string
+  channel_id?: number | string | null
+  channelId?: number | string | null
 }
 
 // 通话记录
@@ -252,6 +271,9 @@ export interface CallRecord {
   has_recording: boolean
   transcript?: TranscriptSegment[] | null
   transcript_status: string | null
+  screening_status?: string
+  screening_reason?: string | null
+  asr_eligible?: boolean
   ai_analysis?: AIAnalysisResult | null
   ai_analysis_status: string | null
   ai_analyzed_at: string | null
@@ -280,6 +302,8 @@ export interface CallRecordListParams {
   call_result?: string
   has_recording?: boolean
   transcript_status?: string
+  screening_status?: string
+  asr_eligible?: boolean
   min_duration?: number
   max_duration?: number
   search?: string
@@ -421,6 +445,7 @@ export interface YunkeRole {
 export interface OnboardingCreateConsultantRequest {
   employee_id: string
   identity_id: string
+  employee_phone?: string
   yunke_admin_account_id: string
   yunke_dept_id: string
   yunke_role_id: string
@@ -457,6 +482,13 @@ export interface OnboardingConsultantResult {
   employee: OnboardingConsultantEmployee
   yunke: OnboardingConsultantYunke | null
   step_errors: string[]
+}
+
+export interface YunkeDeviceUnbindResult {
+  yunke_admin_account_id: string
+  device_ids: string[]
+  count: number
+  yunke_raw: unknown
 }
 
 // 云客通话记录原始数据（从云客 API 实时查询返回）

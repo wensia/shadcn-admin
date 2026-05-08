@@ -1,17 +1,30 @@
 /**
  * AppSidebar - Semi Design Nav 侧边栏
- * 替代 shadcn Sidebar，使用 Semi Nav 实现导航
+ * 使用 Semi Nav 实现导航
  */
-
-import { useMemo, useState, useCallback } from 'react'
-import { useLocation, Link } from '@tanstack/react-router'
+import { useCallback, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Nav, SideSheet } from '@douyinfe/semi-ui-19'
 import type { NavProps } from '@douyinfe/semi-ui-19/lib/es/navigation'
-import { ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { ChevronsLeft, ChevronsRight, HelpCircle } from 'lucide-react'
+import { AnthropicLogo } from '@/assets/anthropic-logo'
+import { useAuthStore } from '@/stores/auth-store'
 import { useSidebar } from '@/context/sidebar-context'
 import { usePermission, PERMISSIONS } from '@/hooks/use-permission'
-import { useAuthStore } from '@/stores/auth-store'
-import { AnthropicLogo } from '@/assets/anthropic-logo'
+import {
+  crmNavGroups,
+  adminNavGroups,
+  yunkeNavGroups,
+  hrNavGroups,
+  toolsNavGroups,
+  crmTeams,
+  adminTeams,
+  yunkeTeams,
+  hrTeams,
+  toolsTeams,
+} from './data/sidebar-data'
+import { NavUser } from './nav-user'
+import type { NavGroup } from './types'
 
 /**
  * 路由 → 所需权限码映射
@@ -30,22 +43,29 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   '/crm/orders': PERMISSIONS.ORDERS_CREATE,
   '/crm/performance-events': PERMISSIONS.ORDERS_CREATE,
   '/crm/students': PERMISSIONS.STUDENTS_LIST,
-  '/crm/courses': PERMISSIONS.STUDENTS_LIST,
+  '/crm/parents': PERMISSIONS.PARENTS_LIST,
+  '/crm/teachers': PERMISSIONS.TEACHERS_LIST,
+  '/crm/courses': PERMISSIONS.EDUCATION_SCHEDULE,
+  '/crm/packages': PERMISSIONS.EDUCATION_FINANCE,
+  '/crm/classes': PERMISSIONS.EDUCATION_SCHEDULE,
+  '/crm/lessons': PERMISSIONS.EDUCATION_SCHEDULE,
+  '/crm/consumption': PERMISSIONS.EDUCATION_CONSUME,
+  '/crm/balances': PERMISSIONS.EDUCATION_BALANCE,
+  '/crm/finance': PERMISSIONS.EDUCATION_FINANCE,
+  '/crm/teacher-settlements': PERMISSIONS.TEACHER_SETTLEMENT_LIST,
 }
-import {
-  crmNavGroups,
-  adminNavGroups,
-  yunkeNavGroups,
-  hrNavGroups,
-  toolsNavGroups,
-  crmTeams,
-  adminTeams,
-  yunkeTeams,
-  hrTeams,
-  toolsTeams,
-} from './data/sidebar-data'
-import type { NavGroup } from './types'
-import { NavUser } from './nav-user'
+
+const COMMON_HELP_GROUP: NavGroup = {
+  title: '帮助',
+  icon: HelpCircle,
+  items: [
+    {
+      title: '帮助中心',
+      url: '/help-center',
+      icon: HelpCircle,
+    },
+  ],
+}
 
 // ─── Group collapse persistence ────────────────────────────────
 const COLLAPSED_GROUPS_KEY = 'sidebar_collapsed_groups'
@@ -72,30 +92,24 @@ function saveCollapsedGroups(groups: string[]) {
   }
 }
 
-function getInitialOpenKeys(
-  groups: NavGroup[],
-  currentPath: string
-): string[] {
-  // 手风琴模式：只展开当前路由所在的分组
-  for (const group of groups) {
-    const hasActive = group.items.some((item) => item.url === currentPath)
-    if (hasActive) {
-      return [`group-${group.title}`]
-    }
+function getInitialOpenKeys(groups: NavGroup[], currentPath: string): string[] {
+  const activeGroup = groups.find((group) =>
+    group.items.some((item) => item.url === currentPath)
+  )
+
+  if (activeGroup) {
+    return [`group-${activeGroup.title}`]
   }
 
-  // 没有匹配路由时，展开第一个非默认折叠的分组
   if (isFirstVisit()) {
     const first = groups.find(
-      (g) => !DEFAULT_COLLAPSED_GROUPS.includes(g.title)
+      (group) => !DEFAULT_COLLAPSED_GROUPS.includes(group.title)
     )
     return first ? [`group-${first.title}`] : []
   }
 
   const collapsed = getCollapsedGroups()
-  const firstOpen = groups.find(
-    (g) => !collapsed.includes(g.title)
-  )
+  const firstOpen = groups.find((group) => !collapsed.includes(group.title))
   return firstOpen ? [`group-${firstOpen.title}`] : []
 }
 
@@ -103,6 +117,7 @@ function getInitialOpenKeys(
 export function AppSidebar() {
   const { open, setOpen, isMobile, openMobile, setOpenMobile } = useSidebar()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const { hasPermission } = usePermission()
   const isSuperUser = useAuthStore((s) => s.user?.is_superuser ?? false)
@@ -111,31 +126,43 @@ export function AppSidebar() {
   const { navGroups, teams } = useMemo(() => {
     const p = location.pathname
     let groups: NavGroup[], teamList
-    if (p.startsWith('/yunke')) { groups = yunkeNavGroups; teamList = yunkeTeams }
-    else if (p.startsWith('/hr')) { groups = hrNavGroups; teamList = hrTeams }
-    else if (p.startsWith('/admin')) { groups = adminNavGroups; teamList = adminTeams }
-    else if (p.startsWith('/tools')) { groups = toolsNavGroups; teamList = toolsTeams }
-    else { groups = crmNavGroups; teamList = crmTeams }
+    if (p.startsWith('/yunke')) {
+      groups = yunkeNavGroups
+      teamList = yunkeTeams
+    } else if (p.startsWith('/hr')) {
+      groups = hrNavGroups
+      teamList = hrTeams
+    } else if (p.startsWith('/admin')) {
+      groups = adminNavGroups
+      teamList = adminTeams
+    } else if (p.startsWith('/tools')) {
+      groups = toolsNavGroups
+      teamList = toolsTeams
+    } else {
+      groups = crmNavGroups
+      teamList = crmTeams
+    }
 
     // 按权限过滤菜单项
-    const filtered = groups.map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        const url = 'url' in item ? item.url : undefined
-        if (!url) return true
-        const requiredPerm = ROUTE_PERMISSIONS[url as string]
-        if (!requiredPerm) return true
-        return hasPermission(requiredPerm)
-      }),
-    })).filter((group) => group.items.length > 0)
+    const filtered = groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          const url = 'url' in item ? item.url : undefined
+          if (!url) return true
+          const requiredPerm = ROUTE_PERMISSIONS[url as string]
+          if (!requiredPerm) return true
+          return hasPermission(requiredPerm)
+        }),
+      }))
+      .filter((group) => group.items.length > 0)
       // 超管专属：非超管隐藏「工具」导航组
       .filter((group) => group.title !== '工具' || isSuperUser)
 
-    return { navGroups: filtered, teams: teamList }
+    return { navGroups: [...filtered, COMMON_HELP_GROUP], teams: teamList }
   }, [location.pathname, hasPermission, isSuperUser])
 
   const isCollapsed = !open && !isMobile
-
   // ─── Open keys (分组展开状态) ──────────────────────────────
   const [openKeys, setOpenKeys] = useState<string[]>(() =>
     getInitialOpenKeys(navGroups, location.pathname)
@@ -153,11 +180,10 @@ export function AppSidebar() {
 
   const handleOpenChange = useCallback<NonNullable<NavProps['onOpenChange']>>(
     ({ openKeys: rawOpenKeys }) => {
-      const newKeys = (rawOpenKeys ?? []).map(String)
-      // 手风琴模式：找到新展开的 key，只保留它
-      const added = newKeys.filter((k) => !openKeys.includes(k))
-      const result = added.length > 0 ? added.slice(-1) : newKeys
-
+      const nextOpenKeys = (rawOpenKeys ?? []).map(String)
+      const newlyOpened = nextOpenKeys.filter((key) => !openKeys.includes(key))
+      const result =
+        newlyOpened.length > 0 ? newlyOpened.slice(-1) : nextOpenKeys.slice(-1)
       setOpenKeys(result)
       const allKeys = navGroups.map((g) => `group-${g.title}`)
       const collapsed = allKeys
@@ -171,28 +197,18 @@ export function AppSidebar() {
   // ─── Selected keys ────────────────────────────────────────
   const selectedKeys = useMemo(() => [location.pathname], [location.pathname])
 
-  // ─── Render wrapper: TanStack Router Link ─────────────────
-  const renderWrapper = useCallback<NonNullable<NavProps['renderWrapper']>>(
-    ({
-      itemElement,
-      isSubNav,
-      props,
-    }) => {
-      const itemKey = props.itemKey == null ? undefined : String(props.itemKey)
-      if (isSubNav || !itemKey || itemKey.startsWith('group-')) {
-        return itemElement
+  // ─── Navigation selection ─────────────────────────────────
+  const handleSelect = useCallback<NonNullable<NavProps['onSelect']>>(
+    ({ itemKey }) => {
+      const key = itemKey == null ? '' : String(itemKey)
+      if (!key || key.startsWith('group-') || key.startsWith('item-')) return
+
+      navigate({ to: key })
+      if (isMobile) {
+        setOpenMobile(false)
       }
-      return (
-        <Link
-          to={itemKey}
-          style={{ textDecoration: 'none' }}
-          onClick={() => isMobile && setOpenMobile(false)}
-        >
-          {itemElement}
-        </Link>
-      )
     },
-    [isMobile, setOpenMobile]
+    [isMobile, navigate, setOpenMobile]
   )
 
   // ─── Sidebar content ─────────────────────────────────────
@@ -202,19 +218,20 @@ export function AppSidebar() {
       selectedKeys={selectedKeys}
       openKeys={resolvedOpenKeys}
       onOpenChange={handleOpenChange}
+      onSelect={handleSelect}
       onCollapseChange={(collapsed: boolean) => setOpen(!collapsed)}
-      renderWrapper={renderWrapper}
       style={{ height: '100%', userSelect: 'none' }}
     >
       <Nav.Header
         logo={
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
             <AnthropicLogo className='size-7' />
-            {/* 折叠态：toggle 在 logo 下方滑入 */}
             {!isMobile && (
               <div
                 style={{
@@ -222,7 +239,8 @@ export function AppSidebar() {
                   marginTop: isCollapsed ? 6 : 0,
                   opacity: isCollapsed ? 1 : 0,
                   overflow: 'hidden',
-                  transition: 'max-height 0.25s ease, opacity 0.15s ease 0.08s, margin-top 0.25s ease',
+                  transition:
+                    'max-height 0.25s ease, opacity 0.15s ease 0.08s, margin-top 0.25s ease',
                 }}
               >
                 <div
@@ -242,7 +260,8 @@ export function AppSidebar() {
                     transition: 'background-color 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--semi-color-fill-0)'
+                    e.currentTarget.style.backgroundColor =
+                      'var(--semi-color-fill-0)'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent'
@@ -256,7 +275,6 @@ export function AppSidebar() {
         }
         text={teams[0]?.name || 'RMF CRM'}
       >
-        {/* 展开态：折叠按钮在标题行右侧（折叠时不渲染，与 logo 内的展开按钮互斥） */}
         {!isCollapsed && !isMobile && (
           <div
             onClick={() => setOpen(false)}
@@ -292,7 +310,9 @@ export function AppSidebar() {
           text={group.title}
           icon={
             isCollapsed && group.icon ? (
-              <span className="inline-flex"><group.icon size={16} /></span>
+              <span className='inline-flex'>
+                <group.icon size={16} />
+              </span>
             ) : undefined
           }
         >
@@ -303,7 +323,9 @@ export function AppSidebar() {
               text={item.title}
               icon={
                 item.icon ? (
-                  <span className="inline-flex"><item.icon size={16} /></span>
+                  <span className='inline-flex'>
+                    <item.icon size={16} />
+                  </span>
                 ) : undefined
               }
             />
@@ -311,7 +333,12 @@ export function AppSidebar() {
         </Nav.Sub>
       ))}
 
-      <Nav.Footer style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 8 }}>
+      <Nav.Footer
+        style={{
+          borderTop: '1px solid var(--semi-color-border)',
+          paddingTop: 8,
+        }}
+      >
         <NavUser collapsed={isCollapsed} />
       </Nav.Footer>
     </Nav>

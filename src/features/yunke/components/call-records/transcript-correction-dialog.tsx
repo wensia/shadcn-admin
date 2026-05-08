@@ -57,6 +57,8 @@ export function TranscriptCorrectionDialog({
   const [resultData, setResultData] = useState<ResultData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isDictLoading, setIsDictLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   // 添加规则的输入
@@ -74,6 +76,7 @@ export function TranscriptCorrectionDialog({
       setResultData(null)
       setNewWrong('')
       setNewCorrect('')
+      setIsDirty(false)
     }
   }, [open])
 
@@ -82,6 +85,7 @@ export function TranscriptCorrectionDialog({
     try {
       const data = await callRecordsApi.getTranscriptDictionary()
       setCorrections(data.corrections)
+      setIsDirty(false)
     } catch (error) {
       showApiErrorToast(error, '加载纠错词库失败')
     } finally {
@@ -117,6 +121,7 @@ export function TranscriptCorrectionDialog({
       return
     }
     setCorrections((prev) => ({ ...prev, [wrong]: correct }))
+    setIsDirty(true)
     setNewWrong('')
     setNewCorrect('')
     // 添加新规则后清除预览（因为数据已变）
@@ -132,6 +137,7 @@ export function TranscriptCorrectionDialog({
       delete next[wrong]
       return next
     })
+    setIsDirty(true)
     if (previewData) {
       setPreviewData(null)
       setStep('dictionary')
@@ -152,6 +158,20 @@ export function TranscriptCorrectionDialog({
       showApiErrorToast(error, '预览纠错失败')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleSaveDictionary = async () => {
+    setIsSaving(true)
+    try {
+      const data = await callRecordsApi.saveTranscriptDictionary(corrections)
+      setCorrections(data.corrections)
+      setIsDirty(false)
+      toast.success(`已保存 ${data.total.toLocaleString()} 条纠错规则`)
+    } catch (error) {
+      showApiErrorToast(error, '保存纠错词库失败')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -264,7 +284,7 @@ export function TranscriptCorrectionDialog({
         closeOnEsc
       >
         <div style={{ marginBottom: 4, color: 'var(--semi-color-text-2)', fontSize: 13 }}>
-          管理 ASR 转录文本的纠错词库，批量修正品牌名等常见错误
+          管理 ASR 转录文本的纠错词库，批量修正品牌名等常见错误；保存后会自动用于后续云客通话转写。
         </div>
 
         {/* 词库加载中 */}
@@ -281,16 +301,28 @@ export function TranscriptCorrectionDialog({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>纠错词库</span>
                   <Tag size="small" color="grey">{correctionCount} 条规则</Tag>
+                  {isDirty && <Tag size="small" color="orange">未保存</Tag>}
                 </div>
-                <Button
-                  theme="solid"
-                  size="small"
-                  onClick={handlePreview}
-                  disabled={isLoading || correctionCount === 0}
-                  loading={isLoading && step === 'dictionary'}
-                >
-                  预览纠错
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Button
+                    theme="light"
+                    size="small"
+                    onClick={handleSaveDictionary}
+                    disabled={isSaving || !isDirty}
+                    loading={isSaving}
+                  >
+                    保存词库
+                  </Button>
+                  <Button
+                    theme="solid"
+                    size="small"
+                    onClick={handlePreview}
+                    disabled={isLoading || correctionCount === 0}
+                    loading={isLoading && step === 'dictionary'}
+                  >
+                    预览纠错
+                  </Button>
+                </div>
               </div>
 
               {/* 词库表格 */}

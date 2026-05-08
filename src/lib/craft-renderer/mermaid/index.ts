@@ -114,7 +114,7 @@ export async function renderMermaid(
   options: RenderOptions = {}
 ): Promise<string> {
   const colors = buildColors(options)
-  const font = options.font ?? 'Inter'
+  const font = options.font ?? ''
   const transparent = options.transparent ?? false
   const diagramType = detectDiagramType(text)
 
@@ -161,7 +161,7 @@ export function renderMermaidSync(
   options: RenderOptions = {}
 ): string {
   const colors = buildColors(options)
-  const font = options.font ?? 'Inter'
+  const font = options.font ?? ''
   const transparent = options.transparent ?? false
   const diagramType = detectDiagramType(text)
 

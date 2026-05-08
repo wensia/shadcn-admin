@@ -100,6 +100,10 @@ import type {
   AIPromptItem,
   AIPromptCreate,
   AIPromptUpdate,
+  CallAnalysisPromptTestJob,
+  CallAnalysisPromptTestRequest,
+  CallAnalysisPromptTestResult,
+  CallAnalysisTestRecordItem,
   // AI 资料库文档相关
   AIDocumentItem,
   // AI 调用记录
@@ -1173,6 +1177,7 @@ export const leadAccessStatsApi = {
     const params = new URLSearchParams()
     if (filters?.time_range) params.append('time_range', filters.time_range)
     if (filters?.campus_id) params.append('campus_id', filters.campus_id)
+    if (filters?.department_id) params.append('department_id', filters.department_id)
     if (filters?.area_id) params.append('area_id', filters.area_id)
     if (filters?.district_id) params.append('district_id', filters.district_id)
     if (filters?.region_id) params.append('region_id', filters.region_id)
@@ -1657,6 +1662,26 @@ export const aiConfigApi = {
 
   async seedDefaultPrompts(): Promise<{ message: string }> {
     return rawResult(await apiClient.post('/external/ai-config/prompts/seed-defaults'))
+  },
+
+  async listCallAnalysisTestRecords(params?: {
+    search?: string
+    page?: number
+    size?: number
+  }): Promise<{ items: CallAnalysisTestRecordItem[]; total: number; page?: number; size?: number }> {
+    return rawResult(await apiClient.get('/external/ai-config/prompts/test-call-records', { params })) || { items: [], total: 0 }
+  },
+
+  async testCallAnalysisPrompt(data: CallAnalysisPromptTestRequest): Promise<CallAnalysisPromptTestResult> {
+    return rawResult(await apiClient.post('/external/ai-config/prompts/test-call-analysis', data))
+  },
+
+  async startCallAnalysisPromptTest(data: CallAnalysisPromptTestRequest): Promise<CallAnalysisPromptTestJob> {
+    return rawResult(await apiClient.post('/external/ai-config/prompts/test-call-analysis/jobs', data))
+  },
+
+  async getCallAnalysisPromptTestJob(jobId: string): Promise<CallAnalysisPromptTestJob> {
+    return rawResult(await apiClient.get(`/external/ai-config/prompts/test-call-analysis/jobs/${jobId}`))
   },
 
   // ============ 资料库文档管理 ============

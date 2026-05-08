@@ -103,48 +103,59 @@ function StatCard({
   onClick,
 }: StatCardProps) {
   return (
-    <Card
-      shadows='hover'
-      style={{
-        padding: '12px 16px',
-        cursor: 'pointer',
-        borderColor: active ? iconColor : 'var(--semi-color-border)',
-        boxShadow: active ? `0 0 0 1px ${iconColor}` : undefined,
-        transition: 'all 0.15s ease',
-      }}
-      bodyStyle={{ padding: 0 }}
+    <div
+      role='button'
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: iconBg,
-            color: iconColor,
-          }}
-        >
-          {icon}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Text type='tertiary' style={{ fontSize: 12 }}>
-            {label}
-          </Text>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <Text strong style={{ fontSize: 20, color: active ? iconColor : undefined }}>
-              {count ?? '—'}
-            </Text>
+      <Card
+        shadows='hover'
+        style={{
+          padding: '12px 16px',
+          cursor: 'pointer',
+          borderColor: active ? iconColor : 'var(--semi-color-border)',
+          boxShadow: active ? `0 0 0 1px ${iconColor}` : undefined,
+          transition: 'all 0.15s ease',
+        }}
+        bodyStyle={{ padding: 0 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: iconBg,
+              color: iconColor,
+            }}
+          >
+            {icon}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <Text type='tertiary' style={{ fontSize: 12 }}>
-              个
+              {label}
             </Text>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <Text strong style={{ fontSize: 20, color: active ? iconColor : undefined }}>
+                {count ?? '—'}
+              </Text>
+              <Text type='tertiary' style={{ fontSize: 12 }}>
+                个
+              </Text>
+            </div>
           </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   )
 }
 

@@ -56,7 +56,7 @@ export function AIPromptFormDialog({
         })
       } else if (mode === 'copy' && sourcePrompt) {
         formRef.current?.setValues({
-          name: `${sourcePrompt.name} (改进版)`,
+          name: sourcePrompt.name,
           content: sourcePrompt.content,
           description: '',
         })
@@ -68,7 +68,7 @@ export function AIPromptFormDialog({
 
   const handleSubmit = (formData: PromptFormValues) => {
     onSubmit({
-      name: formData.name,
+      name: mode === 'copy' && sourcePrompt ? sourcePrompt.name : formData.name,
       content: formData.content,
       description: formData.description || undefined,
       sceneKey,
@@ -81,12 +81,14 @@ export function AIPromptFormDialog({
     mode === 'edit'
       ? `编辑 Prompt (v${prompt?.version})`
       : mode === 'copy'
-        ? `基于 v${sourcePrompt?.version} 创建新版本`
+        ? `升级 Prompt 版本 (当前 v${sourcePrompt?.version})`
         : '新建 Prompt'
 
   const description =
     mode === 'edit'
       ? '修改 Prompt 内容和版本说明'
+      : mode === 'copy'
+        ? '升级版本会沿用原名称，保存后版本号自动加一，创建后需手动激活才会生效'
       : '创建后需手动激活才会生效'
 
   return (
@@ -123,10 +125,12 @@ export function AIPromptFormDialog({
           field="name"
           label="名称"
           placeholder="如：通话分析-强化需求挖掘"
+          disabled={mode === 'copy'}
           rules={[
             { required: true, message: '请输入名称' },
             { max: 200, message: '名称最多200字' },
           ]}
+          extraText={mode === 'copy' ? '升级版本必须沿用原名称，确保版本号连续递增' : undefined}
         />
 
         <Form.TextArea

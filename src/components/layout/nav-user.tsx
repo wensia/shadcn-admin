@@ -1,24 +1,20 @@
 /**
  * NavUser - 侧边栏底部用户信息 + 下拉菜单
- * 使用 Semi Dropdown + Avatar 替代 shadcn DropdownMenu
+ * 使用 Semi Dropdown + Avatar
  */
-
 import { useCallback, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Dropdown, Avatar } from '@douyinfe/semi-ui-19'
 import { useQueryClient } from '@tanstack/react-query'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import {
-  IconSetting,
-  IconUser,
   IconBell,
   IconCreditCard,
   IconExit,
   IconLock,
+  IconSetting,
+  IconUser,
 } from '@douyinfe/semi-icons'
+import { Avatar, Dropdown } from '@douyinfe/semi-ui-19'
 import { ChevronsUpDown } from 'lucide-react'
-import { SignOutDialog } from '@/components/sign-out-dialog'
-import { ChangePasswordDialog } from '@/components/change-password-dialog'
-import { ConfigDrawer } from '@/components/config-drawer'
 import {
   type IdentityInfo,
   useAuthStore,
@@ -27,9 +23,12 @@ import {
   useCurrentUser,
   useHasMultipleIdentities,
 } from '@/stores/auth-store'
-import { getIdentityScopeName } from '@/features/auth/select-identity/utils'
-import { IdentityCard } from '@/features/auth/select-identity/components/identity-card'
 import { toast } from '@/lib/toast'
+import { ChangePasswordDialog } from '@/components/change-password-dialog'
+import { ConfigDrawer } from '@/components/config-drawer'
+import { SignOutDialog } from '@/components/sign-out-dialog'
+import { IdentityCard } from '@/features/auth/select-identity/components/identity-card'
+import { getIdentityScopeName } from '@/features/auth/select-identity/utils'
 
 function getAvatarFallback(name?: string): string {
   if (!name) return 'U'
@@ -73,44 +72,47 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
     })
   }, [availableIdentities, currentIdentity])
 
-  const handleSwitchIdentity = useCallback(async (identity: IdentityInfo) => {
-    if (switchingId) return
-    if (identity.id === currentIdentity?.id) return
+  const handleSwitchIdentity = useCallback(
+    async (identity: IdentityInfo) => {
+      if (switchingId) return
+      if (identity.id === currentIdentity?.id) return
 
-    setSwitchingId(identity.id)
-    try {
-      await useAuthStore.getState().selectIdentity(identity.id)
+      setSwitchingId(identity.id)
+      try {
+        await useAuthStore.getState().selectIdentity(identity.id)
 
-      const updatedIdentities = availableIdentities.map((item) => ({
-        ...item,
-        is_last_used: item.id === identity.id,
-      }))
-      useAuthStore.getState().setAvailableIdentities(updatedIdentities)
+        const updatedIdentities = availableIdentities.map((item) => ({
+          ...item,
+          is_last_used: item.id === identity.id,
+        }))
+        useAuthStore.getState().setAvailableIdentities(updatedIdentities)
 
-      toast.success(`已切换到 ${getIdentityScopeName(identity)}`)
-      queryClient.invalidateQueries()
+        toast.success(`已切换到 ${getIdentityScopeName(identity)}`)
+        queryClient.invalidateQueries()
 
-      const restrictedPaths = ['/crm/', '/admin/', '/yunke/', '/hr/']
-      const isRestricted = restrictedPaths.some((path) =>
-        location.pathname.startsWith(path)
-      )
-      if (isRestricted) {
-        navigate({ to: '/', replace: true })
+        const restrictedPaths = ['/crm/', '/admin/', '/yunke/', '/hr/']
+        const isRestricted = restrictedPaths.some((path) =>
+          location.pathname.startsWith(path)
+        )
+        if (isRestricted) {
+          navigate({ to: '/', replace: true })
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '切换身份失败'
+        toast.error(message)
+      } finally {
+        setSwitchingId(null)
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '切换身份失败'
-      toast.error(message)
-    } finally {
-      setSwitchingId(null)
-    }
-  }, [
-    availableIdentities,
-    currentIdentity?.id,
-    location.pathname,
-    navigate,
-    queryClient,
-    switchingId,
-  ])
+    },
+    [
+      availableIdentities,
+      currentIdentity?.id,
+      location.pathname,
+      navigate,
+      queryClient,
+      switchingId,
+    ]
+  )
 
   return (
     <>
@@ -121,7 +123,6 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
         getPopupContainer={() => document.body}
         render={
           <Dropdown.Menu>
-            {/* 用户信息头 */}
             <div
               style={{
                 display: 'flex',
@@ -245,10 +246,7 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
                 通知设置
               </Link>
             </Dropdown.Item>
-            <Dropdown.Item
-              icon={<IconLock />}
-              onClick={() => setPwdOpen(true)}
-            >
+            <Dropdown.Item icon={<IconLock />} onClick={() => setPwdOpen(true)}>
               修改密码
             </Dropdown.Item>
             <Dropdown.Divider />
@@ -277,8 +275,7 @@ export function NavUser({ collapsed }: { collapsed?: boolean }) {
             justifyContent: collapsed ? 'center' : 'flex-start',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              'var(--semi-color-fill-0)'
+            e.currentTarget.style.backgroundColor = 'var(--semi-color-fill-0)'
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent'

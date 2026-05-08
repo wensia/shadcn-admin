@@ -236,12 +236,12 @@ export function fromShikiTheme(theme: ShikiThemeLike): DiagramColors {
  * a blended value from --fg and --bg using color-mix().
  */
 export function buildStyleBlock(font: string, hasMonoFont: boolean): string {
-  const fontImports = [
-    `@import url('https://fonts.googleapis.com/css2?family=${encodeURIComponent(font)}:wght@400;500;600;700&amp;display=swap');`,
-    ...(hasMonoFont
-      ? [`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap');`]
-      : []),
-  ]
+  const safeFont = font.replace(/['"\\<>;]/g, '').trim()
+  const textFontStack = safeFont
+    ? `'${safeFont}', var(--font-sans-local, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)`
+    : 'var(--font-sans-local, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)'
+  const monoFontStack =
+    'var(--font-mono-local, "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace)'
 
   // Derived CSS variables: use override if set, else mix from bg+fg.
   // The --_ prefix signals "private/derived" — not meant for external override.
@@ -262,9 +262,8 @@ export function buildStyleBlock(font: string, hasMonoFont: boolean): string {
 
   return [
     '<style>',
-    `  ${fontImports.join('\n  ')}`,
-    `  text { font-family: '${font}', system-ui, sans-serif; }`,
-    ...(hasMonoFont ? [`  .mono { font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace; }`] : []),
+    `  text { font-family: ${textFontStack}; }`,
+    ...(hasMonoFont ? [`  .mono { font-family: ${monoFontStack}; }`] : []),
     `  svg {${derivedVars}`,
     `  }`,
     '</style>',

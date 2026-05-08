@@ -8,12 +8,10 @@ import {
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { semiGlobal } from '@douyinfe/semi-ui-19'
-// 为 Semi 注入 React 19 的 createRoot（在任何 Semi 组件渲染前调用）
-semiGlobal.config.createRoot = ReactDOM.createRoot
-import { toast } from '@/lib/toast'
-import { handleServerError } from '@/lib/handle-server-error'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { ApiClientError } from '@/lib/api/response-handler'
+import { handleServerError } from '@/lib/handle-server-error'
+import { toast } from '@/lib/toast'
 import { AccentColorProvider } from './context/accent-color-provider'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
@@ -23,6 +21,9 @@ import { ThemeProvider } from './context/theme-provider'
 import { routeTree } from './routeTree.gen'
 // Styles
 import './styles/index.css'
+
+// 为 Semi 注入 React 19 的 createRoot（在任何 Semi 组件渲染前调用）
+semiGlobal.config.createRoot = ReactDOM.createRoot
 
 // Chunk 加载失败时自动刷新（部署新版后旧 chunk 被删除的场景）
 window.addEventListener('vite:preloadError', () => {

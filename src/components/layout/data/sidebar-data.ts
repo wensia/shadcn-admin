@@ -19,6 +19,7 @@ import {
   Briefcase,
   GitBranch,
   UserPlus,
+  UserCheck,
   UsersRound,
   KeyRound,
   Tag,
@@ -137,9 +138,49 @@ export const crmNavGroups: NavGroup[] = [
         icon: GraduationCap,
       },
       {
-        title: '课程安排',
+        title: '家长管理',
+        url: '/crm/parents',
+        icon: UsersRound,
+      },
+      {
+        title: '老师管理',
+        url: '/crm/teachers',
+        icon: UserCog,
+      },
+      {
+        title: '课程产品',
         url: '/crm/courses',
         icon: BookOpen,
+      },
+      {
+        title: '课程课包',
+        url: '/crm/packages',
+        icon: Library,
+      },
+      {
+        title: '班级管理',
+        url: '/crm/classes',
+        icon: School,
+      },
+      {
+        title: '排课管理',
+        url: '/crm/lessons',
+        icon: CalendarCheck,
+      },
+      {
+        title: '消课管理',
+        url: '/crm/consumption',
+        icon: ClipboardList,
+      },
+      {
+        title: '课时余额',
+        url: '/crm/balances',
+        icon: Wallet,
+      },
+      {
+        title: '老师结算',
+        url: '/crm/teacher-settlements',
+        icon: Briefcase,
       },
       {
         title: 'ASP 测评记录',
@@ -156,6 +197,11 @@ export const crmNavGroups: NavGroup[] = [
         title: '人事管理',
         url: '/hr/disc-test',
         icon: UserCog,
+      },
+      {
+        title: '员工身份申请',
+        url: '/hr/identity-applications',
+        icon: UserCheck,
       },
       {
         title: '财务管理',
@@ -293,6 +339,11 @@ export const adminNavGroups: NavGroup[] = [
         icon: UsersRound,
       },
       {
+        title: '员工身份申请',
+        url: '/admin/identity-applications',
+        icon: UserCheck,
+      },
+      {
         title: '管理层级',
         url: '/admin/employee-hierarchy',
         icon: GitBranch,
@@ -380,6 +431,11 @@ export const hrNavGroups: NavGroup[] = [
     title: '人事',
     icon: ClipboardList,
     items: [
+      {
+        title: '身份申请',
+        url: '/hr/identity-applications',
+        icon: UserCheck,
+      },
       {
         title: '离职审批',
         url: '/hr/resignations',

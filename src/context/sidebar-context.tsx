@@ -1,10 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 /**
  * Semi Design 侧边栏状态 Context
- * 替代 shadcn SidebarProvider，保持 useSidebar() 接口兼容
+ * 保持 useSidebar() 接口兼容
  * 提供: state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar
  */
-
 import {
   createContext,
   useContext,
@@ -13,8 +12,8 @@ import {
   useEffect,
   useMemo,
 } from 'react'
-import { useIsMobile } from '@/hooks/use-mobile'
 import { setCookie } from '@/lib/cookies'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -70,13 +69,9 @@ export function SidebarProvider({
     }
   }, [isMobile, setOpen])
 
-  // Ctrl+B 快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (e.metaKey || e.ctrlKey)
-      ) {
+      if (e.key === SIDEBAR_KEYBOARD_SHORTCUT && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         toggleSidebar()
       }

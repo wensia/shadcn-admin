@@ -1056,7 +1056,11 @@ function LinksTab() {
 type ReanalyzeGuard = {
   recordId: string
   previousAnalyzedAt?: string | null
+  previousStatus?: string | null
+  startedAt: number
 }
+
+const STALE_ANALYSIS_RESULT_GRACE_MS = 5 * 60 * 1000
 
 export function DiscTestPage() {
   useDocumentTitle('DISC性格测试')
@@ -1152,9 +1156,56 @@ export function DiscTestPage() {
     if (!detailId || !detailData || !reanalyzeGuard || reanalyzeGuard.recordId !== detailId) return
 
     const currentAI = detailData.result?.aiAnalysis
-    if (!currentAI) return
+    const markCurrentRecordProcessing = () => {
+      queryClient.setQueryData<TempDISCRecordDetail | undefined>(
+        ['disc-record-detail', detailId],
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            result: {
+              ...old.result,
+              aiAnalysis: { status: 'processing' } as TempDISCRecordDetail['result']['aiAnalysis'],
+            },
+          }
+        },
+      )
+      queryClient.setQueriesData<typeof recordsData>(
+        { queryKey: ['disc-records'] },
+        (old) => {
+          if (!old?.items) return old
+          return {
+            ...old,
+            items: old.items.map((item) =>
+              item.id === detailId
+                ? { ...item, ai_analysis_status: 'processing' }
+                : item
+            ),
+          }
+        },
+      )
+    }
+
+    const withinGuardGrace = Date.now() - reanalyzeGuard.startedAt < STALE_ANALYSIS_RESULT_GRACE_MS
+
+    if (!currentAI) {
+      if (withinGuardGrace) {
+        markCurrentRecordProcessing()
+      }
+      return
+    }
 
     if (currentAI.status === 'failed') {
+      const isSameFailedResult =
+        withinGuardGrace &&
+        reanalyzeGuard.previousStatus === 'failed' &&
+        (currentAI.analyzedAt ?? null) === (reanalyzeGuard.previousAnalyzedAt ?? null)
+
+      if (isSameFailedResult) {
+        markCurrentRecordProcessing()
+        return
+      }
+
       reanalyzeGuardRef.current = null
       queryClient.invalidateQueries({ queryKey: ['disc-records'] })
       return
@@ -1168,33 +1219,7 @@ export function DiscTestPage() {
       return
     }
 
-    queryClient.setQueryData<TempDISCRecordDetail | undefined>(
-      ['disc-record-detail', detailId],
-      (old) => {
-        if (!old) return old
-        return {
-          ...old,
-          result: {
-            ...old.result,
-            aiAnalysis: { status: 'processing' } as TempDISCRecordDetail['result']['aiAnalysis'],
-          },
-        }
-      },
-    )
-    queryClient.setQueriesData<typeof recordsData>(
-      { queryKey: ['disc-records'] },
-      (old) => {
-        if (!old?.items) return old
-        return {
-          ...old,
-          items: old.items.map((item) =>
-            item.id === detailId
-              ? { ...item, ai_analysis_status: 'processing' }
-              : item
-          ),
-        }
-      },
-    )
+    markCurrentRecordProcessing()
   }, [detailData, detailId, queryClient, recordsData])
 
   // AI 分析完成/失败时自动同步刷新列表（由详情轮询检测到状态变化）

@@ -1,7 +1,7 @@
 // ============================================================================
-// Font metrics — character width estimates for Inter at different sizes.
+// Font metrics — character width estimates for local system fonts.
 // Used to approximate text bounding boxes without DOM measurement.
-// These are calibrated for Inter's typical glyph widths.
+// These are calibrated for common local sans-serif glyph widths.
 //
 // NOTE: Theme/color system has moved to src/theme.ts. This file only
 // contains font metrics, spacing constants, and stroke widths.
@@ -19,17 +19,17 @@ export function estimateTextWidth(text: string, fontSize: number, fontWeight: nu
 /** Average character width in px for monospace fonts (uniform glyph width) */
 export function estimateMonoTextWidth(text: string, fontSize: number): number {
   // Monospace fonts have uniform character width — 0.6 of fontSize matches actual
-  // glyph widths for JetBrains Mono / SF Mono / Fira Code at small sizes (11px).
+  // glyph widths for local monospace fonts at small sizes (11px).
   // Previous value of 0.55 underestimated widths, causing class member labels to
   // extend beyond their box boundaries.
   return text.length * fontSize * 0.6
 }
 
 /** Monospace font family used for code-like text (class members, types) */
-export const MONO_FONT = "'JetBrains Mono'" as const
+export const MONO_FONT = "'SFMono-Regular'" as const
 
 /** Full CSS fallback chain for monospace text */
-export const MONO_FONT_STACK = `${MONO_FONT}, 'SF Mono', 'Fira Code', ui-monospace, monospace` as const
+export const MONO_FONT_STACK = `${MONO_FONT}, 'SF Mono', Consolas, 'Liberation Mono', Menlo, ui-monospace, monospace` as const
 
 /** Fixed font sizes used in the renderer (in px) */
 export const FONT_SIZES = {
@@ -81,7 +81,7 @@ export const STROKE_WIDTHS = {
  * Instead of relying on `dominant-baseline="central"` (which each font interprets
  * differently based on its own ascent/descent metrics), we use the default alphabetic
  * baseline and shift down by 0.35em. This places the optical center of text at the
- * y coordinate, regardless of font family (Inter, JetBrains Mono, system fallbacks).
+ * y coordinate, regardless of font family.
  *
  * The 0.35em value approximates the distance from alphabetic baseline to visual
  * center of Latin text. Using `em` units ensures it scales with font size.
@@ -93,4 +93,3 @@ export const ARROW_HEAD = {
   width: 8,
   height: 5,
 } as const
-

@@ -154,7 +154,7 @@ function VersionHistoryPanel({
                 />
               </span>
             </Tooltip>
-            <Tooltip content="基于此版本创建">
+            <Tooltip content="基于此版本升级，版本号自动加一">
               <span style={{ display: 'inline-flex' }}>
                 <Button
                   theme="borderless"
@@ -419,15 +419,16 @@ export function AIPromptManager() {
           if (isSkeletonRow(record.id)) {
             return <Skeleton.Paragraph rows={1} style={{ width: 80 }} />
           }
+          const activePrompt = record.activePrompt
           return (
             <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
               <Button
                 size="small"
                 theme="outline"
                 icon={<Plus className="h-3.5 w-3.5" />}
-                onClick={() => openDialog('create', record.sceneKey)}
+                onClick={() => activePrompt ? openDialog('copy', record.sceneKey, activePrompt) : openDialog('create', record.sceneKey)}
               >
-                新建版本
+                {activePrompt ? '升级版本' : '新建版本'}
               </Button>
             </div>
           )

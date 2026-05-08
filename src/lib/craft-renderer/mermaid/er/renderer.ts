@@ -35,7 +35,7 @@ const ER_FONT = {
 export function renderErSvg(
   diagram: PositionedErDiagram,
   colors: DiagramColors,
-  font: string = 'Inter',
+  font: string = '',
   transparent: boolean = false
 ): string {
   const parts: string[] = []

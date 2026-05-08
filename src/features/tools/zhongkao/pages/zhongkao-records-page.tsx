@@ -140,7 +140,7 @@ export function ZhongkaoRecordsPage() {
         if (record.redemption_code) {
           return (
             <Text
-              style={{ fontFamily: "'Fira Code', 'Courier New', monospace", fontSize: 12 }}
+              style={{ fontFamily: "var(--font-mono-local)", fontSize: 12 }}
               type="tertiary"
             >
               {record.redemption_code}

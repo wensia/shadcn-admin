@@ -39,7 +39,7 @@ import { clipEdgeToShape } from './shape-clipping.ts'
 
 /** Default render options (layout-only) */
 const DEFAULTS: Required<Pick<RenderOptions, 'font' | 'padding' | 'nodeSpacing' | 'layerSpacing'>> = {
-  font: 'Inter',
+  font: '',
   padding: 40,
   nodeSpacing: 28,
   layerSpacing: 48,

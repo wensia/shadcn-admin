@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { PanelLeftIcon } from 'lucide-react'
 import { Button } from '@douyinfe/semi-ui-19'
+import { PanelLeftIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSidebar } from '@/context/sidebar-context'
 

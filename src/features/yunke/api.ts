@@ -31,7 +31,15 @@ import type {
   YunkeOnboardingOptions,
   OnboardingCreateConsultantRequest,
   OnboardingConsultantResult,
+  YunkeDeviceUnbindResult,
 } from './types'
+
+export interface AnalyzeCallRecordOptions {
+  config_name?: string
+  model_name?: string
+  prompt_name?: string
+  prompt_version?: number
+}
 
 /**
  * 云客管理 API
@@ -308,6 +316,9 @@ export const yunkeCredentialsApi = {
     page?: number
     page_size?: number
     real_name?: string
+    crm_binding_status?: 'bound' | 'unbound'
+    campus_id?: string
+    department_id?: string
   }): Promise<{
     users: YunkeSubAccount[]
     total: number
@@ -336,6 +347,9 @@ export const yunkeCredentialsApi = {
       page?: number
       page_size?: number
       real_name?: string
+      crm_binding_status?: 'bound' | 'unbound'
+      campus_id?: string
+      department_id?: string
     }
   ): Promise<{
     users: YunkeSubAccount[]
@@ -407,6 +421,17 @@ export const yunkeOnboardingApi = {
     >('/yunke/admin/offboard-sub-account', payload)
     return unwrapData(response)
   },
+
+  /** 云客设备批量解绑：调用云客 unBindDeviceBatch */
+  async unbindDevices(payload: {
+    yunke_admin_account_id: string
+    device_ids: string[]
+  }): Promise<YunkeDeviceUnbindResult> {
+    const response = await apiClient.post<
+      ApiResponse<YunkeDeviceUnbindResult>
+    >('/yunke/admin/unbind-devices', payload)
+    return unwrapData(response)
+  },
 }
 
 /**
@@ -449,18 +474,26 @@ export const callRecordsApi = {
   },
 
   /** 提交 AI 分析任务（异步，立即返回） */
-  async analyzeCallRecord(recordId: string): Promise<{
+  async analyzeCallRecord(recordId: string, options?: AnalyzeCallRecordOptions): Promise<{
     task_id: string
     record_id: string
     status: string
+    config_name?: string | null
+    model_name?: string | null
+    prompt_name?: string | null
+    prompt_version?: number | null
   }> {
     const response = await apiClient.post<
       ApiResponse<{
         task_id: string
         record_id: string
         status: string
+        config_name?: string | null
+        model_name?: string | null
+        prompt_name?: string | null
+        prompt_version?: number | null
       }>
-    >(`/yunke/call-records/${recordId}/analyze`)
+    >(`/yunke/call-records/${recordId}/analyze`, options ?? {})
     return unwrapData(response)
   },
 
@@ -597,13 +630,33 @@ export const callRecordsApi = {
   async getTranscriptDictionary(): Promise<{
     corrections: Record<string, string>
     total: number
+    source?: string
   }> {
     const response = await apiClient.get<
       ApiResponse<{
         corrections: Record<string, string>
         total: number
+        source?: string
       }>
     >('/yunke/call-records/transcript-correction/dictionary')
+    return unwrapData(response)
+  },
+
+  /** 保存转录纠错词库 */
+  async saveTranscriptDictionary(
+    corrections: Record<string, string>
+  ): Promise<{
+    corrections: Record<string, string>
+    total: number
+    source?: string
+  }> {
+    const response = await apiClient.put<
+      ApiResponse<{
+        corrections: Record<string, string>
+        total: number
+        source?: string
+      }>
+    >('/yunke/call-records/transcript-correction/dictionary', { corrections })
     return unwrapData(response)
   },
 

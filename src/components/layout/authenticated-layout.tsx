@@ -1,16 +1,15 @@
 /**
  * AuthenticatedLayout - 登录后的主布局
- * 使用 Semi Layout + 自定义 SidebarProvider 替代 shadcn SidebarProvider
+ * 使用 Semi Layout + 自定义 SidebarProvider
  */
-
 import { Layout } from '@douyinfe/semi-ui-19'
 import { getCookie } from '@/lib/cookies'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarProvider, useSidebar } from '@/context/sidebar-context'
 import { AppSidebar } from '@/components/layout/app-sidebar'
-import { SkipToMain } from '@/components/skip-to-main'
 import { TabsManager } from '@/components/layout/tabs-manager'
+import { SkipToMain } from '@/components/skip-to-main'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -21,7 +20,6 @@ function LayoutInner({ children }: AuthenticatedLayoutProps) {
 
   return (
     <Layout style={{ height: '100vh', overflow: 'hidden' }}>
-      {/* 桌面端: Sider 包裹 Nav; 移动端: SideSheet 由 AppSidebar 内部处理 */}
       {!isMobile && (
         <Layout.Sider
           style={{
@@ -35,7 +33,6 @@ function LayoutInner({ children }: AuthenticatedLayoutProps) {
           <AppSidebar />
         </Layout.Sider>
       )}
-      {/* 移动端: AppSidebar 渲染 SideSheet（不占布局空间） */}
       {isMobile && <AppSidebar />}
 
       <Layout.Content

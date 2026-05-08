@@ -1,0 +1,21 @@
+<svg width="960" height="360" viewBox="0 0 960 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">帮助中心页面结构</title>
+  <desc id="desc">左侧目录、中间正文、右侧标题目录的三栏示意图</desc>
+  <rect width="960" height="360" rx="18" fill="#F7F8FA"/>
+  <rect x="48" y="48" width="188" height="264" rx="10" fill="#FFFFFF" stroke="#D9DDE5"/>
+  <rect x="272" y="48" width="416" height="264" rx="10" fill="#FFFFFF" stroke="#D9DDE5"/>
+  <rect x="724" y="48" width="188" height="264" rx="10" fill="#FFFFFF" stroke="#D9DDE5"/>
+  <rect x="72" y="78" width="104" height="14" rx="7" fill="#1F2937"/>
+  <rect x="72" y="118" width="132" height="10" rx="5" fill="#8B95A7"/>
+  <rect x="72" y="148" width="118" height="10" rx="5" fill="#8B95A7"/>
+  <rect x="72" y="178" width="142" height="10" rx="5" fill="#8B95A7"/>
+  <rect x="72" y="208" width="112" height="10" rx="5" fill="#8B95A7"/>
+  <rect x="304" y="78" width="218" height="18" rx="9" fill="#1F2937"/>
+  <rect x="304" y="124" width="336" height="12" rx="6" fill="#8B95A7"/>
+  <rect x="304" y="154" width="300" height="12" rx="6" fill="#8B95A7"/>
+  <rect x="304" y="196" width="336" height="74" rx="8" fill="#EEF2F7" stroke="#D9DDE5"/>
+  <rect x="748" y="78" width="92" height="14" rx="7" fill="#1F2937"/>
+  <rect x="748" y="118" width="118" height="10" rx="5" fill="#8B95A7"/>
+  <rect x="748" y="148" width="96" height="10" rx="5" fill="#8B95A7"/>
+  <rect x="748" y="178" width="128" height="10" rx="5" fill="#8B95A7"/>
+</svg>

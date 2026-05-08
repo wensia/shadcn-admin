@@ -34,6 +34,10 @@ const { Text } = Typography
 type DateRangeValue = [Date, Date] | undefined
 const toStringArray = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value : value ? [value] : undefined
+const dateRangeDropdownStyle = {
+  maxHeight: 'min(420px, calc(100vh - 96px))',
+  overflow: 'auto',
+} as const
 
 // 来源渠道响应类型
 interface SourceChannelItem {
@@ -468,6 +472,9 @@ export function FilterSheet({
               }
             }}
             placeholder={['开始日期', '结束日期']}
+            position="bottomRight"
+            density="compact"
+            dropdownStyle={dateRangeDropdownStyle}
             style={{ width: '100%' }}
           />
         </FilterField>
@@ -510,6 +517,9 @@ export function FilterSheet({
                   }
                 }}
                 placeholder={['激活开始', '激活结束']}
+                position="bottomRight"
+                density="compact"
+                dropdownStyle={dateRangeDropdownStyle}
                 style={{ width: '100%' }}
               />
             </div>

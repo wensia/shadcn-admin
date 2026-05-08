@@ -31,6 +31,7 @@ import { Route as errors401RouteImport } from './routes/(errors)/401'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignIn2RouteImport } from './routes/(auth)/sign-in-2'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
+import { Route as authSetPasswordRouteImport } from './routes/(auth)/set-password'
 import { Route as authSelectIdentityRouteImport } from './routes/(auth)/select-identity'
 import { Route as authOtpRouteImport } from './routes/(auth)/otp'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
@@ -70,21 +71,33 @@ import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedHrResignationsRouteImport } from './routes/_authenticated/hr/resignations'
+import { Route as AuthenticatedHrIdentityApplicationsRouteImport } from './routes/_authenticated/hr/identity-applications'
 import { Route as AuthenticatedHrDiscTestRouteImport } from './routes/_authenticated/hr/disc-test'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedDemoTdesignLeadsRouteImport } from './routes/_authenticated/demo/tdesign-leads'
 import { Route as AuthenticatedCrmXiaodituiRouteImport } from './routes/_authenticated/crm/xiaoditui'
 import { Route as AuthenticatedCrmWorkbenchRouteImport } from './routes/_authenticated/crm/workbench'
 import { Route as AuthenticatedCrmVisitScheduleRouteImport } from './routes/_authenticated/crm/visit-schedule'
+import { Route as AuthenticatedCrmTeachersRouteImport } from './routes/_authenticated/crm/teachers'
+import { Route as AuthenticatedCrmTeacherSettlementsRouteImport } from './routes/_authenticated/crm/teacher-settlements'
+import { Route as AuthenticatedCrmStudentsRouteImport } from './routes/_authenticated/crm/students'
 import { Route as AuthenticatedCrmPerformanceEventsRouteImport } from './routes/_authenticated/crm/performance-events'
 import { Route as AuthenticatedCrmPendingApprovalsRouteImport } from './routes/_authenticated/crm/pending-approvals'
+import { Route as AuthenticatedCrmParentsRouteImport } from './routes/_authenticated/crm/parents'
+import { Route as AuthenticatedCrmPackagesRouteImport } from './routes/_authenticated/crm/packages'
 import { Route as AuthenticatedCrmOrdersRouteImport } from './routes/_authenticated/crm/orders'
+import { Route as AuthenticatedCrmLessonsRouteImport } from './routes/_authenticated/crm/lessons'
 import { Route as AuthenticatedCrmLeadCreationLogsRouteImport } from './routes/_authenticated/crm/lead-creation-logs'
 import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
+import { Route as AuthenticatedCrmFinanceRouteImport } from './routes/_authenticated/crm/finance'
+import { Route as AuthenticatedCrmCoursesRouteImport } from './routes/_authenticated/crm/courses'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
+import { Route as AuthenticatedCrmConsumptionRouteImport } from './routes/_authenticated/crm/consumption'
+import { Route as AuthenticatedCrmClassesRouteImport } from './routes/_authenticated/crm/classes'
 import { Route as AuthenticatedCrmChannelLedgerRouteImport } from './routes/_authenticated/crm/channel-ledger'
 import { Route as AuthenticatedCrmCallRecordsRouteImport } from './routes/_authenticated/crm/call-records'
 import { Route as AuthenticatedCrmBatchImportRouteImport } from './routes/_authenticated/crm/batch-import'
+import { Route as AuthenticatedCrmBalancesRouteImport } from './routes/_authenticated/crm/balances'
 import { Route as AuthenticatedCrmAspRecordsRouteImport } from './routes/_authenticated/crm/asp-records'
 import { Route as AuthenticatedCrmAiAssistantRouteImport } from './routes/_authenticated/crm/ai-assistant'
 import { Route as AuthenticatedCrmAdvisorTasksRouteImport } from './routes/_authenticated/crm/advisor-tasks'
@@ -102,6 +115,7 @@ import { Route as AuthenticatedAdminOrganizationAssignmentsRouteImport } from '.
 import { Route as AuthenticatedAdminOrganizationRouteImport } from './routes/_authenticated/admin/organization'
 import { Route as AuthenticatedAdminLeadAccessStatsRouteImport } from './routes/_authenticated/admin/lead-access-stats'
 import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated/admin/integrations'
+import { Route as AuthenticatedAdminIdentityApplicationsRouteImport } from './routes/_authenticated/admin/identity-applications'
 import { Route as AuthenticatedAdminIdentitiesRouteImport } from './routes/_authenticated/admin/identities'
 import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
 import { Route as AuthenticatedAdminEmployeeHierarchyRouteImport } from './routes/_authenticated/admin/employee-hierarchy'
@@ -233,6 +247,11 @@ const authSignIn2Route = authSignIn2RouteImport.update({
 const authSignInRoute = authSignInRouteImport.update({
   id: '/(auth)/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSetPasswordRoute = authSetPasswordRouteImport.update({
+  id: '/(auth)/set-password',
+  path: '/set-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authSelectIdentityRoute = authSelectIdentityRouteImport.update({
@@ -447,6 +466,12 @@ const AuthenticatedHrResignationsRoute =
     path: '/resignations',
     getParentRoute: () => AuthenticatedHrRouteRoute,
   } as any)
+const AuthenticatedHrIdentityApplicationsRoute =
+  AuthenticatedHrIdentityApplicationsRouteImport.update({
+    id: '/identity-applications',
+    path: '/identity-applications',
+    getParentRoute: () => AuthenticatedHrRouteRoute,
+  } as any)
 const AuthenticatedHrDiscTestRoute = AuthenticatedHrDiscTestRouteImport.update({
   id: '/disc-test',
   path: '/disc-test',
@@ -482,6 +507,24 @@ const AuthenticatedCrmVisitScheduleRoute =
     path: '/visit-schedule',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmTeachersRoute =
+  AuthenticatedCrmTeachersRouteImport.update({
+    id: '/teachers',
+    path: '/teachers',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmTeacherSettlementsRoute =
+  AuthenticatedCrmTeacherSettlementsRouteImport.update({
+    id: '/teacher-settlements',
+    path: '/teacher-settlements',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmStudentsRoute =
+  AuthenticatedCrmStudentsRouteImport.update({
+    id: '/students',
+    path: '/students',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmPerformanceEventsRoute =
   AuthenticatedCrmPerformanceEventsRouteImport.update({
     id: '/performance-events',
@@ -494,9 +537,25 @@ const AuthenticatedCrmPendingApprovalsRoute =
     path: '/pending-approvals',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmParentsRoute = AuthenticatedCrmParentsRouteImport.update({
+  id: '/parents',
+  path: '/parents',
+  getParentRoute: () => AuthenticatedCrmRouteRoute,
+} as any)
+const AuthenticatedCrmPackagesRoute =
+  AuthenticatedCrmPackagesRouteImport.update({
+    id: '/packages',
+    path: '/packages',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmOrdersRoute = AuthenticatedCrmOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => AuthenticatedCrmRouteRoute,
+} as any)
+const AuthenticatedCrmLessonsRoute = AuthenticatedCrmLessonsRouteImport.update({
+  id: '/lessons',
+  path: '/lessons',
   getParentRoute: () => AuthenticatedCrmRouteRoute,
 } as any)
 const AuthenticatedCrmLeadCreationLogsRoute =
@@ -511,12 +570,33 @@ const AuthenticatedCrmLeadConversionRoute =
     path: '/lead-conversion',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmFinanceRoute = AuthenticatedCrmFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AuthenticatedCrmRouteRoute,
+} as any)
+const AuthenticatedCrmCoursesRoute = AuthenticatedCrmCoursesRouteImport.update({
+  id: '/courses',
+  path: '/courses',
+  getParentRoute: () => AuthenticatedCrmRouteRoute,
+} as any)
 const AuthenticatedCrmContinuousCallRoute =
   AuthenticatedCrmContinuousCallRouteImport.update({
     id: '/continuous-call',
     path: '/continuous-call',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmConsumptionRoute =
+  AuthenticatedCrmConsumptionRouteImport.update({
+    id: '/consumption',
+    path: '/consumption',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmClassesRoute = AuthenticatedCrmClassesRouteImport.update({
+  id: '/classes',
+  path: '/classes',
+  getParentRoute: () => AuthenticatedCrmRouteRoute,
+} as any)
 const AuthenticatedCrmChannelLedgerRoute =
   AuthenticatedCrmChannelLedgerRouteImport.update({
     id: '/channel-ledger',
@@ -533,6 +613,12 @@ const AuthenticatedCrmBatchImportRoute =
   AuthenticatedCrmBatchImportRouteImport.update({
     id: '/batch-import',
     path: '/batch-import',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmBalancesRoute =
+  AuthenticatedCrmBalancesRouteImport.update({
+    id: '/balances',
+    path: '/balances',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmAspRecordsRoute =
@@ -635,6 +721,12 @@ const AuthenticatedAdminIntegrationsRoute =
   AuthenticatedAdminIntegrationsRouteImport.update({
     id: '/integrations',
     path: '/integrations',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminIdentityApplicationsRoute =
+  AuthenticatedAdminIdentityApplicationsRouteImport.update({
+    id: '/identity-applications',
+    path: '/identity-applications',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedAdminIdentitiesRoute =
@@ -800,6 +892,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/select-identity': typeof authSelectIdentityRoute
+  '/set-password': typeof authSetPasswordRoute
   '/sign-in': typeof authSignInRoute
   '/sign-in-2': typeof authSignIn2Route
   '/sign-up': typeof authSignUpRoute
@@ -828,6 +921,7 @@ export interface FileRoutesByFullPath {
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/admin/identity-applications': typeof AuthenticatedAdminIdentityApplicationsRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/admin/organization': typeof AuthenticatedAdminOrganizationRoute
@@ -845,21 +939,33 @@ export interface FileRoutesByFullPath {
   '/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
+  '/crm/balances': typeof AuthenticatedCrmBalancesRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
+  '/crm/classes': typeof AuthenticatedCrmClassesRoute
+  '/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
+  '/crm/courses': typeof AuthenticatedCrmCoursesRoute
+  '/crm/finance': typeof AuthenticatedCrmFinanceRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
+  '/crm/lessons': typeof AuthenticatedCrmLessonsRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
+  '/crm/packages': typeof AuthenticatedCrmPackagesRoute
+  '/crm/parents': typeof AuthenticatedCrmParentsRoute
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
+  '/crm/students': typeof AuthenticatedCrmStudentsRoute
+  '/crm/teacher-settlements': typeof AuthenticatedCrmTeacherSettlementsRoute
+  '/crm/teachers': typeof AuthenticatedCrmTeachersRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/crm/xiaoditui': typeof AuthenticatedCrmXiaodituiRoute
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/hr/identity-applications': typeof AuthenticatedHrIdentityApplicationsRoute
   '/hr/resignations': typeof AuthenticatedHrResignationsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -910,6 +1016,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/select-identity': typeof authSelectIdentityRoute
+  '/set-password': typeof authSetPasswordRoute
   '/sign-in': typeof authSignInRoute
   '/sign-in-2': typeof authSignIn2Route
   '/sign-up': typeof authSignUpRoute
@@ -938,6 +1045,7 @@ export interface FileRoutesByTo {
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/admin/identity-applications': typeof AuthenticatedAdminIdentityApplicationsRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/admin/organization': typeof AuthenticatedAdminOrganizationRoute
@@ -955,21 +1063,33 @@ export interface FileRoutesByTo {
   '/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
+  '/crm/balances': typeof AuthenticatedCrmBalancesRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
+  '/crm/classes': typeof AuthenticatedCrmClassesRoute
+  '/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
+  '/crm/courses': typeof AuthenticatedCrmCoursesRoute
+  '/crm/finance': typeof AuthenticatedCrmFinanceRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
+  '/crm/lessons': typeof AuthenticatedCrmLessonsRoute
   '/crm/orders': typeof AuthenticatedCrmOrdersRoute
+  '/crm/packages': typeof AuthenticatedCrmPackagesRoute
+  '/crm/parents': typeof AuthenticatedCrmParentsRoute
   '/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
+  '/crm/students': typeof AuthenticatedCrmStudentsRoute
+  '/crm/teacher-settlements': typeof AuthenticatedCrmTeacherSettlementsRoute
+  '/crm/teachers': typeof AuthenticatedCrmTeachersRoute
   '/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/crm/xiaoditui': typeof AuthenticatedCrmXiaodituiRoute
   '/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/hr/identity-applications': typeof AuthenticatedHrIdentityApplicationsRoute
   '/hr/resignations': typeof AuthenticatedHrResignationsRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -1029,6 +1149,7 @@ export interface FileRoutesById {
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/otp': typeof authOtpRoute
   '/(auth)/select-identity': typeof authSelectIdentityRoute
+  '/(auth)/set-password': typeof authSetPasswordRoute
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-in-2': typeof authSignIn2Route
   '/(auth)/sign-up': typeof authSignUpRoute
@@ -1058,6 +1179,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/_authenticated/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
+  '/_authenticated/admin/identity-applications': typeof AuthenticatedAdminIdentityApplicationsRoute
   '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/_authenticated/admin/lead-access-stats': typeof AuthenticatedAdminLeadAccessStatsRoute
   '/_authenticated/admin/organization': typeof AuthenticatedAdminOrganizationRoute
@@ -1075,21 +1197,33 @@ export interface FileRoutesById {
   '/_authenticated/crm/advisor-tasks': typeof AuthenticatedCrmAdvisorTasksRoute
   '/_authenticated/crm/ai-assistant': typeof AuthenticatedCrmAiAssistantRoute
   '/_authenticated/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
+  '/_authenticated/crm/balances': typeof AuthenticatedCrmBalancesRoute
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
   '/_authenticated/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
   '/_authenticated/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
+  '/_authenticated/crm/classes': typeof AuthenticatedCrmClassesRoute
+  '/_authenticated/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
+  '/_authenticated/crm/courses': typeof AuthenticatedCrmCoursesRoute
+  '/_authenticated/crm/finance': typeof AuthenticatedCrmFinanceRoute
   '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/_authenticated/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
+  '/_authenticated/crm/lessons': typeof AuthenticatedCrmLessonsRoute
   '/_authenticated/crm/orders': typeof AuthenticatedCrmOrdersRoute
+  '/_authenticated/crm/packages': typeof AuthenticatedCrmPackagesRoute
+  '/_authenticated/crm/parents': typeof AuthenticatedCrmParentsRoute
   '/_authenticated/crm/pending-approvals': typeof AuthenticatedCrmPendingApprovalsRoute
   '/_authenticated/crm/performance-events': typeof AuthenticatedCrmPerformanceEventsRoute
+  '/_authenticated/crm/students': typeof AuthenticatedCrmStudentsRoute
+  '/_authenticated/crm/teacher-settlements': typeof AuthenticatedCrmTeacherSettlementsRoute
+  '/_authenticated/crm/teachers': typeof AuthenticatedCrmTeachersRoute
   '/_authenticated/crm/visit-schedule': typeof AuthenticatedCrmVisitScheduleRoute
   '/_authenticated/crm/workbench': typeof AuthenticatedCrmWorkbenchRoute
   '/_authenticated/crm/xiaoditui': typeof AuthenticatedCrmXiaodituiRoute
   '/_authenticated/demo/tdesign-leads': typeof AuthenticatedDemoTdesignLeadsRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/hr/disc-test': typeof AuthenticatedHrDiscTestRoute
+  '/_authenticated/hr/identity-applications': typeof AuthenticatedHrIdentityApplicationsRoute
   '/_authenticated/hr/resignations': typeof AuthenticatedHrResignationsRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -1147,6 +1281,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/otp'
     | '/select-identity'
+    | '/set-password'
     | '/sign-in'
     | '/sign-in-2'
     | '/sign-up'
@@ -1175,6 +1310,7 @@ export interface FileRouteTypes {
     | '/admin/employee-hierarchy'
     | '/admin/employees'
     | '/admin/identities'
+    | '/admin/identity-applications'
     | '/admin/integrations'
     | '/admin/lead-access-stats'
     | '/admin/organization'
@@ -1192,21 +1328,33 @@ export interface FileRouteTypes {
     | '/crm/advisor-tasks'
     | '/crm/ai-assistant'
     | '/crm/asp-records'
+    | '/crm/balances'
     | '/crm/batch-import'
     | '/crm/call-records'
     | '/crm/channel-ledger'
+    | '/crm/classes'
+    | '/crm/consumption'
     | '/crm/continuous-call'
+    | '/crm/courses'
+    | '/crm/finance'
     | '/crm/lead-conversion'
     | '/crm/lead-creation-logs'
+    | '/crm/lessons'
     | '/crm/orders'
+    | '/crm/packages'
+    | '/crm/parents'
     | '/crm/pending-approvals'
     | '/crm/performance-events'
+    | '/crm/students'
+    | '/crm/teacher-settlements'
+    | '/crm/teachers'
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/crm/xiaoditui'
     | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
+    | '/hr/identity-applications'
     | '/hr/resignations'
     | '/settings/account'
     | '/settings/appearance'
@@ -1257,6 +1405,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/otp'
     | '/select-identity'
+    | '/set-password'
     | '/sign-in'
     | '/sign-in-2'
     | '/sign-up'
@@ -1285,6 +1434,7 @@ export interface FileRouteTypes {
     | '/admin/employee-hierarchy'
     | '/admin/employees'
     | '/admin/identities'
+    | '/admin/identity-applications'
     | '/admin/integrations'
     | '/admin/lead-access-stats'
     | '/admin/organization'
@@ -1302,21 +1452,33 @@ export interface FileRouteTypes {
     | '/crm/advisor-tasks'
     | '/crm/ai-assistant'
     | '/crm/asp-records'
+    | '/crm/balances'
     | '/crm/batch-import'
     | '/crm/call-records'
     | '/crm/channel-ledger'
+    | '/crm/classes'
+    | '/crm/consumption'
     | '/crm/continuous-call'
+    | '/crm/courses'
+    | '/crm/finance'
     | '/crm/lead-conversion'
     | '/crm/lead-creation-logs'
+    | '/crm/lessons'
     | '/crm/orders'
+    | '/crm/packages'
+    | '/crm/parents'
     | '/crm/pending-approvals'
     | '/crm/performance-events'
+    | '/crm/students'
+    | '/crm/teacher-settlements'
+    | '/crm/teachers'
     | '/crm/visit-schedule'
     | '/crm/workbench'
     | '/crm/xiaoditui'
     | '/demo/tdesign-leads'
     | '/errors/$error'
     | '/hr/disc-test'
+    | '/hr/identity-applications'
     | '/hr/resignations'
     | '/settings/account'
     | '/settings/appearance'
@@ -1375,6 +1537,7 @@ export interface FileRouteTypes {
     | '/(auth)/forgot-password'
     | '/(auth)/otp'
     | '/(auth)/select-identity'
+    | '/(auth)/set-password'
     | '/(auth)/sign-in'
     | '/(auth)/sign-in-2'
     | '/(auth)/sign-up'
@@ -1404,6 +1567,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/employee-hierarchy'
     | '/_authenticated/admin/employees'
     | '/_authenticated/admin/identities'
+    | '/_authenticated/admin/identity-applications'
     | '/_authenticated/admin/integrations'
     | '/_authenticated/admin/lead-access-stats'
     | '/_authenticated/admin/organization'
@@ -1421,21 +1585,33 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/advisor-tasks'
     | '/_authenticated/crm/ai-assistant'
     | '/_authenticated/crm/asp-records'
+    | '/_authenticated/crm/balances'
     | '/_authenticated/crm/batch-import'
     | '/_authenticated/crm/call-records'
     | '/_authenticated/crm/channel-ledger'
+    | '/_authenticated/crm/classes'
+    | '/_authenticated/crm/consumption'
     | '/_authenticated/crm/continuous-call'
+    | '/_authenticated/crm/courses'
+    | '/_authenticated/crm/finance'
     | '/_authenticated/crm/lead-conversion'
     | '/_authenticated/crm/lead-creation-logs'
+    | '/_authenticated/crm/lessons'
     | '/_authenticated/crm/orders'
+    | '/_authenticated/crm/packages'
+    | '/_authenticated/crm/parents'
     | '/_authenticated/crm/pending-approvals'
     | '/_authenticated/crm/performance-events'
+    | '/_authenticated/crm/students'
+    | '/_authenticated/crm/teacher-settlements'
+    | '/_authenticated/crm/teachers'
     | '/_authenticated/crm/visit-schedule'
     | '/_authenticated/crm/workbench'
     | '/_authenticated/crm/xiaoditui'
     | '/_authenticated/demo/tdesign-leads'
     | '/_authenticated/errors/$error'
     | '/_authenticated/hr/disc-test'
+    | '/_authenticated/hr/identity-applications'
     | '/_authenticated/hr/resignations'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
@@ -1487,6 +1663,7 @@ export interface RootRouteChildren {
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOtpRoute: typeof authOtpRoute
   authSelectIdentityRoute: typeof authSelectIdentityRoute
+  authSetPasswordRoute: typeof authSetPasswordRoute
   authSignInRoute: typeof authSignInRoute
   authSignIn2Route: typeof authSignIn2Route
   authSignUpRoute: typeof authSignUpRoute
@@ -1653,6 +1830,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof authSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/set-password': {
+      id: '/(auth)/set-password'
+      path: '/set-password'
+      fullPath: '/set-password'
+      preLoaderRoute: typeof authSetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/select-identity': {
@@ -1928,6 +2112,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHrResignationsRouteImport
       parentRoute: typeof AuthenticatedHrRouteRoute
     }
+    '/_authenticated/hr/identity-applications': {
+      id: '/_authenticated/hr/identity-applications'
+      path: '/identity-applications'
+      fullPath: '/hr/identity-applications'
+      preLoaderRoute: typeof AuthenticatedHrIdentityApplicationsRouteImport
+      parentRoute: typeof AuthenticatedHrRouteRoute
+    }
     '/_authenticated/hr/disc-test': {
       id: '/_authenticated/hr/disc-test'
       path: '/disc-test'
@@ -1970,6 +2161,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmVisitScheduleRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/teachers': {
+      id: '/_authenticated/crm/teachers'
+      path: '/teachers'
+      fullPath: '/crm/teachers'
+      preLoaderRoute: typeof AuthenticatedCrmTeachersRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/teacher-settlements': {
+      id: '/_authenticated/crm/teacher-settlements'
+      path: '/teacher-settlements'
+      fullPath: '/crm/teacher-settlements'
+      preLoaderRoute: typeof AuthenticatedCrmTeacherSettlementsRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/students': {
+      id: '/_authenticated/crm/students'
+      path: '/students'
+      fullPath: '/crm/students'
+      preLoaderRoute: typeof AuthenticatedCrmStudentsRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/performance-events': {
       id: '/_authenticated/crm/performance-events'
       path: '/performance-events'
@@ -1984,11 +2196,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmPendingApprovalsRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/parents': {
+      id: '/_authenticated/crm/parents'
+      path: '/parents'
+      fullPath: '/crm/parents'
+      preLoaderRoute: typeof AuthenticatedCrmParentsRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/packages': {
+      id: '/_authenticated/crm/packages'
+      path: '/packages'
+      fullPath: '/crm/packages'
+      preLoaderRoute: typeof AuthenticatedCrmPackagesRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/orders': {
       id: '/_authenticated/crm/orders'
       path: '/orders'
       fullPath: '/crm/orders'
       preLoaderRoute: typeof AuthenticatedCrmOrdersRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/lessons': {
+      id: '/_authenticated/crm/lessons'
+      path: '/lessons'
+      fullPath: '/crm/lessons'
+      preLoaderRoute: typeof AuthenticatedCrmLessonsRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/lead-creation-logs': {
@@ -2005,11 +2238,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmLeadConversionRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/finance': {
+      id: '/_authenticated/crm/finance'
+      path: '/finance'
+      fullPath: '/crm/finance'
+      preLoaderRoute: typeof AuthenticatedCrmFinanceRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/courses': {
+      id: '/_authenticated/crm/courses'
+      path: '/courses'
+      fullPath: '/crm/courses'
+      preLoaderRoute: typeof AuthenticatedCrmCoursesRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/continuous-call': {
       id: '/_authenticated/crm/continuous-call'
       path: '/continuous-call'
       fullPath: '/crm/continuous-call'
       preLoaderRoute: typeof AuthenticatedCrmContinuousCallRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/consumption': {
+      id: '/_authenticated/crm/consumption'
+      path: '/consumption'
+      fullPath: '/crm/consumption'
+      preLoaderRoute: typeof AuthenticatedCrmConsumptionRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/classes': {
+      id: '/_authenticated/crm/classes'
+      path: '/classes'
+      fullPath: '/crm/classes'
+      preLoaderRoute: typeof AuthenticatedCrmClassesRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/channel-ledger': {
@@ -2031,6 +2292,13 @@ declare module '@tanstack/react-router' {
       path: '/batch-import'
       fullPath: '/crm/batch-import'
       preLoaderRoute: typeof AuthenticatedCrmBatchImportRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/balances': {
+      id: '/_authenticated/crm/balances'
+      path: '/balances'
+      fullPath: '/crm/balances'
+      preLoaderRoute: typeof AuthenticatedCrmBalancesRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/asp-records': {
@@ -2150,6 +2418,13 @@ declare module '@tanstack/react-router' {
       path: '/integrations'
       fullPath: '/admin/integrations'
       preLoaderRoute: typeof AuthenticatedAdminIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/identity-applications': {
+      id: '/_authenticated/admin/identity-applications'
+      path: '/identity-applications'
+      fullPath: '/admin/identity-applications'
+      preLoaderRoute: typeof AuthenticatedAdminIdentityApplicationsRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/identities': {
@@ -2341,6 +2616,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminEmployeeHierarchyRoute: typeof AuthenticatedAdminEmployeeHierarchyRoute
   AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
   AuthenticatedAdminIdentitiesRoute: typeof AuthenticatedAdminIdentitiesRoute
+  AuthenticatedAdminIdentityApplicationsRoute: typeof AuthenticatedAdminIdentityApplicationsRoute
   AuthenticatedAdminIntegrationsRoute: typeof AuthenticatedAdminIntegrationsRoute
   AuthenticatedAdminLeadAccessStatsRoute: typeof AuthenticatedAdminLeadAccessStatsRoute
   AuthenticatedAdminOrganizationRoute: typeof AuthenticatedAdminOrganizationRoute
@@ -2380,6 +2656,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
       AuthenticatedAdminEmployeeHierarchyRoute,
     AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
     AuthenticatedAdminIdentitiesRoute: AuthenticatedAdminIdentitiesRoute,
+    AuthenticatedAdminIdentityApplicationsRoute:
+      AuthenticatedAdminIdentityApplicationsRoute,
     AuthenticatedAdminIntegrationsRoute: AuthenticatedAdminIntegrationsRoute,
     AuthenticatedAdminLeadAccessStatsRoute:
       AuthenticatedAdminLeadAccessStatsRoute,
@@ -2411,15 +2689,26 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmAdvisorTasksRoute: typeof AuthenticatedCrmAdvisorTasksRoute
   AuthenticatedCrmAiAssistantRoute: typeof AuthenticatedCrmAiAssistantRoute
   AuthenticatedCrmAspRecordsRoute: typeof AuthenticatedCrmAspRecordsRoute
+  AuthenticatedCrmBalancesRoute: typeof AuthenticatedCrmBalancesRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
   AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
   AuthenticatedCrmChannelLedgerRoute: typeof AuthenticatedCrmChannelLedgerRoute
+  AuthenticatedCrmClassesRoute: typeof AuthenticatedCrmClassesRoute
+  AuthenticatedCrmConsumptionRoute: typeof AuthenticatedCrmConsumptionRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
+  AuthenticatedCrmCoursesRoute: typeof AuthenticatedCrmCoursesRoute
+  AuthenticatedCrmFinanceRoute: typeof AuthenticatedCrmFinanceRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
   AuthenticatedCrmLeadCreationLogsRoute: typeof AuthenticatedCrmLeadCreationLogsRoute
+  AuthenticatedCrmLessonsRoute: typeof AuthenticatedCrmLessonsRoute
   AuthenticatedCrmOrdersRoute: typeof AuthenticatedCrmOrdersRoute
+  AuthenticatedCrmPackagesRoute: typeof AuthenticatedCrmPackagesRoute
+  AuthenticatedCrmParentsRoute: typeof AuthenticatedCrmParentsRoute
   AuthenticatedCrmPendingApprovalsRoute: typeof AuthenticatedCrmPendingApprovalsRoute
   AuthenticatedCrmPerformanceEventsRoute: typeof AuthenticatedCrmPerformanceEventsRoute
+  AuthenticatedCrmStudentsRoute: typeof AuthenticatedCrmStudentsRoute
+  AuthenticatedCrmTeacherSettlementsRoute: typeof AuthenticatedCrmTeacherSettlementsRoute
+  AuthenticatedCrmTeachersRoute: typeof AuthenticatedCrmTeachersRoute
   AuthenticatedCrmVisitScheduleRoute: typeof AuthenticatedCrmVisitScheduleRoute
   AuthenticatedCrmWorkbenchRoute: typeof AuthenticatedCrmWorkbenchRoute
   AuthenticatedCrmXiaodituiRoute: typeof AuthenticatedCrmXiaodituiRoute
@@ -2438,16 +2727,28 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
   AuthenticatedCrmAdvisorTasksRoute: AuthenticatedCrmAdvisorTasksRoute,
   AuthenticatedCrmAiAssistantRoute: AuthenticatedCrmAiAssistantRoute,
   AuthenticatedCrmAspRecordsRoute: AuthenticatedCrmAspRecordsRoute,
+  AuthenticatedCrmBalancesRoute: AuthenticatedCrmBalancesRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
   AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
   AuthenticatedCrmChannelLedgerRoute: AuthenticatedCrmChannelLedgerRoute,
+  AuthenticatedCrmClassesRoute: AuthenticatedCrmClassesRoute,
+  AuthenticatedCrmConsumptionRoute: AuthenticatedCrmConsumptionRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
+  AuthenticatedCrmCoursesRoute: AuthenticatedCrmCoursesRoute,
+  AuthenticatedCrmFinanceRoute: AuthenticatedCrmFinanceRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
   AuthenticatedCrmLeadCreationLogsRoute: AuthenticatedCrmLeadCreationLogsRoute,
+  AuthenticatedCrmLessonsRoute: AuthenticatedCrmLessonsRoute,
   AuthenticatedCrmOrdersRoute: AuthenticatedCrmOrdersRoute,
+  AuthenticatedCrmPackagesRoute: AuthenticatedCrmPackagesRoute,
+  AuthenticatedCrmParentsRoute: AuthenticatedCrmParentsRoute,
   AuthenticatedCrmPendingApprovalsRoute: AuthenticatedCrmPendingApprovalsRoute,
   AuthenticatedCrmPerformanceEventsRoute:
     AuthenticatedCrmPerformanceEventsRoute,
+  AuthenticatedCrmStudentsRoute: AuthenticatedCrmStudentsRoute,
+  AuthenticatedCrmTeacherSettlementsRoute:
+    AuthenticatedCrmTeacherSettlementsRoute,
+  AuthenticatedCrmTeachersRoute: AuthenticatedCrmTeachersRoute,
   AuthenticatedCrmVisitScheduleRoute: AuthenticatedCrmVisitScheduleRoute,
   AuthenticatedCrmWorkbenchRoute: AuthenticatedCrmWorkbenchRoute,
   AuthenticatedCrmXiaodituiRoute: AuthenticatedCrmXiaodituiRoute,
@@ -2473,11 +2774,14 @@ const AuthenticatedCrmRouteRouteWithChildren =
 
 interface AuthenticatedHrRouteRouteChildren {
   AuthenticatedHrDiscTestRoute: typeof AuthenticatedHrDiscTestRoute
+  AuthenticatedHrIdentityApplicationsRoute: typeof AuthenticatedHrIdentityApplicationsRoute
   AuthenticatedHrResignationsRoute: typeof AuthenticatedHrResignationsRoute
 }
 
 const AuthenticatedHrRouteRouteChildren: AuthenticatedHrRouteRouteChildren = {
   AuthenticatedHrDiscTestRoute: AuthenticatedHrDiscTestRoute,
+  AuthenticatedHrIdentityApplicationsRoute:
+    AuthenticatedHrIdentityApplicationsRoute,
   AuthenticatedHrResignationsRoute: AuthenticatedHrResignationsRoute,
 }
 
@@ -2664,6 +2968,7 @@ const rootRouteChildren: RootRouteChildren = {
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOtpRoute: authOtpRoute,
   authSelectIdentityRoute: authSelectIdentityRoute,
+  authSetPasswordRoute: authSetPasswordRoute,
   authSignInRoute: authSignInRoute,
   authSignIn2Route: authSignIn2Route,
   authSignUpRoute: authSignUpRoute,

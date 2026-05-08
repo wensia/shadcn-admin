@@ -1,7 +1,7 @@
 /**
- * ASR 任务专用参数表单组件
+ * 云客通话转写任务专用参数表单组件
  *
- * 用于配置 ASR 语音转录定时任务的参数
+ * 用于配置云客 /pc/trans/transWord 批量转写定时任务的参数
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -9,8 +9,8 @@ import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Info, ChevronDown, ChevronRight, Mic } from 'lucide-react'
 
 import { Button, Select, Switch, Tag, Tooltip, Typography, Input as SemiInput, InputNumber } from '@douyinfe/semi-ui-19'
-import { asrConfigApi, scheduledTasksApi } from '../api'
-import { TIME_RANGE_PRESETS, ASR_PROVIDER_OPTIONS } from '../types'
+import { scheduledTasksApi } from '../api'
+import { TIME_RANGE_PRESETS } from '../types'
 
 const { Text } = Typography
 
@@ -39,7 +39,7 @@ interface ASRTaskFormProps {
  * 从时间变量字符串推断预设类型
  */
 function inferTimeRangeType(startTime?: string, endTime?: string): string {
-  if (!startTime || !endTime) return 'today'
+  if (!startTime || !endTime) return 'yesterday_to_now'
 
   for (const preset of TIME_RANGE_PRESETS) {
     if (preset.start === startTime && preset.end === endTime) {
@@ -49,18 +49,10 @@ function inferTimeRangeType(startTime?: string, endTime?: string): string {
 
   // 如果不匹配任何预设，判断是否是动态变量
   if (startTime.includes('{{') || endTime.includes('{{')) {
-    return 'today'
+    return 'yesterday_to_now'
   }
 
   return 'custom'
-}
-
-/**
- * 获取提供商的中文名称
- */
-function getProviderLabel(provider: string): string {
-  const option = ASR_PROVIDER_OPTIONS.find(opt => opt.value === provider)
-  return option?.label || provider
 }
 
 function toStringArray(value: unknown): string[] {
@@ -73,12 +65,6 @@ function toStringArray(value: unknown): string[] {
 }
 
 export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
-  // 查询 ASR 配置列表
-  const { data: asrConfigs, isLoading: configsLoading } = useQuery({
-    queryKey: ['asr-configs-simple'],
-    queryFn: () => asrConfigApi.getSimpleList(),
-  })
-
   const { data: yunkeDepartments, isLoading: departmentsLoading } = useQuery({
     queryKey: ['yunke-department-options'],
     queryFn: () => scheduledTasksApi.getYunkeDepartmentOptions(),
@@ -92,19 +78,18 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
   )
 
   // 表单状态
-  const [asrConfigId, setAsrConfigId] = useState<string>(initialValues?.asr_config_id?.toString() || '')
   const [timeRangeType, setTimeRangeType] = useState<string>(initialTimeRangeType)
   const [customStartTime, setCustomStartTime] = useState<string>(initialTimeRangeType === 'custom' ? (initialValues?.start_time || '') : '')
   const [customEndTime, setCustomEndTime] = useState<string>(initialTimeRangeType === 'custom' ? (initialValues?.end_time || '') : '')
   const [skipExisting, setSkipExisting] = useState<boolean>(initialValues?.skip_existing ?? true)
-  const [minDuration, setMinDuration] = useState<number>(initialValues?.min_duration ?? 0)
-  const [batchSize, setBatchSize] = useState<number>(initialValues?.batch_size ?? 10)
-  const [maxRecords, setMaxRecords] = useState<number>(initialValues?.max_records ?? 10)
+  const [minDuration, setMinDuration] = useState<number>(initialValues?.min_duration ?? 30)
+  const [batchSize, setBatchSize] = useState<number>(initialValues?.batch_size ?? 5)
+  const [maxRecords, setMaxRecords] = useState<number>(initialValues?.max_records ?? 20)
   const [concurrency, setConcurrency] = useState<number>(initialValues?.concurrency ?? 1)
   const [departmentIds, setDepartmentIds] = useState<string[]>(toStringArray(initialValues?.department_ids))
   const [departmentNames, setDepartmentNames] = useState<string[]>(toStringArray(initialValues?.department_names))
   const [campusIds, setCampusIds] = useState<string[]>(toStringArray(initialValues?.campus_ids))
-  const [maxDurationSeconds, setMaxDurationSeconds] = useState<number>(initialValues?.max_duration_seconds ?? 1800)
+  const [maxDurationSeconds, setMaxDurationSeconds] = useState<number>(initialValues?.max_duration_seconds ?? 7200)
   const [dryRun, setDryRun] = useState<boolean>(initialValues?.dry_run ?? false)
 
   // 高级选项展开状态
@@ -112,8 +97,6 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
 
   // 构建 kwargs 并通知外部
   const buildAndNotify = useCallback(() => {
-    if (!asrConfigId) return
-
     let startTime: string
     let endTime: string
 
@@ -127,7 +110,6 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
     }
 
     const kwargs: Record<string, unknown> = {
-      asr_config_id: asrConfigId || null,
       start_time: startTime,
       end_time: endTime,
       skip_existing: skipExisting,
@@ -140,10 +122,11 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
       campus_ids: campusIds,
       max_duration_seconds: maxDurationSeconds,
       dry_run: dryRun,
+      allow_unscoped: false,
     }
 
     onChange(kwargs)
-  }, [asrConfigId, timeRangeType, customStartTime, customEndTime, skipExisting, minDuration, batchSize, maxRecords, concurrency, departmentIds, departmentNames, campusIds, maxDurationSeconds, dryRun, onChange])
+  }, [timeRangeType, customStartTime, customEndTime, skipExisting, minDuration, batchSize, maxRecords, concurrency, departmentIds, departmentNames, campusIds, maxDurationSeconds, dryRun, onChange])
 
   // 监听表单变化
   useEffect(() => {
@@ -156,13 +139,6 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
     label: preset.label,
   }))
 
-  // ASR 配置下拉选项
-  const asrConfigOptions = (asrConfigs || []).map((config) => ({
-    value: config.id,
-    label: config.name,
-    provider: config.provider,
-    is_default: config.is_default,
-  }))
   const departmentOptions = (yunkeDepartments?.options || []).map((department) => ({
     value: department.value,
     label: department.label,
@@ -171,51 +147,16 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
 
   return (
     <div className="space-y-4">
-      {/* ASR 配置选择 */}
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-medium">
+      {/* 转写通道 */}
+      <div className="space-y-2 rounded-lg border p-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
           <Mic className="h-4 w-4" />
-          ASR 配置
-        </label>
-        {configsLoading ? (
-          <div className="h-8 w-full bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
-        ) : (
-          <Select
-            value={asrConfigId}
-            onChange={(value) => setAsrConfigId(value as string)}
-            placeholder="选择 ASR 服务配置"
-            style={{ width: '100%' }}
-            optionList={asrConfigOptions}
-            renderOptionItem={(renderProps) => {
-              const { label, value: optValue, ...rest } = renderProps
-              const config = asrConfigOptions.find(c => c.value === optValue)
-              return (
-                <div
-                  className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[var(--semi-color-fill-0)]"
-                  onClick={(event) => rest.onClick?.(event)}
-                  style={rest.focused ? { backgroundColor: 'var(--semi-color-fill-0)' } : undefined}
-                >
-                  <span>{label}</span>
-                  {config && (
-                    <Tag size="small" color="blue" type="light">
-                      {getProviderLabel(config.provider)}
-                    </Tag>
-                  )}
-                  {config?.is_default && (
-                    <Tag size="small" color="grey" type="light">
-                      默认
-                    </Tag>
-                  )}
-                </div>
-              )
-            }}
-            emptyContent={
-              <div className="py-2 px-2 text-sm" style={{ color: 'var(--semi-color-text-2)' }}>
-                暂无可用的 ASR 配置
-              </div>
-            }
-          />
-        )}
+          云客转写
+          <Tag size="small" color="green" type="light">固定通道</Tag>
+        </div>
+        <Text type="tertiary" size="small">
+          生产任务固定使用云客 /pc/trans/transWord；云客当前按每小时最多 20 次控制，旧 ASR 配置参数不会被后端读取。
+        </Text>
       </div>
 
       {/* 时间范围选择 */}
@@ -341,7 +282,7 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium">
                 批次大小
-                <Tooltip content="每批处理的记录数量">
+                <Tooltip content="每批处理的记录数量；生产建议 5">
                   <Info className="h-3 w-3" style={{ color: 'var(--semi-color-text-2)' }} />
                 </Tooltip>
               </label>
@@ -358,7 +299,7 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium">
                 最大处理数量
-                <Tooltip content="单次任务最多处理的记录数；后端会对 0 或负数使用安全上限">
+                <Tooltip content="单次任务最多处理的记录数；云客当前一小时最多转换 20 次">
                   <Info className="h-3 w-3" style={{ color: 'var(--semi-color-text-2)' }} />
                 </Tooltip>
               </label>
@@ -390,7 +331,7 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium">
                 并发数
-                <Tooltip content="同时进行转录的并发请求数；敏感任务建议 1">
+                <Tooltip content="同时进行转写的并发请求数；生产默认 1，避免触发云客频率限制">
                   <Info className="h-3 w-3" style={{ color: 'var(--semi-color-text-2)' }} />
                 </Tooltip>
               </label>
@@ -407,7 +348,7 @@ export function ASRTaskForm({ initialValues, onChange }: ASRTaskFormProps) {
               <div className="space-y-0.5">
                 <div className="text-sm font-medium">只预览</div>
                 <Text type="tertiary" size="small">
-                  只统计将处理的记录，不实际提交 ASR
+                  只统计将处理的记录，不实际提交云客转写
                 </Text>
               </div>
               <Switch

@@ -10,8 +10,7 @@
  * - Green: #788c5d - Secondary accent
  *
  * Typography:
- * - Headings: Poppins (fallback: Arial)
- * - Body: Lora (fallback: Georgia)
+ * - All fonts use local system stacks. Do not load remote font CSS.
  */
 
 :root {
@@ -79,6 +78,19 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+
+  /* 本地字体栈：禁止依赖 Google Fonts 等远程字体服务 */
+  --font-sans-local: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-display-local: 'Avenir Next', 'Segoe UI', -apple-system,
+    BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    Arial, sans-serif;
+  --font-serif-local: 'Iowan Old Style', 'Songti SC', STSong, SimSun, Georgia,
+    serif;
+  --font-mono-local: 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono',
+    Menlo, monospace;
+  --app-font-family: var(--font-sans-local);
 }
 
 /* ==================== Accent Color Themes ==================== */
@@ -191,8 +203,18 @@
 
 @theme inline {
   /* 字体 */
-  --font-poppins: 'Poppins', 'Arial', sans-serif;
-  --font-lora: 'Lora', 'Georgia', serif;
+  --font-sans: var(--font-sans-local);
+  --font-serif: var(--font-serif-local);
+  --font-mono: var(--font-mono-local);
+  --font-system: var(--font-sans-local);
+  --font-display: var(--font-display-local);
+  --font-heading: var(--font-display-local);
+  --font-inter: var(--font-sans-local);
+  --font-manrope: var(--font-sans-local);
+  --font-poppins: var(--font-display-local);
+  --font-lora: var(--font-serif-local);
+  --font-bricolage: var(--font-display-local);
+  --font-jetbrains: var(--font-mono-local);
 
   /* 字体大小 */
   --font-size-xs: 0.75rem;    /* 12px */

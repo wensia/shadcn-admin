@@ -341,7 +341,7 @@ export function EmployeesPage() {
 
   // 创建员工
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; scope_type?: string; campus_id?: string; region_id?: string; district_id?: string; area_id?: string; department_id?: string; position_id?: string; joined_at?: string }) =>
+    mutationFn: (data: { name: string; email?: string; phone?: string; scope_type?: string; campus_id?: string; region_id?: string; district_id?: string; area_id?: string; department_id?: string; position_id?: string; joined_at?: string }) =>
       adminApi.quickCreateEmployee(data),
     onSuccess: (response) => {
       if (response.data) {
@@ -1005,6 +1005,8 @@ export function EmployeesPage() {
       if (validIdentities.length === 0) {
         createMutation.mutate({
           name: values.name,
+          email: values.email || undefined,
+          phone: values.phone || undefined,
           joined_at: values.joined_at || undefined,
         })
       } else {
@@ -1013,6 +1015,8 @@ export function EmployeesPage() {
           const deptInfo = departmentOptionsMap[firstIdentity.campus_id]?.find(d => d.id === firstIdentity.department_id)
           createMutation.mutate({
             name: values.name,
+            email: values.email || undefined,
+            phone: values.phone || undefined,
             scope_type: 'campus',
             campus_id: firstIdentity.campus_id,
             department_id: deptInfo?.campus_department_id || firstIdentity.department_id,
@@ -1022,6 +1026,8 @@ export function EmployeesPage() {
         } else {
           createMutation.mutate({
             name: values.name,
+            email: values.email || undefined,
+            phone: values.phone || undefined,
             scope_type: firstIdentity.scope_type,
             region_id: firstIdentity.region_id || undefined,
             district_id: firstIdentity.district_id || undefined,

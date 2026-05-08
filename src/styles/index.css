@@ -1,7 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './theme.css';
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400..800&display=swap');
 
 @layer base {
   * {
@@ -17,24 +16,42 @@
     box-shadow: none !important;
   }
 
-  html {
-    @apply overflow-x-hidden;
-    /* Anthropic 品牌字体：正文使用 Lora */
-    font-family: 'Lora', 'Georgia', serif;
+  :root.font-system,
+  :root.font-inter,
+  :root.font-manrope {
+    --app-font-family: var(--font-sans-local);
   }
 
-  /* Anthropic 品牌字体：标题使用 Poppins */
+  :root.font-serif {
+    --app-font-family: var(--font-serif-local);
+  }
+
+  :root.font-mono {
+    --app-font-family: var(--font-mono-local);
+  }
+
+  html {
+    @apply overflow-x-hidden;
+    font-family: var(--app-font-family, var(--font-sans-local));
+  }
+
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    font-family: 'Poppins', 'Arial', sans-serif;
+    font-family: var(--font-display-local);
   }
 
   body {
     @apply min-h-svh w-full bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar;
+    font-family: var(--app-font-family, var(--font-sans-local));
+  }
+
+  /* Semi Design base.css sets body to Inter; keep the app on local stacks. */
+  html body {
+    font-family: var(--app-font-family, var(--font-sans-local)) !important;
   }
 
   /* Override Radix scroll locking for sticky headers */
@@ -62,7 +79,6 @@
 
   /* Prevent focus zoom on mobile devices */
   @media screen and (max-width: 767px) {
-
     input,
     select,
     textarea {
@@ -77,7 +93,6 @@
 }
 
 @utility no-scrollbar {
-
   /* Hide scrollbar for Chrome, Safari and Opera */
   &::-webkit-scrollbar {
     display: none;
@@ -149,19 +164,20 @@
 
 /* Fix: CommandItem 悬浮/选中状态下 checkbox 边框可见性 */
 /* 当 CommandItem 处于 selected 状态时，增强 checkbox 的可见性 */
-[data-slot="command-item"][data-selected="true"] [data-slot="checkbox"] {
+[data-slot='command-item'][data-selected='true'] [data-slot='checkbox'] {
   border-color: var(--foreground);
   background-color: var(--background);
 }
 
-[data-slot="command-item"][data-selected="true"] [data-slot="checkbox"][data-state="checked"] {
+[data-slot='command-item'][data-selected='true']
+  [data-slot='checkbox'][data-state='checked'] {
   border-color: var(--primary);
   background-color: var(--primary);
 }
 
 /* Dialog content: keep horizontal padding on small screens */
-[data-slot="dialog-content"],
-[data-slot="alert-dialog-content"] {
+[data-slot='dialog-content'],
+[data-slot='alert-dialog-content'] {
   width: min(100%, calc(100vw - 2rem)) !important;
   box-sizing: border-box;
 }
@@ -261,7 +277,6 @@
 }
 
 @keyframes spinner-grid {
-
   0%,
   70%,
   100% {
@@ -326,28 +341,32 @@
 ============================================================================= */
 
 /* Header z-index must beat body sticky cells (z-10) to prevent bleed-through */
-[data-slot="table-header"] {
+[data-slot='table-header'] {
   z-index: 20 !important;
 }
 
 /* Body cells: solid background prevents scrolling content bleed-through */
-[data-slot="table-row"]>.sticky {
+[data-slot='table-row'] > .sticky {
   background-color: var(--background) !important;
 }
 
 /* Header cells: solid background matching card/header bg + stick vertically too */
-[data-slot="table-header"] .sticky {
+[data-slot='table-header'] .sticky {
   top: 0;
   background-color: var(--card, var(--background)) !important;
 }
 
 /* Hover: blend muted color with background to produce solid equivalent of bg-muted/50 */
-[data-slot="table-row"]:hover>.sticky {
-  background-color: color-mix(in srgb, var(--muted) 50%, var(--background)) !important;
+[data-slot='table-row']:hover > .sticky {
+  background-color: color-mix(
+    in srgb,
+    var(--muted) 50%,
+    var(--background)
+  ) !important;
 }
 
 /* Selected: full muted background, matching data-[state=selected]:bg-muted */
-[data-slot="table-row"][data-state="selected"]>.sticky {
+[data-slot='table-row'][data-state='selected'] > .sticky {
   background-color: var(--muted) !important;
 }
 
@@ -358,7 +377,7 @@
 
 /* ── Login Page Scope ── */
 .login-page {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans-local);
 }
 
 /* ── 背景 ── */
@@ -382,7 +401,11 @@
   height: 600px;
   right: -150px;
   top: -120px;
-  background: radial-gradient(circle, rgba(217, 119, 87, 0.1) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(217, 119, 87, 0.1) 0%,
+    transparent 70%
+  );
   animation: login-drift 25s ease-in-out infinite;
 }
 
@@ -391,13 +414,16 @@
   height: 450px;
   left: -100px;
   bottom: -80px;
-  background: radial-gradient(circle, rgba(217, 119, 87, 0.08) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(217, 119, 87, 0.08) 0%,
+    transparent 70%
+  );
   animation: login-drift 20s ease-in-out infinite reverse;
   animation-delay: -7s;
 }
 
 @keyframes login-drift {
-
   0%,
   100% {
     transform: translate(0, 0) scale(1);
@@ -419,7 +445,9 @@
   background: #fff;
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.06);
   padding: 40px 36px;
   position: relative;
   z-index: 1;
@@ -452,12 +480,12 @@
   color: var(--semi-color-text-0, #1c1f23);
   font-size: 12px;
   font-weight: 500;
-  color: var(--semi-color-primary, #0064FA);
+  color: var(--semi-color-primary, #0064fa);
   text-decoration: none;
 }
 
 .login-forgot-link:hover {
-  color: var(--semi-color-primary-hover, #0050C8);
+  color: var(--semi-color-primary-hover, #0050c8);
 }
 
 /* DISC Report Drawer Custom Tabs Styles */
@@ -488,6 +516,11 @@
   border-radius: 2px !important;
 }
 
+.disc-tabs-wrapper .semi-tabs-content,
+.disc-tabs-wrapper .semi-tabs-pane-motion-overlay,
+.disc-tabs-wrapper .semi-tabs-pane-active.semi-tabs-pane {
+  overflow: visible !important;
+}
 
 /* ── Accessibility: Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
@@ -527,7 +560,7 @@
   font-style: normal;
 }
 
-.markdown-content em>strong,
+.markdown-content em > strong,
 .markdown-content em strong {
   font-style: normal;
   color: var(--destructive);
@@ -541,8 +574,16 @@
 .neo-bg-grid {
   background-color: var(--background);
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--foreground) 10%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--foreground) 10%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--foreground) 10%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--foreground) 10%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 24px 24px;
 }
 
@@ -561,13 +602,13 @@
 }
 
 .neo-badge {
-  background-color: #D4FF00;
+  background-color: #d4ff00;
   /* Neon yellow/lemon accent */
   color: #000;
   border: 2px solid #000;
   box-shadow: 2px 2px 0px 0px #000;
   border-radius: 0px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono-local);
   font-weight: 700;
   padding: 4px 8px;
   text-transform: uppercase;
@@ -576,7 +617,7 @@
 }
 
 .neo-heading {
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: var(--font-display-local);
   font-weight: 800;
   letter-spacing: -0.03em;
   text-transform: uppercase;
@@ -584,7 +625,7 @@
 }
 
 .neo-data {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono-local);
   font-weight: 800;
   letter-spacing: -0.05em;
   color: var(--foreground);
@@ -602,7 +643,7 @@
   border: 2px solid var(--foreground) !important;
   border-radius: 0 !important;
   box-shadow: 4px 4px 0px 0px var(--foreground) !important;
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: var(--font-mono-local) !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
 }
@@ -620,7 +661,7 @@
 
 .neo-context .semi-button-borderless {
   border-radius: 0 !important;
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: var(--font-mono-local) !important;
   font-weight: 700 !important;
 }
 
@@ -634,7 +675,7 @@
   border-radius: 0 !important;
   border: 2px solid var(--foreground) !important;
   box-shadow: 3px 3px 0px 0px var(--foreground) !important;
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: var(--font-mono-local) !important;
 }
 
 .neo-context .semi-select:hover,
@@ -654,45 +695,61 @@
   border-radius: 0 !important;
 }
 
-.neo-context .semi-table-thead>tr>th {
+.neo-context .semi-table-thead > tr > th {
   background-color: var(--foreground) !important;
   color: var(--background) !important;
-  font-family: 'Bricolage Grotesque', sans-serif !important;
+  font-family: var(--font-display-local) !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
   border-bottom: 2px solid var(--foreground) !important;
 }
 
-.neo-context .semi-table-tbody>tr>td {
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent) !important;
-  font-family: 'JetBrains Mono', monospace !important;
+.neo-context .semi-table-tbody > tr > td {
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--foreground) 20%, transparent) !important;
+  font-family: var(--font-mono-local) !important;
 }
 
-.neo-context .semi-table-tbody>tr:hover>td {
-  background-color: color-mix(in srgb, #D4FF00 20%, transparent) !important;
+.neo-context .semi-table-tbody > tr:hover > td {
+  background-color: color-mix(in srgb, #d4ff00 20%, transparent) !important;
 }
 
-.advisor-task-table .semi-table-tbody>tr>td {
+.advisor-task-table .semi-table-tbody > tr > td {
   background: var(--advisor-task-row-bg, #ffffff) !important;
 }
 
-.advisor-task-table .semi-table-tbody>tr:hover>td {
+.advisor-task-table .semi-table-tbody > tr:hover > td {
   background: var(--advisor-task-row-hover-bg, #f8fafc) !important;
 }
 
-.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-left,
-.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-left-last,
-.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-right,
-.advisor-task-table .semi-table-tbody>tr>td.semi-table-cell-fixed-right-first {
+.advisor-task-table .semi-table-tbody > tr > td.semi-table-cell-fixed-left,
+.advisor-task-table .semi-table-tbody > tr > td.semi-table-cell-fixed-left-last,
+.advisor-task-table .semi-table-tbody > tr > td.semi-table-cell-fixed-right,
+.advisor-task-table
+  .semi-table-tbody
+  > tr
+  > td.semi-table-cell-fixed-right-first {
   background: var(--advisor-task-row-bg, #ffffff) !important;
   background-clip: padding-box;
 }
 
-.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-left,
-.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-left-last,
-.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-right,
-.advisor-task-table .semi-table-tbody>tr:hover>td.semi-table-cell-fixed-right-first {
+.advisor-task-table
+  .semi-table-tbody
+  > tr:hover
+  > td.semi-table-cell-fixed-left,
+.advisor-task-table
+  .semi-table-tbody
+  > tr:hover
+  > td.semi-table-cell-fixed-left-last,
+.advisor-task-table
+  .semi-table-tbody
+  > tr:hover
+  > td.semi-table-cell-fixed-right,
+.advisor-task-table
+  .semi-table-tbody
+  > tr:hover
+  > td.semi-table-cell-fixed-right-first {
   background: var(--advisor-task-row-hover-bg, #f8fafc) !important;
 }
 
@@ -701,7 +758,7 @@
 }
 
 .neo-context .semi-tabs-tab {
-  font-family: 'Bricolage Grotesque', sans-serif !important;
+  font-family: var(--font-display-local) !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   border-radius: 0 !important;

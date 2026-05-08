@@ -9,6 +9,7 @@ import {
   Banner,
   Button,
   Form,
+  Input,
   Modal,
   Select,
   Switch,
@@ -117,27 +118,47 @@ function formatIdentity(identity: EmployeeIdentityItem): string {
     .join(' / ')
 }
 
+function normalizePhoneInput(value: string): string {
+  return value.replace(/[\s-]+/g, '').trim()
+}
+
 export function CreateConsultantDialog({ open, onClose, credential }: Props) {
   const [employeeSelectorOpen, setEmployeeSelectorOpen] = useState(false)
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeListItem | null>(null)
   const [selectedIdentityId, setSelectedIdentityId] = useState('')
+  const [employeePhoneInput, setEmployeePhoneInput] = useState('')
   const [formValues, setFormValues] = useState<{
     yunkeRoleId: string
     yunkeDeptId: string
     sendSms: boolean
   }>({ yunkeRoleId: '', yunkeDeptId: '', sendSms: false })
   const [result, setResult] = useState<OnboardingConsultantResult | null>(null)
+  const [canLoadConfig, setCanLoadConfig] = useState(false)
 
   useEffect(() => {
     if (!open) {
+      setCanLoadConfig(false)
       setEmployeeSelectorOpen(false)
       setSelectedEmployee(null)
       setSelectedIdentityId('')
+      setEmployeePhoneInput('')
       setFormValues({ yunkeRoleId: '', yunkeDeptId: '', sendSms: false })
       setResult(null)
+      return
     }
-  }, [open])
+
+    setCanLoadConfig(false)
+    if (typeof window === 'undefined') {
+      setCanLoadConfig(true)
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setCanLoadConfig(true)
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [open, credential.id])
 
   // ---------------- CRM 员工 + 身份 ----------------
   const { data: identities = [], isLoading: identitiesLoading } = useQuery({
@@ -168,6 +189,25 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
     [identities, selectedIdentityId]
   )
 
+  useEffect(() => {
+    if (!selectedEmployee || identitiesLoading) return
+
+    if (identities.length === 1) {
+      const onlyIdentityId = identities[0].id
+      if (selectedIdentityId !== onlyIdentityId) {
+        setSelectedIdentityId(onlyIdentityId)
+      }
+      return
+    }
+
+    if (
+      selectedIdentityId &&
+      !identities.some((identity) => identity.id === selectedIdentityId)
+    ) {
+      setSelectedIdentityId('')
+    }
+  }, [selectedEmployee, identities, identitiesLoading, selectedIdentityId])
+
   // ---------------- 云客下拉（部门树 + 角色） ----------------
   const {
     data: yunkeOptions,
@@ -176,7 +216,7 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
   } = useQuery({
     queryKey: ['yunke-onboarding-options', credential.id],
     queryFn: () => yunkeOnboardingApi.getOptions(credential.id),
-    enabled: open && credential.status === 1,
+    enabled: canLoadConfig && credential.status === 1,
     retry: false,
   })
 
@@ -220,8 +260,14 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
       toast.error('请选择 CRM 员工')
       return
     }
-    if (!selectedEmployee.phone) {
-      toast.error('所选员工没有手机号')
+    const employeePhone =
+      selectedEmployee.phone?.trim() || normalizePhoneInput(employeePhoneInput)
+    if (!employeePhone) {
+      toast.error('请填写员工手机号')
+      return
+    }
+    if (!/^\d{11}$/.test(employeePhone)) {
+      toast.error('员工手机号必须是 11 位数字')
       return
     }
     if (!selectedIdentityId) {
@@ -240,6 +286,7 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
     mutation.mutate({
       employee_id: selectedEmployee.id,
       identity_id: selectedIdentityId,
+      employee_phone: selectedEmployee.phone?.trim() ? undefined : employeePhone,
       yunke_admin_account_id: credential.id,
       yunke_dept_id: formValues.yunkeDeptId,
       yunke_role_id: formValues.yunkeRoleId,
@@ -270,12 +317,14 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
       `手机号：${employee.phone || '-'}`,
       `CRM身份：${identityText || '-'}`,
     ].join('\n')
+    const yunkeAccount = yunke?.username || yunke?.phone || '-'
+    const yunkePassword =
+      yunke?.password || '已存在绑定，请使用已保存密码或重置密码'
     const yunkeBlock = yunke
       ? [
-          `云客账号：${yunke.phone}`,
-          `初始密码：${yunke.password || '已存在绑定，请使用已保存密码或重置密码'}`,
-          `所属公司：${yunke.company_code}`,
-          `登录地址：https://crm.yunkecn.com`,
+          `姓名：${employee.name}`,
+          `账号：${yunkeAccount}`,
+          `密码：${yunkePassword}`,
         ].join('\n')
       : null
 
@@ -398,6 +447,26 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
             </div>
           </Form.Slot>
 
+          {selectedEmployee && !selectedEmployee.phone?.trim() && (
+            <Form.Slot label='员工手机号'>
+              <Input
+                value={employeePhoneInput}
+                placeholder='请输入 11 位手机号'
+                maxLength={11}
+                onChange={(value) =>
+                  setEmployeePhoneInput(normalizePhoneInput(value))
+                }
+              />
+              <Text
+                type='warning'
+                size='small'
+                style={{ marginTop: 4, display: 'block' }}
+              >
+                该员工档案暂无手机号，提交后会同步写入 CRM 员工资料
+              </Text>
+            </Form.Slot>
+          )}
+
           <Form.Slot label='员工身份'>
             <Select
               style={{ width: '100%' }}
@@ -496,6 +565,7 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
         onSelect={(employee) => {
           setSelectedEmployee(employee)
           setSelectedIdentityId('')
+          setEmployeePhoneInput(employee.phone ?? '')
         }}
         title='选择课程顾问'
         description='从 CRM 在职课程顾问中选择要开通云客账号的员工'

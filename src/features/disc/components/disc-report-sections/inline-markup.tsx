@@ -29,7 +29,7 @@ export function InlineMarkup({ text }: { text: string }) {
               strong
               style={{ color: 'var(--semi-color-danger)', fontStyle: 'normal' }}
             >
-              {part.slice(3, -3)}
+              <InlineMarkup text={part.slice(3, -3)} />
             </Text>
           )
         }
@@ -40,7 +40,7 @@ export function InlineMarkup({ text }: { text: string }) {
               strong
               style={{ color: 'var(--semi-color-primary)' }}
             >
-              {part.slice(2, -2)}
+              <InlineMarkup text={part.slice(2, -2)} />
             </Text>
           )
         }

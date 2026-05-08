@@ -4,7 +4,9 @@ import { ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Form, Button } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
-import { sleep, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { authApi } from '../../api'
+import { showApiErrorToast } from '@/lib/api/error-toast'
 
 type ForgotPasswordFormValues = {
   email: string
@@ -18,19 +20,18 @@ export function ForgotPasswordForm({
   const [isLoading, setIsLoading] = useState(false)
   const formRef = useRef<FormApi | null>(null)
 
-  function handleSubmit(values: ForgotPasswordFormValues) {
+  async function handleSubmit(values: ForgotPasswordFormValues) {
     setIsLoading(true)
-
-    toast.promise(sleep(2000), {
-      loading: 'Sending email...',
-      success: () => {
-        setIsLoading(false)
-        formRef.current?.setValues({ email: '' })
-        navigate({ to: '/otp' })
-        return `Email sent to ${values.email}`
-      },
-      error: 'Error',
-    })
+    try {
+      await authApi.resetPassword({ email: values.email })
+      toast.success(`重置邮件已发送到 ${values.email}`)
+      formRef.current?.setValues({ email: '' })
+      navigate({ to: '/otp' })
+    } catch (error) {
+      showApiErrorToast(error, '发送失败')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

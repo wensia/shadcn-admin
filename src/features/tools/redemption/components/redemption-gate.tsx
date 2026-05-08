@@ -94,13 +94,13 @@ export function RedemptionGate({ toolId, onVerified }: RedemptionGateProps) {
             </div>
             <CardTitle
               className="font-display text-xl font-semibold"
-              style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+              style={{ fontFamily: "var(--font-display-local)" }}
             >
               请输入兑换码
             </CardTitle>
             <CardDescription
               className="mt-1"
-              style={{ fontFamily: "'Lora', Georgia, serif" }}
+              style={{ fontFamily: "var(--font-serif-local)" }}
             >
               该工具需要兑换码才能使用
             </CardDescription>
@@ -117,13 +117,13 @@ export function RedemptionGate({ toolId, onVerified }: RedemptionGateProps) {
                 }}
                 onKeyDown={handleKeyDown}
                 className="ant-input h-12 text-center text-lg tracking-widest"
-                style={{ fontFamily: "'Fira Code', 'Courier New', monospace" }}
+                style={{ fontFamily: "var(--font-mono-local)" }}
                 autoFocus
               />
               {error && (
                 <p
                   className="text-center text-[13px]"
-                  style={{ color: '#d97757', fontFamily: "'Lora', Georgia, serif" }}
+                  style={{ color: '#d97757', fontFamily: "var(--font-serif-local)" }}
                 >
                   {error}
                 </p>
@@ -140,14 +140,14 @@ export function RedemptionGate({ toolId, onVerified }: RedemptionGateProps) {
 
             <div className="relative flex items-center my-1">
               <div className="flex-1 border-t border-border/40" />
-              <span className="px-3 text-[12px] text-muted-foreground" style={{ fontFamily: "'Lora', Georgia, serif" }}>或</span>
+              <span className="px-3 text-[12px] text-muted-foreground" style={{ fontFamily: "var(--font-serif-local)" }}>或</span>
               <div className="flex-1 border-t border-border/40" />
             </div>
 
             <a
               href={`/sign-in?redirect=${encodeURIComponent(window.location.pathname)}`}
               className="ant-btn flex h-11 w-full items-center justify-center rounded-lg border border-border/50 bg-card text-[14px] font-medium text-foreground transition-colors hover:bg-muted"
-              style={{ fontFamily: "'Poppins', Arial, sans-serif" }}
+              style={{ fontFamily: "var(--font-display-local)" }}
             >
               员工登录
             </a>
@@ -155,7 +155,7 @@ export function RedemptionGate({ toolId, onVerified }: RedemptionGateProps) {
             <div className="rounded-xl bg-[#788c5d]/8 p-3">
               <p
                 className="text-center text-[12px] text-muted-foreground"
-                style={{ fontFamily: "'Lora', Georgia, serif" }}
+                style={{ fontFamily: "var(--font-serif-local)" }}
               >
                 兑换码由管理员发放，如需获取请联系相关负责人
               </p>
@@ -165,7 +165,7 @@ export function RedemptionGate({ toolId, onVerified }: RedemptionGateProps) {
 
         <p
           className="mt-8 text-center text-[13px] text-[#b0aea5]"
-          style={{ fontFamily: "'Lora', Georgia, serif" }}
+          style={{ fontFamily: "var(--font-serif-local)" }}
         >
           由 RuiMF 提供技术支持
         </p>

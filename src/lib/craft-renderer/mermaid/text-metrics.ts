@@ -11,7 +11,7 @@
 
 /**
  * Narrow characters - visually thin glyphs.
- * Note: '1' is included because in proportional fonts (like Inter), it's
+ * Note: '1' is included because in proportional system fonts, it's
  * significantly narrower than other digits which use tabular/uniform width.
  */
 const NARROW_CHARS = new Set(['i', 'l', 't', 'f', 'j', 'I', '1', '!', '|', '.', ',', ':', ';', "'"])
@@ -173,7 +173,7 @@ export function getCharWidth(char: string): number {
  * @returns Estimated width in pixels
  */
 export function measureTextWidth(text: string, fontSize: number, fontWeight: number): number {
-  // Base ratio calibrated for Inter font family
+  // Base ratio calibrated for local system sans fonts
   // Heavier weights are slightly wider
   // Added +0.02 buffer to prevent edge truncation of characters like 's' at line ends
   const baseRatio = fontWeight >= 600 ? 0.60 : fontWeight >= 500 ? 0.57 : 0.54

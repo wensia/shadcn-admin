@@ -21,7 +21,7 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
-import { leadAccessStatsApi } from '../api'
+import { adminApi, leadAccessStatsApi } from '../api'
 import { LeadAccessNotifyDialog } from '../components/lead-access-notify-dialog'
 import type {
   AdvisorAccessStatistics,
@@ -83,7 +83,45 @@ export function LeadAccessStatsPage() {
     queryFn: () => leadAccessStatsApi.getAdvisorStatistics(filters),
   })
 
+  // 获取校区选项，用于统计筛选
+  const { data: campusOptionsData = [], isLoading: isCampusOptionsLoading } = useQuery({
+    queryKey: ['lead-access-stats-campus-options'],
+    queryFn: async () => {
+      const response = await adminApi.getCampusesSimple()
+      return response.data || []
+    },
+  })
+
+  // 获取部门选项，用于统计筛选
+  const { data: departmentOptionsData = [], isLoading: isDepartmentOptionsLoading } = useQuery({
+    queryKey: ['lead-access-stats-department-options'],
+    queryFn: async () => {
+      const response = await adminApi.getDepartmentsSimple()
+      return response.data || []
+    },
+  })
+
   const statistics = useMemo<AdvisorAccessStatistics[]>(() => data?.statistics ?? [], [data?.statistics])
+  const campusOptions = useMemo(
+    () => [
+      { label: '全部校区', value: 'all' },
+      ...campusOptionsData.map((campus) => ({
+        label: campus.name,
+        value: campus.id,
+      })),
+    ],
+    [campusOptionsData]
+  )
+  const departmentOptions = useMemo(
+    () => [
+      { label: '全部部门', value: 'all' },
+      ...departmentOptionsData.map((department) => ({
+        label: department.name,
+        value: department.id,
+      })),
+    ],
+    [departmentOptionsData]
+  )
   const summary: AccessStatisticsSummary = data?.summary || {
     total_users: 0,
     active_users: 0,
@@ -171,6 +209,16 @@ export function LeadAccessStatsPage() {
             return <SemiSkeletonCell width={112} />
           }
           return record.campus_name
+        },
+      },
+      {
+        title: '所属部门',
+        dataIndex: 'department_name',
+        render: (_text: string, record: StatsRow) => {
+          if (isSkeletonRow(record.user_id)) {
+            return <SemiSkeletonCell width={88} />
+          }
+          return record.department_name || '-'
         },
       },
       {
@@ -335,6 +383,7 @@ export function LeadAccessStatsPage() {
       const headers = [
         '顾问姓名',
         '所属校区',
+        '所属部门',
         '地区',
         '查看线索数',
         '总访问次数',
@@ -345,6 +394,7 @@ export function LeadAccessStatsPage() {
       const rows = filteredData.map((item) => [
         item.user_name,
         item.campus_name,
+        item.department_name || '-',
         item.district_name || '-',
         item.view_count.toString(),
         item.total_access.toString(),
@@ -472,12 +522,30 @@ export function LeadAccessStatsPage() {
             </div>
 
             {/* 筛选工具栏 */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={filters.time_range || 'today'}
                 onChange={(value) => handleFilterChange('time_range', value as string)}
                 optionList={TIME_RANGE_OPTIONS}
                 style={{ width: 140 }}
+              />
+              <Select
+                value={filters.campus_id || 'all'}
+                onChange={(value) => handleFilterChange('campus_id', value as string)}
+                optionList={campusOptions}
+                loading={isCampusOptionsLoading}
+                filter
+                placeholder="筛选校区"
+                style={{ width: 180 }}
+              />
+              <Select
+                value={filters.department_id || 'all'}
+                onChange={(value) => handleFilterChange('department_id', value as string)}
+                optionList={departmentOptions}
+                loading={isDepartmentOptionsLoading}
+                filter
+                placeholder="筛选部门"
+                style={{ width: 160 }}
               />
               <Input
                 prefix={<Search className="h-4 w-4" />}
