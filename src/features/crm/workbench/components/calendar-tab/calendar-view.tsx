@@ -30,6 +30,7 @@ import { leadsApi } from '@/features/crm/leads/api'
 import { LeadDetailSheet } from '@/features/crm/leads/components/lead-detail-sheet'
 import { LeadStatusBadge } from '@/features/crm/leads/components/status-badges'
 import type { LeadListItem } from '@/features/crm/leads/types'
+import { getLatestLeadNoteText } from '@/features/crm/leads/utils/notes'
 
 type ViewMode = 'month' | 'week'
 
@@ -461,55 +462,58 @@ export function CalendarView() {
         <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>
           {selectedDateLeads.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {selectedDateLeads.map((lead) => (
-                <div
-                  key={lead.id}
-                  onClick={(e) => handleLeadClick(e, lead.id)}
-                  style={{
-                    display: 'flex', flexDirection: 'column', gap: 8,
-                    padding: 12, borderRadius: 8,
-                    border: '1px solid var(--semi-color-border)',
-                    background: 'var(--semi-color-bg-0)',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--semi-color-bg-0)' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ fontWeight: 500, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {lead.child_name || '未命名'}
-                      {lead.grade && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', marginLeft: 8, fontWeight: 400 }}>{lead.grade}</span>}
+              {selectedDateLeads.map((lead) => {
+                const noteText = getLatestLeadNoteText(lead.notes)
+                return (
+                  <div
+                    key={lead.id}
+                    onClick={(e) => handleLeadClick(e, lead.id)}
+                    style={{
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                      padding: 12, borderRadius: 8,
+                      border: '1px solid var(--semi-color-border)',
+                      background: 'var(--semi-color-bg-0)',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--semi-color-fill-0)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--semi-color-bg-0)' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ fontWeight: 500, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {lead.child_name || '未命名'}
+                        {lead.grade && <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)', marginLeft: 8, fontWeight: 400 }}>{lead.grade}</span>}
+                      </div>
+                      {lead.next_followup_at && (
+                        <Tag size="small" style={{ fontFamily: 'monospace', flexShrink: 0 }}>
+                          {format(parseISO(lead.next_followup_at), 'HH:mm')}
+                        </Tag>
+                      )}
                     </div>
-                    {lead.next_followup_at && (
-                      <Tag size="small" style={{ fontFamily: 'monospace', flexShrink: 0 }}>
-                        {format(parseISO(lead.next_followup_at), 'HH:mm')}
-                      </Tag>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                      <IconUser size="extra-small" />
+                      <span>{lead.advisor_name || '未分配'}</span>
+                      <span style={{ width: 1, height: 12, background: 'var(--semi-color-border)', margin: '0 4px' }} />
+                      <LeadStatusBadge status={lead.status} showDot={false} className="text-[10px] py-0 h-4" />
+                    </div>
+
+                    {noteText && (
+                      <div style={{
+                        fontSize: 12, color: 'var(--semi-color-text-3)',
+                        background: 'var(--semi-color-fill-0)',
+                        padding: 6, borderRadius: 4,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}>
+                        {noteText}
+                      </div>
                     )}
                   </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-                    <IconUser size="extra-small" />
-                    <span>{lead.advisor_name || '未分配'}</span>
-                    <span style={{ width: 1, height: 12, background: 'var(--semi-color-border)', margin: '0 4px' }} />
-                    <LeadStatusBadge status={lead.status} showDot={false} className="text-[10px] py-0 h-4" />
-                  </div>
-
-                  {lead.notes && (
-                    <div style={{
-                      fontSize: 12, color: 'var(--semi-color-text-3)',
-                      background: 'var(--semi-color-fill-0)',
-                      padding: 6, borderRadius: 4,
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}>
-                      {lead.notes}
-                    </div>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div style={{

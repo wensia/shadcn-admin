@@ -15,7 +15,7 @@ export interface ScopeOption {
 }
 
 export function inferScopeField(role: AssignmentRole): ScopeField {
-  if (role === 'principal' || role === 'vice_principal') return 'campus_id'
+  if (role === 'principal' || role === 'operation_assistant' || role === 'vice_principal') return 'campus_id'
   if (role === 'area_director') return 'area_id'
   if (role === 'area_manager' || role === 'teaching_supervisor') return 'area_department_id'
   return 'campus_department_id'

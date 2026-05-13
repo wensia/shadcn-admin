@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { ArrowLeft, Users, UserCheck, UserX, Percent, Info, User, UserPlus, Calendar, CalendarCheck, FileText } from 'lucide-react'
+import { ArrowLeft, Users, UserCheck, UserX, Percent, Info, User, UserPlus, Calendar, CalendarCheck, FileText, XCircle } from 'lucide-react'
 import { StatsBar, type StatsBarItem } from '@/components/semi/stats-bar'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
@@ -26,6 +26,7 @@ import {
 import { leadAssignmentTasksApi } from './api'
 import {
   completionStatusLabels,
+  skippedReasonLabels,
   taskStatusLabels,
   type LeadAssignmentTaskItem,
   type TaskCompletionStatus,
@@ -45,7 +46,8 @@ const taskStatusColors = {
 const completionStatusColors = {
   completed: 'green',
   pending: 'orange',
-} as const satisfies Record<'completed' | 'pending', 'green' | 'orange'>
+  skipped: 'grey',
+} as const satisfies Record<Exclude<TaskCompletionStatus, 'all'>, 'green' | 'orange' | 'grey'>
 
 interface AssignmentTaskDetailPageProps {
   taskId: string
@@ -165,23 +167,34 @@ export function AssignmentTaskDetailPage({
         width: 120,
         render: (value, record) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+          const status = value as Exclude<TaskCompletionStatus, 'all'>
           return (
             <Tag
-              color={completionStatusColors[value as 'completed' | 'pending']}
+              color={completionStatusColors[status]}
               shape='circle'
             >
-              {value === 'completed' ? '已回访' : '未回访'}
+              {completionStatusLabels[status]}
             </Tag>
           )
         },
       },
       {
-        title: '完成时间',
+        title: '跳过原因',
+        dataIndex: 'skipped_reason',
+        width: 150,
+        render: (value, record) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={90} />
+          return value ? skippedReasonLabels[value as string] || (value as string) : '-'
+        },
+      },
+      {
+        title: '完成/跳过时间',
         dataIndex: 'completed_at',
         width: 170,
         render: (value, record) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={120} />
-          return value ? formatTime(value as string) : '-'
+          const timeValue = (value as string | undefined) || record.skipped_at
+          return timeValue ? formatTime(timeValue) : '-'
         },
       },
       {
@@ -304,7 +317,9 @@ export function AssignmentTaskDetailPage({
                 { label: '总线索', value: `${task?.total_leads ?? 0}条`, icon: Users, color: 'var(--semi-color-primary)' },
                 { label: '已回访', value: `${task?.completed_count ?? 0}条`, icon: UserCheck, color: 'var(--semi-color-success)' },
                 { label: '未回访', value: `${task?.pending_count ?? 0}条`, icon: UserX, color: 'var(--semi-color-warning)' },
+                { label: '已跳过', value: `${task?.skipped_count ?? 0}条`, icon: XCircle, color: 'var(--semi-color-text-2)' },
                 { label: '回访率', value: `${Number(task?.completion_rate ?? 0).toFixed(1)}%`, icon: Percent, color: 'var(--semi-color-primary)' },
+                { label: '任务进度', value: `${Number(task?.task_progress_rate ?? 0).toFixed(1)}%`, icon: Percent, color: 'var(--semi-color-primary)' },
               ] satisfies StatsBarItem[]}
               isLoading={taskLoading}
             />
@@ -329,7 +344,7 @@ export function AssignmentTaskDetailPage({
               page={pagination.page}
               pageSize={pagination.size}
               isLoading={itemsLoading}
-              scrollX={1300}
+              scrollX={1450}
               onPageChange={(page) =>
                 setPagination((prev) => ({ ...prev, page }))
               }
@@ -352,4 +367,3 @@ export function AssignmentTaskDetailPage({
     </>
   )
 }
-

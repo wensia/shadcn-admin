@@ -88,12 +88,13 @@ export const batchImportApi = {
    */
   async uploadFile(
     file: File,
-    campusId: string,
     options: UploadOptions = {}
   ): Promise<ApiResponse<UploadResponse>> {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('campus_id', campusId)
+    if (options.campusId) {
+      formData.append('campus_id', options.campusId)
+    }
 
     if (options.batchDescription) {
       formData.append('batch_description', options.batchDescription)

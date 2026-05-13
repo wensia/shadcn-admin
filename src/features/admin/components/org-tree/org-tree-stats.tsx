@@ -9,6 +9,7 @@ const { Text } = Typography
 
 interface OrgTreeStatsProps {
   tree: OrganizationTreeNode[]
+  compact?: boolean
 }
 
 interface StatsData {
@@ -67,7 +68,7 @@ function walk(
   }
 }
 
-export function OrgTreeStats({ tree }: OrgTreeStatsProps) {
+export function OrgTreeStats({ tree, compact = false }: OrgTreeStatsProps) {
   const stats = useMemo(() => {
     const acc: StatsData = {
       region_count: 0,
@@ -98,6 +99,34 @@ export function OrgTreeStats({ tree }: OrgTreeStatsProps) {
       tone: stats.missing_leader_count > 0 ? 'danger' : undefined,
     },
   ]
+
+  if (compact) {
+    return (
+      <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
+        {tiles.map((t) => (
+          <div
+            key={t.label}
+            className="min-h-9 rounded-md border px-3 py-1.5 flex items-center justify-between gap-2"
+            style={{
+              background: 'var(--semi-color-fill-0)',
+              borderColor: t.tone === 'danger' ? 'var(--semi-color-danger-light-default)' : 'var(--semi-color-border)',
+            }}
+          >
+            <Text type="tertiary" className="text-xs truncate">
+              {t.label}
+            </Text>
+            <Text
+              strong
+              className="text-sm shrink-0"
+              style={{ color: t.tone === 'danger' && t.value > 0 ? 'var(--semi-color-danger)' : undefined }}
+            >
+              {t.value}
+            </Text>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-4 gap-3 md:grid-cols-8">

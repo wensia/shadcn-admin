@@ -251,7 +251,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
           address_detail: lead.address_detail || '',
           source_channel_id: lead.source_channel_id || '',
           intention_level: lead.intention_level || '',
-          notes: lead.notes || '',
+          notes: '',
           owner_campus_id: lead.owner_campus_id || ''
         })
         setWatchedChannelId(lead.source_channel_id || '')
@@ -716,7 +716,7 @@ export function LeadFormDialog({ lead, open, onOpenChange, onSuccess }: LeadForm
               <div style={{ gridColumn: 'span 2' }}>
                 <Form.TextArea
                   field="notes"
-                  label="备注"
+                  label={isEdit ? '新增备注' : '备注'}
                   placeholder="请输入备注信息"
                   rules={[{ max: 500, message: '最多500个字符' }]}
                   autosize={{ minRows: 2, maxRows: 4 }}

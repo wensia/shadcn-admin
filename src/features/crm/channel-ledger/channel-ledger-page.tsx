@@ -39,6 +39,7 @@ import {
   type LeadStatus,
   type SourceChannelExtraField,
 } from '@/features/crm/leads/types'
+import { getLatestLeadNoteText } from '@/features/crm/leads/utils/notes'
 import { channelLedgerApi } from './api'
 import {
   channelLedgerValidityLabels,
@@ -711,11 +712,14 @@ export function ChannelLedgerPage() {
         dataIndex: 'notes',
         width: 180,
         ellipsis: true,
-        render: (value: string | null | undefined) => (
-          <Text type={value ? 'primary' : 'quaternary'}>
-            {value || '-'}
-          </Text>
-        ),
+        render: (_, record) => {
+          const noteText = getLatestLeadNoteText(record.notes)
+          return (
+            <Text type={noteText ? 'primary' : 'quaternary'}>
+              {noteText || '-'}
+            </Text>
+          )
+        },
       },
       {
         title: '回访①',

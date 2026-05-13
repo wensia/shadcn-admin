@@ -56,7 +56,7 @@ const TAB_LABELS: Record<TabKey, string> = {
 
 /** 每个 tab 下允许展示/新增的角色 */
 const TAB_ROLES: Record<Exclude<TabKey, 'history'>, AssignmentRole[]> = {
-  campus: ['principal', 'vice_principal'],
+  campus: ['principal', 'operation_assistant', 'vice_principal'],
   area: ['area_director'],
   campus_department: ['dept_manager', 'dept_deputy', 'dept_supervisor'],
   area_department: [
@@ -173,7 +173,7 @@ export function OrganizationAssignmentsPage() {
             组织任命管理
           </Title>
           <Text type="tertiary" className="text-sm">
-            统一管理校长、区域总、区域经理、教学督导、部门经理等所有组织负责人任命
+            统一管理校长、运营助理、区域总、区域经理、教学督导、部门经理等所有组织负责人任命
           </Text>
         </div>
         <div className="flex gap-2">

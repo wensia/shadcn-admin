@@ -116,6 +116,17 @@ export enum OwnershipChangeType {
   ADVISOR_TRANSFER_RELEASE = 'advisor_transfer_release'
 }
 
+export type LeadNoteSource = 'legacy_migration' | 'legacy_string' | 'create' | 'manual_update' | 'import' | 'public_submit'
+
+export interface LeadNoteTimelineEntry {
+  id: string
+  content: string
+  created_at: string
+  created_by_id?: string | null
+  created_by_name?: string | null
+  source: LeadNoteSource
+}
+
 // ==================== 线索类型定义 ====================
 
 export interface Lead {
@@ -160,7 +171,7 @@ export interface Lead {
   // 状态信息
   status: LeadStatus
   intention_level?: IntentionLevel
-  notes?: string
+  notes?: LeadNoteTimelineEntry[]
   next_followup_at?: string  // 下次跟进时间
 
   // 顾问和校区信息
@@ -228,7 +239,7 @@ export interface LeadListItem {
   import_batch_id?: string
   batch_remark?: string | null
   batch_name?: string | null
-  notes?: string
+  notes?: LeadNoteTimelineEntry[]
 
   // 样式配置（可选，由include_styles参数控制）
   status_style?: EnumStyleConfig
@@ -407,6 +418,10 @@ export interface LeadListParams {
   owner_campus_id?: string[]  // 多选
   created_from?: string
   created_to?: string
+  next_followup_from?: string
+  next_followup_to?: string
+  sort_by?: 'created_at' | 'next_followup_at'
+  sort_order?: 'asc' | 'desc'
   search?: string
   tag?: string
   followup_result_filter?: string

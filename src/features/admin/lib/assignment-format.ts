@@ -13,6 +13,7 @@ import type { AssignmentItem, AssignmentRole } from '../types'
 export function roleTagColor(role: AssignmentRole | string): SemiTagColor {
   const map: Record<string, SemiTagColor> = {
     principal: 'red',
+    operation_assistant: 'green',
     vice_principal: 'orange',
     area_director: 'purple',
     area_manager: 'violet',

@@ -60,6 +60,8 @@ import type {
   YunkeDepartmentOptionsResponse,
   // 来源渠道相关
   SourceChannel,
+  DirectVisitCampusTokenItem,
+  DirectVisitCampusTokensResponse,
   DingtalkRobot,
   DingtalkRobotCreate,
   DingtalkRobotUpdate,
@@ -93,6 +95,10 @@ import type {
   // ASR 配置相关
   ASRConfigItem,
   ASRConfigListResponse,
+  // 邮件配置相关
+  EmailConfigItem,
+  EmailConfigUpsert,
+  EmailConfigTestResult,
   // AI 配置相关
   AIConfigItem,
   AIConfigListResponse,
@@ -324,6 +330,11 @@ export const adminApi = {
     campus_id?: string
   } = {}): Promise<ApiResponse<PaginatedResponse<EmployeeItem>>> {
     return apiClient.get<ApiResponse<PaginatedResponse<EmployeeItem>>>(`${BASE_URL}/employees`, { params })
+  },
+
+  /** 获取员工详情 */
+  async getEmployee(id: string): Promise<ApiResponse<EmployeeItem>> {
+    return apiClient.get<ApiResponse<EmployeeItem>>(`${BASE_URL}/employees/${id}`)
   },
 
   /** 创建员工 */
@@ -947,6 +958,30 @@ export const sourceChannelApi = {
   async removeSubmitToken(channelId: string, token: string): Promise<void> {
     await apiClient.delete(`/source-channels/${channelId}/submit-tokens/${token}`)
   },
+
+  /** 获取校区直访码列表 */
+  async getDirectVisitCampusTokens(): Promise<DirectVisitCampusTokensResponse> {
+    const response = await apiClient.get<ApiResponse<DirectVisitCampusTokensResponse>>(
+      '/source-channels/direct-visit/campus-tokens'
+    )
+    return unwrapData(response)
+  },
+
+  /** 为校区生成直访码 */
+  async createDirectVisitCampusToken(campusId: string): Promise<DirectVisitCampusTokenItem> {
+    const response = await apiClient.post<ApiResponse<DirectVisitCampusTokenItem>>(
+      `/source-channels/direct-visit/campus-tokens/${campusId}`
+    )
+    return unwrapData(response)
+  },
+
+  /** 轮换校区直访码 */
+  async rotateDirectVisitCampusToken(campusId: string): Promise<DirectVisitCampusTokenItem> {
+    const response = await apiClient.post<ApiResponse<DirectVisitCampusTokenItem>>(
+      `/source-channels/direct-visit/campus-tokens/${campusId}/rotate`
+    )
+    return unwrapData(response)
+  },
 }
 
 // ============================================================================
@@ -1560,6 +1595,32 @@ export const asrConfigApi = {
       throw new Error(response.message || '测试失败')
     }
     return response.data
+  },
+}
+
+// ============================================================================
+// 邮件配置 API
+// ============================================================================
+
+export const emailConfigApi = {
+  /** 获取当前邮件配置 */
+  async get(): Promise<EmailConfigItem> {
+    const response = await apiClient.get<ApiResponse<EmailConfigItem>>('/external/email-config')
+    return unwrapData(response)
+  },
+
+  /** 保存邮件配置 */
+  async save(data: EmailConfigUpsert): Promise<EmailConfigItem> {
+    const response = await apiClient.put<ApiResponse<EmailConfigItem>>('/external/email-config', data)
+    return unwrapData(response)
+  },
+
+  /** 发送测试邮件 */
+  async test(toEmail?: string): Promise<EmailConfigTestResult> {
+    const response = await apiClient.post<ApiResponse<EmailConfigTestResult>>('/external/email-config/test', {
+      to_email: toEmail || undefined,
+    })
+    return unwrapData(response)
   },
 }
 

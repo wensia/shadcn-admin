@@ -6,7 +6,7 @@ import type {
 } from '../leads/types'
 
 export type LeadAssignmentTaskStatus = 'active' | 'completed' | 'cancelled'
-export type TaskCompletionStatus = 'all' | 'completed' | 'pending'
+export type TaskCompletionStatus = 'all' | 'completed' | 'pending' | 'skipped'
 
 export interface TaskPerson {
   id: string
@@ -24,8 +24,11 @@ export interface LeadAssignmentTask {
   status: LeadAssignmentTaskStatus
   total_leads: number
   completed_count: number
+  skipped_count: number
+  closed_count: number
   pending_count: number
   completion_rate: number
+  task_progress_rate: number
   latest_followup_at?: string | null
   completed_at?: string | null
   completed_duration_seconds?: number | null
@@ -55,6 +58,8 @@ export interface LeadAssignmentTaskItem {
   completion_status: Exclude<TaskCompletionStatus, 'all'>
   completed_at?: string | null
   last_followup_result?: FollowupResult | null
+  skipped_at?: string | null
+  skipped_reason?: string | null
   next_followup_at?: string | null
   created_at: string
 }
@@ -95,4 +100,13 @@ export const completionStatusLabels: Record<TaskCompletionStatus, string> = {
   all: '全部',
   completed: '已回访',
   pending: '未回访',
+  skipped: '已跳过',
+}
+
+export const skippedReasonLabels: Record<string, string> = {
+  released_to_pool: '已释放到公海',
+  reassigned: '已重新分配',
+  lead_deleted: '线索已删除',
+  not_current_advisor: '已不属于原负责人',
+  historical_repair: '历史数据修复',
 }

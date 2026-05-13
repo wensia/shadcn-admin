@@ -548,6 +548,7 @@ export function MyPage() {
 - DataTableLayout 自带刷新按钮（`onRefresh` prop），自动渲染在工具栏行最右侧（`theme="light"`），toolbar 中不需要额外的刷新按钮
 - 骨架屏使用 `isSkeletonRow(record.id)` + `<SemiSkeletonCell width={N} />`
 - 所有弹窗（Modal / SideSheet）放在 `<DataTableLayout>` 外面
+- 展示/查看型 Modal 如果保留右上角关闭按钮，不在底部再添加仅用于关闭弹窗的按钮；应显式设置 `footer={null}`。底部只保留提交、确认、跳转等明确业务操作。
 
 ## 数据表高度链规范（强制）
 

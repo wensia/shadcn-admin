@@ -2,24 +2,27 @@
  * 校区管理页面
  */
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import QRCode from 'qrcode'
 import { toast } from '@/lib/toast'
-import { Plus, Pencil, Trash2, Building2, Power, PowerOff } from 'lucide-react'
-import { Button, Form, Input, Modal, Select, Typography } from '@douyinfe/semi-ui-19'
+import { Plus, Pencil, Trash2, Building2, Power, PowerOff, QrCode, Copy, Download, RotateCcw } from 'lucide-react'
+import { Banner, Button, Form, Input, Modal, Select, Spin, Tooltip, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
-import { adminApi } from '../api'
+import { copyToClipboard } from '@/lib/utils'
+import { adminApi, sourceChannelApi } from '../api'
 import type {
   AreaItem,
   CampusItem,
   CampusCreate,
   CampusUpdate,
+  DirectVisitCampusTokenItem,
 } from '../types'
 import { StatusBadge } from '../components/status-badge'
 import { showApiErrorToast } from '@/lib/api/error-toast'
@@ -50,6 +53,9 @@ export function CampusesPage() {
   const [editingItem, setEditingItem] = useState<CampusItem | null>(null)
   const [deletingItem, setDeletingItem] = useState<CampusItem | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [directVisitCampus, setDirectVisitCampus] = useState<CampusItem | null>(null)
+  const [directVisitQrDataUrl, setDirectVisitQrDataUrl] = useState('')
+  const directVisitOpen = !!directVisitCampus
 
   // 获取校区列表
   const { data, isLoading, refetch } = useQuery({
@@ -84,6 +90,25 @@ export function CampusesPage() {
   })
 
   const areas = useMemo<AreaItem[]>(() => areasData?.items ?? [], [areasData?.items])
+
+  const { data: directVisitTokensData, isLoading: isDirectVisitTokensLoading } = useQuery({
+    queryKey: ['admin-direct-visit-campus-tokens'],
+    queryFn: () => sourceChannelApi.getDirectVisitCampusTokens(),
+    enabled: directVisitOpen,
+  })
+
+  const directVisitTokenItem = useMemo<DirectVisitCampusTokenItem | undefined>(() => {
+    if (!directVisitCampus) return undefined
+    return directVisitTokensData?.items.find((item) => item.campus_id === directVisitCampus.id)
+  }, [directVisitCampus, directVisitTokensData?.items])
+
+  const directVisitLink = directVisitTokenItem?.token
+    ? `${window.location.origin}/direct-visit?token=${encodeURIComponent(directVisitTokenItem.token)}`
+    : ''
+  const directVisitOperationAssistantId = directVisitTokenItem
+    ? directVisitTokenItem.operation_assistant_id ?? null
+    : directVisitCampus?.operation_assistant_id ?? null
+  const hasDirectVisitOperationAssistant = Boolean(directVisitOperationAssistantId)
 
   // 创建校区
   const createMutation = useMutation({
@@ -140,6 +165,42 @@ export function CampusesPage() {
     onError: (error: Error) => showApiErrorToast(error, '操作失败'),
   })
 
+  const generateDirectVisitMutation = useMutation({
+    mutationFn: (campusId: string) => sourceChannelApi.createDirectVisitCampusToken(campusId),
+    onSuccess: async () => {
+      toast.success('直访码已生成')
+      await queryClient.invalidateQueries({ queryKey: ['admin-direct-visit-campus-tokens'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '生成直访码失败'),
+  })
+
+  const rotateDirectVisitMutation = useMutation({
+    mutationFn: (campusId: string) => sourceChannelApi.rotateDirectVisitCampusToken(campusId),
+    onSuccess: async () => {
+      toast.success('直访码已更新')
+      await queryClient.invalidateQueries({ queryKey: ['admin-direct-visit-campus-tokens'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '更新直访码失败'),
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    if (!directVisitLink) {
+      setDirectVisitQrDataUrl('')
+      return
+    }
+
+    QRCode.toDataURL(directVisitLink, {
+      width: 240,
+      margin: 2,
+      color: { dark: '#111827', light: '#ffffff' },
+    })
+      .then((url) => { if (!cancelled) setDirectVisitQrDataUrl(url) })
+      .catch(() => { if (!cancelled) setDirectVisitQrDataUrl('') })
+
+    return () => { cancelled = true }
+  }, [directVisitLink])
+
   // 表格列定义
   const columns: ColumnProps<CampusItem>[] = [
       {
@@ -170,7 +231,7 @@ export function CampusesPage() {
       {
         title: '校区领导',
         dataIndex: 'principal_name',
-        width: 190,
+        width: 220,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
             return <SemiSkeletonCell width={136} />
@@ -178,12 +239,13 @@ export function CampusesPage() {
           if (record.is_area_office) {
             return <Text type="tertiary" size="small">不适用</Text>
           }
-          if (!record.principal_name && !record.vice_principal_name) {
+          if (!record.principal_name && !record.operation_assistant_name && !record.vice_principal_name) {
             return <Text type="tertiary" size="small">未任命</Text>
           }
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <Text size="small">校长：{record.principal_name || '-'}</Text>
+              <Text type="tertiary" size="small">运营助理：{record.operation_assistant_name || '-'}</Text>
               <Text type="tertiary" size="small">助理：{record.vice_principal_name || '-'}</Text>
             </div>
           )
@@ -251,13 +313,23 @@ export function CampusesPage() {
       {
         title: '操作',
         dataIndex: 'id',
-        width: 160,
+        width: 200,
         render: (_: unknown, record: CampusItem) => {
           if (isSkeletonRow(record.id)) {
-            return <SemiSkeletonCell width={64} />
+            return <SemiSkeletonCell width={88} />
           }
           return (
             <div style={{ display: 'flex', gap: 4 }}>
+              <Tooltip content="直访码">
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<QrCode className="h-4 w-4" />}
+                  size="small"
+                  disabled={!record.is_active}
+                  onClick={() => handleOpenDirectVisit(record)}
+                />
+              </Tooltip>
               <Button
                 theme="borderless"
                 type="tertiary"
@@ -321,6 +393,40 @@ export function CampusesPage() {
     setDeleteDialogOpen(true)
   }
 
+  const handleOpenDirectVisit = (item: CampusItem) => {
+    setDirectVisitCampus(item)
+    setDirectVisitQrDataUrl('')
+  }
+
+  const handleCopyDirectVisitLink = async () => {
+    if (!directVisitLink) return
+    const success = await copyToClipboard(directVisitLink)
+    if (success) {
+      toast.success('直访链接已复制')
+    } else {
+      toast.error('复制失败')
+    }
+  }
+
+  const handleDownloadDirectVisitQr = () => {
+    if (!directVisitQrDataUrl || !directVisitCampus) return
+    const link = document.createElement('a')
+    link.href = directVisitQrDataUrl
+    link.download = `${directVisitCampus.name}-直访码.png`
+    link.click()
+  }
+
+  const handleRotateDirectVisitToken = () => {
+    if (!directVisitCampus) return
+    Modal.confirm({
+      title: '更新直访码',
+      content: '更新后旧二维码将无法继续访问，需要重新张贴新二维码。',
+      okText: '更新',
+      cancelText: '取消',
+      onOk: () => rotateDirectVisitMutation.mutate(directVisitCampus.id),
+    })
+  }
+
   // 处理删除确认
   const handleDeleteConfirm = () => {
     if (deletingItem) {
@@ -369,6 +475,7 @@ export function CampusesPage() {
   )
 
   const isPending = createMutation.isPending || updateMutation.isPending
+  const isDirectVisitMutating = generateDirectVisitMutation.isPending || rotateDirectVisitMutation.isPending
 
   return (
     <>
@@ -492,6 +599,133 @@ export function CampusesPage() {
             启用状态
           </Form.Checkbox>
         </Form>
+      </Modal>
+
+      {/* 直访码对话框 */}
+      <Modal
+        title={directVisitCampus ? `${directVisitCampus.name} · 直访码` : '直访码'}
+        visible={directVisitOpen}
+        onCancel={() => setDirectVisitCampus(null)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setDirectVisitCampus(null)}>关闭</Button>
+          </div>
+        }
+        style={{ maxWidth: 520 }}
+      >
+        {isDirectVisitTokensLoading ? (
+          <div style={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
+            <Spin />
+          </div>
+        ) : !directVisitCampus?.is_active ? (
+          <Banner
+            type="warning"
+            fullMode={false}
+            closeIcon={null}
+            title="校区已停用"
+            description="停用校区不能生成直访码。"
+          />
+        ) : !hasDirectVisitOperationAssistant && !directVisitTokenItem?.token ? (
+          <Banner
+            type="warning"
+            fullMode={false}
+            closeIcon={null}
+            title="未任命运营助理"
+            description="请先在组织任命中为该校区任命运营助理，再生成直访码。"
+          />
+        ) : !directVisitTokenItem?.token ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Banner
+              type="info"
+              fullMode={false}
+              closeIcon={null}
+              title="尚未生成直访码"
+              description="生成后家长可扫码进入手机端直访登记页。"
+            />
+            <Button
+              theme="solid"
+              icon={<QrCode className="h-4 w-4" />}
+              loading={generateDirectVisitMutation.isPending}
+              onClick={() => directVisitCampus && generateDirectVisitMutation.mutate(directVisitCampus.id)}
+            >
+              生成直访码
+            </Button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+            {!hasDirectVisitOperationAssistant && (
+              <Banner
+                type="warning"
+                fullMode={false}
+                closeIcon={null}
+                title="未任命运营助理"
+                description="当前只能查看已有直访码；补齐运营助理后才能更新直访码。"
+              />
+            )}
+
+            <div
+              style={{
+                width: 240,
+                height: 240,
+                border: '1px solid var(--semi-color-border)',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#ffffff',
+              }}
+            >
+              {directVisitQrDataUrl ? (
+                <img src={directVisitQrDataUrl} alt="校区直访二维码" width={220} height={220} />
+              ) : (
+                <Spin />
+              )}
+            </div>
+
+            <div
+              style={{
+                width: '100%',
+                padding: 12,
+                border: '1px solid var(--semi-color-border)',
+                borderRadius: 8,
+                background: 'var(--semi-color-fill-0)',
+                fontFamily: 'monospace',
+                fontSize: 12,
+                lineHeight: 1.6,
+                wordBreak: 'break-all',
+              }}
+            >
+              {directVisitLink}
+            </div>
+
+            {directVisitTokenItem.updated_at && (
+              <Text type="tertiary" size="small">
+                更新时间：{new Date(directVisitTokenItem.updated_at).toLocaleString('zh-CN')}
+              </Text>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }}>
+              <Button icon={<Copy className="h-4 w-4" />} onClick={handleCopyDirectVisitLink}>
+                复制链接
+              </Button>
+              <Button icon={<Download className="h-4 w-4" />} onClick={handleDownloadDirectVisitQr}>
+                下载二维码
+              </Button>
+            </div>
+
+            <Button
+              type="warning"
+              theme="outline"
+              icon={<RotateCcw className="h-4 w-4" />}
+              loading={isDirectVisitMutating}
+              disabled={!hasDirectVisitOperationAssistant}
+              onClick={handleRotateDirectVisitToken}
+              block
+            >
+              更新直访码
+            </Button>
+          </div>
+        )}
       </Modal>
 
       {/* 删除确认对话框 */}

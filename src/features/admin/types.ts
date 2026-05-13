@@ -63,6 +63,8 @@ export interface CampusItem {
   managing_office_name?: string | null
   principal_id?: string | null
   principal_name?: string | null
+  operation_assistant_id?: string | null
+  operation_assistant_name?: string | null
   vice_principal_id?: string | null
   vice_principal_name?: string | null
   created_at?: string
@@ -209,7 +211,7 @@ export interface YunkeInfo {
 export interface CampusLeadershipItem {
   campus_id: string
   campus_name: string
-  role: 'principal' | 'vice_principal'
+  role: 'principal' | 'operation_assistant' | 'vice_principal'
   role_label: string
 }
 
@@ -805,6 +807,22 @@ export interface SourceChannel {
   updated_at: string
 }
 
+export interface DirectVisitCampusTokenItem {
+  campus_id: string
+  campus_name: string
+  is_active: boolean
+  operation_assistant_id?: string | null
+  operation_assistant_name?: string | null
+  token?: string
+  updated_at?: string
+}
+
+export interface DirectVisitCampusTokensResponse {
+  channel_id: string
+  channel_name: string
+  items: DirectVisitCampusTokenItem[]
+}
+
 /** 来源渠道分类选项 */
 export const SOURCE_CHANNEL_CATEGORIES = [
   { label: '线上', value: 'online' },
@@ -1382,6 +1400,54 @@ export interface ASRConfigListResponse {
   total: number
 }
 
+// ============================================================================
+// 邮件配置相关类型
+// ============================================================================
+
+/** 邮件配置 */
+export interface EmailConfigItem {
+  id: string | null
+  source: 'database' | 'env'
+  name: string
+  provider: 'tencent_ses' | 'custom' | string
+  smtp_host: string | null
+  smtp_port: number
+  smtp_username: string | null
+  smtp_password_masked: string | null
+  password_configured: boolean
+  smtp_from_email: string | null
+  smtp_from_name: string
+  smtp_use_tls: boolean
+  smtp_use_ssl: boolean
+  smtp_timeout_seconds: number
+  is_active: boolean
+  last_verified_at: string | null
+  notes: string | null
+}
+
+/** 邮件配置保存请求 */
+export interface EmailConfigUpsert {
+  name: string
+  provider: 'tencent_ses' | 'custom'
+  smtp_host: string
+  smtp_port: number
+  smtp_username: string
+  smtp_password?: string
+  smtp_from_email: string
+  smtp_from_name: string
+  smtp_use_tls: boolean
+  smtp_use_ssl: boolean
+  smtp_timeout_seconds: number
+  is_active: boolean
+  notes?: string | null
+}
+
+/** 邮件配置测试结果 */
+export interface EmailConfigTestResult {
+  success: boolean
+  message: string
+}
+
 /** ASR 任务参数 */
 export interface ASRTaskParams {
   asr_config_id?: string  // 兼容旧参数，云客转写会忽略
@@ -1736,6 +1802,7 @@ export interface EmployeeBatchImportResult {
 
 export type AssignmentRole =
   | 'principal'
+  | 'operation_assistant'
   | 'vice_principal'
   | 'area_director'
   | 'area_manager'
@@ -1746,6 +1813,7 @@ export type AssignmentRole =
 
 export const ASSIGNMENT_ROLE_LABELS: Record<AssignmentRole, string> = {
   principal: '校长',
+  operation_assistant: '运营助理',
   vice_principal: '助理校长',
   area_director: '区域总',
   area_manager: '区域经理',
@@ -1758,6 +1826,7 @@ export const ASSIGNMENT_ROLE_LABELS: Record<AssignmentRole, string> = {
 /** 单人角色：必须 rank=0 */
 export const SINGLETON_ROLES: AssignmentRole[] = [
   'principal',
+  'operation_assistant',
   'vice_principal',
   'area_director',
   'area_manager',

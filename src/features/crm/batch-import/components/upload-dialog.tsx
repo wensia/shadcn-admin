@@ -23,7 +23,6 @@ import {
   IconCrossCircleStroked,
 } from '@douyinfe/semi-icons'
 
-import { useAuthStore } from '@/stores/auth-store'
 import { batchImportApi } from '../api'
 import type { UploadResponse } from '../types'
 
@@ -38,7 +37,6 @@ interface UploadDialogProps {
 
 export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProps) {
   const queryClient = useQueryClient()
-  const user = useAuthStore((state) => state.user)
 
   // 文件和表单状态
   const [file, setFile] = useState<File | null>(null)
@@ -96,13 +94,12 @@ export function UploadDialog({ open, onOpenChange, onSuccess }: UploadDialogProp
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error('请选择文件')
-      if (!user?.campus_id) throw new Error('无法获取校区信息，请重新登录')
 
       setPhase('uploading')
       setUploadProgress(0)
       setErrorMessage(null)
 
-      return batchImportApi.uploadFile(file, user.campus_id, {
+      return batchImportApi.uploadFile(file, {
         batchDescription,
         startRow: startRow || undefined,
         importCount: importCount || undefined,

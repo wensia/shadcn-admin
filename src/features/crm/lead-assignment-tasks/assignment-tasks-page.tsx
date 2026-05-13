@@ -319,6 +319,49 @@ export function AssignmentTasksPage() {
         },
       },
       {
+        title: '已跳过',
+        dataIndex: 'skipped_count',
+        width: 80,
+        align: 'center',
+        render: (value, record) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={32} />
+          return (
+            <Text style={{ color: 'var(--semi-color-text-2)' }}>
+              {value as number}
+            </Text>
+          )
+        },
+      },
+      {
+        title: '任务进度',
+        dataIndex: 'task_progress_rate',
+        width: 130,
+        render: (value, record) => {
+          if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <Text>{Number(value).toFixed(2)}%</Text>
+              <div
+                style={{
+                  height: 6,
+                  borderRadius: 999,
+                  background: 'var(--semi-color-fill-0)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: `${Math.min(Number(value), 100)}%`,
+                    height: '100%',
+                    background: 'var(--semi-color-primary)',
+                  }}
+                />
+              </div>
+            </div>
+          )
+        },
+      },
+      {
         title: '回访率',
         dataIndex: 'completion_rate',
         width: 130,
@@ -600,7 +643,7 @@ export function AssignmentTasksPage() {
         page={pagination.page}
         pageSize={pagination.size}
         isLoading={isLoading}
-        scrollX={1620}
+        scrollX={1830}
         onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
         onPageSizeChange={(size) => setPagination({ page: 1, size })}
         onRowClick={(record) => {

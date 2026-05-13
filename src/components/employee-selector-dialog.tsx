@@ -2,7 +2,7 @@
  * 员工选择器弹窗组件 - Semi Design 版本
  * 可复用的员工选择组件，支持搜索、分页、校区筛选
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { IconSearch, IconRefresh } from '@douyinfe/semi-icons'
 import {
@@ -29,6 +29,20 @@ export interface EmployeeSelectorDialogProps {
   confirmText?: string
   excludeIds?: string[]
   filterByAdvisorPosition?: boolean
+  fixedCampusName?: string
+  lockCampus?: boolean
+  employeeLoader?: (params: {
+    page: number
+    size: number
+    search?: string
+    campusName?: string
+  }) => Promise<{
+    items: EmployeeListItem[]
+    total: number
+    page: number
+    size: number
+    pages: number
+  }>
 }
 
 export function EmployeeSelectorDialog({
@@ -40,13 +54,23 @@ export function EmployeeSelectorDialog({
   confirmText = '确定选择',
   excludeIds = [],
   filterByAdvisorPosition = true,
+  fixedCampusName,
+  lockCampus = false,
+  employeeLoader,
 }: EmployeeSelectorDialogProps) {
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeListItem | null>(null)
   const [searchText, setSearchText] = useState('')
-  const [selectedCampus, setSelectedCampus] = useState('')
+  const [selectedCampus, setSelectedCampus] = useState(fixedCampusName || '')
   const [page, setPage] = useState(1)
   const pageSize = 5
+
+  useEffect(() => {
+    if (open && fixedCampusName) {
+      setSelectedCampus(fixedCampusName)
+      setPage(1)
+    }
+  }, [fixedCampusName, open])
 
   // 获取校区列表
   const { data: campuses = [] } = useQuery({
@@ -54,7 +78,7 @@ export function EmployeeSelectorDialog({
     queryFn: async () => {
       return await employeeApi.getCurrentUserCampuses()
     },
-    enabled: open,
+    enabled: open && !lockCampus,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -71,8 +95,17 @@ export function EmployeeSelectorDialog({
       searchText,
       selectedCampus,
       filterByAdvisorPosition,
+      Boolean(employeeLoader),
     ],
     queryFn: async () => {
+      if (employeeLoader) {
+        return employeeLoader({
+          page,
+          size: pageSize,
+          search: searchText || undefined,
+          campusName: selectedCampus || undefined,
+        })
+      }
       const params = {
         page,
         size: pageSize,
@@ -94,7 +127,7 @@ export function EmployeeSelectorDialog({
   const resetDialogState = () => {
     setSelectedEmployee(null)
     setSearchText('')
-    setSelectedCampus('')
+    setSelectedCampus(fixedCampusName || '')
     setPage(1)
   }
 
@@ -215,10 +248,12 @@ export function EmployeeSelectorDialog({
   ]
 
   // 校区选项
-  const campusOptions = [
-    { value: '', label: '全部校区' },
-    ...campuses.map((c) => ({ value: c.name, label: c.name })),
-  ]
+  const campusOptions = lockCampus && fixedCampusName
+    ? [{ value: fixedCampusName, label: fixedCampusName }]
+    : [
+        { value: '', label: '全部校区' },
+        ...campuses.map((c) => ({ value: c.name, label: c.name })),
+      ]
 
   return (
     <Modal
@@ -281,18 +316,20 @@ export function EmployeeSelectorDialog({
             style={{ width: 200 }}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Text type='tertiary'>校区</Text>
-          <Select
-            value={selectedCampus}
-            onChange={(v) => {
-              setSelectedCampus(v as string)
-              setPage(1)
-            }}
-            optionList={campusOptions}
-            style={{ width: 140 }}
-          />
-        </div>
+        {!lockCampus && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Text type='tertiary'>校区</Text>
+            <Select
+              value={selectedCampus}
+              onChange={(v) => {
+                setSelectedCampus(v as string)
+                setPage(1)
+              }}
+              optionList={campusOptions}
+              style={{ width: 140 }}
+            />
+          </div>
+        )}
         <Button
           theme='borderless'
           type='tertiary'

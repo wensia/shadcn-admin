@@ -4,13 +4,14 @@
 
 import React, { useState } from 'react'
 import { Popover, Button, Toast, Spin, Tag, TextArea } from '@douyinfe/semi-ui-19'
-import { IconEdit, IconLoading, IconTick, IconChevronDown } from '@douyinfe/semi-icons'
+import { IconEdit, IconLoading, IconTick, IconChevronDown, IconPlus } from '@douyinfe/semi-icons'
 import { gradeLabels, type Lead, type LeadStatus, type IntentionLevel } from '../../types'
 import { formatTime } from '@/lib/utils/time'
 import { InfoItem } from './info-item'
 import { LeadStatusBadge, IntentionLevelBadge } from '../status-badges'
 import { leadStatusStyles, intentionLevelStyles } from '@/lib/status-styles'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import { getLeadNoteSourceLabel, normalizeLeadNotes } from '../../utils/notes'
 
 /** 家长关系映射 */
 const parentRelationLabels: Record<string, string> = {
@@ -236,59 +237,263 @@ function EditableIntentionLevel({ level, editable, onSave }: { level: IntentionL
   )
 }
 
-/** 内联备注组件 - 用于表格行内展示 */
-function NotesInline({ notes, editable, onSave }: { notes?: string; editable?: boolean; onSave?: (value: string) => Promise<void> }) {
+/** 备注时间线组件 */
+function NotesTimeline({ lead, editable, onSave }: { lead: Lead; editable?: boolean; onSave?: (value: string) => Promise<void> }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(notes || '')
+  const [editValue, setEditValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const entries = normalizeLeadNotes(lead.notes, {
+    created_at: lead.created_at,
+    created_by_id: lead.created_by_id,
+    created_by_name: lead.created_by_name,
+  })
 
   const handleSave = async () => {
     if (!onSave) return
+    const trimmed = editValue.trim()
+    if (!trimmed) {
+      Toast.warning('请输入备注内容')
+      return
+    }
     setIsSaving(true)
     try {
-      await onSave(editValue)
+      await onSave(trimmed)
+      setEditValue('')
       setIsEditing(false)
-      Toast.success('备注已更新')
+      Toast.success('备注已追加')
     } catch (error: unknown) {
       showApiErrorToast(error, '保存失败')
     } finally { setIsSaving(false) }
   }
 
+  const orderedEntries = [...entries].reverse()
+
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-      <p style={{ fontSize: 13, color: notes ? 'var(--semi-color-text-1)' : 'var(--semi-color-text-2)', whiteSpace: 'pre-wrap', margin: 0, flex: 1, lineHeight: 1.6 }}>
-        {notes || '暂无备注'}
-      </p>
-      {editable && onSave && (
-        <Popover
-          visible={isEditing}
-          onVisibleChange={(visible) => { setIsEditing(visible); if (visible) setEditValue(notes || '') }}
-          trigger="click"
-          position="bottomRight"
-          content={
-            <div style={{ padding: 12, width: 300, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--semi-color-text-2)' }}>编辑备注</div>
-              <TextArea value={editValue} onChange={(val) => setEditValue(val)} placeholder="请输入备注信息" autosize={{ minRows: 3 }} autoFocus />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <Button size="small" theme="light" onClick={() => setIsEditing(false)} disabled={isSaving}>取消</Button>
-                <Button size="small" theme="solid" onClick={handleSave} disabled={isSaving}>
-                  {isSaving && <IconLoading spin style={{ marginRight: 4 }} />}保存
-                </Button>
-              </div>
-            </div>
-          }
-        >
-          <span style={{ display: 'inline-flex', flexShrink: 0 }}>
-            <Button
-              theme="borderless"
-              type="tertiary"
-              icon={<IconEdit style={{ fontSize: 14 }} />}
-              size="small"
-              style={{ padding: 4, height: 'auto', width: 'auto' }}
-              title="编辑备注"
-            />
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        padding: '4px 0 8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--semi-color-text-1)',
+              letterSpacing: 0,
+            }}
+          >
+            备注日志
           </span>
-        </Popover>
+          <Tag size="small" color="grey">
+            {entries.length} 条
+          </Tag>
+          {entries.length > 1 && (
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-3)' }}>
+              最新在上
+            </span>
+          )}
+        </div>
+
+        {editable && onSave && !isEditing && (
+          <Button
+            theme="light"
+            type="primary"
+            icon={<IconPlus style={{ fontSize: 14 }} />}
+            size="small"
+            onClick={() => setIsEditing(true)}
+          >
+            新增备注
+          </Button>
+        )}
+      </div>
+
+      {editable && onSave && isEditing && (
+        <div
+          style={{
+            border: '1px solid rgba(22, 93, 255, 0.22)',
+            background: 'linear-gradient(180deg, rgba(22, 93, 255, 0.055), rgba(22, 93, 255, 0.018))',
+            borderRadius: 8,
+            padding: 12,
+            boxShadow: '0 8px 22px rgba(29, 33, 41, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <IconEdit style={{ color: 'var(--semi-color-primary)', fontSize: 15 }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--semi-color-text-0)' }}>
+              追加一条备注
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--semi-color-text-3)' }}>
+              保存后进入时间线，不覆盖历史
+            </span>
+          </div>
+          <TextArea
+            value={editValue}
+            onChange={(val) => setEditValue(val)}
+            placeholder="输入新的备注内容"
+            autosize={{ minRows: 3, maxRows: 5 }}
+            maxCount={500}
+            showClear
+            autoFocus
+            style={{ background: 'var(--semi-color-bg-0)' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+            <Button
+              size="small"
+              theme="borderless"
+              onClick={() => { setIsEditing(false); setEditValue('') }}
+              disabled={isSaving}
+            >
+              取消
+            </Button>
+            <Button
+              size="small"
+              theme="solid"
+              onClick={handleSave}
+              disabled={isSaving || !editValue.trim()}
+            >
+              {isSaving && <IconLoading spin style={{ marginRight: 4 }} />}追加备注
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {orderedEntries.length ? (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            position: 'relative',
+          }}
+        >
+          {orderedEntries.map((entry, index) => {
+            const isLatest = index === 0
+            const createdAt = entry.created_at ? formatTime(entry.created_at) : '时间未知'
+            const creatorName = entry.created_by_name || '未知用户'
+
+            return (
+              <div
+                key={entry.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '28px minmax(0, 1fr)',
+                  gap: 10,
+                  alignItems: 'stretch',
+                }}
+              >
+                <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 18,
+                      bottom: index === orderedEntries.length - 1 ? 'auto' : -10,
+                      width: 1,
+                      background: 'linear-gradient(180deg, var(--semi-color-border), transparent)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: 10,
+                      height: 10,
+                      marginTop: 12,
+                      borderRadius: '50%',
+                      background: isLatest ? 'var(--semi-color-primary)' : 'var(--semi-color-fill-2)',
+                      border: `2px solid ${isLatest ? 'rgba(22, 93, 255, 0.18)' : 'var(--semi-color-bg-0)'}`,
+                      boxShadow: isLatest ? '0 0 0 4px rgba(22, 93, 255, 0.1)' : 'none',
+                      zIndex: 1,
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    border: `1px solid ${isLatest ? 'rgba(22, 93, 255, 0.22)' : 'var(--semi-color-border)'}`,
+                    background: isLatest
+                      ? 'linear-gradient(180deg, rgba(22, 93, 255, 0.045), var(--semi-color-bg-0))'
+                      : 'var(--semi-color-bg-0)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      padding: '9px 12px',
+                      borderBottom: '1px solid var(--semi-color-border)',
+                      background: isLatest ? 'rgba(22, 93, 255, 0.035)' : 'var(--semi-color-fill-0)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
+                      <Tag size="small" color={isLatest ? 'blue' : 'grey'}>
+                        {getLeadNoteSourceLabel(entry.source)}
+                      </Tag>
+                      {isLatest && (
+                        <Tag size="small" color="green">
+                          最新
+                        </Tag>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        flexWrap: 'wrap',
+                        justifyContent: 'flex-end',
+                        color: 'var(--semi-color-text-2)',
+                        fontSize: 12,
+                      }}
+                    >
+                      <span>{createdAt}</span>
+                      <span style={{ width: 1, height: 12, background: 'var(--semi-color-border)' }} />
+                      <span>{creatorName}</span>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      fontSize: 14,
+                      lineHeight: 1.75,
+                      color: 'var(--semi-color-text-0)',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {entry.content}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: '18px 16px',
+            borderRadius: 8,
+            border: '1px dashed var(--semi-color-border)',
+            background: 'var(--semi-color-fill-0)',
+            color: 'var(--semi-color-text-2)',
+            fontSize: 13,
+          }}
+        >
+          暂无备注记录
+        </div>
       )}
     </div>
   )
@@ -426,7 +631,7 @@ export function LeadInfoDisplay({ lead, isOverdue = false, showBackupContact = t
           <tr><td colSpan={8} style={sectionHeaderStyle}>备注</td></tr>
           <tr>
             <td colSpan={8} style={{ padding: '8px 12px' }}>
-              <NotesInline notes={lead.notes} editable={editable} onSave={createSaveHandler('notes')} />
+              <NotesTimeline lead={lead} editable={editable} onSave={createSaveHandler('notes')} />
             </td>
           </tr>
 

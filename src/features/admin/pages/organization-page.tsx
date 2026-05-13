@@ -147,7 +147,9 @@ export function OrganizationPage() {
       setTreeWidth((w) => {
         try {
           window.localStorage.setItem(TREE_WIDTH_STORAGE_KEY, String(w))
-        } catch {}
+        } catch {
+          // localStorage may be unavailable in restricted browser contexts.
+        }
         return w
       })
     }
@@ -163,7 +165,9 @@ export function OrganizationPage() {
     setTreeWidth(TREE_DEFAULT_WIDTH)
     try {
       window.localStorage.setItem(TREE_WIDTH_STORAGE_KEY, String(TREE_DEFAULT_WIDTH))
-    } catch {}
+    } catch {
+      // localStorage may be unavailable in restricted browser contexts.
+    }
   }, [])
 
   const { data: tree = [], isLoading, refetch, isRefetching } = useQuery({
@@ -222,13 +226,13 @@ export function OrganizationPage() {
 
       {/* 统计卡片 */}
       {!isLoading && (
-        <div className="px-4 pt-3">
-          <OrgTreeStats tree={tree} />
+        <div className="px-4 pt-2">
+          <OrgTreeStats tree={tree} compact />
         </div>
       )}
 
       {/* 主从主体：左树 + 拖拽条 + 右面板 */}
-      <div className="flex-1 flex min-h-0 px-4 pb-4 pt-3">
+      <div className="flex-1 flex min-h-0 px-4 pb-4 pt-2">
         {/* 左侧：树 */}
         <div
           className="shrink-0 flex flex-col border border-[var(--semi-color-border)] rounded-md overflow-hidden"
@@ -307,6 +311,7 @@ export function OrganizationPage() {
         <div className="flex-1 min-w-0 border border-[var(--semi-color-border)] rounded-md overflow-hidden">
           <OrgNodeAssignmentPanel
             node={selectedNode}
+            tree={tree}
             onNodeDeleted={() => setSelectedId(null)}
           />
         </div>

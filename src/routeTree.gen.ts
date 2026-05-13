@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeadSubmitRouteImport } from './routes/lead-submit'
 import { Route as DiscTestRouteImport } from './routes/disc-test'
 import { Route as DiscResultsRouteImport } from './routes/disc-results'
+import { Route as DirectVisitRouteImport } from './routes/direct-visit'
 import { Route as ChannelPortalRouteImport } from './routes/channel-portal'
 import { Route as AspTestRouteImport } from './routes/asp-test'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
@@ -90,6 +91,7 @@ import { Route as AuthenticatedCrmLessonsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedCrmLeadCreationLogsRouteImport } from './routes/_authenticated/crm/lead-creation-logs'
 import { Route as AuthenticatedCrmLeadConversionRouteImport } from './routes/_authenticated/crm/lead-conversion'
 import { Route as AuthenticatedCrmFinanceRouteImport } from './routes/_authenticated/crm/finance'
+import { Route as AuthenticatedCrmDirectVisitLeadsRouteImport } from './routes/_authenticated/crm/direct-visit-leads'
 import { Route as AuthenticatedCrmCoursesRouteImport } from './routes/_authenticated/crm/courses'
 import { Route as AuthenticatedCrmContinuousCallRouteImport } from './routes/_authenticated/crm/continuous-call'
 import { Route as AuthenticatedCrmConsumptionRouteImport } from './routes/_authenticated/crm/consumption'
@@ -119,6 +121,7 @@ import { Route as AuthenticatedAdminIdentityApplicationsRouteImport } from './ro
 import { Route as AuthenticatedAdminIdentitiesRouteImport } from './routes/_authenticated/admin/identities'
 import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
 import { Route as AuthenticatedAdminEmployeeHierarchyRouteImport } from './routes/_authenticated/admin/employee-hierarchy'
+import { Route as AuthenticatedAdminEmailConfigRouteImport } from './routes/_authenticated/admin/email-config'
 import { Route as AuthenticatedAdminDistrictsRouteImport } from './routes/_authenticated/admin/districts'
 import { Route as AuthenticatedAdminDingtalkRobotsRouteImport } from './routes/_authenticated/admin/dingtalk-robots'
 import { Route as AuthenticatedAdminDepartmentsRouteImport } from './routes/_authenticated/admin/departments'
@@ -135,6 +138,7 @@ import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminAiConfigRouteImport } from './routes/_authenticated/admin/ai-config'
 import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
+import { Route as AuthenticatedCrmLeadsNurtureRouteImport } from './routes/_authenticated/crm/leads/nurture'
 import { Route as AuthenticatedCrmDataStatisticsMarketingRouteImport } from './routes/_authenticated/crm/data-statistics/marketing'
 import { Route as AuthenticatedCrmDataStatisticsConsultingRouteImport } from './routes/_authenticated/crm/data-statistics/consulting'
 import { Route as AuthenticatedCrmDataStatisticsAdvisorRouteImport } from './routes/_authenticated/crm/data-statistics/advisor'
@@ -164,6 +168,11 @@ const DiscTestRoute = DiscTestRouteImport.update({
 const DiscResultsRoute = DiscResultsRouteImport.update({
   id: '/disc-results',
   path: '/disc-results',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DirectVisitRoute = DirectVisitRouteImport.update({
+  id: '/direct-visit',
+  path: '/direct-visit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChannelPortalRoute = ChannelPortalRouteImport.update({
@@ -575,6 +584,12 @@ const AuthenticatedCrmFinanceRoute = AuthenticatedCrmFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AuthenticatedCrmRouteRoute,
 } as any)
+const AuthenticatedCrmDirectVisitLeadsRoute =
+  AuthenticatedCrmDirectVisitLeadsRouteImport.update({
+    id: '/direct-visit-leads',
+    path: '/direct-visit-leads',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmCoursesRoute = AuthenticatedCrmCoursesRouteImport.update({
   id: '/courses',
   path: '/courses',
@@ -747,6 +762,12 @@ const AuthenticatedAdminEmployeeHierarchyRoute =
     path: '/employee-hierarchy',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminEmailConfigRoute =
+  AuthenticatedAdminEmailConfigRouteImport.update({
+    id: '/email-config',
+    path: '/email-config',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminDistrictsRoute =
   AuthenticatedAdminDistrictsRouteImport.update({
     id: '/districts',
@@ -842,6 +863,12 @@ const AuthenticatedCrmLeadsPoolRoute =
     path: '/leads/pool',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmLeadsNurtureRoute =
+  AuthenticatedCrmLeadsNurtureRouteImport.update({
+    id: '/leads/nurture',
+    path: '/leads/nurture',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmDataStatisticsMarketingRoute =
   AuthenticatedCrmDataStatisticsMarketingRouteImport.update({
     id: '/data-statistics/marketing',
@@ -878,6 +905,7 @@ export interface FileRoutesByFullPath {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
+  '/direct-visit': typeof DirectVisitRoute
   '/disc-results': typeof DiscResultsRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -918,6 +946,7 @@ export interface FileRoutesByFullPath {
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
   '/admin/districts': typeof AuthenticatedAdminDistrictsRoute
+  '/admin/email-config': typeof AuthenticatedAdminEmailConfigRoute
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
@@ -947,6 +976,7 @@ export interface FileRoutesByFullPath {
   '/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/courses': typeof AuthenticatedCrmCoursesRoute
+  '/crm/direct-visit-leads': typeof AuthenticatedCrmDirectVisitLeadsRoute
   '/crm/finance': typeof AuthenticatedCrmFinanceRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
@@ -997,6 +1027,7 @@ export interface FileRoutesByFullPath {
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
+  '/crm/leads/nurture': typeof AuthenticatedCrmLeadsNurtureRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
   '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
@@ -1007,6 +1038,7 @@ export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
+  '/direct-visit': typeof DirectVisitRoute
   '/disc-results': typeof DiscResultsRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -1042,6 +1074,7 @@ export interface FileRoutesByTo {
   '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
   '/admin/districts': typeof AuthenticatedAdminDistrictsRoute
+  '/admin/email-config': typeof AuthenticatedAdminEmailConfigRoute
   '/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
@@ -1071,6 +1104,7 @@ export interface FileRoutesByTo {
   '/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
   '/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/crm/courses': typeof AuthenticatedCrmCoursesRoute
+  '/crm/direct-visit-leads': typeof AuthenticatedCrmDirectVisitLeadsRoute
   '/crm/finance': typeof AuthenticatedCrmFinanceRoute
   '/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
@@ -1121,6 +1155,7 @@ export interface FileRoutesByTo {
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
+  '/crm/leads/nurture': typeof AuthenticatedCrmLeadsNurtureRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
   '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
@@ -1133,6 +1168,7 @@ export interface FileRoutesById {
   '/clerk': typeof ClerkRouteRouteWithChildren
   '/asp-test': typeof AspTestRoute
   '/channel-portal': typeof ChannelPortalRoute
+  '/direct-visit': typeof DirectVisitRoute
   '/disc-results': typeof DiscResultsRoute
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
@@ -1176,6 +1212,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
   '/_authenticated/admin/dingtalk-robots': typeof AuthenticatedAdminDingtalkRobotsRoute
   '/_authenticated/admin/districts': typeof AuthenticatedAdminDistrictsRoute
+  '/_authenticated/admin/email-config': typeof AuthenticatedAdminEmailConfigRoute
   '/_authenticated/admin/employee-hierarchy': typeof AuthenticatedAdminEmployeeHierarchyRoute
   '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/_authenticated/admin/identities': typeof AuthenticatedAdminIdentitiesRoute
@@ -1205,6 +1242,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
   '/_authenticated/crm/continuous-call': typeof AuthenticatedCrmContinuousCallRoute
   '/_authenticated/crm/courses': typeof AuthenticatedCrmCoursesRoute
+  '/_authenticated/crm/direct-visit-leads': typeof AuthenticatedCrmDirectVisitLeadsRoute
   '/_authenticated/crm/finance': typeof AuthenticatedCrmFinanceRoute
   '/_authenticated/crm/lead-conversion': typeof AuthenticatedCrmLeadConversionRoute
   '/_authenticated/crm/lead-creation-logs': typeof AuthenticatedCrmLeadCreationLogsRoute
@@ -1255,6 +1293,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/_authenticated/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/_authenticated/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
+  '/_authenticated/crm/leads/nurture': typeof AuthenticatedCrmLeadsNurtureRoute
   '/_authenticated/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/_authenticated/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
   '/_authenticated/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
@@ -1267,6 +1306,7 @@ export interface FileRouteTypes {
     | '/clerk'
     | '/asp-test'
     | '/channel-portal'
+    | '/direct-visit'
     | '/disc-results'
     | '/disc-test'
     | '/lead-submit'
@@ -1307,6 +1347,7 @@ export interface FileRouteTypes {
     | '/admin/departments'
     | '/admin/dingtalk-robots'
     | '/admin/districts'
+    | '/admin/email-config'
     | '/admin/employee-hierarchy'
     | '/admin/employees'
     | '/admin/identities'
@@ -1336,6 +1377,7 @@ export interface FileRouteTypes {
     | '/crm/consumption'
     | '/crm/continuous-call'
     | '/crm/courses'
+    | '/crm/direct-visit-leads'
     | '/crm/finance'
     | '/crm/lead-conversion'
     | '/crm/lead-creation-logs'
@@ -1386,6 +1428,7 @@ export interface FileRouteTypes {
     | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
     | '/crm/data-statistics/marketing'
+    | '/crm/leads/nurture'
     | '/crm/leads/pool'
     | '/crm/leads/'
     | '/crm/leads/assignment-tasks/$taskId'
@@ -1396,6 +1439,7 @@ export interface FileRouteTypes {
     | '/clerk'
     | '/asp-test'
     | '/channel-portal'
+    | '/direct-visit'
     | '/disc-results'
     | '/disc-test'
     | '/lead-submit'
@@ -1431,6 +1475,7 @@ export interface FileRouteTypes {
     | '/admin/departments'
     | '/admin/dingtalk-robots'
     | '/admin/districts'
+    | '/admin/email-config'
     | '/admin/employee-hierarchy'
     | '/admin/employees'
     | '/admin/identities'
@@ -1460,6 +1505,7 @@ export interface FileRouteTypes {
     | '/crm/consumption'
     | '/crm/continuous-call'
     | '/crm/courses'
+    | '/crm/direct-visit-leads'
     | '/crm/finance'
     | '/crm/lead-conversion'
     | '/crm/lead-creation-logs'
@@ -1510,6 +1556,7 @@ export interface FileRouteTypes {
     | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
     | '/crm/data-statistics/marketing'
+    | '/crm/leads/nurture'
     | '/crm/leads/pool'
     | '/crm/leads'
     | '/crm/leads/assignment-tasks/$taskId'
@@ -1521,6 +1568,7 @@ export interface FileRouteTypes {
     | '/clerk'
     | '/asp-test'
     | '/channel-portal'
+    | '/direct-visit'
     | '/disc-results'
     | '/disc-test'
     | '/lead-submit'
@@ -1564,6 +1612,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/departments'
     | '/_authenticated/admin/dingtalk-robots'
     | '/_authenticated/admin/districts'
+    | '/_authenticated/admin/email-config'
     | '/_authenticated/admin/employee-hierarchy'
     | '/_authenticated/admin/employees'
     | '/_authenticated/admin/identities'
@@ -1593,6 +1642,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/consumption'
     | '/_authenticated/crm/continuous-call'
     | '/_authenticated/crm/courses'
+    | '/_authenticated/crm/direct-visit-leads'
     | '/_authenticated/crm/finance'
     | '/_authenticated/crm/lead-conversion'
     | '/_authenticated/crm/lead-creation-logs'
@@ -1643,6 +1693,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/data-statistics/advisor'
     | '/_authenticated/crm/data-statistics/consulting'
     | '/_authenticated/crm/data-statistics/marketing'
+    | '/_authenticated/crm/leads/nurture'
     | '/_authenticated/crm/leads/pool'
     | '/_authenticated/crm/leads/'
     | '/_authenticated/crm/leads/assignment-tasks/$taskId'
@@ -1655,6 +1706,7 @@ export interface RootRouteChildren {
   ClerkRouteRoute: typeof ClerkRouteRouteWithChildren
   AspTestRoute: typeof AspTestRoute
   ChannelPortalRoute: typeof ChannelPortalRoute
+  DirectVisitRoute: typeof DirectVisitRoute
   DiscResultsRoute: typeof DiscResultsRoute
   DiscTestRoute: typeof DiscTestRoute
   LeadSubmitRoute: typeof LeadSubmitRoute
@@ -1711,6 +1763,13 @@ declare module '@tanstack/react-router' {
       path: '/disc-results'
       fullPath: '/disc-results'
       preLoaderRoute: typeof DiscResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/direct-visit': {
+      id: '/direct-visit'
+      path: '/direct-visit'
+      fullPath: '/direct-visit'
+      preLoaderRoute: typeof DirectVisitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/channel-portal': {
@@ -2245,6 +2304,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmFinanceRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/direct-visit-leads': {
+      id: '/_authenticated/crm/direct-visit-leads'
+      path: '/direct-visit-leads'
+      fullPath: '/crm/direct-visit-leads'
+      preLoaderRoute: typeof AuthenticatedCrmDirectVisitLeadsRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/courses': {
       id: '/_authenticated/crm/courses'
       path: '/courses'
@@ -2448,6 +2514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEmployeeHierarchyRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/admin/email-config': {
+      id: '/_authenticated/admin/email-config'
+      path: '/email-config'
+      fullPath: '/admin/email-config'
+      preLoaderRoute: typeof AuthenticatedAdminEmailConfigRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/admin/districts': {
       id: '/_authenticated/admin/districts'
       path: '/districts'
@@ -2560,6 +2633,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmLeadsPoolRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/leads/nurture': {
+      id: '/_authenticated/crm/leads/nurture'
+      path: '/leads/nurture'
+      fullPath: '/crm/leads/nurture'
+      preLoaderRoute: typeof AuthenticatedCrmLeadsNurtureRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/data-statistics/marketing': {
       id: '/_authenticated/crm/data-statistics/marketing'
       path: '/data-statistics/marketing'
@@ -2613,6 +2693,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
   AuthenticatedAdminDingtalkRobotsRoute: typeof AuthenticatedAdminDingtalkRobotsRoute
   AuthenticatedAdminDistrictsRoute: typeof AuthenticatedAdminDistrictsRoute
+  AuthenticatedAdminEmailConfigRoute: typeof AuthenticatedAdminEmailConfigRoute
   AuthenticatedAdminEmployeeHierarchyRoute: typeof AuthenticatedAdminEmployeeHierarchyRoute
   AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
   AuthenticatedAdminIdentitiesRoute: typeof AuthenticatedAdminIdentitiesRoute
@@ -2652,6 +2733,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminDingtalkRobotsRoute:
       AuthenticatedAdminDingtalkRobotsRoute,
     AuthenticatedAdminDistrictsRoute: AuthenticatedAdminDistrictsRoute,
+    AuthenticatedAdminEmailConfigRoute: AuthenticatedAdminEmailConfigRoute,
     AuthenticatedAdminEmployeeHierarchyRoute:
       AuthenticatedAdminEmployeeHierarchyRoute,
     AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
@@ -2697,6 +2779,7 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmConsumptionRoute: typeof AuthenticatedCrmConsumptionRoute
   AuthenticatedCrmContinuousCallRoute: typeof AuthenticatedCrmContinuousCallRoute
   AuthenticatedCrmCoursesRoute: typeof AuthenticatedCrmCoursesRoute
+  AuthenticatedCrmDirectVisitLeadsRoute: typeof AuthenticatedCrmDirectVisitLeadsRoute
   AuthenticatedCrmFinanceRoute: typeof AuthenticatedCrmFinanceRoute
   AuthenticatedCrmLeadConversionRoute: typeof AuthenticatedCrmLeadConversionRoute
   AuthenticatedCrmLeadCreationLogsRoute: typeof AuthenticatedCrmLeadCreationLogsRoute
@@ -2716,6 +2799,7 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmDataStatisticsAdvisorRoute: typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   AuthenticatedCrmDataStatisticsConsultingRoute: typeof AuthenticatedCrmDataStatisticsConsultingRoute
   AuthenticatedCrmDataStatisticsMarketingRoute: typeof AuthenticatedCrmDataStatisticsMarketingRoute
+  AuthenticatedCrmLeadsNurtureRoute: typeof AuthenticatedCrmLeadsNurtureRoute
   AuthenticatedCrmLeadsPoolRoute: typeof AuthenticatedCrmLeadsPoolRoute
   AuthenticatedCrmLeadsIndexRoute: typeof AuthenticatedCrmLeadsIndexRoute
   AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute: typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
@@ -2735,6 +2819,7 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
   AuthenticatedCrmConsumptionRoute: AuthenticatedCrmConsumptionRoute,
   AuthenticatedCrmContinuousCallRoute: AuthenticatedCrmContinuousCallRoute,
   AuthenticatedCrmCoursesRoute: AuthenticatedCrmCoursesRoute,
+  AuthenticatedCrmDirectVisitLeadsRoute: AuthenticatedCrmDirectVisitLeadsRoute,
   AuthenticatedCrmFinanceRoute: AuthenticatedCrmFinanceRoute,
   AuthenticatedCrmLeadConversionRoute: AuthenticatedCrmLeadConversionRoute,
   AuthenticatedCrmLeadCreationLogsRoute: AuthenticatedCrmLeadCreationLogsRoute,
@@ -2759,6 +2844,7 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
     AuthenticatedCrmDataStatisticsConsultingRoute,
   AuthenticatedCrmDataStatisticsMarketingRoute:
     AuthenticatedCrmDataStatisticsMarketingRoute,
+  AuthenticatedCrmLeadsNurtureRoute: AuthenticatedCrmLeadsNurtureRoute,
   AuthenticatedCrmLeadsPoolRoute: AuthenticatedCrmLeadsPoolRoute,
   AuthenticatedCrmLeadsIndexRoute: AuthenticatedCrmLeadsIndexRoute,
   AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute:
@@ -2960,6 +3046,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClerkRouteRoute: ClerkRouteRouteWithChildren,
   AspTestRoute: AspTestRoute,
   ChannelPortalRoute: ChannelPortalRoute,
+  DirectVisitRoute: DirectVisitRoute,
   DiscResultsRoute: DiscResultsRoute,
   DiscTestRoute: DiscTestRoute,
   LeadSubmitRoute: LeadSubmitRoute,

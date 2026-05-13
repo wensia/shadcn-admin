@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { SourceChannelExtraField } from '@/features/crm/leads/types'
+import type { LeadNoteTimelineEntry, SourceChannelExtraField } from '@/features/crm/leads/types'
 
 const publicClient = axios.create({ baseURL: '/api/v1' })
 
@@ -122,7 +122,7 @@ export interface PortalLeadItem {
   registered_at: string
   name_masked: string
   phone_masked: string
-  notes: string
+  notes: LeadNoteTimelineEntry[]
   source_extra_info: Record<string, string>
   status: string
   status_label: string

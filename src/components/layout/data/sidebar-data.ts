@@ -46,6 +46,7 @@ import {
   Wrench,
   Crown,
   Megaphone,
+  Mail,
 } from 'lucide-react'
 import { type SidebarData, type NavGroup } from '../types'
 
@@ -71,6 +72,11 @@ export const crmNavGroups: NavGroup[] = [
         icon: ClipboardList,
       },
       {
+        title: '直访线索',
+        url: '/crm/direct-visit-leads',
+        icon: UserPlus,
+      },
+      {
         title: '小地推',
         url: '/crm/xiaoditui',
         icon: Megaphone,
@@ -90,6 +96,11 @@ export const crmNavGroups: NavGroup[] = [
         title: '线索管理',
         url: '/crm/leads',
         icon: Users,
+      },
+      {
+        title: '长期跟进',
+        url: '/crm/leads/nurture',
+        icon: Clock,
       },
       {
         title: '分配任务',
@@ -399,6 +410,11 @@ export const adminNavGroups: NavGroup[] = [
         title: '每日通知',
         url: '/admin/daily-notices',
         icon: Bell,
+      },
+      {
+        title: '邮件配置',
+        url: '/admin/email-config',
+        icon: Mail,
       },
       {
         title: 'AI 配置',

@@ -6,6 +6,7 @@ import type {
   LeadAssignmentTaskItem,
   LeadAssignmentTaskListParams,
   LeadAssignmentTaskSummary,
+  TaskCompletionStatus,
 } from './types'
 
 export const leadAssignmentTasksApi = {
@@ -30,7 +31,7 @@ export const leadAssignmentTasksApi = {
     params?: {
       page?: number
       size?: number
-      completion_status?: 'completed' | 'pending'
+      completion_status?: Exclude<TaskCompletionStatus, 'all'>
     }
   ): Promise<ApiResponse<PaginatedResponse<LeadAssignmentTaskItem>>> {
     return apiClient.get(`/lead-assignment-tasks/${id}/items`, { params })

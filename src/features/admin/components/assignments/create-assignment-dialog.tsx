@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
+  Banner,
   Button,
   Input,
   Modal,
@@ -35,6 +36,8 @@ export interface CreateAssignmentDialogProps {
   roleWhitelist?: AssignmentRole[]
   /** 可选：是否锁定作用域选择（预填后不允许改） */
   lockScope?: boolean
+  /** 可选：自定义弹窗标题 */
+  title?: string
 }
 
 export function CreateAssignmentDialog({
@@ -45,8 +48,12 @@ export function CreateAssignmentDialog({
   initialScope,
   roleWhitelist,
   lockScope,
+  title,
 }: CreateAssignmentDialogProps) {
-  const allowedRoles = (roleWhitelist ?? (Object.keys(ASSIGNMENT_ROLE_LABELS) as AssignmentRole[]))
+  const allowedRoles = useMemo(
+    () => roleWhitelist ?? (Object.keys(ASSIGNMENT_ROLE_LABELS) as AssignmentRole[]),
+    [roleWhitelist],
+  )
   const defaultRole = initialRole ?? allowedRoles[0]
 
   const [role, setRole] = useState<AssignmentRole>(defaultRole)
@@ -61,8 +68,11 @@ export function CreateAssignmentDialog({
   const [remark, setRemark] = useState<string>('')
 
   useEffect(() => {
-    if (open) {
-      const r = initialRole ?? allowedRoles[0]
+    if (!open) return
+    let cancelled = false
+    const r = initialRole ?? allowedRoles[0]
+    queueMicrotask(() => {
+      if (cancelled) return
       setRole(r)
       setScopeType(initialScope?.field ?? inferScopeField(r))
       setScopeId(initialScope?.id ?? '')
@@ -71,7 +81,8 @@ export function CreateAssignmentDialog({
       setEmployeeSelectorOpen(false)
       setRank(undefined)
       setRemark('')
-    }
+    })
+    return () => { cancelled = true }
   }, [open, initialRole, initialScope, allowedRoles])
 
   const { data: campuses = [] } = useQuery({
@@ -150,7 +161,7 @@ export function CreateAssignmentDialog({
   return (
     <>
       <Modal
-        title="新增任命"
+        title={title ?? '新增任命'}
         visible={open}
         onCancel={onClose}
         onOk={handleSubmit}
@@ -158,9 +169,17 @@ export function CreateAssignmentDialog({
         width={560}
       >
         <div className="space-y-4">
+          <Banner
+            type="info"
+            fullMode={false}
+            closeIcon={null}
+            title="任命不会修改员工岗位"
+            description="组织任命只表示管理职责和权限；员工的人事岗位仍以员工信息中的组织身份/职位为准。"
+          />
+
           <div>
             <Text strong className="block mb-2">
-              角色
+              {isDeptRole ? '负责人类型' : '角色'}
             </Text>
             <Select
               value={role}

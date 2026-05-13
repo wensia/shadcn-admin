@@ -22,31 +22,40 @@ import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { Main } from '@/components/layout/main'
 import { Button, Card, Tag, Skeleton, Typography } from '@douyinfe/semi-ui-19'
-import { yunkeApi } from '../api'
+import { yunkeApi, yunkeCredentialsApi } from '../api'
 
 const { Text } = Typography
 
 export function YunkeDashboardPage() {
   const queryClient = useQueryClient()
 
-  // 获取管理员状态
-  const { data: adminStatus, isLoading: statusLoading } = useQuery({
-    queryKey: ['yunke-admin-status'],
-    queryFn: () => yunkeApi.getStatus(),
+  // 获取有效云客凭证状态
+  const { data: credentialStatus, isLoading: credentialStatusLoading } = useQuery({
+    queryKey: ['yunke-credential-status'],
+    queryFn: () =>
+      yunkeCredentialsApi.getCredentials({ status: 1, skip: 0, limit: 1 }),
   })
 
-  // 获取子账号列表统计
+  // 获取所有有效凭证下的子账号统计
   const { data: accountsData, isLoading: accountsLoading } = useQuery({
-    queryKey: ['yunke-sub-accounts-stats'],
-    queryFn: () => yunkeApi.getSubAccounts({ page: 1, page_size: 1 }),
+    queryKey: ['yunke-credential-sub-accounts-stats'],
+    queryFn: () =>
+      yunkeCredentialsApi.getSubAccountsFromCredentials({
+        page: 1,
+        page_size: 1,
+      }),
   })
+
+  const loggedInCredentialCount = credentialStatus?.total ?? 0
+  const hasLoggedInCredential = loggedInCredentialCount > 0
 
   // 检查登录状态
   const checkStatusMutation = useMutation({
     mutationFn: () => yunkeApi.checkAllLoginStatus(),
     onSuccess: (data) => {
       toast.info(`检查完成：${data.logged_in}/${data.total} 个账号已登录`)
-      queryClient.invalidateQueries({ queryKey: ['yunke-admin-status'] })
+      queryClient.invalidateQueries({ queryKey: ['yunke-credential-status'] })
+      queryClient.invalidateQueries({ queryKey: ['yunke-credential-sub-accounts-stats'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '检查登录状态失败')
@@ -63,7 +72,8 @@ export function YunkeDashboardPage() {
       if (data.failed > 0) {
         toast.warning(`${data.failed} 个账号更新失败`)
       }
-      queryClient.invalidateQueries({ queryKey: ['yunke-admin-status'] })
+      queryClient.invalidateQueries({ queryKey: ['yunke-credential-status'] })
+      queryClient.invalidateQueries({ queryKey: ['yunke-credential-sub-accounts-stats'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '批量更新失败')
@@ -79,14 +89,15 @@ export function YunkeDashboardPage() {
       } else {
         toast.info('未找到可匹配的账号')
       }
-      queryClient.invalidateQueries({ queryKey: ['yunke-sub-accounts-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['yunke-credential-status'] })
+      queryClient.invalidateQueries({ queryKey: ['yunke-credential-sub-accounts-stats'] })
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '同步失败')
     },
   })
 
-  const isLoading = statusLoading || accountsLoading
+  const isLoading = credentialStatusLoading || accountsLoading
 
   return (
     <Main fixed>
@@ -98,14 +109,14 @@ export function YunkeDashboardPage() {
             <Text type="tertiary" size="small">云客外呼系统集成管理</Text>
           </div>
           <Tag
-            color={adminStatus?.logged_in ? 'green' : 'red'}
+            color={hasLoggedInCredential ? 'green' : 'red'}
             type="light"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
-            {adminStatus?.logged_in ? (
-              <><CheckCircle style={{ width: 12, height: 12 }} /> 管理员已登录</>
+            {hasLoggedInCredential ? (
+              <><CheckCircle style={{ width: 12, height: 12 }} /> 云客凭证已登录</>
             ) : (
-              <><XCircle style={{ width: 12, height: 12 }} /> 管理员未登录</>
+              <><XCircle style={{ width: 12, height: 12 }} /> 云客凭证未登录</>
             )}
           </Tag>
         </div>
@@ -127,18 +138,20 @@ export function YunkeDashboardPage() {
 
           <Card bodyStyle={{ padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text type="secondary" size="small" style={{ fontWeight: 500 }}>管理员状态</Text>
+              <Text type="secondary" size="small" style={{ fontWeight: 500 }}>云客凭证状态</Text>
               <Activity style={{ width: 16, height: 16, color: 'var(--semi-color-text-2)' }} />
             </div>
-            {statusLoading ? (
+            {credentialStatusLoading ? (
               <Skeleton.Paragraph rows={1} style={{ width: 96, height: 32 }} />
             ) : (
               <div style={{ fontSize: 24, fontWeight: 700 }}>
-                {adminStatus?.logged_in ? '已登录' : '未登录'}
+                {hasLoggedInCredential ? '已登录' : '未登录'}
               </div>
             )}
             <Text type="tertiary" size="small">
-              {adminStatus?.cookies_count ? `${adminStatus.cookies_count} 个 cookies` : '需要登录'}
+              {hasLoggedInCredential
+                ? `${loggedInCredentialCount} 个已登录凭证`
+                : '请前往凭证管理刷新登录'}
             </Text>
           </Card>
 
@@ -249,12 +262,12 @@ export function YunkeDashboardPage() {
           <Card bodyStyle={{ padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <LogIn style={{ width: 20, height: 20, color: 'red' }} />
-              <Text strong style={{ fontSize: 15 }}>管理员登录</Text>
+              <Text strong style={{ fontSize: 15 }}>凭证管理</Text>
             </div>
-            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>登录云客管理员账号以启用功能</Text>
+            <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>创建或刷新云客管理员凭证</Text>
             <Link to="/yunke/credentials">
               <Button theme="outline" block>
-                去登录 <ArrowRight style={{ width: 16, height: 16, marginLeft: 8 }} />
+                去管理 <ArrowRight style={{ width: 16, height: 16, marginLeft: 8 }} />
               </Button>
             </Link>
           </Card>

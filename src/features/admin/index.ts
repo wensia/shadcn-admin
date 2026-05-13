@@ -12,6 +12,7 @@ export {
   coursesApi,
   leadAccessStatsApi,
   yunkeAdminApi,
+  emailConfigApi,
 } from './api'
 
 // 类型

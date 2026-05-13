@@ -278,9 +278,8 @@ const leadsApi = {
     }
   ): Promise<ApiResponse<{
     id: string
-    followup_priority?: number
     next_followup_at?: string
-    followup_remark?: string
+    remark?: string
   }>> {
     return apiClient.put(`/leads/${leadId}/followup-info`, data)
   },

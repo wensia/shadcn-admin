@@ -97,7 +97,7 @@ export interface UploadOptions {
   batchDescription?: string
   startRow?: number
   importCount?: number
-  campusId?: string  // 校区ID（可选，如果不传则使用当前用户的校区）
+  campusId?: string  // 兼容旧调用；新版导入以 Excel 归属校区为准
   onProgress?: (percent: number) => void
 }
 

@@ -130,8 +130,14 @@ export interface YunkeAutoSyncResult {
   details: Array<{
     yunke_name: string
     employee_name: string
-    status: string
+    status?: string
+    source_account_id?: string | null
   }>
+  errors?: Array<{
+    account_id: string
+    account_phone: string
+    error: string
+  }> | null
 }
 
 // ============ AI 分析 ============

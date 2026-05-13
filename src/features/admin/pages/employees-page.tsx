@@ -19,6 +19,7 @@ import { adminApi, apiKeysApi } from '../api'
 import { type EmployeeItem, type EmployeeUpdate, type EmployeeIdentityItem, type ApiKeyCreateResponse, type OrganizationTreeNode } from '../types'
 import { EmployeeStatusBadge, SuperuserBadge, PositionNameBadge } from '../components/status-badge'
 import { EmployeeBatchImportDialog } from '../components/employee-batch-import-dialog'
+import { EmployeeEditDialog } from '../components/employees/employee-edit-dialog'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 const { Text } = Typography
@@ -71,16 +72,6 @@ interface CampusTreeOption {
   isLeaf: boolean
   children?: CampusTreeOption[]
 }
-
-function normalizeDateInputValue(value?: string | null): string {
-  if (!value) return ''
-  const matched = /^(\d{4}-\d{2}-\d{2})/.exec(value)
-  if (matched?.[1]) return matched[1]
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return ''
-  return parsed.toISOString().slice(0, 10)
-}
-
 
 export function EmployeesPage() {
   useDocumentTitle('员工管理')
@@ -892,61 +883,9 @@ export function EmployeesPage() {
   }
 
   // 处理编辑
-  const handleEdit = useCallback(async (item: EmployeeItem) => {
+  const handleEdit = (item: EmployeeItem) => {
     setEditingItem(item)
-    setDialogOpen(true)
-    setTimeout(() => {
-      formRef.current?.setValues({
-        username: item.username,
-        name: item.name,
-        email: item.email || '',
-        phone: item.phone || '',
-        is_active: item.is_active,
-        is_superuser: item.is_superuser,
-        joined_at: normalizeDateInputValue(item.joined_at),
-      })
-    }, 0)
-
-    // 加载员工身份信息
-    try {
-      const response = await adminApi.getEmployeeIdentities({ employee_id: item.id, size: 100 })
-      const items = response.data?.items || []
-      if (items.length > 0) {
-        const identityData: IdentityFormData[] = items.map((identity) => ({
-          id: identity.id,
-          scope_type: (identity.scope_type || 'campus') as ScopeType,
-          campus_id: identity.campus_id || '',
-          region_id: identity.region_id || '',
-          district_id: identity.district_id || '',
-          area_id: identity.area_id || '',
-          department_id: identity.department_id,
-          position_id: identity.position_id,
-          is_active: identity.is_active,
-        }))
-        setIdentities(identityData)
-
-        const campusIdentities = items.filter(i => (i.scope_type || 'campus') === 'campus')
-        const uniqueCampusIds = [...new Set(campusIdentities.map(i => i.campus_id).filter(Boolean))] as string[]
-        const deptMaps = await Promise.all(uniqueCampusIds.map(id => loadDepartmentsForCampus(id)))
-        const combinedDeptMap: Record<string, string> = {}
-        deptMaps.forEach(map => { Object.assign(combinedDeptMap, map) })
-        const campusDeptIds = [...new Set(campusIdentities.map(i => i.department_id).filter(Boolean))]
-        await Promise.all(campusDeptIds.map(deptId => {
-          const campusDeptId = combinedDeptMap[deptId]
-          return loadPositionsForDepartment(deptId, campusDeptId)
-        }))
-        const uniqueRegionIds = [...new Set(items.map(i => i.region_id).filter(Boolean))] as string[]
-        await Promise.all(uniqueRegionIds.map(id => loadDistrictsForRegion(id)))
-        const uniqueDistrictIds = [...new Set(items.map(i => i.district_id).filter(Boolean))] as string[]
-        await Promise.all(uniqueDistrictIds.map(id => loadAreasForDistrict(id)))
-      } else {
-        setIdentities([{ scope_type: 'campus', campus_id: '', region_id: '', district_id: '', area_id: '', department_id: '', position_id: '', is_active: true }])
-      }
-    } catch (error) {
-      showApiErrorToast(error, '加载身份信息失败')
-      setIdentities([{ scope_type: 'campus', campus_id: '', region_id: '', district_id: '', area_id: '', department_id: '', position_id: '', is_active: true }])
-    }
-  }, [loadAreasForDistrict, loadDepartmentsForCampus, loadDistrictsForRegion, loadPositionsForDepartment])
+  }
 
   // 处理重置密码
   const handleResetPassword = (item: EmployeeItem) => {
@@ -1530,6 +1469,17 @@ export function EmployeesPage() {
           </div>
         </Form>
       </Modal>
+
+      <EmployeeEditDialog
+        open={!!editingItem}
+        employeeId={editingItem?.id ?? null}
+        employee={editingItem}
+        onClose={() => setEditingItem(null)}
+        onSuccess={() => {
+          refetch()
+          queryClient.invalidateQueries({ queryKey: ['admin-employee-identities'] })
+        }}
+      />
 
       {/* 重置密码对话框 */}
       <Modal

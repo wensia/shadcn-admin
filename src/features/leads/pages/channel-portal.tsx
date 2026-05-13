@@ -23,6 +23,7 @@ import {
   Toast,
   SideSheet,
   Divider,
+  Timeline,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconRefresh } from '@douyinfe/semi-icons'
@@ -38,6 +39,11 @@ import {
   type PortalLeadsResponse,
   type PortalStatsResponse,
 } from '../api/channel-submit'
+import {
+  getLeadNoteSourceLabel,
+  getLatestLeadNoteText,
+  normalizeLeadNotes,
+} from '@/features/crm/leads/utils/notes'
 
 const { Title, Text } = Typography
 
@@ -167,6 +173,10 @@ function PortalLeadReadonlySheet({
   const extraEntries = useMemo(
     () => getExtraInfoEntries(lead?.source_extra_info || {}),
     [lead?.source_extra_info]
+  )
+  const noteEntries = useMemo(
+    () => normalizeLeadNotes(lead?.notes),
+    [lead?.notes]
   )
 
   return (
@@ -323,27 +333,40 @@ function PortalLeadReadonlySheet({
             )}
           </Card>
 
-          {(lead.notes || extraEntries.length > 0) && (
+          {(noteEntries.length > 0 || extraEntries.length > 0) && (
             <Card bodyStyle={{ padding: 16 }}>
               <Title heading={6} style={{ margin: '0 0 10px' }}>
                 线索补充信息
               </Title>
-              {lead.notes && (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: 10,
-                    background: 'var(--semi-color-fill-0)',
-                    lineHeight: 1.7,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {lead.notes}
-                </div>
+              {noteEntries.length > 0 && (
+                <Timeline>
+                  {[...noteEntries].reverse().map((entry) => (
+                    <Timeline.Item key={entry.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <Tag size="small">{getLeadNoteSourceLabel(entry.source)}</Tag>
+                        <Text type="tertiary" size="small">
+                          {fmtTime(entry.created_at)}
+                        </Text>
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 6,
+                          padding: '10px 12px',
+                          borderRadius: 8,
+                          background: 'var(--semi-color-fill-0)',
+                          lineHeight: 1.7,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {entry.content}
+                      </div>
+                    </Timeline.Item>
+                  ))}
+                </Timeline>
               )}
 
-              {lead.notes && extraEntries.length > 0 && (
+              {noteEntries.length > 0 && extraEntries.length > 0 && (
                 <Divider margin="16px" />
               )}
 
@@ -444,10 +467,11 @@ function PortalLeadsView({ token }: { token: string }) {
         dataIndex: 'notes',
         width: 150,
         ellipsis: { showTitle: false },
-        render: (_: string, record: PortalLeadItem) => {
+        render: (_: unknown, record: PortalLeadItem) => {
+          const noteText = getLatestLeadNoteText(record.notes)
           const extra = record.source_extra_info || {}
           const extraText = Object.values(extra).filter(Boolean).join(' / ')
-          if (!record.notes && !extraText) {
+          if (!noteText && !extraText) {
             return (
               <Text type="quaternary">
                 -
@@ -456,9 +480,9 @@ function PortalLeadsView({ token }: { token: string }) {
           }
           return (
             <div>
-              {record.notes && (
+              {noteText && (
                 <span
-                  title={record.notes}
+                  title={noteText}
                   style={{
                     display: 'block',
                     maxWidth: 140,
@@ -467,7 +491,7 @@ function PortalLeadsView({ token }: { token: string }) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {record.notes}
+                  {noteText}
                 </span>
               )}
               {extraText && (

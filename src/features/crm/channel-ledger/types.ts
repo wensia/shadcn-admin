@@ -1,5 +1,6 @@
 import type {
   Grade,
+  LeadNoteTimelineEntry,
   LeadStatus,
   SourceChannelExtraField,
 } from '@/features/crm/leads/types'
@@ -41,7 +42,7 @@ export interface ChannelLedgerItem {
   status_label?: string | null
   validity?: ChannelLedgerValidity | null
   validity_label?: string | null
-  notes?: string | null
+  notes?: LeadNoteTimelineEntry[] | null
   recent_followups?: ChannelLedgerFollowupSnapshot[] | null
   followup_snapshots?: ChannelLedgerFollowupSnapshot[] | null
   promised?: boolean | null

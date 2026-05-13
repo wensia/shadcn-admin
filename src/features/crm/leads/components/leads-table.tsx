@@ -10,6 +10,7 @@ import { formatTime } from '@/lib/utils/time'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
 import type { SemiTagColor } from '@/lib/semi-types'
+import { getLatestLeadNoteText } from '../utils/notes'
 import {
   leadStatusLabels,
   intentionLevelLabels,
@@ -311,9 +312,10 @@ export function LeadsTable({
         ellipsis: { showTitle: false },
         render: (_text: string, record: LeadListItem) => {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={96} />
-          return record.notes ? (
+          const noteText = getLatestLeadNoteText(record.notes)
+          return noteText ? (
             <span
-              title={record.notes}
+              title={noteText}
               style={{
                 fontSize: 13,
                 maxWidth: 150,
@@ -323,7 +325,7 @@ export function LeadsTable({
                 display: 'block',
               }}
             >
-              {record.notes}
+              {noteText}
             </span>
           ) : (
             <Text type="quaternary" style={{ fontSize: 13 }}>

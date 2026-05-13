@@ -3,6 +3,7 @@
  * 使用 Semi Nav 实现导航
  */
 import { useCallback, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Nav, SideSheet } from '@douyinfe/semi-ui-19'
 import type { NavProps } from '@douyinfe/semi-ui-19/lib/es/navigation'
@@ -11,6 +12,7 @@ import { AnthropicLogo } from '@/assets/anthropic-logo'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSidebar } from '@/context/sidebar-context'
 import { usePermission, PERMISSIONS } from '@/hooks/use-permission'
+import { directVisitLeadsApi } from '@/features/crm/direct-visit-leads/api'
 import {
   crmNavGroups,
   adminNavGroups,
@@ -121,6 +123,17 @@ export function AppSidebar() {
 
   const { hasPermission } = usePermission()
   const isSuperUser = useAuthStore((s) => s.user?.is_superuser ?? false)
+  const { data: directVisitLeadsAccess } = useQuery({
+    queryKey: ['direct-visit-leads-access'],
+    queryFn: async () => {
+      const response = await directVisitLeadsApi.access()
+      return Boolean(response.data?.can_access)
+    },
+    enabled: !isSuperUser,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+  const canAccessDirectVisitLeads = isSuperUser || directVisitLeadsAccess === true
 
   // 根据当前路径选择导航配置，并按权限过滤菜单项
   const { navGroups, teams } = useMemo(() => {
@@ -150,6 +163,7 @@ export function AppSidebar() {
         items: group.items.filter((item) => {
           const url = 'url' in item ? item.url : undefined
           if (!url) return true
+          if (url === '/crm/direct-visit-leads') return canAccessDirectVisitLeads
           const requiredPerm = ROUTE_PERMISSIONS[url as string]
           if (!requiredPerm) return true
           return hasPermission(requiredPerm)
@@ -160,7 +174,7 @@ export function AppSidebar() {
       .filter((group) => group.title !== '工具' || isSuperUser)
 
     return { navGroups: [...filtered, COMMON_HELP_GROUP], teams: teamList }
-  }, [location.pathname, hasPermission, isSuperUser])
+  }, [location.pathname, hasPermission, isSuperUser, canAccessDirectVisitLeads])
 
   const isCollapsed = !open && !isMobile
   // ─── Open keys (分组展开状态) ──────────────────────────────
