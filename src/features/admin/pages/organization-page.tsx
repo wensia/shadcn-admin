@@ -16,16 +16,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useQuery } from '@tanstack/react-query'
-import { Search, X } from 'lucide-react'
-import { Button, Empty, Input, Skeleton, Typography } from '@douyinfe/semi-ui-19'
-import { IconRefresh } from '@douyinfe/semi-icons'
+import { X } from 'lucide-react'
+import { Button, Empty, Input, Skeleton } from '@douyinfe/semi-ui-19'
+import { IconSearch } from '@douyinfe/semi-icons'
 import { adminApi } from '../api'
 import type { OrganizationTreeNode } from '../types'
 import { OrgTreeStats } from '../components/org-tree/org-tree-stats'
 import { OrgTreeNode } from '../components/org-tree/org-tree-node'
 import { OrgNodeAssignmentPanel } from '../components/org-tree/org-node-assignment-panel'
-
-const { Text } = Typography
 
 const TREE_WIDTH_STORAGE_KEY = 'admin.organization.tree_width'
 const TREE_MIN_WIDTH = 240
@@ -170,7 +168,7 @@ export function OrganizationPage() {
     }
   }, [])
 
-  const { data: tree = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: tree = [], isLoading } = useQuery({
     queryKey: ['organization-tree-full'],
     queryFn: async () => {
       const response = await adminApi.getOrganizationTree()
@@ -206,25 +204,9 @@ export function OrganizationPage() {
     [tree, selectedId],
   )
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* 顶部标题栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--semi-color-border)]">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">组织架构</h2>
-          <Text type="tertiary" size="small">
-            大区 → 地区 → 区域 → 校区 → 部门；选中节点后在右侧管理任命
-          </Text>
-        </div>
-        <Button
-          theme="outline"
-          icon={<IconRefresh spin={isRefetching} />}
-          onClick={() => refetch()}
-          disabled={isRefetching}
-        />
-      </div>
-
-      {/* 统计卡片 */}
+	  return (
+	    <div className="flex flex-col h-full">
+	      {/* 统计卡片 */}
       {!isLoading && (
         <div className="px-4 pt-2">
           <OrgTreeStats tree={tree} compact />
@@ -240,7 +222,7 @@ export function OrganizationPage() {
         >
           <div className="p-3 border-b border-[var(--semi-color-border)] flex items-center gap-2">
             <Input
-              prefix={<Search className="h-4 w-4" />}
+              prefix={<IconSearch />}
               placeholder="搜索组织单位/部门..."
               value={searchTerm}
               onChange={(v) => setSearchTerm(v)}
@@ -250,7 +232,6 @@ export function OrganizationPage() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<X className="h-4 w-4" />}
                 onClick={() => setSearchTerm('')}
               />

@@ -123,7 +123,6 @@ export function AreaDepartmentsPage() {
         return (
           <Button
             theme="borderless"
-            size="small"
             icon={<Users size={14} />}
             onClick={() => {
               setSelectedDepartment(record)
@@ -276,7 +275,7 @@ function ManageAreaManagersDialog({
       width={560}
     >
       <div style={{ marginBottom: 12 }}>
-        <Button size="small" theme="light" onClick={() => setAddOpen(!addOpen)}>
+        <Button theme="light" onClick={() => setAddOpen(!addOpen)}>
           {addOpen ? '取消添加' : '+ 添加负责人'}
         </Button>
       </div>
@@ -309,7 +308,6 @@ function ManageAreaManagersDialog({
           </div>
           <Button
             theme="solid"
-            size="small"
             disabled={!selectedEmployee}
             loading={addMutation.isPending}
             onClick={() => addMutation.mutate()}
@@ -337,7 +335,6 @@ function ManageAreaManagersDialog({
               <Button
                 theme="borderless"
                 type="danger"
-                size="small"
                 loading={removeMutation.isPending}
                 onClick={() => {
                   Modal.confirm({

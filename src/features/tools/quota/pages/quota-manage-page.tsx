@@ -307,7 +307,6 @@ export function QuotaManagePage() {
           <div style={{ display: 'flex', gap: 4 }}>
             <Button
               theme="light"
-              size="small"
               data-stop-row-click
               onClick={() => {
                 setEditTarget(record)
@@ -319,7 +318,6 @@ export function QuotaManagePage() {
             <Button
               theme="light"
               type="danger"
-              size="small"
               icon={<IconDelete />}
               data-stop-row-click
               onClick={() => {
@@ -424,9 +422,9 @@ export function QuotaManagePage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Text type="tertiary" style={{ fontSize: 13 }}>共 {userData?.total || 0} 位员工</Text>
-              <Button size="small" disabled={userPage <= 1} onClick={() => setUserPage((p) => p - 1)}>上一页</Button>
+              <Button disabled={userPage <= 1} onClick={() => setUserPage((p) => p - 1)}>上一页</Button>
               <Text style={{ fontSize: 13 }}>{userPage} / {totalUserPages}</Text>
-              <Button size="small" disabled={userPage >= totalUserPages} onClick={() => setUserPage((p) => p + 1)}>下一页</Button>
+              <Button disabled={userPage >= totalUserPages} onClick={() => setUserPage((p) => p + 1)}>下一页</Button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Button onClick={() => { setCreateModalVisible(false); resetCreateModal() }}>取消</Button>

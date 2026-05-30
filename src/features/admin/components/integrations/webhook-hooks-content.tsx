@@ -323,22 +323,22 @@ export function WebhookHooksContent() {
             <div className="flex items-center gap-1">
               <Tooltip content="配置">
                 <span style={{ display: 'inline-flex' }}>
-                  <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+                  <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
                 </span>
               </Tooltip>
               <Tooltip content="测试">
                 <span style={{ display: 'inline-flex' }}>
-                  <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTestClick(record)} />
+                  <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} onClick={() => handleTestClick(record)} />
                 </span>
               </Tooltip>
               <Tooltip content="复制标识">
                 <span style={{ display: 'inline-flex' }}>
-                  <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} size="small" onClick={() => handleCopyHookKey(record.hook_key)} />
+                  <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} onClick={() => handleCopyHookKey(record.hook_key)} />
                 </span>
               </Tooltip>
               <Tooltip content="删除">
                 <span style={{ display: 'inline-flex' }}>
-                  <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} size="small" onClick={() => handleDeleteClick(record)} />
+                  <Button theme="borderless" type="tertiary" icon={<Trash2 className="h-4 w-4 text-red-500" />} onClick={() => handleDeleteClick(record)} />
                 </span>
               </Tooltip>
             </div>
@@ -671,7 +671,6 @@ export function WebhookHooksContent() {
                       theme="borderless"
                       type="tertiary"
                       icon={<X className="h-4 w-4" />}
-                      size="small"
                       className="shrink-0 mt-6"
                       onClick={() => handleRemoveCampusRule(index)}
                     />
@@ -680,7 +679,6 @@ export function WebhookHooksContent() {
 
                 <Button
                   theme="outline"
-                  size="small"
                   icon={<Plus className="h-4 w-4" />}
                   onClick={handleAddCampusRule}
                 >

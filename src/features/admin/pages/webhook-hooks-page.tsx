@@ -309,10 +309,10 @@ export function WebhookHooksPage() {
           if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
           return (
             <div style={{ display: 'flex', gap: 4 }}>
-            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
-            <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} size="small" onClick={() => handleTestClick(record)} />
-            <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} size="small" onClick={() => handleCopyHookKey(record.hook_key)} />
-            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Play className="h-4 w-4" />} onClick={() => handleTestClick(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Copy className="h-4 w-4" />} onClick={() => handleCopyHookKey(record.hook_key)} />
+            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleDeleteClick(record)} />
           </div>
           )
         },
@@ -574,11 +574,11 @@ export function WebhookHooksPage() {
                         />
                       </div>
                     </div>
-                    <Button theme="borderless" type="tertiary" icon={<X className="h-4 w-4" />} size="small" style={{ marginTop: 24 }} onClick={() => handleRemoveCampusRule(index)} />
+                    <Button theme="borderless" type="tertiary" icon={<X className="h-4 w-4" />} style={{ marginTop: 24 }} onClick={() => handleRemoveCampusRule(index)} />
                   </div>
                 ))}
 
-                <Button theme="outline" size="small" icon={<Plus className="h-4 w-4" />} onClick={handleAddCampusRule}>
+                <Button theme="outline" icon={<Plus className="h-4 w-4" />} onClick={handleAddCampusRule}>
                   新增匹配规则
                 </Button>
               </div>

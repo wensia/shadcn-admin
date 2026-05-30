@@ -276,7 +276,7 @@ export function CalendarTab({ dateFrom, dateTo: _dateTo, creatorCampusId }: Cale
             <Radio value="month">月</Radio>
           </RadioGroup>
 
-          <Button theme="solid" size="small" onClick={goToToday} style={{ background: 'var(--semi-color-text-0)' }}>今天</Button>
+          <Button theme="solid" onClick={goToToday} style={{ background: 'var(--semi-color-text-0)' }}>今天</Button>
 
           <div style={{ display: 'flex', alignItems: 'center', borderRadius: 8, border: '1px solid #e8e6dc', background: '#faf9f5' }}>
             <Button

@@ -414,7 +414,6 @@ export function IdentityApplicationsPage({
             <Button
               theme="borderless"
               type="tertiary"
-              size="small"
               icon={<Eye className="h-4 w-4" />}
               onClick={() => {
                 setSelectedItem(record)
@@ -428,7 +427,6 @@ export function IdentityApplicationsPage({
                 <Button
                   theme="borderless"
                   type="primary"
-                  size="small"
                   icon={<Check className="h-4 w-4" />}
                   onClick={() => openReviewDialog(record, 'approve', 'department')}
                 >
@@ -437,7 +435,6 @@ export function IdentityApplicationsPage({
                 <Button
                   theme="borderless"
                   type="danger"
-                  size="small"
                   icon={<X className="h-4 w-4" />}
                   onClick={() => openReviewDialog(record, 'reject', 'department')}
                 >
@@ -450,7 +447,6 @@ export function IdentityApplicationsPage({
                 <Button
                   theme="borderless"
                   type="primary"
-                  size="small"
                   icon={<Check className="h-4 w-4" />}
                   onClick={() => openReviewDialog(record, 'approve', 'admin')}
                 >
@@ -459,7 +455,6 @@ export function IdentityApplicationsPage({
                 <Button
                   theme="borderless"
                   type="danger"
-                  size="small"
                   icon={<X className="h-4 w-4" />}
                   onClick={() => openReviewDialog(record, 'reject', 'admin')}
                 >
@@ -471,7 +466,6 @@ export function IdentityApplicationsPage({
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 loading={resendMutation.isPending}
                 icon={<Mail className="h-4 w-4" />}
                 onClick={() => resendMutation.mutate(record.id)}

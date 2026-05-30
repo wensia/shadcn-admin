@@ -298,7 +298,6 @@ export function AIConfigContent() {
                   theme="borderless"
                   type="tertiary"
                   icon={<MoreHorizontal className="h-4 w-4" />}
-                  size="small"
                 />
               </span>
             </Dropdown>

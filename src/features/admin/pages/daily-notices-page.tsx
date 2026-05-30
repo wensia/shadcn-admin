@@ -207,13 +207,12 @@ export function DailyNoticesPage() {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={112} />
         return (
           <div className="flex items-center gap-1">
-            <Button theme="borderless" type="tertiary" size="small" icon={<Eye className="h-4 w-4" />} onClick={() => handlePreview(record)} />
-            <Button theme="borderless" type="tertiary" size="small" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Eye className="h-4 w-4" />} onClick={() => handlePreview(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
             {record.is_active ? (
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<PowerOff className="h-4 w-4 text-orange-500" />}
                 onClick={() => deactivateMutation.mutate(record.id)}
                 disabled={deactivateMutation.isPending}
@@ -222,7 +221,6 @@ export function DailyNoticesPage() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<Power className="h-4 w-4 text-green-600" />}
                 onClick={() => activateMutation.mutate(record.id)}
                 disabled={activateMutation.isPending}
@@ -231,7 +229,6 @@ export function DailyNoticesPage() {
             <Button
               theme="borderless"
               type="danger"
-              size="small"
               icon={<Trash2 className="h-4 w-4" />}
               onClick={() => handleDeleteClick(record)}
             />

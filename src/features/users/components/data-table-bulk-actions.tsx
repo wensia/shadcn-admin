@@ -66,7 +66,6 @@ export function DataTableBulkActions({
                 theme='borderless'
                 type='tertiary'
                 icon={<X size={14} />}
-                size='small'
                 onClick={onClearSelection}
                 style={{ borderRadius: '50%', width: 24, height: 24, padding: 0 }}
               />
@@ -92,7 +91,6 @@ export function DataTableBulkActions({
             <span style={{ display: 'inline-flex' }}>
               <Button
                 theme='outline'
-                size='small'
                 icon={<Mail size={16} />}
                 onClick={handleBulkInvite}
                 style={{ width: 32, height: 32 }}
@@ -104,7 +102,6 @@ export function DataTableBulkActions({
             <span style={{ display: 'inline-flex' }}>
               <Button
                 theme='outline'
-                size='small'
                 icon={<UserCheck size={16} />}
                 onClick={() => handleBulkStatusChange('active')}
                 style={{ width: 32, height: 32 }}
@@ -116,7 +113,6 @@ export function DataTableBulkActions({
             <span style={{ display: 'inline-flex' }}>
               <Button
                 theme='outline'
-                size='small'
                 icon={<UserX size={16} />}
                 onClick={() => handleBulkStatusChange('inactive')}
                 style={{ width: 32, height: 32 }}
@@ -129,7 +125,6 @@ export function DataTableBulkActions({
               <Button
                 type='danger'
                 theme='solid'
-                size='small'
                 icon={<Trash2 size={16} />}
                 onClick={() => setShowDeleteConfirm(true)}
                 style={{ width: 32, height: 32 }}

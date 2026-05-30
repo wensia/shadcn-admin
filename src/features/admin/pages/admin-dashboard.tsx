@@ -184,7 +184,6 @@ export function AdminDashboardPage() {
         <Button
           theme="borderless"
           type="tertiary"
-          size="small"
           icon={<IconExternalOpen size="small" />}
           onClick={() => navigate({ to: path })}
         />
@@ -219,17 +218,15 @@ export function AdminDashboardPage() {
             <Button
               icon={<IconRefresh />}
               theme="borderless"
-              size="small"
               onClick={() => refetch()}
               style={{ ...cellStyle }}
-            >
-              刷新
-            </Button>
+              title="刷新"
+              aria-label="刷新"
+            />
             <Button
               icon={<IconPlus />}
               theme="solid"
               type="primary"
-              size="small"
               onClick={() => navigate({ to: '/admin/employees' })}
               style={{ ...cellStyle }}
             >
@@ -307,7 +304,6 @@ export function AdminDashboardPage() {
             <Button
               key={action.path}
               theme="borderless"
-              size="small"
               onClick={() => navigate({ to: action.path })}
               style={{ ...cellStyle, fontSize: 12 }}
             >

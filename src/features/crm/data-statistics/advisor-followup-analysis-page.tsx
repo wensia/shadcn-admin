@@ -312,10 +312,9 @@ export function AdvisorFollowupAnalysisPage({
           icon={<RefreshCw size={14} />}
           loading={isAnyRefetching}
           onClick={handleRefresh}
-          size="small"
-        >
-          刷新
-        </Button>
+          title="刷新"
+          aria-label="刷新"
+        />
       </div>
 
       {/* 跟进结果分布 */}

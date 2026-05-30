@@ -177,9 +177,13 @@ export function OrganizationAssignmentsPage() {
           </Text>
         </div>
         <div className="flex gap-2">
-          <Button icon={<IconRefresh />} onClick={() => refetch()} loading={isFetching}>
-            刷新
-          </Button>
+          <Button
+            icon={<IconRefresh />}
+            onClick={() => refetch()}
+            loading={isFetching}
+            title="刷新"
+            aria-label="刷新"
+          />
           <Button
             theme="solid"
             type="primary"

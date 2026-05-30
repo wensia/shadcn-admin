@@ -117,7 +117,6 @@ export function UserAuthForm({ redirectTo }: UserAuthFormProps) {
         theme='solid'
         loading={isLoading}
         block
-        size='large'
         style={{ marginTop: 24 }}
       >
         登录

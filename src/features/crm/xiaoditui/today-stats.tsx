@@ -2,56 +2,47 @@
  * 小地推数据收集统计区块
  * - 筛选：活动 / 日期范围 / 推广员
  * - 总览：区间收集、活跃推广员、活动累计、头部贡献
- * - 明细：推广员排行 + 最新收集样本
+ * - 明细：推广员采集数量
  */
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Avatar,
   Banner,
   Button,
-  Card,
   DatePicker,
   Empty,
-  Progress,
   Select,
-  Spin,
-  Tag,
-  Tooltip,
+  Skeleton,
   Typography,
 } from '@douyinfe/semi-ui-19'
 import {
   IconActivity,
   IconBarChartVStroked,
-  IconCalendar,
-  IconClock,
   IconInfoCircle,
-  IconList,
-  IconMapPin,
-  IconPhone,
+  IconPlus,
   IconRefresh,
-  IconUser,
   IconUserGroup,
 } from '@douyinfe/semi-icons'
+import { VChart, type IBarChartSpec } from '@visactor/react-vchart'
 
 import {
   xiaoditangApi,
   type XiaoditangMarketGroup,
-  type XiaoditangSampleItem,
 } from './api'
+import { XiaodituiImportLeadsDialog } from './import-leads-dialog'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 interface Props {
   /** 是否启用查询（账号失效时禁用） */
   enabled?: boolean
+  embedded?: boolean
+  overviewRefreshing?: boolean
+  onRefreshOverview?: () => void
 }
 
-type DatePresetKey = 'today' | 'yesterday' | 'week' | 'sevenDays'
-
 interface DatePreset {
-  key: DatePresetKey
   label: string
   getRange: () => [Date, Date]
 }
@@ -110,58 +101,51 @@ function lastSevenDaysRangeCN(): [Date, Date] {
   return [start, end]
 }
 
-function daysBetweenInclusive(start: Date, end: Date): number {
-  const startTime = new Date(start).setHours(0, 0, 0, 0)
-  const endTime = new Date(end).setHours(0, 0, 0, 0)
-  return Math.max(1, Math.round((endTime - startTime) / 86_400_000) + 1)
+function currentMonthRangeCN(): [Date, Date] {
+  const end = todayCN()
+  const start = new Date(end.getFullYear(), end.getMonth(), 1)
+  return [start, end]
 }
 
-function getPercent(value: number, total: number): number {
-  if (total <= 0) return 0
-  return Math.max(0, Math.min(100, Math.round((value / total) * 100)))
+function previousMonthRangeCN(): [Date, Date] {
+  const today = todayCN()
+  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const end = new Date(today.getFullYear(), today.getMonth(), 0)
+  return [start, end]
 }
 
 function getOneDecimal(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
-function getAvatarText(name?: string | null): string {
-  return (name || '未').trim().slice(0, 1).toUpperCase()
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return toYMD(a) === toYMD(b)
-}
-
-function isSameRange(a: [Date, Date], b: [Date, Date]): boolean {
-  return isSameDay(a[0], b[0]) && isSameDay(a[1], b[1])
-}
-
 function formatRangeText(startDate: string, endDate: string): string {
   return startDate === endDate ? startDate : `${startDate} ~ ${endDate}`
 }
 
-function formatSampleName(sample: XiaoditangSampleItem): string {
-  return sample.nickname || sample.mobile || sample.col || '未命名线索'
-}
-
-function isRepeatSample(value?: string | null): boolean {
-  const normalized = String(value || '').trim().toLowerCase()
-  return ['1', 'true', 'yes', 'y', '是', '重复'].includes(normalized)
-}
-
 const datePresets: DatePreset[] = [
-  { key: 'today', label: '今天', getRange: todayRangeCN },
-  { key: 'yesterday', label: '昨天', getRange: yesterdayRangeCN },
-  { key: 'week', label: '本周', getRange: currentWeekRangeCN },
-  { key: 'sevenDays', label: '近 7 天', getRange: lastSevenDaysRangeCN },
+  { label: '今天', getRange: todayRangeCN },
+  { label: '昨天', getRange: yesterdayRangeCN },
+  { label: '本周', getRange: currentWeekRangeCN },
+  { label: '近 7 天', getRange: lastSevenDaysRangeCN },
+  { label: '本月', getRange: currentMonthRangeCN },
+  { label: '上个月', getRange: previousMonthRangeCN },
 ]
 
-export function TodayStatsBlock({ enabled = true }: Props) {
+const datePickerPresets = datePresets.map((preset) => () => {
+  const [start, end] = preset.getRange()
+  return { text: preset.label, start, end }
+})
+
+export function TodayStatsBlock({
+  enabled = true,
+  embedded = false,
+  overviewRefreshing = false,
+  onRefreshOverview,
+}: Props) {
   const [activityId, setActivityId] = useState<number | undefined>(undefined)
   const [dateRange, setDateRange] = useState<[Date, Date]>(todayRangeCN)
   const [selectedMarketIds, setSelectedMarketIds] = useState<number[]>([])
-  const [showAllMarkets, setShowAllMarkets] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
 
   const activitiesQuery = useQuery({
     queryKey: ['xiaoditui', 'activities'],
@@ -173,19 +157,10 @@ export function TodayStatsBlock({ enabled = true }: Props) {
 
   const activities = activitiesQuery.data?.data || []
   const selectedActivityId = activityId ?? activities[0]?.activity_id
-  const selectedActivity = activities.find(
-    (item) => item.activity_id === selectedActivityId,
-  )
 
   const startDate = toYMD(dateRange[0])
   const endDate = toYMD(dateRange[1])
   const rangeText = formatRangeText(startDate, endDate)
-  const rangeDays = daysBetweenInclusive(dateRange[0], dateRange[1])
-
-  const activePreset = useMemo(
-    () => datePresets.find((preset) => isSameRange(dateRange, preset.getRange())),
-    [dateRange],
-  )
 
   const statsQuery = useQuery({
     queryKey: ['xiaoditui', 'stats', selectedActivityId, startDate, endDate],
@@ -203,7 +178,6 @@ export function TodayStatsBlock({ enabled = true }: Props) {
   const stats = statsQuery.data?.data
   const errorMessage =
     statsQuery.data && !statsQuery.data.success ? statsQuery.data.message : null
-
   const marketOptions = useMemo(
     () =>
       (stats?.by_market || []).map((m) => ({
@@ -237,59 +211,31 @@ export function TodayStatsBlock({ enabled = true }: Props) {
   const hasMarketFilter = effectiveSelectedMarketIds.length > 0
   const displayTotal = hasMarketFilter ? filteredTotal : (stats?.range_total ?? 0)
   const activeMarketCount = filteredMarkets.length
-  const topMarket = filteredMarkets[0]
-  const topShare = topMarket ? getPercent(topMarket.count, displayTotal) : 0
-  const activityShare = getPercent(displayTotal, stats?.all_time_total ?? 0)
   const avgPerMarket =
     activeMarketCount > 0 ? displayTotal / activeMarketCount : 0
-  const visibleMarkets = showAllMarkets
-    ? filteredMarkets
-    : filteredMarkets.slice(0, 8)
-  const hiddenMarketCount = Math.max(0, filteredMarkets.length - visibleMarkets.length)
-  const latestSample = stats?.samples?.[0]
+  const showStatsSkeleton =
+    activitiesQuery.isPending || (statsQuery.isPending && !!selectedActivityId)
 
   const toolbar = (
     <div style={filterPanelStyle}>
-      <div style={filterHeaderStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={filterIconStyle}>
-            <IconCalendar />
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Text strong>筛选范围</Text>
-            <Text type='tertiary' size='small'>
-              {selectedActivity?.name || '等待活动数据'} · {rangeText}
-            </Text>
-          </div>
-        </div>
-        <Button
-          theme='borderless'
-          icon={<IconRefresh />}
-          loading={statsQuery.isFetching}
-          onClick={() => statsQuery.refetch()}
-        >
-          刷新
-        </Button>
-      </div>
+      <div className='xiaoditui-activity-filter-bar'>
+        <div className='xiaoditui-activity-filter-grid'>
+          <FilterField label='活动' className='xiaoditui-activity-filter-field'>
+            <Select
+              placeholder='选择活动'
+              loading={activitiesQuery.isPending}
+              value={selectedActivityId}
+              onChange={(v) => setActivityId(v as number)}
+              style={{ width: '100%' }}
+              optionList={activities.map((a) => ({
+                label: a.name,
+                value: a.activity_id,
+              }))}
+              filter
+            />
+          </FilterField>
 
-      <div style={filterGridStyle}>
-        <LabeledControl label='活动'>
-          <Select
-            placeholder='选择活动'
-            loading={activitiesQuery.isPending}
-            value={selectedActivityId}
-            onChange={(v) => setActivityId(v as number)}
-            style={{ width: '100%' }}
-            optionList={activities.map((a) => ({
-              label: a.name,
-              value: a.activity_id,
-            }))}
-            filter
-          />
-        </LabeledControl>
-
-        <LabeledControl label='日期'>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <FilterField label='日期' className='xiaoditui-activity-filter-field'>
             <DatePicker
               type='dateRange'
               value={dateRange}
@@ -305,73 +251,70 @@ export function TodayStatsBlock({ enabled = true }: Props) {
               showClear={false}
               syncSwitchMonth
               weekStartsOn={1}
+              presets={datePickerPresets}
+              presetPosition='bottom'
               style={{ width: '100%' }}
             />
-            <div style={presetGroupStyle}>
-              {datePresets.map((preset) => {
-                const active = activePreset?.key === preset.key
-                return (
-                  <Button
-                    key={preset.key}
-                    theme={active ? 'solid' : 'borderless'}
-                    type={active ? 'primary' : 'tertiary'}
-                    size='small'
-                    onClick={() => setDateRange(preset.getRange())}
-                  >
-                    {preset.label}
-                  </Button>
-                )
-              })}
-            </div>
-          </div>
-        </LabeledControl>
+          </FilterField>
 
-        <LabeledControl label='推广员'>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Select
-              multiple
-              maxTagCount={2}
-              placeholder='全部推广员'
-              value={effectiveSelectedMarketIds}
-              onChange={(v) => setSelectedMarketIds((v as number[]) || [])}
-              style={{ width: '100%' }}
-              optionList={marketOptions}
-              disabled={marketOptions.length === 0}
-              filter
-              showClear
-            />
-            <div style={{ minHeight: 22 }}>
-              {hasMarketFilter ? (
+          <FilterField label='推广员' className='xiaoditui-activity-filter-field'>
+            <div style={promoterFilterRowStyle}>
+              <Select
+                multiple
+                maxTagCount={2}
+                placeholder='全部推广员'
+                value={effectiveSelectedMarketIds}
+                onChange={(v) => setSelectedMarketIds((v as number[]) || [])}
+                style={{ flex: 1, minWidth: 0 }}
+                optionList={marketOptions}
+                disabled={marketOptions.length === 0}
+                filter
+                showClear
+              />
+              {hasMarketFilter && (
                 <Button
                   theme='borderless'
                   type='tertiary'
-                  size='small'
                   onClick={() => setSelectedMarketIds([])}
-                  style={{ paddingLeft: 0 }}
                 >
-                  清除推广员筛选
+                  清除
                 </Button>
-              ) : (
-                <Text type='tertiary' size='small'>
-                  当前统计全部推广员
-                </Text>
               )}
             </div>
-          </div>
-        </LabeledControl>
+          </FilterField>
+        </div>
+
+        <div className='xiaoditui-activity-filter-actions'>
+          <Button
+            theme='solid'
+            type='primary'
+            icon={<IconPlus />}
+            disabled={!enabled || !selectedActivityId}
+            onClick={() => setImportDialogOpen(true)}
+          >
+            录入 CRM
+          </Button>
+
+          <Button
+            theme='light'
+            icon={<IconRefresh />}
+            loading={statsQuery.isFetching || overviewRefreshing}
+            onClick={() => {
+              onRefreshOverview?.()
+              statsQuery.refetch()
+            }}
+            title='刷新'
+            aria-label='刷新'
+          />
+        </div>
       </div>
     </div>
   )
 
   let body: ReactNode
 
-  if (statsQuery.isPending && selectedActivityId) {
-    body = (
-      <div style={loadingStyle}>
-        <Spin size='middle' />
-        <Text type='tertiary'>正在拉取统计…</Text>
-      </div>
-    )
+  if (showStatsSkeleton) {
+    body = <StatsLoadingSkeleton />
   } else if (errorMessage) {
     body = (
       <Empty
@@ -391,7 +334,7 @@ export function TodayStatsBlock({ enabled = true }: Props) {
     body = null
   } else {
     body = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={statsContentStyle}>
         {stats.truncated && (
           <Banner
             fullMode={false}
@@ -401,187 +344,80 @@ export function TodayStatsBlock({ enabled = true }: Props) {
           />
         )}
 
-        <div style={overviewStyle}>
-          <div style={heroMetricStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <Text type='tertiary'>区间收集</Text>
-                <div style={heroNumberStyle}>{displayTotal.toLocaleString()}</div>
-              </div>
-              <Tooltip content={`活动累计 ${stats.all_time_total.toLocaleString()} 条`}>
-                <div style={circleProgressStyle}>
-                  <Progress
-                    type='circle'
-                    width={74}
-                    percent={activityShare}
-                    stroke='var(--semi-color-primary)'
-                    aria-label='区间收集占活动累计比例'
-                    format={(percent) => `${percent}%`}
-                    showInfo
-                  />
-                </div>
-              </Tooltip>
-            </div>
-            <div style={heroMetaStyle}>
-              <Tag color='blue' size='small'>
-                {activePreset?.label || '自定义'} · {rangeDays} 天
-              </Tag>
-              <Text type='tertiary' size='small'>
-                扫描 {stats.page_count} 页
-              </Text>
-              {hasMarketFilter && (
-                <Tag color='orange' size='small'>
-                  已筛选 {effectiveSelectedMarketIds.length} 人
-                </Tag>
-              )}
-            </div>
-          </div>
-
-          <MetricTile
+        <div className='xiaoditui-overview-strip' style={kpiStripStyle}>
+          <OverviewInlineMetric
+            icon={<IconActivity />}
+            label='区间收集'
+            value={displayTotal.toLocaleString()}
+            accent='#0f766e'
+          />
+          <OverviewInlineMetric
             icon={<IconUserGroup />}
             label='活跃推广员'
             value={activeMarketCount.toLocaleString()}
-            hint={
-              hasMarketFilter
-                ? `已选 ${effectiveSelectedMarketIds.length} 人`
-                : '区间内有收集记录'
-            }
             accent='#16a34a'
           />
-          <MetricTile
+          <OverviewInlineMetric
             icon={<IconBarChartVStroked />}
             label='人均收集'
             value={getOneDecimal(avgPerMarket)}
-            hint='按活跃推广员计算'
             accent='#0f766e'
           />
-          <MetricTile
+          <OverviewInlineMetric
             icon={<IconActivity />}
             label='活动累计'
             value={stats.all_time_total.toLocaleString()}
-            hint={topMarket ? `头名贡献 ${topShare}%` : '暂无推广员数据'}
             accent='#475569'
           />
         </div>
 
-        <div style={insightGridStyle}>
-          <section style={sectionStyle}>
-            <SectionHeader
-              icon={<IconUserGroup />}
-              title='推广员表现'
-              extra={
-                <Text type='tertiary' size='small'>
-                  {activeMarketCount} 人
-                </Text>
-              }
-            />
-
-            {filteredMarkets.length === 0 ? (
-              <Empty
-                image={<IconUserGroup size='extra-large' />}
-                title={
-                  hasMarketFilter ? '所选推广员该区间无数据' : '该区间还没有数据'
-                }
-                description={rangeText}
-              />
-            ) : (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {visibleMarkets.map((market, index) => (
-                    <MarketPerformanceRow
-                      key={market.market_id}
-                      market={market}
-                      rank={index + 1}
-                      total={displayTotal}
-                    />
-                  ))}
-                </div>
-                {hiddenMarketCount > 0 ? (
-                  <Button
-                    block
-                    theme='borderless'
-                    type='tertiary'
-                    style={{ marginTop: 10 }}
-                    onClick={() => setShowAllMarkets(true)}
-                  >
-                    展开其余 {hiddenMarketCount} 位推广员
-                  </Button>
-                ) : (
-                  showAllMarkets &&
-                  filteredMarkets.length > 8 && (
-                    <Button
-                      block
-                      theme='borderless'
-                      type='tertiary'
-                      style={{ marginTop: 10 }}
-                      onClick={() => setShowAllMarkets(false)}
-                    >
-                      收起排行
-                    </Button>
-                  )
-                )}
-              </>
-            )}
-          </section>
-
-          <section style={sectionStyle}>
-            <SectionHeader
-              icon={<IconList />}
-              title='最新收集'
-              extra={
-                latestSample ? (
-                  <Text type='tertiary' size='small'>
-                    最近 {formatRel(latestSample.created_at)}
-                  </Text>
-                ) : null
-              }
-            />
-            <RecentSamples samples={stats.samples || []} />
-          </section>
-        </div>
+        <DataPanel title='推广员采集数量' meta={`${activeMarketCount} 人 · ${rangeText}`}>
+          <PromoterCollectionBars
+            markets={filteredMarkets}
+            hasMarketFilter={hasMarketFilter}
+            rangeText={rangeText}
+          />
+        </DataPanel>
       </div>
     )
   }
 
   return (
-    <Card
-      bordered
-      bodyStyle={{ padding: 20 }}
-      title={
-        <div style={titleStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={titleIconStyle}>
-              <IconActivity />
-            </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span>数据收集统计</span>
-              <Text type='tertiary' size='small'>
-                {selectedActivity?.name || '小地推活动'} 的收集进展与推广员表现
-              </Text>
-            </div>
-          </div>
-          <Tag color='blue' size='small'>
-            {rangeText}
-          </Tag>
-        </div>
-      }
-    >
-      {toolbar}
-      {body}
-    </Card>
+    <>
+      <section style={embedded ? embeddedStatsShellStyle : statsShellStyle}>
+        {toolbar}
+        {body}
+      </section>
+      <XiaodituiImportLeadsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        activities={activities}
+        defaultActivityId={selectedActivityId}
+        defaultStartDate={startDate}
+        defaultEndDate={endDate}
+        onSuccess={() => {
+          onRefreshOverview?.()
+          statsQuery.refetch()
+        }}
+      />
+    </>
   )
 }
 
-function LabeledControl({
+function FilterField({
   label,
   children,
+  style,
+  className,
 }: {
   label: string
   children: ReactNode
+  style?: CSSProperties
+  className?: string
 }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <Text type='tertiary' size='small'>
+    <label className={className} style={{ ...compactFilterFieldStyle, ...style }}>
+      <Text type='tertiary' size='small' style={compactFilterLabelStyle}>
         {label}
       </Text>
       {children}
@@ -589,394 +425,394 @@ function LabeledControl({
   )
 }
 
-interface MetricTileProps {
+interface OverviewInlineMetricProps {
   icon: ReactNode
   label: string
   value: string
-  hint: string
   accent: string
 }
 
-function MetricTile({ icon, label, value, hint, accent }: MetricTileProps) {
+function OverviewInlineMetric({
+  icon,
+  label,
+  value,
+  accent,
+}: OverviewInlineMetricProps) {
   return (
-    <div style={metricTileStyle}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ ...metricIconStyle, color: accent }}>{icon}</span>
-        <Text type='tertiary' size='small'>
-          {label}
-        </Text>
-      </div>
-      <Text strong style={{ fontSize: 24, lineHeight: 1.1, color: accent }}>
+    <div style={overviewInlineMetricStyle}>
+      <span style={{ ...overviewInlineIconStyle, color: accent }}>{icon}</span>
+      <Text type='tertiary' style={overviewInlineLabelStyle}>
+        {label}
+      </Text>
+      <Text strong style={{ ...overviewInlineValueStyle, color: accent }}>
         {value}
       </Text>
-      <Text type='tertiary' size='small'>
-        {hint}
-      </Text>
     </div>
   )
 }
 
-function SectionHeader({
-  icon,
+function DataPanel({
   title,
-  extra,
+  meta,
+  children,
 }: {
-  icon: ReactNode
   title: string
-  extra?: ReactNode
+  meta: string
+  children: ReactNode
 }) {
   return (
-    <div style={sectionHeaderStyle}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={sectionIconStyle}>{icon}</span>
-        <Title heading={6} style={{ margin: 0 }}>
-          {title}
-        </Title>
+    <div style={dataPanelStyle}>
+      <div style={dataPanelHeaderStyle}>
+        <Text strong>{title}</Text>
+        <Text type='tertiary' size='small'>
+          {meta}
+        </Text>
       </div>
-      {extra}
+      {children}
     </div>
   )
 }
 
-function MarketPerformanceRow({
-  market,
-  rank,
-  total,
-}: {
-  market: XiaoditangMarketGroup
-  rank: number
-  total: number
-}) {
-  const percent = getPercent(market.count, total)
-  const rankColor =
-    rank === 1 ? '#d97706' : rank === 2 ? '#2563eb' : rank === 3 ? '#16a34a' : '#64748b'
-
+function StatsLoadingSkeleton() {
   return (
-    <div style={marketRowStyle}>
-      <div style={rankStyle(rankColor)}>{rank}</div>
-      <Avatar size='small' style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-        {getAvatarText(market.name)}
-      </Avatar>
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Text strong ellipsis={{ showTooltip: true }} style={{ maxWidth: 180 }}>
-            {market.name}
-          </Text>
-          {market.mobile && (
-            <Text type='tertiary' size='small'>
-              {market.mobile}
-            </Text>
-          )}
+    <div style={statsContentStyle}>
+      <div className='xiaoditui-overview-strip' style={kpiStripStyle}>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} style={overviewSkeletonMetricStyle}>
+            <Skeleton.Avatar shape='square' style={overviewSkeletonIconStyle} />
+            <div style={overviewSkeletonTextStyle}>
+              <Skeleton.Paragraph rows={1} style={{ width: 72 }} />
+              <Skeleton.Title style={{ width: 96, height: 20, margin: 0 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={dataPanelStyle}>
+        <div style={dataPanelHeaderStyle}>
+          <Skeleton.Paragraph rows={1} style={{ width: 132 }} />
+          <Skeleton.Paragraph rows={1} style={{ width: 120 }} />
         </div>
-        <Progress
-          percent={percent}
-          showInfo={false}
-          size='small'
-          stroke={rank <= 3 ? 'var(--semi-color-primary)' : '#94a3b8'}
-          aria-label={`${market.name} 收集占比`}
-          style={{ marginTop: 7 }}
+        <div style={statsChartSkeletonStyle}>
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} style={statsChartSkeletonRowStyle}>
+              <Skeleton.Paragraph rows={1} style={{ width: 96 }} />
+              <div style={statsChartSkeletonTrackStyle}>
+                <Skeleton.Title
+                  style={{
+                    width: `${Math.max(28, 82 - index * 8)}%`,
+                    height: 18,
+                    margin: 0,
+                  }}
+                />
+              </div>
+              <Skeleton.Paragraph rows={1} style={{ width: 48 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PromoterCollectionBars({
+  markets,
+  hasMarketFilter,
+  rangeText,
+}: {
+  markets: XiaoditangMarketGroup[]
+  hasMarketFilter: boolean
+  rangeText: string
+}) {
+  const rows = [...markets].sort((a, b) => b.count - a.count)
+
+  if (rows.length === 0) {
+    return (
+      <div style={promoterBarsEmptyStyle}>
+        <Empty
+          image={<IconUserGroup size='extra-large' />}
+          title={hasMarketFilter ? '所选推广员该区间无数据' : '该区间还没有数据'}
+          description={rangeText}
         />
       </div>
-      <div style={{ width: 86, textAlign: 'right' }}>
-        <Text strong style={{ fontSize: 18, color: 'var(--semi-color-primary)' }}>
-          {market.count.toLocaleString()}
-        </Text>
-        <div>
-          <Text type='tertiary' size='small'>
-            {percent}%
-          </Text>
-        </div>
-      </div>
-      <Tooltip content={market.last_collected_at || '暂无时间'}>
-        <Text type='tertiary' size='small' style={{ width: 70, textAlign: 'right' }}>
-          {formatRel(market.last_collected_at)}
-        </Text>
-      </Tooltip>
-    </div>
-  )
-}
-
-function RecentSamples({ samples }: { samples: XiaoditangSampleItem[] }) {
-  if (samples.length === 0) {
-    return (
-      <Empty
-        image={<IconUser size='extra-large' />}
-        title='暂无最新收集'
-        description='当前日期范围内没有可展示的样本'
-      />
     )
   }
 
+  const chartRows = rows.map((market) => ({
+    promoter: market.name || '未记录',
+    count: market.count,
+    mobile: market.mobile || '—',
+    lastCollectedText: formatRel(market.last_collected_at),
+  }))
+  const chartHeight = Math.max(220, rows.length * 34 + 62)
+  const spec: IBarChartSpec = {
+    type: 'bar',
+    direction: 'horizontal',
+    autoFit: true,
+    padding: { top: 8, right: 72, bottom: 28, left: 8 },
+    data: [{ id: 'promoterCollection', values: chartRows }],
+    xField: 'count',
+    yField: 'promoter',
+    barMaxWidth: 18,
+    bar: {
+      style: {
+        fill: '#0f766e',
+        cornerRadius: [0, 7, 7, 0],
+      },
+      state: {
+        hover: {
+          fill: '#0d9488',
+        },
+      },
+    },
+    label: {
+      visible: true,
+      position: 'right',
+      offset: 8,
+      formatMethod: (_text, datum) =>
+        `${Number(datum?.count || 0).toLocaleString()} 条`,
+      style: {
+        fill: '#0f766e',
+        fontSize: 12,
+        fontWeight: 600,
+      },
+    },
+    axes: [
+      {
+        orient: 'left',
+        type: 'band',
+        domainLine: { visible: false },
+        tick: { visible: false },
+        label: {
+          autoLimit: true,
+          limitEllipsis: '...',
+          style: {
+            fill: '#334155',
+            fontSize: 13,
+            fontWeight: 500,
+          },
+        },
+      },
+      {
+        orient: 'bottom',
+        type: 'linear',
+        nice: true,
+        min: 0,
+        domainLine: { visible: false },
+        tick: { visible: false },
+        grid: {
+          visible: true,
+          style: {
+            stroke: '#dbe4ea',
+            lineDash: [4, 4],
+          },
+        },
+        label: {
+          style: {
+            fill: '#64748b',
+            fontSize: 12,
+          },
+        },
+      },
+    ],
+    tooltip: {
+      visible: true,
+      mark: {
+        title: { value: (datum) => datum?.promoter || '未记录' },
+        content: [
+          {
+            key: '采集数量',
+            value: (datum) => `${Number(datum?.count || 0).toLocaleString()} 条`,
+          },
+          {
+            key: '手机号',
+            value: (datum) => datum?.mobile || '—',
+          },
+          {
+            key: '最近采集',
+            value: (datum) => datum?.lastCollectedText || '—',
+          },
+        ],
+      },
+    },
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {samples.map((sample) => (
-        <div
-          key={`${sample.id ?? 'sample'}-${sample.created_at ?? ''}-${sample.mobile ?? ''}`}
-          style={sampleRowStyle}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Avatar size='small' style={{ backgroundColor: '#ecfeff', color: '#0e7490' }}>
-              {getAvatarText(formatSampleName(sample))}
-            </Avatar>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Text strong ellipsis={{ showTooltip: true }} style={{ maxWidth: 180 }}>
-                  {formatSampleName(sample)}
-                </Text>
-                {isRepeatSample(sample.is_repeat) && (
-                  <Tag color='orange' size='small'>
-                    重复
-                  </Tag>
-                )}
-              </div>
-              <div style={sampleMetaStyle}>
-                {sample.mobile && (
-                  <span style={inlineMetaStyle}>
-                    <IconPhone size='small' />
-                    <Text type='tertiary' size='small'>
-                      {sample.mobile}
-                    </Text>
-                  </span>
-                )}
-                {sample.address && (
-                  <span style={inlineMetaStyle}>
-                    <IconMapPin size='small' />
-                    <Text
-                      type='tertiary'
-                      size='small'
-                      ellipsis={{ showTooltip: true }}
-                      style={{ maxWidth: 220 }}
-                    >
-                      {sample.address}
-                    </Text>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div style={sampleFooterStyle}>
-            <span style={inlineMetaStyle}>
-              <IconClock size='small' />
-              <Text type='tertiary' size='small'>
-                {formatRel(sample.created_at)}
-              </Text>
-            </span>
-            <Text type='tertiary' size='small'>
-              {sample.market_name || '未知推广员'}
-            </Text>
-          </div>
-        </div>
-      ))}
+    <div style={promoterChartScrollStyle}>
+      <VChart
+        spec={spec}
+        style={{ height: chartHeight }}
+        options={{ mode: 'desktop-browser' }}
+      />
     </div>
   )
 }
 
-const titleStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  flexWrap: 'wrap',
-  gap: 12,
+const statsShellStyle: CSSProperties = {
+  border: '1px solid #d7dee8',
+  borderRadius: 10,
+  background: '#f7faf9',
+  overflow: 'hidden',
+  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
 }
 
-const titleIconStyle: CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 8,
+const embeddedStatsShellStyle: CSSProperties = {
+  background: '#f7faf9',
+  overflow: 'hidden',
+}
+
+const overviewInlineMetricStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: 'var(--semi-color-primary)',
-  background: 'var(--semi-color-primary-light-default)',
+  gap: 10,
+  minHeight: 48,
+  minWidth: 0,
+  padding: '0 16px',
+  whiteSpace: 'nowrap',
+}
+
+const overviewInlineIconStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 22,
+  lineHeight: 1,
+}
+
+const overviewInlineLabelStyle: CSSProperties = {
+  fontSize: 15,
+  lineHeight: '20px',
+}
+
+const overviewInlineValueStyle: CSSProperties = {
+  fontSize: 20,
+  lineHeight: '24px',
+  fontVariantNumeric: 'tabular-nums',
+  letterSpacing: 0,
 }
 
 const filterPanelStyle: CSSProperties = {
-  border: '1px solid var(--semi-color-border)',
-  borderRadius: 8,
-  background: 'var(--semi-color-fill-0)',
-  padding: 14,
-  marginBottom: 16,
+  borderBottom: '1px solid #dfe6ee',
+  background: '#fbfcfd',
+  padding: '8px 12px',
 }
 
-const filterHeaderStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  flexWrap: 'wrap',
-  gap: 12,
-  marginBottom: 14,
-}
-
-const filterIconStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: 'var(--semi-color-primary)',
-  background: 'var(--semi-color-primary-light-default)',
-  flexShrink: 0,
-}
-
-const filterGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-  gap: 14,
-  alignItems: 'start',
-}
-
-const presetGroupStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
-  flexWrap: 'wrap',
-}
-
-const loadingStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 12,
-  padding: '32px 0',
-}
-
-const overviewStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-  gap: 12,
-}
-
-const heroMetricStyle: CSSProperties = {
-  border: '1px solid var(--semi-color-border)',
-  borderRadius: 8,
-  padding: '16px 18px',
-  background: 'linear-gradient(135deg, rgba(24, 144, 255, 0.10), rgba(20, 184, 166, 0.08))',
+const compactFilterFieldStyle: CSSProperties = {
   minWidth: 0,
-}
-
-const heroNumberStyle: CSSProperties = {
-  marginTop: 6,
-  fontSize: 42,
-  lineHeight: 1,
-  fontWeight: 700,
-  color: 'var(--semi-color-primary)',
-  fontVariantNumeric: 'tabular-nums',
-}
-
-const circleProgressStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flexShrink: 0,
-}
-
-const heroMetaStyle: CSSProperties = {
+  width: '100%',
   display: 'flex',
   alignItems: 'center',
   gap: 8,
-  flexWrap: 'wrap',
-  marginTop: 14,
 }
 
-const metricTileStyle: CSSProperties = {
-  border: '1px solid var(--semi-color-border)',
-  borderRadius: 8,
-  padding: '14px 16px',
-  background: 'var(--semi-color-bg-0)',
+const compactFilterLabelStyle: CSSProperties = {
+  lineHeight: '16px',
+  width: 42,
+  flexShrink: 0,
+  textAlign: 'right',
+}
+
+const promoterFilterRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  minWidth: 0,
+  width: '100%',
+}
+
+const statsContentStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
-  minWidth: 0,
+  gap: 10,
+  padding: 12,
 }
 
-const metricIconStyle: CSSProperties = {
-  display: 'inline-flex',
+const kpiStripStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  alignItems: 'center',
+  gap: 0,
+  minHeight: 48,
+  border: '1px solid #dbe4ea',
+  borderRadius: 12,
+  background: '#fff',
+  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+  overflow: 'hidden',
+}
+
+const overviewSkeletonMetricStyle: CSSProperties = {
+  minHeight: 48,
+  minWidth: 0,
+  display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-}
-
-const insightGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-  gap: 16,
-  alignItems: 'start',
-}
-
-const sectionStyle: CSSProperties = {
-  border: '1px solid var(--semi-color-border)',
-  borderRadius: 8,
-  padding: 14,
-  background: 'var(--semi-color-bg-0)',
-  minWidth: 0,
-}
-
-const sectionHeaderStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-  marginBottom: 12,
-}
-
-const sectionIconStyle: CSSProperties = {
-  color: 'var(--semi-color-primary)',
-  display: 'inline-flex',
-}
-
-const marketRowStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '32px 32px minmax(0, 1fr) 86px 70px',
-  alignItems: 'center',
   gap: 10,
-  padding: '10px 8px',
-  borderRadius: 8,
-  background: 'var(--semi-color-fill-0)',
+  padding: '0 16px',
 }
 
-function rankStyle(color: string): CSSProperties {
-  return {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: 12,
-    color,
-    background: 'var(--semi-color-bg-0)',
-    border: '1px solid var(--semi-color-border)',
-  }
+const overviewSkeletonIconStyle: CSSProperties = {
+  width: 22,
+  height: 22,
+  borderRadius: 6,
 }
 
-const sampleRowStyle: CSSProperties = {
-  padding: 12,
-  borderRadius: 8,
-  border: '1px solid var(--semi-color-border)',
-  background: 'var(--semi-color-fill-0)',
-}
-
-const sampleMetaStyle: CSSProperties = {
+const overviewSkeletonTextStyle: CSSProperties = {
+  minWidth: 0,
   display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-  flexWrap: 'wrap',
-  marginTop: 5,
+  flexDirection: 'column',
+  gap: 5,
+}
+
+const dataPanelStyle: CSSProperties = {
+  border: '1px solid #e1e8ee',
+  borderRadius: 8,
+  background: '#fbfdff',
+  overflow: 'hidden',
   minWidth: 0,
 }
 
-const inlineMetaStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
-  minWidth: 0,
-}
-
-const sampleFooterStyle: CSSProperties = {
+const dataPanelHeaderStyle: CSSProperties = {
+  minHeight: 40,
+  padding: '9px 12px',
+  borderBottom: '1px solid #e1e8ee',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
+  gap: 10,
+  background: '#fff',
+}
+
+const promoterChartScrollStyle: CSSProperties = {
+  maxHeight: 430,
+  overflowY: 'auto',
+  padding: '12px 14px 8px',
+  background: '#fbfdff',
+}
+
+const statsChartSkeletonStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
   gap: 12,
-  marginTop: 10,
+  padding: '16px 14px 18px',
+  background: '#fbfdff',
+}
+
+const statsChartSkeletonRowStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '110px minmax(0, 1fr) 56px',
+  alignItems: 'center',
+  gap: 12,
+  minHeight: 26,
+}
+
+const statsChartSkeletonTrackStyle: CSSProperties = {
+  minWidth: 0,
+}
+
+const promoterBarsEmptyStyle: CSSProperties = {
+  minHeight: 180,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 }

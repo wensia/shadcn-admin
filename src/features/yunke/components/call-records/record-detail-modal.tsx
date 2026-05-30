@@ -445,7 +445,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               </code>
               <Button
                 theme="borderless"
-                size="small"
                 icon={<Copy style={{ height: 12, width: 12 }} />}
                 onClick={handleCopyRecordId}
                 title="复制通话 ID"
@@ -500,7 +499,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                 {hasRecording && (
                   <Button
                     theme="borderless"
-                    size="small"
                     icon={
                       downloading
                         ? <Loader2 className="animate-spin" style={{ height: 12, width: 12 }} />
@@ -517,7 +515,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                 {canDownloadTranscript && (
                   <Button
                     theme="borderless"
-                    size="small"
                     icon={<Download style={{ height: 12, width: 12 }} />}
                     onClick={handleDownloadTranscriptTxt}
                     style={{ height: 24, padding: '0 8px', fontSize: 11 }}
@@ -562,7 +559,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                     <span>
                       <Button
                         theme="borderless"
-                        size="small"
                         icon={<Copy style={{ height: 12, width: 12 }} />}
                         style={{ height: 24, padding: '0 8px', fontSize: 11 }}
                       >
@@ -627,7 +623,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                       <Button
                         theme="borderless"
                         type="tertiary"
-                        size="small"
                         icon={<SkipBack style={{ height: 14, width: 14 }} />}
                         onClick={skipBackward}
                         aria-label="快退 10 秒"
@@ -652,7 +647,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                       <Button
                         theme="borderless"
                         type="tertiary"
-                        size="small"
                         icon={<SkipForward style={{ height: 14, width: 14 }} />}
                         onClick={skipForward}
                         aria-label="快进 10 秒"
@@ -664,7 +658,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                       <Button
                         theme="borderless"
                         type="tertiary"
-                        size="small"
                         onClick={cyclePlaybackRate}
                         aria-label={`当前倍速 ${playbackRate}x`}
                         style={{
@@ -682,7 +675,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                       <Button
                         theme="borderless"
                         type="tertiary"
-                        size="small"
                         icon={<RotateCcw style={{ height: 13, width: 13 }} />}
                         onClick={resetPlayback}
                         aria-label="还原到开头"
@@ -696,7 +688,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
                       <Button
                         theme="borderless"
                         type="tertiary"
-                        size="small"
                         icon={isMuted || volume === 0 ? <VolumeX style={{ height: 13, width: 13 }} /> : <Volume2 style={{ height: 13, width: 13 }} />}
                         onClick={toggleMute}
                         aria-label={isMuted || volume === 0 ? '取消静音' : '静音'}
@@ -774,7 +765,6 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
             </span>
             <Button
               theme="borderless"
-              size="small"
               icon={analysisStatus === 'completed'
                 ? <RefreshCw style={{ height: 12, width: 12 }} />
                 : <BrainCircuit style={{ height: 12, width: 12 }} />

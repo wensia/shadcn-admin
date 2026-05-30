@@ -171,8 +171,8 @@ export function DepartmentsPage() {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
-            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDelete(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleDelete(record)} />
           </div>
         )
       },
@@ -326,7 +326,6 @@ export function DepartmentsPage() {
                 {Object.keys(PERMISSION_PRESETS).map((name) => (
                   <Button
                     key={name}
-                    size="small"
                     theme="borderless"
                     onClick={() => handleApplyPreset(name)}
                   >
@@ -334,7 +333,6 @@ export function DepartmentsPage() {
                   </Button>
                 ))}
                 <Button
-                  size="small"
                   theme="borderless"
                   type="tertiary"
                   onClick={() => formRef.current?.setValue('permissions', [])}

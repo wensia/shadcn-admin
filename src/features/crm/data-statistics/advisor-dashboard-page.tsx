@@ -309,7 +309,6 @@ function MetricToggle<T extends string>({
       {options.map((opt) => (
         <Button
           key={opt.key}
-          size="small"
           theme={active === opt.key ? 'solid' : 'light'}
           type={active === opt.key ? 'primary' : 'tertiary'}
           onClick={() => onChange(opt.key)}
@@ -1037,9 +1036,9 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
           loading={isRefreshing}
           onClick={handleRefresh}
           style={{ borderRadius: 8 }}
-        >
-          刷新
-        </Button>
+          title="刷新"
+          aria-label="刷新"
+        />
       }
       toolbar={
         <Card

@@ -3,16 +3,14 @@
  * 实现类似浏览器/IDE的tab页面导航功能
  * 使用Outlet渲染当前路由组件，保持与TanStack Router兼容
  */
-
 import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Outlet } from '@tanstack/react-router'
-import { X, LayoutDashboard } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Dropdown, Button as SemiButton } from '@douyinfe/semi-ui-19'
-import { useTabsStore, type TabInfo } from '@/stores/tabs-store'
+import { X, LayoutDashboard } from 'lucide-react'
+import { getTabGroup, useTabsStore, type TabInfo } from '@/stores/tabs-store'
 import { getRouteConfig } from '@/lib/route-components'
+import { cn } from '@/lib/utils'
 import { NotificationSidebarBell } from '@/features/notifications/components'
-
 
 /**
  * 单个Tab项组件
@@ -41,18 +39,12 @@ function TabItem({
         <Dropdown.Menu>
           {tab.closable && (
             <>
-              <Dropdown.Item onClick={onClose}>
-                关闭当前
-              </Dropdown.Item>
+              <Dropdown.Item onClick={onClose}>关闭当前</Dropdown.Item>
               <Dropdown.Divider />
             </>
           )}
-          <Dropdown.Item onClick={onCloseOthers}>
-            关闭其他
-          </Dropdown.Item>
-          <Dropdown.Item onClick={onCloseAll}>
-            关闭全部
-          </Dropdown.Item>
+          <Dropdown.Item onClick={onCloseOthers}>关闭其他</Dropdown.Item>
+          <Dropdown.Item onClick={onCloseAll}>关闭全部</Dropdown.Item>
         </Dropdown.Menu>
       }
     >
@@ -71,7 +63,7 @@ function TabItem({
           <SemiButton
             theme='borderless'
             className={cn(
-              '!ml-1 !h-auto !min-w-0 !rounded-sm !p-0.5 opacity-0 transition-opacity hover:!bg-muted group-hover:opacity-100',
+              '!ml-1 !h-auto !min-w-0 !rounded-sm !p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:!bg-muted',
               isActive && 'opacity-100'
             )}
             onClick={(e) => {
@@ -85,20 +77,6 @@ function TabItem({
       </div>
     </Dropdown>
   )
-}
-
-/**
- * TabsManager主组件
- */
-/**
- * 获取路径所属的模块前缀
- * 每个顶级路径独立一组 tabs，互不混用
- */
-function getModuleGroup(path: string): string {
-  if (path.startsWith('/yunke')) return 'yunke'
-  if (path.startsWith('/admin')) return 'admin'
-  if (path.startsWith('/hr')) return 'hr'
-  return 'crm'
 }
 
 export function TabsManager() {
@@ -120,8 +98,10 @@ export function TabsManager() {
   } = useTabsStore()
 
   // 根据当前路径过滤同模块的 tabs
-  const currentGroup = getModuleGroup(location.pathname)
-  const visibleTabs = tabs.filter(tab => getModuleGroup(tab.path) === currentGroup)
+  const currentGroup = getTabGroup(location.pathname)
+  const visibleTabs = tabs.filter(
+    (tab) => getTabGroup(tab.path) === currentGroup
+  )
 
   // 监听URL变化，同步tab状态（只处理外部导航，如侧边栏点击）
   useEffect(() => {
@@ -205,15 +185,32 @@ export function TabsManager() {
     }
   }
 
+  const navigateToActiveTab = () => {
+    const store = useTabsStore.getState()
+    const activeTab = store.tabs.find((t) => t.id === store.activeTabId)
+    if (activeTab && activeTab.path !== location.pathname) {
+      isInternalNavigation.current = true
+      lastPathRef.current = activeTab.path
+      navigate({ to: activeTab.path })
+    }
+  }
+
+  const handleCloseOtherTabs = (tabId: string) => {
+    removeOtherTabs(tabId)
+    navigateToActiveTab()
+  }
+
+  const handleCloseAllTabs = () => {
+    removeAllTabs(currentGroup)
+    navigateToActiveTab()
+  }
+
   return (
     <div className='flex h-full flex-col'>
       {/* Tab栏 */}
       <div className='flex shrink-0 items-center border-b bg-muted/30'>
         <div className='min-w-0 flex-1 overflow-x-auto'>
-          <div
-            ref={tabsContainerRef}
-            className='flex h-10 items-end'
-          >
+          <div ref={tabsContainerRef} className='flex h-10 items-end'>
             {visibleTabs.map((tab) => (
               <div key={tab.id} data-tab-id={tab.id}>
                 <TabItem
@@ -221,8 +218,8 @@ export function TabsManager() {
                   isActive={tab.id === activeTabId}
                   onActivate={() => handleActivateTab(tab.id)}
                   onClose={() => handleCloseTab(tab.id)}
-                  onCloseOthers={() => removeOtherTabs(tab.id)}
-                  onCloseAll={() => removeAllTabs()}
+                  onCloseOthers={() => handleCloseOtherTabs(tab.id)}
+                  onCloseAll={handleCloseAllTabs}
                 />
               </div>
             ))}

@@ -852,7 +852,6 @@ export function EmployeesPage() {
                   theme="borderless"
                   type="tertiary"
                   icon={<MoreHorizontal className="h-4 w-4" />}
-                  size="small"
                 />
               </span>
             </Dropdown>
@@ -1531,7 +1530,6 @@ export function EmployeesPage() {
                 />
                 <Button
                   theme="outline"
-                  size="small"
                   onClick={async () => {
                     const { copyToClipboard } = await import('@/lib/utils')
                     const success = await copyToClipboard(generatedPassword)
@@ -1711,7 +1709,6 @@ export function EmployeesPage() {
                   type="tertiary"
                   icon={showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   onClick={() => setShowApiKey(!showApiKey)}
-                  size="small"
                 />
               </div>
               <Button

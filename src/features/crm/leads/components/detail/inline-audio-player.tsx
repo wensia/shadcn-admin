@@ -125,7 +125,6 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
             <Button
               theme="borderless"
               type="tertiary"
-              size="small"
               icon={<SkipBack style={{ height: 14, width: 14 }} />}
               onClick={skipBackward}
               aria-label="快退 10 秒"
@@ -135,7 +134,6 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
         </Tooltip>
         <Button
           theme="solid"
-          size="small"
           icon={
             isPlaying
               ? <Pause style={{ height: 14, width: 14 }} />
@@ -150,7 +148,6 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
             <Button
               theme="borderless"
               type="tertiary"
-              size="small"
               icon={<SkipForward style={{ height: 14, width: 14 }} />}
               onClick={skipForward}
               aria-label="快进 10 秒"
@@ -222,7 +219,6 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             icon={
               isMuted || volume === 0
                 ? <VolumeX style={{ height: 14, width: 14 }} />
@@ -246,7 +242,6 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             icon={<Download style={{ height: 14, width: 14 }} />}
             style={{ height: 28, width: 28, padding: 0 }}
           />
@@ -259,7 +254,6 @@ export function InlineAudioPlayer({ audioUrl, title, onClose }: InlineAudioPlaye
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             icon={<X style={{ height: 14, width: 14 }} />}
             onClick={handleClose}
             aria-label="关闭播放器"

@@ -138,7 +138,6 @@ export function Apps() {
                 </div>
                 <Button
                   theme='outline'
-                  size='small'
                   className={`${app.connected ? 'border border-blue-300 bg-blue-50 hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900' : ''}`}
                 >
                   {app.connected ? 'Connected' : 'Connect'}

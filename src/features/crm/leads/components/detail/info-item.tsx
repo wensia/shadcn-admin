@@ -215,7 +215,6 @@ export function InfoItem({
               (opt: AsyncSelectOptionItem) => String(opt[labelKey] ?? '').toLowerCase() === searchQuery.toLowerCase()
             ) && (
               <Button
-                size="small"
                 theme="light"
                 icon={isCreating ? <IconLoading /> : <IconPlus />}
                 disabled={isCreating}
@@ -285,8 +284,8 @@ export function InfoItem({
                 <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--semi-color-text-2)' }}>{label}</div>
                 {renderEditControl()}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <Button size="small" theme="light" onClick={() => setIsEditing(false)} disabled={isSaving}>取消</Button>
-                  <Button size="small" theme="solid" onClick={handleSave} disabled={isSaving}>
+                  <Button theme="light" onClick={() => setIsEditing(false)} disabled={isSaving}>取消</Button>
+                  <Button theme="solid" onClick={handleSave} disabled={isSaving}>
                     {isSaving && <IconLoading spin style={{ marginRight: 4 }} />}
                     保存
                   </Button>

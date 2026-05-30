@@ -26,6 +26,8 @@ import type {
   AdvisorPendingByChannelResponse
 } from './types'
 
+const COURSE_ADVISOR_DEPARTMENT_NAMES = '咨询部,TMK'
+
 /**
  * Leads API对象
  * 包含所有线索管理相关的API方法
@@ -463,6 +465,7 @@ export const employeeApi = {
     size?: number
     search?: string
     campus_name?: string
+    department_names?: string
     is_active?: boolean
   }): Promise<EmployeeListResponse> {
     return apiClient.get<EmployeeListResponse>('/employees', {
@@ -475,7 +478,7 @@ export const employeeApi = {
     })
   },
 
-  /** 获取课程顾问列表（用于线索分配） */
+  /** 获取咨询部/TMK员工列表（用于线索分配；按部门筛选，不按岗位筛选） */
   getCourseAdvisors(params?: {
     page?: number
     size?: number
@@ -486,7 +489,7 @@ export const employeeApi = {
     return apiClient.get<EmployeeListResponse>('/employees', {
       params: filterUndefined({
         ...params,
-        position_names: '顾问,销售顾问,课程顾问,课程销售',
+        department_names: COURSE_ADVISOR_DEPARTMENT_NAMES,
         is_active: params?.is_active !== false,
         include_identities: true,
         use_cache: false

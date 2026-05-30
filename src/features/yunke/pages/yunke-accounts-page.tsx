@@ -319,7 +319,6 @@ function SubAccountsTable({
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  size="small"
                   icon={<Unlink style={{ width: 12, height: 12 }} />}
                   style={{ width: 24, height: 24, padding: 0, flex: '0 0 auto' }}
                   onClick={() => handleUnbindClick(record)}
@@ -330,7 +329,6 @@ function SubAccountsTable({
           return (
             <Button
               theme="outline"
-              size="small"
               style={{ height: 28, fontSize: 12 }}
               onClick={() => handleBindClick(record)}
             >
@@ -456,7 +454,6 @@ function SubAccountsTable({
               <Button
                 theme="borderless"
                 icon={<IconMore />}
-                size="small"
                 style={{ height: 28, width: 32 }}
               />
             </Dropdown>
@@ -804,7 +801,6 @@ function SubAccountsTable({
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<Copy style={{ width: 12, height: 12 }} />}
                 style={{ width: 24, height: 24, padding: 0 }}
                 onClick={() => handleCopyToClipboard(selectedAccount?.real_name || '', '姓名')}
@@ -818,7 +814,6 @@ function SubAccountsTable({
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<Copy style={{ width: 12, height: 12 }} />}
                 style={{ width: 24, height: 24, padding: 0 }}
                 onClick={() => handleCopyToClipboard(selectedAccount?.username || '', '账号')}
@@ -832,7 +827,6 @@ function SubAccountsTable({
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<Copy style={{ width: 12, height: 12 }} />}
                 style={{ width: 24, height: 24, padding: 0 }}
                 onClick={() => handleCopyToClipboard(passwordResult?.new_password || '', '密码')}
@@ -1147,7 +1141,6 @@ export function YunkeAccountsPage() {
                 <Button
                   theme="solid"
                   type="primary"
-                  size="small"
                   icon={<UserPlus style={{ width: 14, height: 14 }} />}
                   disabled={cred.status !== 1}
                   onClick={() => setOnboardingCred(cred)}

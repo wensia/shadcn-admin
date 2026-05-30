@@ -286,7 +286,6 @@ export function CampusDepartmentsPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Eye className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleViewEmployees(record!)}
               />
             </Tooltip>
@@ -295,7 +294,6 @@ export function CampusDepartmentsPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Users className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleManageManagers(record!)}
               />
             </Tooltip>
@@ -303,7 +301,6 @@ export function CampusDepartmentsPage() {
               theme="borderless"
               type="danger"
               icon={<Trash2 className="h-4 w-4" />}
-              size="small"
               onClick={() => handleDeleteClick(record!)}
             />
           </div>

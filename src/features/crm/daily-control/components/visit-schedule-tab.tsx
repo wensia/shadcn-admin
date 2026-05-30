@@ -386,7 +386,7 @@ export function VisitScheduleTab({ mode, dateFrom, dateTo, creatorCampusId }: Vi
           }
         >
           <span style={{ display: 'inline-flex' }}>
-            <Button theme="borderless" icon={<IconMore />} size="small" />
+            <Button theme="borderless" icon={<IconMore />} />
           </span>
         </Dropdown>
       )

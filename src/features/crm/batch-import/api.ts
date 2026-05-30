@@ -2,7 +2,6 @@
  * 批量导入 API
  * 从旧版前端批量导入 API 迁移
  */
-
 import { apiClient } from '@/lib/api/client'
 import type { ApiResponse, PaginatedResponse } from '@/lib/api/types'
 import type {
@@ -107,7 +106,7 @@ export const batchImportApi = {
     }
 
     return apiClient.post<ApiResponse<UploadResponse>>(
-      '/lead-batch-import/upload-async',  // 使用智能处理接口
+      '/lead-batch-import/upload-async', // 使用智能处理接口
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -139,7 +138,12 @@ export const batchImportApi = {
   ): Promise<ApiResponse<FailureListResponse>> {
     return apiClient.get<ApiResponse<FailureListResponse>>(
       `/lead-batch-import/failures/${batchId}`,
-      { params }
+      {
+        params: {
+          page: params.page,
+          size: params.page_size,
+        },
+      }
     )
   },
 

@@ -261,7 +261,6 @@ export function DiscAccessGrantModal({ visible, onClose }: DiscAccessGrantModalP
             theme="borderless"
             type="danger"
             icon={<IconDelete />}
-            size="small"
           />
         </Popconfirm>
       ),
@@ -283,9 +282,9 @@ export function DiscAccessGrantModal({ visible, onClose }: DiscAccessGrantModalP
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Text type="tertiary" style={{ fontSize: 13 }}>共 {employeeData?.total || 0} 位员工</Text>
-              <Button size="small" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>上一页</Button>
+              <Button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>上一页</Button>
               <Text style={{ fontSize: 13 }}>{page} / {totalPages}</Text>
-              <Button size="small" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>下一页</Button>
+              <Button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>下一页</Button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Button onClick={onClose}>关闭</Button>

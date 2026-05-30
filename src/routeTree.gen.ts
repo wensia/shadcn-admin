@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZhongkaoTestRouteImport } from './routes/zhongkao-test'
+import { Route as XiaodituiCameraRouteImport } from './routes/xiaoditui-camera'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeadSubmitRouteImport } from './routes/lead-submit'
 import { Route as DiscTestRouteImport } from './routes/disc-test'
@@ -137,9 +138,12 @@ import { Route as AuthenticatedAdminAreaDepartmentsRouteImport } from './routes/
 import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin/api-keys'
 import { Route as AuthenticatedAdminAiConfigRouteImport } from './routes/_authenticated/admin/ai-config'
 import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
+import { Route as AuthenticatedCrmXiaodituiSalaryRouteImport } from './routes/_authenticated/crm/xiaoditui_.salary'
+import { Route as AuthenticatedCrmXiaodituiLeadsRouteImport } from './routes/_authenticated/crm/xiaoditui_.leads'
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
 import { Route as AuthenticatedCrmLeadsNurtureRouteImport } from './routes/_authenticated/crm/leads/nurture'
 import { Route as AuthenticatedCrmDataStatisticsMarketingRouteImport } from './routes/_authenticated/crm/data-statistics/marketing'
+import { Route as AuthenticatedCrmDataStatisticsLeadPaymentRouteImport } from './routes/_authenticated/crm/data-statistics/lead-payment'
 import { Route as AuthenticatedCrmDataStatisticsConsultingRouteImport } from './routes/_authenticated/crm/data-statistics/consulting'
 import { Route as AuthenticatedCrmDataStatisticsAdvisorRouteImport } from './routes/_authenticated/crm/data-statistics/advisor'
 import { Route as AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/index'
@@ -148,6 +152,11 @@ import { Route as AuthenticatedCrmLeadsAssignmentTasksTaskIdRouteImport } from '
 const ZhongkaoTestRoute = ZhongkaoTestRouteImport.update({
   id: '/zhongkao-test',
   path: '/zhongkao-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const XiaodituiCameraRoute = XiaodituiCameraRouteImport.update({
+  id: '/xiaoditui-camera',
+  path: '/xiaoditui-camera',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -857,6 +866,18 @@ const AuthenticatedCrmLeadsIndexRoute =
     path: '/leads/',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedCrmXiaodituiSalaryRoute =
+  AuthenticatedCrmXiaodituiSalaryRouteImport.update({
+    id: '/xiaoditui_/salary',
+    path: '/xiaoditui/salary',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmXiaodituiLeadsRoute =
+  AuthenticatedCrmXiaodituiLeadsRouteImport.update({
+    id: '/xiaoditui_/leads',
+    path: '/xiaoditui/leads',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
 const AuthenticatedCrmLeadsPoolRoute =
   AuthenticatedCrmLeadsPoolRouteImport.update({
     id: '/leads/pool',
@@ -873,6 +894,12 @@ const AuthenticatedCrmDataStatisticsMarketingRoute =
   AuthenticatedCrmDataStatisticsMarketingRouteImport.update({
     id: '/data-statistics/marketing',
     path: '/data-statistics/marketing',
+    getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmDataStatisticsLeadPaymentRoute =
+  AuthenticatedCrmDataStatisticsLeadPaymentRouteImport.update({
+    id: '/data-statistics/lead-payment',
+    path: '/data-statistics/lead-payment',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
 const AuthenticatedCrmDataStatisticsConsultingRoute =
@@ -910,6 +937,7 @@ export interface FileRoutesByFullPath {
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
+  '/xiaoditui-camera': typeof XiaodituiCameraRoute
   '/zhongkao-test': typeof ZhongkaoTestRoute
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/crm': typeof AuthenticatedCrmRouteRouteWithChildren
@@ -1026,9 +1054,12 @@ export interface FileRoutesByFullPath {
   '/yunke/': typeof AuthenticatedYunkeIndexRoute
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
+  '/crm/data-statistics/lead-payment': typeof AuthenticatedCrmDataStatisticsLeadPaymentRoute
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/crm/leads/nurture': typeof AuthenticatedCrmLeadsNurtureRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
+  '/crm/xiaoditui/leads': typeof AuthenticatedCrmXiaodituiLeadsRoute
+  '/crm/xiaoditui/salary': typeof AuthenticatedCrmXiaodituiSalaryRoute
   '/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
   '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
   '/crm/leads/assignment-tasks/': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
@@ -1043,6 +1074,7 @@ export interface FileRoutesByTo {
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
+  '/xiaoditui-camera': typeof XiaodituiCameraRoute
   '/zhongkao-test': typeof ZhongkaoTestRoute
   '/hr': typeof AuthenticatedHrRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -1154,9 +1186,12 @@ export interface FileRoutesByTo {
   '/yunke': typeof AuthenticatedYunkeIndexRoute
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
+  '/crm/data-statistics/lead-payment': typeof AuthenticatedCrmDataStatisticsLeadPaymentRoute
   '/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/crm/leads/nurture': typeof AuthenticatedCrmLeadsNurtureRoute
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
+  '/crm/xiaoditui/leads': typeof AuthenticatedCrmXiaodituiLeadsRoute
+  '/crm/xiaoditui/salary': typeof AuthenticatedCrmXiaodituiSalaryRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
   '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
   '/crm/leads/assignment-tasks': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
@@ -1173,6 +1208,7 @@ export interface FileRoutesById {
   '/disc-test': typeof DiscTestRoute
   '/lead-submit': typeof LeadSubmitRoute
   '/login': typeof LoginRoute
+  '/xiaoditui-camera': typeof XiaodituiCameraRoute
   '/zhongkao-test': typeof ZhongkaoTestRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/crm': typeof AuthenticatedCrmRouteRouteWithChildren
@@ -1292,9 +1328,12 @@ export interface FileRoutesById {
   '/_authenticated/yunke/': typeof AuthenticatedYunkeIndexRoute
   '/_authenticated/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/_authenticated/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
+  '/_authenticated/crm/data-statistics/lead-payment': typeof AuthenticatedCrmDataStatisticsLeadPaymentRoute
   '/_authenticated/crm/data-statistics/marketing': typeof AuthenticatedCrmDataStatisticsMarketingRoute
   '/_authenticated/crm/leads/nurture': typeof AuthenticatedCrmLeadsNurtureRoute
   '/_authenticated/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
+  '/_authenticated/crm/xiaoditui_/leads': typeof AuthenticatedCrmXiaodituiLeadsRoute
+  '/_authenticated/crm/xiaoditui_/salary': typeof AuthenticatedCrmXiaodituiSalaryRoute
   '/_authenticated/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
   '/_authenticated/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
   '/_authenticated/crm/leads/assignment-tasks/': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
@@ -1311,6 +1350,7 @@ export interface FileRouteTypes {
     | '/disc-test'
     | '/lead-submit'
     | '/login'
+    | '/xiaoditui-camera'
     | '/zhongkao-test'
     | '/admin'
     | '/crm'
@@ -1427,9 +1467,12 @@ export interface FileRouteTypes {
     | '/yunke/'
     | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
+    | '/crm/data-statistics/lead-payment'
     | '/crm/data-statistics/marketing'
     | '/crm/leads/nurture'
     | '/crm/leads/pool'
+    | '/crm/xiaoditui/leads'
+    | '/crm/xiaoditui/salary'
     | '/crm/leads/'
     | '/crm/leads/assignment-tasks/$taskId'
     | '/crm/leads/assignment-tasks/'
@@ -1444,6 +1487,7 @@ export interface FileRouteTypes {
     | '/disc-test'
     | '/lead-submit'
     | '/login'
+    | '/xiaoditui-camera'
     | '/zhongkao-test'
     | '/hr'
     | '/forgot-password'
@@ -1555,9 +1599,12 @@ export interface FileRouteTypes {
     | '/yunke'
     | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
+    | '/crm/data-statistics/lead-payment'
     | '/crm/data-statistics/marketing'
     | '/crm/leads/nurture'
     | '/crm/leads/pool'
+    | '/crm/xiaoditui/leads'
+    | '/crm/xiaoditui/salary'
     | '/crm/leads'
     | '/crm/leads/assignment-tasks/$taskId'
     | '/crm/leads/assignment-tasks'
@@ -1573,6 +1620,7 @@ export interface FileRouteTypes {
     | '/disc-test'
     | '/lead-submit'
     | '/login'
+    | '/xiaoditui-camera'
     | '/zhongkao-test'
     | '/_authenticated/admin'
     | '/_authenticated/crm'
@@ -1692,9 +1740,12 @@ export interface FileRouteTypes {
     | '/_authenticated/yunke/'
     | '/_authenticated/crm/data-statistics/advisor'
     | '/_authenticated/crm/data-statistics/consulting'
+    | '/_authenticated/crm/data-statistics/lead-payment'
     | '/_authenticated/crm/data-statistics/marketing'
     | '/_authenticated/crm/leads/nurture'
     | '/_authenticated/crm/leads/pool'
+    | '/_authenticated/crm/xiaoditui_/leads'
+    | '/_authenticated/crm/xiaoditui_/salary'
     | '/_authenticated/crm/leads/'
     | '/_authenticated/crm/leads/assignment-tasks/$taskId'
     | '/_authenticated/crm/leads/assignment-tasks/'
@@ -1711,6 +1762,7 @@ export interface RootRouteChildren {
   DiscTestRoute: typeof DiscTestRoute
   LeadSubmitRoute: typeof LeadSubmitRoute
   LoginRoute: typeof LoginRoute
+  XiaodituiCameraRoute: typeof XiaodituiCameraRoute
   ZhongkaoTestRoute: typeof ZhongkaoTestRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOtpRoute: typeof authOtpRoute
@@ -1735,6 +1787,13 @@ declare module '@tanstack/react-router' {
       path: '/zhongkao-test'
       fullPath: '/zhongkao-test'
       preLoaderRoute: typeof ZhongkaoTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/xiaoditui-camera': {
+      id: '/xiaoditui-camera'
+      path: '/xiaoditui-camera'
+      fullPath: '/xiaoditui-camera'
+      preLoaderRoute: typeof XiaodituiCameraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -2626,6 +2685,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmLeadsIndexRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/crm/xiaoditui_/salary': {
+      id: '/_authenticated/crm/xiaoditui_/salary'
+      path: '/xiaoditui/salary'
+      fullPath: '/crm/xiaoditui/salary'
+      preLoaderRoute: typeof AuthenticatedCrmXiaodituiSalaryRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/xiaoditui_/leads': {
+      id: '/_authenticated/crm/xiaoditui_/leads'
+      path: '/xiaoditui/leads'
+      fullPath: '/crm/xiaoditui/leads'
+      preLoaderRoute: typeof AuthenticatedCrmXiaodituiLeadsRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
     '/_authenticated/crm/leads/pool': {
       id: '/_authenticated/crm/leads/pool'
       path: '/leads/pool'
@@ -2645,6 +2718,13 @@ declare module '@tanstack/react-router' {
       path: '/data-statistics/marketing'
       fullPath: '/crm/data-statistics/marketing'
       preLoaderRoute: typeof AuthenticatedCrmDataStatisticsMarketingRouteImport
+      parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/data-statistics/lead-payment': {
+      id: '/_authenticated/crm/data-statistics/lead-payment'
+      path: '/data-statistics/lead-payment'
+      fullPath: '/crm/data-statistics/lead-payment'
+      preLoaderRoute: typeof AuthenticatedCrmDataStatisticsLeadPaymentRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
     '/_authenticated/crm/data-statistics/consulting': {
@@ -2798,9 +2878,12 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmIndexRoute: typeof AuthenticatedCrmIndexRoute
   AuthenticatedCrmDataStatisticsAdvisorRoute: typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   AuthenticatedCrmDataStatisticsConsultingRoute: typeof AuthenticatedCrmDataStatisticsConsultingRoute
+  AuthenticatedCrmDataStatisticsLeadPaymentRoute: typeof AuthenticatedCrmDataStatisticsLeadPaymentRoute
   AuthenticatedCrmDataStatisticsMarketingRoute: typeof AuthenticatedCrmDataStatisticsMarketingRoute
   AuthenticatedCrmLeadsNurtureRoute: typeof AuthenticatedCrmLeadsNurtureRoute
   AuthenticatedCrmLeadsPoolRoute: typeof AuthenticatedCrmLeadsPoolRoute
+  AuthenticatedCrmXiaodituiLeadsRoute: typeof AuthenticatedCrmXiaodituiLeadsRoute
+  AuthenticatedCrmXiaodituiSalaryRoute: typeof AuthenticatedCrmXiaodituiSalaryRoute
   AuthenticatedCrmLeadsIndexRoute: typeof AuthenticatedCrmLeadsIndexRoute
   AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute: typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
   AuthenticatedCrmLeadsAssignmentTasksIndexRoute: typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
@@ -2842,10 +2925,14 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
     AuthenticatedCrmDataStatisticsAdvisorRoute,
   AuthenticatedCrmDataStatisticsConsultingRoute:
     AuthenticatedCrmDataStatisticsConsultingRoute,
+  AuthenticatedCrmDataStatisticsLeadPaymentRoute:
+    AuthenticatedCrmDataStatisticsLeadPaymentRoute,
   AuthenticatedCrmDataStatisticsMarketingRoute:
     AuthenticatedCrmDataStatisticsMarketingRoute,
   AuthenticatedCrmLeadsNurtureRoute: AuthenticatedCrmLeadsNurtureRoute,
   AuthenticatedCrmLeadsPoolRoute: AuthenticatedCrmLeadsPoolRoute,
+  AuthenticatedCrmXiaodituiLeadsRoute: AuthenticatedCrmXiaodituiLeadsRoute,
+  AuthenticatedCrmXiaodituiSalaryRoute: AuthenticatedCrmXiaodituiSalaryRoute,
   AuthenticatedCrmLeadsIndexRoute: AuthenticatedCrmLeadsIndexRoute,
   AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute:
     AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute,
@@ -3051,6 +3138,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscTestRoute: DiscTestRoute,
   LeadSubmitRoute: LeadSubmitRoute,
   LoginRoute: LoginRoute,
+  XiaodituiCameraRoute: XiaodituiCameraRoute,
   ZhongkaoTestRoute: ZhongkaoTestRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOtpRoute: authOtpRoute,

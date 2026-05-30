@@ -235,7 +235,7 @@ export function ApiKeysPage() {
 
           if (!record.has_api_key) {
             return (
-              <Button theme="outline" size="small" icon={<Plus className="h-4 w-4" />} onClick={() => handleCreateClick(record)}>
+              <Button theme="outline" icon={<Plus className="h-4 w-4" />} onClick={() => handleCreateClick(record)}>
                 创建密钥
               </Button>
             )
@@ -243,8 +243,8 @@ export function ApiKeysPage() {
 
           return (
             <div style={{ display: 'flex', gap: 4 }}>
-              <Button theme="borderless" type="tertiary" icon={<RefreshCw className="h-4 w-4" />} size="small" onClick={() => handleRegenerateClick(record)} />
-              <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
+              <Button theme="borderless" type="tertiary" icon={<RefreshCw className="h-4 w-4" />} onClick={() => handleRegenerateClick(record)} />
+              <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleDeleteClick(record)} />
             </div>
           )
         },

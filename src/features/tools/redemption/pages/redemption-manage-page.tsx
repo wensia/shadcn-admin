@@ -240,7 +240,6 @@ export function RedemptionManagePage() {
           <Button
             theme="light"
             type="danger"
-            size="small"
             disabled={record.is_exhausted}
             data-stop-row-click
             onClick={() => {

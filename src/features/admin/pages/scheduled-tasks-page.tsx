@@ -382,14 +382,12 @@ export function ScheduledTasksPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Pencil className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleEdit(record)}
               />
               <Button
                 theme="borderless"
                 type="tertiary"
                 icon={<Play className="h-4 w-4 text-green-500" />}
-                size="small"
                 onClick={() => handleRunClick(record)}
                 disabled={runNowMutation.isPending}
               />
@@ -397,7 +395,6 @@ export function ScheduledTasksPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Trash2 className="h-4 w-4" style={{ color: 'var(--semi-color-danger)' }} />}
-                size="small"
                 onClick={() => handleDeleteClick(record)}
               />
             </div>
@@ -487,7 +484,6 @@ export function ScheduledTasksPage() {
             theme="borderless"
             type="tertiary"
             icon={<FileText className="h-4 w-4 text-blue-500" />}
-            size="small"
             onClick={(e) => {
               e.stopPropagation()
               handleViewLog(record)
@@ -841,7 +837,6 @@ export function ScheduledTasksPage() {
                         key={preset.label}
                         type="tertiary"
                         theme="outline"
-                        size="small"
                         onClick={() => handleApplyPreset(preset)}
                       >
                         {preset.label}
@@ -981,9 +976,13 @@ export function ScheduledTasksPage() {
         width={600}
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button theme="outline" icon={<IconRefresh />} onClick={() => refetchTaskResult()}>
-              刷新
-            </Button>
+            <Button
+              theme="outline"
+              icon={<IconRefresh />}
+              onClick={() => refetchTaskResult()}
+              title="刷新"
+              aria-label="刷新"
+            />
             <Button theme="solid" type="primary" onClick={() => setLogDialogOpen(false)}>关闭</Button>
           </div>
         }

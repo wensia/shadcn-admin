@@ -87,6 +87,56 @@
   }
 }
 
+/* Semi only adds input prefix/suffix spacing for string prefixes and Semi icons.
+   Custom React nodes such as lucide icons need the same global inset. */
+.semi-input-wrapper__with-prefix
+  .semi-input-prefix:not(.semi-input-prefix-icon):not(
+    .semi-input-prefix-text
+  ):not(.semi-input-inset-label),
+.semi-input-wrapper__with-suffix
+  .semi-input-suffix:not(.semi-input-suffix-icon):not(
+    .semi-input-suffix-text
+  ):not(.semi-input-suffix-hidden) {
+  flex-shrink: 0;
+  margin-inline: 8px;
+  color: var(--semi-color-text-2);
+  line-height: 1;
+}
+
+.semi-input-wrapper__with-prefix
+  .semi-input-prefix:not(.semi-input-prefix-icon):not(
+    .semi-input-prefix-text
+  ):not(.semi-input-inset-label)
+  > svg,
+.semi-input-wrapper__with-suffix
+  .semi-input-suffix:not(.semi-input-suffix-icon):not(
+    .semi-input-suffix-text
+  ):not(.semi-input-suffix-hidden)
+  > svg {
+  flex-shrink: 0;
+}
+
+/* Feishu theme resets Semi Tag to inline-block after Semi's base CSS.
+   Select value tags must stay flex so closable icons remain on the same line. */
+.semi-select-selection .semi-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.semi-select-selection .semi-tag-content,
+.semi-select-selection .semi-tag-content-center {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.semi-select-selection .semi-tag-close {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
 @utility container {
   margin-inline: auto;
   padding-inline: 2rem;
@@ -218,7 +268,27 @@
   flex-direction: column;
   flex: 1 1 0%;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
+}
+
+/* Xiaoditui account tabs fill the remaining page height and scroll inside panes. */
+.xiaoditui-account-data-tabs.semi-tabs {
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.xiaoditui-account-data-tabs.semi-tabs .semi-tabs-content,
+.xiaoditui-account-data-tabs.semi-tabs .semi-tabs-pane-motion-overlay,
+.xiaoditui-account-data-tabs.semi-tabs .semi-tabs-pane-active.semi-tabs-pane {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
 }
 
 /* =============================================================================
@@ -551,6 +621,19 @@
 }
 
 /* =============================================================================
+   Semi Modal: footer={null} 时保留底部安全间距
+
+   Semi Modal 的垂直内边距默认来自 header/body/footer 的 margin。
+   当业务弹窗隐藏 footer 并在 body 内自绘底部操作区时，原本由 footer
+   提供的 24px 底部留白会消失。这里只兜底无 footer 的 Modal，避免按钮
+   或末尾内容贴住圆角底边；带 footer 的 Modal 继续使用 Semi 默认间距。
+============================================================================= */
+
+.semi-modal-content:not(:has(> .semi-modal-footer)) > .semi-modal-body {
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+/* =============================================================================
    Markdown 三级语义标记：***加粗斜体*** = 风险/警告色（红色）
    原理：***text*** 渲染为 <em><strong>text</strong></em>（react-markdown: em 在外）
    通过 CSS 级联将 em 内的 strong 变为红色 + 取消斜体
@@ -767,4 +850,168 @@
 .neo-context .semi-tabs-tab-active {
   background-color: var(--foreground) !important;
   color: var(--background) !important;
+}
+
+.xiaoditui-overview-strip > div:not(:last-child) {
+  border-right: 1px solid #e5e7eb;
+}
+
+.xiaoditui-salary-detail-modal .semi-modal-header {
+  margin-bottom: 8px;
+}
+
+.xiaoditui-settlement-table .semi-table-footer {
+  padding: 0 !important;
+  border-top: 1px solid #dbe5ef;
+  background: #f8fafc;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.xiaoditui-activity-filter-bar,
+.xiaoditui-parttime-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.xiaoditui-activity-filter-grid,
+.xiaoditui-parttime-filter-grid {
+  display: grid;
+  align-items: center;
+  gap: 12px 20px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.xiaoditui-activity-filter-grid {
+  grid-template-columns:
+    minmax(280px, 1.15fr)
+    minmax(360px, 1fr)
+    minmax(280px, 1fr);
+}
+
+.xiaoditui-parttime-filter-grid--calendar {
+  grid-template-columns:
+    minmax(280px, 1.1fr)
+    minmax(300px, 1fr)
+    minmax(220px, 0.75fr);
+}
+
+.xiaoditui-parttime-filter-grid--summary {
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+}
+
+.xiaoditui-parttime-filter-grid--salary {
+  grid-template-columns:
+    minmax(240px, 1fr)
+    minmax(360px, 1.3fr)
+    minmax(240px, 0.85fr)
+    minmax(180px, 0.65fr)
+    minmax(180px, 0.65fr);
+}
+
+.xiaoditui-activity-filter-field,
+.xiaoditui-filter-field {
+  width: auto;
+  min-width: 0;
+}
+
+.xiaoditui-activity-filter-field > .semi-select,
+.xiaoditui-activity-filter-field > .semi-datepicker,
+.xiaoditui-filter-field > .semi-select,
+.xiaoditui-filter-field > .semi-datepicker,
+.xiaoditui-filter-field > .semi-input-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.xiaoditui-activity-filter-actions,
+.xiaoditui-parttime-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.xiaoditui-parttime-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+}
+
+.xiaoditui-salary-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(520px, 600px);
+}
+
+.organization-member-collapse .semi-collapse-header {
+  margin: 0;
+  padding: 0 12px;
+  border-radius: 0;
+}
+
+@media (max-width: 1440px) {
+  .xiaoditui-parttime-filter-grid--salary {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 1280px) {
+  .xiaoditui-activity-filter-bar,
+  .xiaoditui-parttime-filter-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xiaoditui-activity-filter-grid,
+  .xiaoditui-parttime-filter-grid {
+    grid-template-columns: repeat(2, minmax(300px, 1fr));
+  }
+
+  .xiaoditui-activity-filter-actions,
+  .xiaoditui-parttime-filter-actions {
+    justify-content: flex-end;
+  }
+
+  .xiaoditui-salary-summary-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 1080px) {
+  .xiaoditui-parttime-filter-grid {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .xiaoditui-activity-filter-grid,
+  .xiaoditui-parttime-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xiaoditui-activity-filter-actions,
+  .xiaoditui-parttime-filter-actions {
+    justify-content: flex-start;
+  }
+
+  .xiaoditui-salary-summary-strip {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .xiaoditui-parttime-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xiaoditui-salary-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xiaoditui-parttime-detail {
+    position: static !important;
+    max-height: none !important;
+  }
 }

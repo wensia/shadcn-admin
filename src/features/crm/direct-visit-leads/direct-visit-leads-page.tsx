@@ -176,7 +176,7 @@ function AssignDialog({ record, open, onClose, onSuccess }: AssignDialogProps) {
 
   const assignMutation = useMutation({
     mutationFn: async () => {
-      if (!record || !selectedAdvisor) throw new Error('请选择顾问')
+      if (!record || !selectedAdvisor) throw new Error('请选择咨询部/TMK员工')
       const response = await directVisitLeadsApi.assign(record.id, selectedAdvisor.id)
       return response.data
     },
@@ -257,11 +257,10 @@ function AssignDialog({ record, open, onClose, onSuccess }: AssignDialogProps) {
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Text type="tertiary" size="small">共 {advisorData?.total || 0} 位顾问</Text>
-            <Button size="small" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>上一页</Button>
+            <Text type="tertiary" size="small">共 {advisorData?.total || 0} 位咨询部/TMK员工</Text>
+            <Button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>上一页</Button>
             <Text size="small">{page} / {Math.max(1, Math.ceil((advisorData?.total || 0) / pageSize))}</Text>
             <Button
-              size="small"
               disabled={page >= Math.ceil((advisorData?.total || 0) / pageSize)}
               onClick={() => setPage((p) => p + 1)}
             >
@@ -276,7 +275,7 @@ function AssignDialog({ record, open, onClose, onSuccess }: AssignDialogProps) {
               loading={assignMutation.isPending}
               onClick={() => assignMutation.mutate()}
             >
-              {selectedAdvisor ? `确定分配给 ${selectedAdvisor.name}` : '请选择顾问'}
+              {selectedAdvisor ? `确定分配给 ${selectedAdvisor.name}` : '请选择咨询部/TMK员工'}
             </Button>
           </div>
         </div>
@@ -285,7 +284,7 @@ function AssignDialog({ record, open, onClose, onSuccess }: AssignDialogProps) {
       <div style={{ padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <Space>
-            <Text type="tertiary" size="small">搜索顾问</Text>
+            <Text type="tertiary" size="small">搜索咨询部/TMK员工</Text>
             <Input
               prefix={<IconSearch />}
               value={searchText}
@@ -329,7 +328,7 @@ function AssignDialog({ record, open, onClose, onSuccess }: AssignDialogProps) {
           })}
           empty={
             <div style={{ padding: '32px 0', textAlign: 'center' }}>
-              <Text type="tertiary">暂无顾问数据</Text>
+              <Text type="tertiary">暂无咨询部/TMK员工数据</Text>
             </div>
           }
         />
@@ -654,7 +653,6 @@ function ReceptionDialog({ record, open, onClose, onSuccess }: ReceptionDialogPr
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text type="tertiary" size="small">提出的问题</Text>
             <Button
-              size="small"
               theme="borderless"
               icon={<Plus className="h-4 w-4" />}
               onClick={() => setQuestions((items) => [...items, ''])}
@@ -1395,7 +1393,6 @@ export function DirectVisitLeadsPage() {
         if (record.status === 'pending_assign') {
           return (
             <Button
-              size="small"
               theme="light"
               type="warning"
               icon={<UserPlus className="h-4 w-4" />}
@@ -1486,7 +1483,6 @@ export function DirectVisitLeadsPage() {
               }
             >
               <Button
-                size="small"
                 theme="borderless"
                 type="tertiary"
                 icon={<IconMore />}

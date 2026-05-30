@@ -107,7 +107,8 @@ export function DataTableLayout({
                 theme="light"
                 onClick={onRefresh}
                 loading={isRefreshing}
-                title="刷新数据"
+                title="刷新"
+                aria-label="刷新"
                 style={{ flexShrink: 0, marginTop: 1 }}
               />
             )}

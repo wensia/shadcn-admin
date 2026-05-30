@@ -345,7 +345,6 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
                       ? <FileText style={{ width: 16, height: 16 }} />
                       : <Play style={{ width: 16, height: 16 }} />
                     }
-                    size="small"
                     onClick={() => onPlayRecord(record)}
                   />
                 </span>
@@ -356,7 +355,6 @@ export function createCallRecordsColumns(options: CreateColumnsOptions = {}): Co
                 <Button
                   theme="borderless"
                   icon={<Copy style={{ width: 15, height: 15 }} />}
-                  size="small"
                   onClick={(event) => {
                     event.stopPropagation()
                     void copyRecordId(record)

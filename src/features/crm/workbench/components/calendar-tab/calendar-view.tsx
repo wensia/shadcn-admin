@@ -194,18 +194,16 @@ export function CalendarView() {
               <Button
                 theme="borderless"
                 icon={<IconChevronLeft />}
-                size="small"
                 onClick={goPrev}
               />
               <div style={{ width: 1, height: 16, background: 'var(--semi-color-border)', margin: '0 4px' }} />
               <Button
                 theme="borderless"
                 icon={<IconChevronRight />}
-                size="small"
                 onClick={goNext}
               />
             </div>
-            <Button size="small" onClick={goToToday}>今天</Button>
+            <Button onClick={goToToday}>今天</Button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -218,7 +216,6 @@ export function CalendarView() {
             <Button
               theme="borderless"
               icon={<IconRefresh spin={isFetching && !isLoading} />}
-              size="small"
               onClick={() => refetch()}
               disabled={isFetching}
               aria-label="刷新日历数据"

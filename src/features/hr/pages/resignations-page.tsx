@@ -251,7 +251,6 @@ export function ResignationsPage() {
               theme="borderless"
               type="tertiary"
               icon={<Eye className="h-4 w-4" />}
-              size="small"
               onClick={() => { setSelectedItem(record); setDetailDialogOpen(true) }}
             >
               详情
@@ -261,7 +260,6 @@ export function ResignationsPage() {
                 theme="borderless"
                 type="primary"
                 icon={<Send className="h-4 w-4" />}
-                size="small"
                 onClick={() => submitMutation.mutate(record.id)}
               >
                 提交
@@ -272,7 +270,6 @@ export function ResignationsPage() {
                 theme="borderless"
                 type="primary"
                 icon={<Send className="h-4 w-4" />}
-                size="small"
                 onClick={() => submitMutation.mutate(record.id)}
               >
                 重新提交
@@ -284,7 +281,6 @@ export function ResignationsPage() {
                   theme="borderless"
                   type="primary"
                   icon={<Check className="h-4 w-4" />}
-                  size="small"
                   onClick={() => {
                     setSelectedItem(record)
                     setApprovalAction('approve')
@@ -298,7 +294,6 @@ export function ResignationsPage() {
                   theme="borderless"
                   type="danger"
                   icon={<X className="h-4 w-4" />}
-                  size="small"
                   onClick={() => {
                     setSelectedItem(record)
                     setApprovalAction('reject')
@@ -315,7 +310,6 @@ export function ResignationsPage() {
                 theme="borderless"
                 type="danger"
                 icon={<Ban className="h-4 w-4" />}
-                size="small"
                 onClick={() => cancelMutation.mutate(record.id)}
               >
                 取消

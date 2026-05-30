@@ -288,7 +288,6 @@ export function ApiKeysContent() {
                     theme="borderless"
                     type="tertiary"
                     icon={<IconRefresh />}
-                    size="small"
                     onClick={() => handleRegenerateClick(record)}
                   />
                 </span>
@@ -299,7 +298,6 @@ export function ApiKeysContent() {
                     theme="borderless"
                     type="tertiary"
                     icon={<Trash2 className="h-4 w-4 text-red-500" />}
-                    size="small"
                     onClick={() => handleDeleteClick(record)}
                   />
                 </span>
@@ -456,7 +454,6 @@ export function ApiKeysContent() {
                     theme="borderless"
                     type="tertiary"
                     icon={showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    size="small"
                     onClick={() => setShowKey(!showKey)}
                   />
                 </div>
@@ -560,7 +557,7 @@ export function ApiKeysContent() {
                         <div className="font-medium">{emp.name}</div>
                         <Text type="tertiary" size="small">{emp.username}</Text>
                       </div>
-                      <Button theme="outline" size="small">选择</Button>
+                      <Button theme="outline">选择</Button>
                     </div>
                   ))}
                 </div>
@@ -578,7 +575,6 @@ export function ApiKeysContent() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 onClick={() => setConfigSelectedEmployee(null)}
               >
                 ← 返回选择

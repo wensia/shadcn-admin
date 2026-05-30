@@ -176,8 +176,8 @@ export function SchoolsPage() {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
-            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleDeleteClick(record)} />
           </div>
         )
       },

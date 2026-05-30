@@ -41,6 +41,7 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   '/crm/continuous-call': PERMISSIONS.LEADS_LIST,
   '/crm/leads/assignment-tasks': PERMISSIONS.LEADS_LIST,
   '/crm/lead-creation-logs': PERMISSIONS.LEADS_CREATE,
+  '/crm/data-statistics/lead-payment': PERMISSIONS.LEADS_LIST,
   '/crm/channel-ledger': PERMISSIONS.LEADS_LIST,
   '/crm/orders': PERMISSIONS.ORDERS_CREATE,
   '/crm/performance-events': PERMISSIONS.ORDERS_CREATE,

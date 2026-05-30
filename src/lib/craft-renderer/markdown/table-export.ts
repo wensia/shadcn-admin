@@ -103,23 +103,25 @@ const WORKBOOK_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 // cellXfs index map (the `s` attribute on <c> elements):
 //   0 = default
 //   1 = currency    ($#,##0)
-//   2 = percent +   (green 0.0%)
-//   3 = percent -   (red   0.0%)
-//   4 = percent 0   (0.0%)
-//   5 = number      (#,##0)
-//   6 = bold header
-//   7 = boolean yes (green)
-//   8 = boolean no  (muted gray)
-//   9 = badge success (green)
-//  10 = badge error   (red)
-//  11 = badge default (gray)
+//   2 = cny         (¥#,##0.00)
+//   3 = percent +   (green 0.0%)
+//   4 = percent -   (red   0.0%)
+//   5 = percent 0   (0.0%)
+//   6 = number      (#,##0)
+//   7 = bold header
+//   8 = boolean yes (green)
+//   9 = boolean no  (muted gray)
+//  10 = badge success (green)
+//  11 = badge error   (red)
+//  12 = badge default (gray)
 
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <numFmts count="3">
+  <numFmts count="4">
     <numFmt numFmtId="164" formatCode="$#,##0"/>
     <numFmt numFmtId="165" formatCode="0.0%"/>
     <numFmt numFmtId="166" formatCode="#,##0"/>
+    <numFmt numFmtId="167" formatCode="&quot;¥&quot;#,##0.00"/>
   </numFmts>
   <fonts count="5">
     <font><sz val="11"/><name val="Calibri"/></font>
@@ -138,9 +140,10 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="12">
+  <cellXfs count="13">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+    <xf numFmtId="167" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
     <xf numFmtId="165" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>
     <xf numFmtId="165" fontId="2" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>
     <xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
@@ -158,22 +161,25 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 const S = {
   DEFAULT: 0,
   CURRENCY: 1,
-  PERCENT_POS: 2,
-  PERCENT_NEG: 3,
-  PERCENT_ZERO: 4,
-  NUMBER: 5,
-  BOLD: 6,
-  BOOL_YES: 7,
-  BOOL_NO: 8,
-  BADGE_SUCCESS: 9,
-  BADGE_ERROR: 10,
-  BADGE_DEFAULT: 11,
+  CNY: 2,
+  PERCENT_POS: 3,
+  PERCENT_NEG: 4,
+  PERCENT_ZERO: 5,
+  NUMBER: 6,
+  BOLD: 7,
+  BOOL_YES: 8,
+  BOOL_NO: 9,
+  BADGE_SUCCESS: 10,
+  BADGE_ERROR: 11,
+  BADGE_DEFAULT: 12,
 } as const
 
 function getCellStyle(col: ExportColumn, val: unknown): number {
   switch (col.type) {
     case 'currency':
       return S.CURRENCY
+    case 'cny':
+      return S.CNY
     case 'percent': {
       const n = typeof val === 'number' ? val : Number(val)
       if (isNaN(n) || n === 0) return S.PERCENT_ZERO

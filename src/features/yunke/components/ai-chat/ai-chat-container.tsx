@@ -113,7 +113,6 @@ export function AIChatContainer({ sessionId, onTitleGenerated, ensureSession, on
                     <Button
                       key={q}
                       theme="borderless"
-                      size="small"
                       style={{
                         borderRadius: 8,
                         background: 'var(--semi-color-fill-0)',

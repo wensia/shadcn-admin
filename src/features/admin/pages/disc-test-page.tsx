@@ -176,10 +176,10 @@ function QrHoverPopover({
             {url}
           </p>
           <div className="flex w-full gap-2">
-            <Button size="small" theme="outline" icon={<IconCopy />} onClick={handleCopy} style={{ flex: 1 }}>
+            <Button theme="outline" icon={<IconCopy />} onClick={handleCopy} style={{ flex: 1 }}>
               复制链接
             </Button>
-            <Button size="small" theme="outline" icon={<Download className="h-3.5 w-3.5" />} onClick={handleDownload} style={{ flex: 1 }}>
+            <Button theme="outline" icon={<Download className="h-3.5 w-3.5" />} onClick={handleDownload} style={{ flex: 1 }}>
               下载
             </Button>
           </div>
@@ -345,7 +345,6 @@ function FixedLinkModal({
                 theme="borderless"
                 type="tertiary"
                 icon={<IconCopy />}
-                size="small"
                 onClick={() => handleCopyUrl(record.url)}
                 aria-label="复制测试链接"
               />
@@ -354,7 +353,6 @@ function FixedLinkModal({
                   theme="borderless"
                   type="tertiary"
                   icon={<IconEyeOpened />}
-                  size="small"
                   onClick={() => handleCopyUrl(record.resultsUrl)}
                   aria-label="复制查看结果链接"
                 />
@@ -365,7 +363,6 @@ function FixedLinkModal({
                     theme="borderless"
                     type="tertiary"
                     icon={<QrCode className="h-3.5 w-3.5" />}
-                    size="small"
                     aria-label="查看二维码"
                   />
                 </span>
@@ -376,7 +373,6 @@ function FixedLinkModal({
             <Button
               theme="borderless"
               type={record.disabled ? 'primary' : 'warning'}
-              size="small"
               onClick={() => toggleSourceChannel(record.name)}
               style={{ fontSize: 12 }}
             >
@@ -393,7 +389,6 @@ function FixedLinkModal({
                   theme="borderless"
                   type="danger"
                   icon={<IconDelete />}
-                  size="small"
                   aria-label="删除渠道"
                 />
               </span>
@@ -908,7 +903,6 @@ function LinksTab() {
               theme="borderless"
               type="tertiary"
               icon={<IconCopy />}
-              size="small"
               onClick={(e) => { e.stopPropagation(); handleCopyLink(record.test_url) }}
             />
             <QrHoverPopover url={getFullUrl(record.test_url)}>
@@ -916,7 +910,6 @@ function LinksTab() {
                 theme="borderless"
                 type="tertiary"
                 icon={<QrCode className="h-3.5 w-3.5" />}
-                size="small"
               />
             </QrHoverPopover>
             {record.status === 'PENDING' && (
@@ -929,7 +922,6 @@ function LinksTab() {
                   theme="borderless"
                   type="danger"
                   icon={<IconDelete />}
-                  size="small"
                   onClick={(e) => e.stopPropagation()}
                 />
               </Popconfirm>
@@ -1022,17 +1014,17 @@ function LinksTab() {
                   过期: {link.expires_at ? formatTime(link.expires_at) : '-'}
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <Button size="small" theme="outline" icon={<IconCopy />} onClick={() => handleCopyLink(link.test_url)}>
+                  <Button theme="outline" icon={<IconCopy />} onClick={() => handleCopyLink(link.test_url)}>
                     复制
                   </Button>
                   <QrHoverPopover url={getFullUrl(link.test_url)}>
-                    <Button size="small" theme="outline" icon={<QrCode className="h-3 w-3" />}>
+                    <Button theme="outline" icon={<QrCode className="h-3 w-3" />}>
                       二维码
                     </Button>
                   </QrHoverPopover>
                   {link.status === 'PENDING' && (
                     <Popconfirm title="确定删除？" onConfirm={() => handleDelete(link.id)} position="top">
-                      <Button size="small" theme="outline" type="danger" icon={<IconDelete />}>删除</Button>
+                      <Button theme="outline" type="danger" icon={<IconDelete />}>删除</Button>
                     </Popconfirm>
                   )}
                 </div>
@@ -1390,7 +1382,6 @@ export function DiscTestPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<IconMore />}
-                size="small"
               />
             </span>
           </Dropdown>
@@ -1635,7 +1626,6 @@ export function DiscTestPage() {
                   已选择 <strong>{selectedRowKeys.length}</strong> 条记录
                 </span>
                 <Button
-                  size="small"
                   theme="solid"
                   type="primary"
                   icon={<Sparkles className="h-3.5 w-3.5" />}
@@ -1647,7 +1637,6 @@ export function DiscTestPage() {
                 </Button>
                 <div className="flex-1" />
                 <Button
-                  size="small"
                   theme="borderless"
                   type="tertiary"
                   icon={<X className="h-3.5 w-3.5" />}

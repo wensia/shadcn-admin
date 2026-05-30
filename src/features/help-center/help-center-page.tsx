@@ -125,7 +125,6 @@ export function HelpCenterPage() {
               {kindFilters.map((item) => (
                 <Button
                   key={item.key}
-                  size="small"
                   theme={kindFilter === item.key ? 'solid' : 'borderless'}
                   type={kindFilter === item.key ? 'primary' : 'tertiary'}
                   onClick={() => setKindFilter(item.key)}

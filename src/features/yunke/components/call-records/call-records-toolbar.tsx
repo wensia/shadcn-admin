@@ -183,7 +183,6 @@ export function CallRecordsToolbar({
       {hasDurationFilter && (
         <Button
           theme="borderless"
-          size="small"
           onClick={() => {
             onFilterChange('min_duration', undefined)
             onFilterChange('max_duration', undefined)
@@ -229,7 +228,6 @@ export function CallRecordsToolbar({
       {hasScoreFilter && (
         <Button
           theme="borderless"
-          size="small"
           onClick={() => {
             onFilterChange('min_score', undefined)
             onFilterChange('max_score', undefined)
@@ -264,7 +262,7 @@ export function CallRecordsToolbar({
           style={{ width: 200 }}
           size="default"
         />
-        <Button theme="solid" size="default" onClick={handleSearch} icon={<IconSearch />}>
+        <Button theme="solid" onClick={handleSearch} icon={<IconSearch />}>
           搜索
         </Button>
       </div>
@@ -390,7 +388,6 @@ export function CallRecordsToolbar({
         <span>
           <Button
             theme={hasDurationFilter ? 'solid' : 'light'}
-            size="default"
             icon={<IconClock />}
           >
             {hasDurationFilter ? durationLabel : '通话时长'}
@@ -424,7 +421,6 @@ export function CallRecordsToolbar({
         <span>
           <Button
             theme={hasScoreFilter ? 'solid' : 'light'}
-            size="default"
             icon={<IconStar />}
           >
             {hasScoreFilter ? scoreLabel : 'AI评分'}

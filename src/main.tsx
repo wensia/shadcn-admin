@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { semiGlobal } from '@douyinfe/semi-ui-19'
+import { initVChartSemiTheme } from '@visactor/vchart-semi-theme'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { ApiClientError } from '@/lib/api/response-handler'
 import { handleServerError } from '@/lib/handle-server-error'
@@ -20,10 +21,12 @@ import { ThemeProvider } from './context/theme-provider'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
 // Styles
+import '@semi-bot/semi-theme-feishu/semi.min.css'
 import './styles/index.css'
 
 // 为 Semi 注入 React 19 的 createRoot（在任何 Semi 组件渲染前调用）
 semiGlobal.config.createRoot = ReactDOM.createRoot
+initVChartSemiTheme()
 
 // Chunk 加载失败时自动刷新（部署新版后旧 chunk 被删除的场景）
 window.addEventListener('vite:preloadError', () => {

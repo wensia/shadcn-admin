@@ -114,7 +114,6 @@ function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; 
                       <Button
                         key={option.value}
                         theme="borderless"
-                        size="small"
                         style={{
                           justifyContent: 'flex-start', color,
                           backgroundColor: isSelected ? color + '18' : 'transparent',
@@ -141,7 +140,6 @@ function EditableLeadStatus({ status, editable, onSave }: { status: LeadStatus; 
       <span style={{ display: 'inline-flex' }}>
         <Button
           theme="borderless"
-          size="small"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
             borderRadius: 12, border: `1px solid ${selectedColor}`,
@@ -204,7 +202,6 @@ function EditableIntentionLevel({ level, editable, onSave }: { level: IntentionL
                 <Button
                   key={option.value}
                   theme="borderless"
-                  size="small"
                   style={{ justifyContent: 'flex-start', color, backgroundColor: isSelected ? color + '20' : 'transparent', fontWeight: isSelected ? 500 : 400 }}
                   onClick={() => handleSelect(option.value)}
                   disabled={isSaving}
@@ -221,7 +218,6 @@ function EditableIntentionLevel({ level, editable, onSave }: { level: IntentionL
       <span style={{ display: 'inline-flex' }}>
         <Button
           theme="borderless"
-          size="small"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
             borderRadius: 12, border: `1px solid ${selectedColor}`,
@@ -311,7 +307,6 @@ function NotesTimeline({ lead, editable, onSave }: { lead: Lead; editable?: bool
             theme="light"
             type="primary"
             icon={<IconPlus style={{ fontSize: 14 }} />}
-            size="small"
             onClick={() => setIsEditing(true)}
           >
             新增备注
@@ -350,7 +345,6 @@ function NotesTimeline({ lead, editable, onSave }: { lead: Lead; editable?: bool
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
             <Button
-              size="small"
               theme="borderless"
               onClick={() => { setIsEditing(false); setEditValue('') }}
               disabled={isSaving}
@@ -358,7 +352,6 @@ function NotesTimeline({ lead, editable, onSave }: { lead: Lead; editable?: bool
               取消
             </Button>
             <Button
-              size="small"
               theme="solid"
               onClick={handleSave}
               disabled={isSaving || !editValue.trim()}

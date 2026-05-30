@@ -36,13 +36,13 @@ function buildSidebarTitleMap(): Record<string, string> {
   for (const group of allGroups) {
     for (const item of group.items) {
       if (item.url) {
-        map[item.url] = item.title
+        map[item.url] ??= item.title
       }
       // 处理子菜单
       if (item.items) {
         for (const sub of item.items) {
           if (sub.url) {
-            map[sub.url] = sub.title
+            map[sub.url] ??= sub.title
           }
         }
       }

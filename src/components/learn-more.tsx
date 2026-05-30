@@ -26,7 +26,6 @@ export function LearnMore({
       <span style={{ display: 'inline-flex' }}>
         <Button
           theme='borderless'
-          size='small'
           icon={<CircleQuestionMark className='size-4 [&>circle]:hidden' />}
           className={cn('!size-5 !rounded-full', triggerClassName)}
         />

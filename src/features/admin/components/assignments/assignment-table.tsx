@@ -94,7 +94,6 @@ export function AssignmentTable({
           {a.is_active && (
             <div className="flex gap-2 ml-4 shrink-0">
               <Button
-                size="small"
                 icon={<ArrowRightLeft size={14} />}
                 onClick={() => onTransfer(a)}
               >
@@ -105,7 +104,7 @@ export function AssignmentTable({
                 content={`将 ${a.employee_name} 从此任命中卸任`}
                 onConfirm={() => onRelieve(a.id)}
               >
-                <Button size="small" type="danger" icon={<UserMinus size={14} />}>
+                <Button type="danger" icon={<UserMinus size={14} />}>
                   卸任
                 </Button>
               </Popconfirm>

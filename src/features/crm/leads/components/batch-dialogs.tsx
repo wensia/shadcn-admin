@@ -102,7 +102,7 @@ export function BatchAssignDialog({
 
   const handleSubmit = () => {
     if (!selectedAdvisor) {
-      Toast.warning({ content: '请选择顾问' })
+      Toast.warning({ content: '请选择咨询部/TMK员工' })
       return
     }
     assignMutation.mutate({
@@ -207,7 +207,7 @@ export function BatchAssignDialog({
 
   return (
     <Modal
-      title="选择课程顾问"
+      title="选择咨询部/TMK员工"
       visible={open}
       onCancel={handleAssignDialogClose}
       width={900}
@@ -215,12 +215,12 @@ export function BatchAssignDialog({
       footer={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Text type="tertiary" style={{ fontSize: 13 }}>共 {advisorData?.total || 0} 位顾问</Text>
-            <Button size="small" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>上一页</Button>
+            <Text type="tertiary" style={{ fontSize: 13 }}>共 {advisorData?.total || 0} 位咨询部/TMK员工</Text>
+            <Button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>上一页</Button>
             <Text style={{ fontSize: 13 }}>
               {page} / {Math.max(1, Math.ceil((advisorData?.total || 0) / pageSize))}
             </Text>
-            <Button size="small" disabled={page >= Math.ceil((advisorData?.total || 0) / pageSize)} onClick={() => setPage((p) => p + 1)}>下一页</Button>
+            <Button disabled={page >= Math.ceil((advisorData?.total || 0) / pageSize)} onClick={() => setPage((p) => p + 1)}>下一页</Button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Button onClick={handleAssignDialogClose}>取消</Button>
@@ -230,7 +230,7 @@ export function BatchAssignDialog({
               disabled={!selectedAdvisor || assignMutation.isPending}
               loading={assignMutation.isPending}
             >
-              {selectedAdvisor ? `确定选择 ${selectedAdvisor.name}` : '请先选择顾问'}
+              {selectedAdvisor ? `确定选择 ${selectedAdvisor.name}` : '请先选择咨询部/TMK员工'}
             </Button>
           </div>
         </div>
@@ -238,13 +238,13 @@ export function BatchAssignDialog({
     >
       <div style={{ padding: 16 }}>
         <Text type="tertiary" style={{ fontSize: 13, marginBottom: 12, display: 'block' }}>
-          将 {selectedLeadIds.length} 条线索分配给顾问
+          将 {selectedLeadIds.length} 条线索分配给咨询部/TMK员工
         </Text>
 
         {/* 搜索栏 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           <Space>
-            <Text type="tertiary" style={{ fontSize: 13 }}>搜索顾问</Text>
+            <Text type="tertiary" style={{ fontSize: 13 }}>搜索咨询部/TMK员工</Text>
             <Input
               prefix={<IconSearch />}
               value={searchText}
@@ -286,7 +286,7 @@ export function BatchAssignDialog({
           />
         </div>
 
-        {/* 顾问表格 */}
+        {/* 咨询部/TMK员工表格 */}
         <Table<EmployeeListItem>
           columns={advisorColumns}
           dataSource={advisorData?.items || []}
@@ -306,7 +306,7 @@ export function BatchAssignDialog({
           })}
           empty={
             <div style={{ padding: '32px 0', textAlign: 'center' }}>
-              <Text type="tertiary">暂无顾问数据</Text>
+              <Text type="tertiary">暂无咨询部/TMK员工数据</Text>
             </div>
           }
         />

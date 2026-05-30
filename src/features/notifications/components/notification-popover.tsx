@@ -132,7 +132,6 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             onClick={handleMarkAllAsRead}
             disabled={markAllAsRead.isPending}
             icon={markAllAsRead.isPending ? (

@@ -220,14 +220,12 @@ export function CoursesPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Pencil className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleEdit(record)}
               />
               <Button
                 theme="borderless"
                 type="tertiary"
                 icon={<Copy className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleCopy(record)}
                 disabled={copyMutation.isPending}
               />
@@ -235,7 +233,6 @@ export function CoursesPage() {
                 theme="borderless"
                 type="danger"
                 icon={<Trash2 className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleDeleteClick(record)}
               />
             </div>
@@ -351,13 +348,13 @@ export function CoursesPage() {
               <Text type="tertiary" size="small">
                 已选择 {selectedRowKeys.length} 项
               </Text>
-              <Button size="small" theme="outline" onClick={handleBatchActivate} disabled={batchActivateMutation.isPending}>
+              <Button theme="outline" onClick={handleBatchActivate} disabled={batchActivateMutation.isPending}>
                 批量启用
               </Button>
-              <Button size="small" theme="outline" onClick={handleBatchDeactivate} disabled={batchDeactivateMutation.isPending}>
+              <Button theme="outline" onClick={handleBatchDeactivate} disabled={batchDeactivateMutation.isPending}>
                 批量停用
               </Button>
-              <Button size="small" theme="solid" type="danger" onClick={() => setBatchDeleteDialogOpen(true)}>
+              <Button theme="solid" type="danger" onClick={() => setBatchDeleteDialogOpen(true)}>
                 批量删除
               </Button>
             </div>

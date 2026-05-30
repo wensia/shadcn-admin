@@ -776,7 +776,7 @@ export default function TDesignLeadsDemo() {
           ))}
         </TdSelect>
         <TdButton variant="outline" size="small" icon={<Filter className="h-3.5 w-3.5" />}>高级筛选</TdButton>
-        <TdButton variant="text" size="small" icon={<RefreshCw className="h-3.5 w-3.5" />}>刷新</TdButton>
+        <TdButton variant="text" size="small" icon={<RefreshCw className="h-3.5 w-3.5" />} title="刷新" aria-label="刷新" />
 
         {/* 批量操作 */}
         {selectedIds.size > 0 && (

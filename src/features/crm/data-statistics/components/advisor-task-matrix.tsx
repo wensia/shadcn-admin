@@ -200,7 +200,6 @@ function ReadOnlyReviewButton({
   const button = (
     <span style={{ display: 'inline-flex' }}>
       <Button
-        size="small"
         type="primary"
         theme="light"
         disabled={disabled}
@@ -604,7 +603,6 @@ export function AdvisorTaskMatrix({
           return (
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <Button
-                size="small"
                 type="tertiary"
                 theme="light"
                 icon={<FileSearch size={14} />}

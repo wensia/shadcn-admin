@@ -261,7 +261,7 @@ export function PaymentTab({ dateFrom, dateTo, creatorCampusId }: PaymentTabProp
             }
           >
             <span style={{ display: 'inline-flex' }}>
-              <Button theme="borderless" icon={<IconMore />} size="small" />
+              <Button theme="borderless" icon={<IconMore />} />
             </span>
           </Dropdown>
         )

@@ -1392,7 +1392,6 @@ export function AIAnalysisPanel({ record, isAnalyzing, onAnalyze }: AIAnalysisPa
         <p style={{ fontSize: 14, color: 'var(--semi-color-danger)', margin: 0 }}>分析失败</p>
         <Button
           theme="borderless"
-          size="small"
           onClick={onAnalyze}
           disabled={isAnalyzing}
           icon={<BrainCircuit style={{ height: 16, width: 16 }} />}
@@ -1415,7 +1414,6 @@ export function AIAnalysisPanel({ record, isAnalyzing, onAnalyze }: AIAnalysisPa
         <Button
           onClick={onAnalyze}
           disabled={isAnalyzing}
-          size="small"
           icon={isAnalyzing
             ? <Spin size="small" />
             : <BrainCircuit style={{ height: 16, width: 16 }} />

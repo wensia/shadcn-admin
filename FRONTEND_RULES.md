@@ -97,6 +97,14 @@ import { Play, FileText, UserRound } from 'lucide-react'
 import { toast } from '@/lib/toast'
 ```
 
+### Button 尺寸规范
+
+Semi `Button` / `ButtonGroup` 默认使用标准尺寸，也就是 Semi 默认的 `size="default"`。业务代码中默认不要显式写 `size` 属性。
+
+- **正确**：`<Button theme="solid">保存</Button>`
+- **错误**：`<Button size="small">保存</Button>`、`<Button size="large">保存</Button>`、`<Button size="default">保存</Button>`
+- 如确需非标准按钮尺寸，必须有明确设计原因，并在局部代码旁说明原因；不能把小按钮作为表格操作、工具栏、弹窗操作区的默认写法。
+
 ### 样式方式
 
 Semi 组件使用 **inline style** 而非 Tailwind：
@@ -113,6 +121,20 @@ Semi 组件使用 **inline style** 而非 Tailwind：
 ```
 
 Tailwind 仅用于：自定义非 Semi 元素、全局样式工具类（`.no-scrollbar`）。
+
+### Semi Input 前后缀间距
+
+Semi `Input` 对字符串前缀和 Semi Icons 会自动加左右间距，但对 lucide、自定义 SVG、`Spin` 等 React 节点不会自动识别为 icon。项目已在 `src/styles/index.css` 统一补齐 `.semi-input-prefix` / `.semi-input-suffix` 的安全间距。
+
+- **正确**：继续按业务需要传 `prefix={<Search className="h-4 w-4" />}` 或 `suffix={<Loader2 />}`，由全局样式兜底。
+- **错误**：在单个页面里给 prefix 图标手写 `marginLeft` / `marginRight` 修贴边问题。
+
+### Semi Select 选中标签结构
+
+Feishu 主题会在 Semi 基础样式之后把 `.semi-tag` 改成 `inline-block`。`Select multiple` 的选中项需要保持 flex 结构，否则 closable tag 的关闭图标会被挤到下一行。项目已在 `src/styles/index.css` 的 `.semi-select-selection` 范围内恢复 tag 的 flex 布局。
+
+- **正确**：多选 `Select` 直接使用 Semi 默认 tag，不在页面内手写 tag 子结构。
+- **错误**：在单个筛选组件里给 `.semi-tag-close` 写局部定位或负 margin。
 
 ## 端口配置
 
@@ -305,14 +327,22 @@ if (statusFilter.length > 0) {
 
 ```
 标题行:  页面标题 共N条                          [操作按钮]
-工具栏:  [搜索框] [搜索] [筛选下拉...] [批量操作]    [🔄刷新]
+工具栏:  [搜索框] [搜索] [筛选下拉...] [批量操作]    [🔄]
 标签栏:  筛选条件: [状态: 待分配 ×] [意向: 高 ×]   清除全部
 ```
 
 - 刷新按钮由 `DataTableLayout` 的 `onRefresh` 自动渲染在**工具栏行最右侧**（`theme="light"` 浅色底）
+- 刷新按钮必须是**纯图标按钮**：只显示刷新图标，不展示“刷新”文字；需要可访问说明时使用 `aria-label="刷新"` / `title="刷新"`
 - 搜索和筛选放在 toolbar slot
 - 批量操作按钮放在工具栏内
 - `headerActions` 仅放新建等操作按钮，不含刷新
+
+### 信息密度与标题布局
+
+- 标题 + 说明、名称 + 手机号、标题 + 统计摘要等短文本组合，默认使用同一行横向展示：`display: 'flex'`、`alignItems: 'baseline'`、`gap`，空间不足时再 `flexWrap: 'wrap'` 自然换行。
+- 非必要不要使用“纵向标题”样式（例如强制 `flexDirection: 'column'` 把标题和说明拆成两行）。这会浪费纵向空间，尤其不适合弹窗、表格上方、筛选区、详情摘要和操作面板。
+- 只有在内容本身是段落说明、移动端窄屏、或多个信息块需要明确纵向层级时，才使用纵向堆叠。
+- 新增业务页面时，应优先选择数据表、紧凑信息表、单行标题栏和横向操作区，避免用大面积卡片或纵向标题堆叠承载密集运营数据。
 
 ## Semi Table 防无限循环
 
@@ -445,6 +475,7 @@ try { ... } catch (error) {
 | `.semi-tabs-content` | 修复 Tabs 内容区 flex 高度链断裂（Layer 1） |
 | `.semi-tabs-pane-motion-overlay` | 修复 Tabs 内容区 flex 高度链断裂（Layer 2） |
 | `.semi-navigation-*` | 侧边栏 Nav 可滚动 + Footer 固定底部 |
+| `.semi-modal-content:not(:has(> .semi-modal-footer)) > .semi-modal-body` | 兜底 `footer={null}` 的 Modal 底部安全间距，避免内容贴住圆角底边 |
 | `*:focus` | 移除所有焦点轮廓 |
 | 表格粘性列 | `[data-slot="table-row"] > .sticky` 背景色 |
 
@@ -471,6 +502,7 @@ try { ... } catch (error) {
 - **禁止**使用 `<Main fixed>` 包裹数据表页面 → 必须用 `DataTableLayout`（`DataTableLayout` 已内置完整的高度链）
 - **禁止**手动定义 `pagination` useMemo 配置对象
 - **禁止**在 toolbar 或页面中自建刷新按钮（`<Button icon={<IconRefresh />} />`）→ 必须用 `DataTableLayout` 的 `onRefresh` prop
+- **禁止**刷新按钮展示文字（如 `<Button icon={<IconRefresh />}>刷新</Button>`）→ 必须保持纯图标按钮
 - **禁止**自行拼凑标题行（`<Title>` + 总数 + 操作按钮）→ 必须用 `DataTableLayout` 的 `title` / `total` / `headerActions` prop
 
 ### 自查清单（新增/修改数据表时）
@@ -481,7 +513,8 @@ try { ... } catch (error) {
 4. 独立页面是否用 `DataTableLayout` 包裹（而非 `<Main fixed>`）？
 5. 弹窗/SideSheet 是否放在 `DataTableLayout` 外面？
 6. 刷新是否通过 `DataTableLayout` 的 `onRefresh` prop（而非 toolbar 内自建按钮）？
-7. 标题/总数/操作按钮是否通过 `DataTableLayout` 的 props（而非自行拼凑）？
+7. 刷新按钮是否只显示图标、不展示“刷新”文字？
+8. 标题/总数/操作按钮是否通过 `DataTableLayout` 的 props（而非自行拼凑）？
 
 ### 标准页面结构（简化版）
 
@@ -545,9 +578,10 @@ export function MyPage() {
 ### 注意事项
 
 - SemiDataTable 自动计算 `scroll.y`，无需手动设置表格高度
-- DataTableLayout 自带刷新按钮（`onRefresh` prop），自动渲染在工具栏行最右侧（`theme="light"`），toolbar 中不需要额外的刷新按钮
+- DataTableLayout 自带刷新按钮（`onRefresh` prop），自动渲染在工具栏行最右侧（`theme="light"`），toolbar 中不需要额外的刷新按钮；刷新按钮必须只显示图标，不展示文字
 - 骨架屏使用 `isSkeletonRow(record.id)` + `<SemiSkeletonCell width={N} />`
 - 所有弹窗（Modal / SideSheet）放在 `<DataTableLayout>` 外面
+- Modal 底部存在提交/确认/保存等业务操作时，优先使用 `footer` prop 承载按钮，不要把按钮塞进 body 末尾；这能复用 Semi 默认 footer 间距、焦点顺序和视觉结构。
 - 展示/查看型 Modal 如果保留右上角关闭按钮，不在底部再添加仅用于关闭弹窗的按钮；应显式设置 `footer={null}`。底部只保留提交、确认、跳转等明确业务操作。
 
 ## 数据表高度链规范（强制）
@@ -821,6 +855,12 @@ export function MyFormDialog({ visible, onClose, onSuccess, editData }) {
   )
 }
 ```
+
+### Modal 底部间距规则
+
+- 有保存、提交、确认等业务操作的表单弹窗，按钮必须放在 `Modal.footer`，不要放在 Form/body 内部末尾。
+- 仅展示内容、无需底部操作的弹窗应显式设置 `footer={null}`；全局 CSS 已为这类无 footer Modal 的 body 补 `24px` 底部安全间距。
+- 如果业务确实需要完全自定义底部区域，优先自定义 `footer` 内容；只有特殊视觉结构才在 body 内自绘，并必须确认底部留白不被覆盖。
 
 ### 表单验证
 

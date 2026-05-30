@@ -198,16 +198,15 @@ export function AreasPage() {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
             <Button
               theme="borderless"
               type={record.is_active ? 'warning' : 'tertiary'}
               icon={record.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4 text-green-600" />}
-              size="small"
               loading={togglingId === record.id}
               onClick={() => toggleStatusMutation.mutate({ id: record.id, is_active: !record.is_active })}
             />
-            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
+            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleDeleteClick(record)} />
           </div>
         )
       },

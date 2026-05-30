@@ -229,7 +229,6 @@ function PageAccessCard({
                   <Button
                     theme="borderless"
                     type="tertiary"
-                    size="small"
                     icon={<UserPlus className="h-3.5 w-3.5" />}
                     onClick={() => handleAddEmployee(emp.id)}
                     disabled={updateMutation.isPending}

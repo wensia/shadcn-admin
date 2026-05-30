@@ -113,6 +113,14 @@ interface QuickCreateEmployeeFormValues {
   joined_at?: string
 }
 
+interface ResetPasswordResult {
+  employee_id: string
+  username: string
+  name: string
+  new_password: string
+  reset_at: string
+}
+
 /** 节点类型 → 该节点可承载的作用域列 + 角色白名单 */
 function getNodeScopeConfig(type: OrgTreeNodeType): NodeScopeConfig | null {
   switch (type) {
@@ -249,6 +257,8 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   const [quickCreateGroup, setQuickCreateGroup] = useState<MemberGroup | null>(null)
   const [quickCreateResult, setQuickCreateResult] = useState<QuickCreateEmployeeResult | null>(null)
   const [editingMember, setEditingMember] = useState<ScopeMember | null>(null)
+  const [resetPasswordMember, setResetPasswordMember] = useState<ScopeMember | null>(null)
+  const [resetPasswordResult, setResetPasswordResult] = useState<ResetPasswordResult | null>(null)
   const [directVisitCampusId, setDirectVisitCampusId] = useState<string | null>(null)
   const [directVisitQr, setDirectVisitQr] = useState<{ link: string; url: string } | null>(null)
   const [transferItem, setTransferItem] = useState<AssignmentItem | null>(null)
@@ -588,6 +598,15 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
     onError: (error: Error) => showApiErrorToast(error, '离职操作失败'),
   })
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: (employeeId: string) => adminApi.resetEmployeePassword(employeeId),
+    onSuccess: (response) => {
+      toast.success('密码重置成功')
+      setResetPasswordResult(response.data ?? null)
+    },
+    onError: (error: Error) => showApiErrorToast(error, '密码重置失败'),
+  })
+
   const openQuickCreate = (group: MemberGroup) => {
     if (!group.createScope) {
       toast.warning('无法识别该部门的组织范围')
@@ -623,6 +642,16 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
 
   const openEditMember = (member: ScopeMember) => {
     setEditingMember(member)
+  }
+
+  const openResetPassword = (member: ScopeMember) => {
+    setResetPasswordMember(member)
+    setResetPasswordResult(null)
+  }
+
+  const closeResetPassword = () => {
+    setResetPasswordMember(null)
+    setResetPasswordResult(null)
   }
 
   const handleCopyDirectVisitLink = async () => {
@@ -685,6 +714,11 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
     })
   }
 
+  const handleResetPasswordConfirm = () => {
+    if (!resetPasswordMember) return
+    resetPasswordMutation.mutate(resetPasswordMember.employee_id)
+  }
+
   const confirmLeaveEmployee = (member: ScopeMember) => {
     Modal.confirm({
       title: `确认将「${member.name}」设为离职？`,
@@ -700,6 +734,152 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
     queryClient.invalidateQueries({ queryKey: ['admin-assignments'] })
     queryClient.invalidateQueries({ queryKey: ['organization-tree-full'] })
   }
+
+  const handleCopyQuickCreateCredentials = async () => {
+    if (!quickCreateResult) return
+
+    const success = await copyToClipboard(
+      `账号: ${quickCreateResult.username}\n密码: ${quickCreateResult.password}`,
+    )
+    if (success) {
+      toast.success('账号密码已复制')
+    } else {
+      toast.error('复制失败')
+    }
+  }
+
+  const handleCopyResetPasswordCredentials = async () => {
+    if (!resetPasswordResult) return
+
+    const success = await copyToClipboard(
+      `账号: ${resetPasswordResult.username}\n密码: ${resetPasswordResult.new_password}`,
+    )
+    if (success) {
+      toast.success('账号密码已复制')
+    } else {
+      toast.error('复制失败')
+    }
+  }
+
+  const memberListCopyText = useMemo(() => {
+    if (!node || members.length === 0) return ''
+
+    const groupsWithMembers = memberGroups.filter((group) => group.items.length > 0)
+    const lines = [`${node.name}员工列表（共 ${members.length} 人）`]
+
+    for (const group of groupsWithMembers) {
+      lines.push('', `${group.departmentName}（${group.items.length} 人）`)
+      group.items.forEach((member, index) => {
+        const detailParts = [
+          member.position_name ? `岗位：${member.position_name}` : null,
+          member.phone ? `手机：${member.phone}` : null,
+          member.email ? `邮箱：${member.email}` : null,
+        ].filter(Boolean)
+        const details = detailParts.length > 0 ? `，${detailParts.join('，')}` : ''
+        lines.push(`${index + 1}. ${member.name}${details}`)
+      })
+    }
+
+    return lines.join('\n')
+  }, [memberGroups, members.length, node])
+
+  const handleCopyMemberList = async () => {
+    if (!memberListCopyText) {
+      toast.warning('暂无员工可复制')
+      return
+    }
+
+    const success = await copyToClipboard(memberListCopyText)
+    if (success) {
+      toast.success(`已复制 ${members.length} 名员工`)
+    } else {
+      toast.error('复制失败')
+    }
+  }
+
+  const renderMemberRows = (groups: MemberGroup[]) => (
+    <div className="flex flex-col divide-y">
+      {groups.flatMap((group) =>
+        group.items.map((m) => {
+          const assignmentLabels = assignmentLabelsByGroupAndEmployee
+            .get(group.key)
+            ?.get(m.employee_id) ?? []
+          return (
+            <div
+              key={`${group.key}:${m.employee_id}`}
+              className="flex items-center gap-3 px-3 py-2 text-sm"
+            >
+              <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                <Text strong>{m.name}</Text>
+                {m.position_name && (
+                  <Tag size="small" color="blue">
+                    岗位：{m.position_name}
+                  </Tag>
+                )}
+                {assignmentLabels.map((label) => (
+                  <Tag key={label} size="small" color="green">
+                    任命：{label}
+                  </Tag>
+                ))}
+              </div>
+              <div
+                className="hidden md:flex flex-col items-end text-xs shrink-0"
+                style={{ color: 'var(--semi-color-text-2)' }}
+              >
+                {m.phone && <span>{m.phone}</span>}
+                {m.email && (
+                  <span className="truncate max-w-[200px]">{m.email}</span>
+                )}
+              </div>
+              <Dropdown
+                trigger="click"
+                position="bottomRight"
+                clickToHide
+                render={
+                  <Dropdown.Menu>
+                    <Dropdown.Item onClick={() => openEditMember(m)}>
+                      编辑员工信息
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => openResetPassword(m)}>
+                      重置密码
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item onClick={() => confirmLeaveEmployee(m)}>
+                      离职
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                }
+              >
+                <Button
+                  theme="borderless"
+                  type="tertiary"
+                  icon={<MoreHorizontal size={16} />}
+                  loading={
+                    (
+                      leaveEmployeeMutation.isPending &&
+                      leaveEmployeeMutation.variables?.employeeId === m.employee_id
+                    ) ||
+                    (
+                      resetPasswordMutation.isPending &&
+                      resetPasswordMutation.variables === m.employee_id
+                    )
+                  }
+                  title="更多操作"
+                />
+              </Dropdown>
+            </div>
+          )
+        }),
+      )}
+    </div>
+  )
+
+  const singleDepartmentMemberGroup = isDeptNode
+    ? memberGroups.find((group) => group.createScope) ?? memberGroups[0] ?? null
+    : null
+  const singleDepartmentMemberGroups = isDeptNode
+    ? memberGroups.filter((group) => group.items.length > 0)
+    : []
 
   if (!node) {
     return (
@@ -783,7 +963,6 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               <Button
                 theme="outline"
                 type="primary"
-                size="small"
                 icon={<IconQrCode />}
                 disabled={!node.is_active}
                 onClick={() => setDirectVisitCampusId(node.id)}
@@ -795,7 +974,6 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               <Button
                 theme="solid"
                 type="primary"
-                size="small"
                 icon={<IconPlus />}
                 onClick={() => {
                   setDepartmentAssignmentGroup(null)
@@ -817,7 +995,6 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 >
                   <Button
                     type="danger"
-                    size="small"
                     icon={<IconDelete />}
                     loading={deleteDeptMutation.isPending}
                   >
@@ -827,7 +1004,6 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               ) : (
                 <Button
                   type="danger"
-                  size="small"
                   icon={<IconDelete />}
                   disabled
                   title={`该部门下有 ${employeeCount} 名员工，需先全部转出或停用`}
@@ -859,14 +1035,13 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 在任负责人
               </Text>
               <Button
-                size="small"
                 theme="borderless"
                 icon={<IconRefresh />}
                 loading={isFetching}
                 onClick={() => refetch()}
-              >
-                刷新
-              </Button>
+                title="刷新"
+                aria-label="刷新"
+              />
             </div>
             <AssignmentTable
               items={assignments}
@@ -898,9 +1073,51 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                   岗位来自员工身份；任命只表示职责和权限，不会修改岗位。
                 </Text>
               </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  theme="light"
+                  type="tertiary"
+                  icon={<IconCopy />}
+                  disabled={membersLoading || members.length === 0}
+                  style={{ border: '1px solid var(--semi-color-border)' }}
+                  title="复制全部员工列表文本"
+                  onClick={handleCopyMemberList}
+                >
+                  复制全部员工
+                </Button>
+                {singleDepartmentMemberGroup?.createScope && (
+                  <Button
+                    theme="light"
+                    type="primary"
+                    style={{ border: '1px solid var(--semi-color-border)' }}
+                    onClick={() => openQuickCreate(singleDepartmentMemberGroup)}
+                  >
+                    添加员工
+                  </Button>
+                )}
+              </div>
             </div>
             {membersLoading ? (
               <Text type="tertiary" size="small">加载中...</Text>
+            ) : isDeptNode ? (
+              members.length === 0 ? (
+                <Empty
+                  title="暂无成员"
+                  description="该部门下暂无在任员工"
+                  style={{ padding: '16px 0' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    border: '1px solid var(--semi-color-border)',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    background: 'var(--semi-color-bg-0)',
+                  }}
+                >
+                  {renderMemberRows(singleDepartmentMemberGroups)}
+                </div>
+              )
             ) : memberGroups.length === 0 ? (
               <Empty
                 title="暂无成员"
@@ -913,6 +1130,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               />
             ) : (
               <Collapse
+                className="organization-member-collapse"
                 key={node.id}
                 expandIconPosition="left"
                 keepDOM
@@ -928,7 +1146,10 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                     key={group.key}
                     itemKey={group.key}
                     header={
-                      <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                      <div
+                        className="flex min-w-0 flex-1 items-center justify-between gap-2"
+                        style={{ minHeight: 44, padding: '4px 0' }}
+                      >
                         <div className="flex min-w-0 items-center gap-2">
                           <Text
                             strong
@@ -944,7 +1165,6 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                         {group.createScope && (
                           <div className="flex shrink-0 items-center gap-1">
                             <Button
-                              size="small"
                               theme="light"
                               type="tertiary"
                               style={{ border: '1px solid var(--semi-color-border)' }}
@@ -956,7 +1176,6 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                               添加负责人
                             </Button>
                             <Button
-                              size="small"
                               theme="light"
                               type="primary"
                               style={{ border: '1px solid var(--semi-color-border)' }}
@@ -979,70 +1198,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                         style={{ padding: '16px 0' }}
                       />
                     ) : (
-                      <div className="flex flex-col divide-y">
-                        {group.items.map((m) => {
-                          const assignmentLabels = assignmentLabelsByGroupAndEmployee
-                            .get(group.key)
-                            ?.get(m.employee_id) ?? []
-                          return (
-                            <div
-                              key={m.employee_id}
-                              className="flex items-center gap-3 px-3 py-2 text-sm"
-                            >
-                              <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                                <Text strong>{m.name}</Text>
-                                {m.position_name && (
-                                  <Tag size="small" color="blue">
-                                    岗位：{m.position_name}
-                                  </Tag>
-                                )}
-                                {assignmentLabels.map((label) => (
-                                  <Tag key={label} size="small" color="green">
-                                    任命：{label}
-                                  </Tag>
-                                ))}
-                              </div>
-                              <div
-                                className="hidden md:flex flex-col items-end text-xs shrink-0"
-                                style={{ color: 'var(--semi-color-text-2)' }}
-                              >
-                                {m.phone && <span>{m.phone}</span>}
-                                {m.email && (
-                                  <span className="truncate max-w-[200px]">{m.email}</span>
-                                )}
-                              </div>
-                              <Dropdown
-                                trigger="click"
-                                position="bottomRight"
-                                clickToHide
-                                render={
-                                  <Dropdown.Menu>
-                                    <Dropdown.Item onClick={() => openEditMember(m)}>
-                                      编辑员工信息
-                                    </Dropdown.Item>
-                                    <Dropdown.Divider />
-                                    <Dropdown.Item onClick={() => confirmLeaveEmployee(m)}>
-                                      离职
-                                    </Dropdown.Item>
-                                  </Dropdown.Menu>
-                                }
-                              >
-                                <Button
-                                  size="small"
-                                  theme="borderless"
-                                  type="tertiary"
-                                  icon={<MoreHorizontal size={16} />}
-                                  loading={
-                                    leaveEmployeeMutation.isPending &&
-                                    leaveEmployeeMutation.variables?.employeeId === m.employee_id
-                                  }
-                                  title="更多操作"
-                                />
-                              </Dropdown>
-                            </div>
-                          )
-                        })}
-                      </div>
+                      renderMemberRows([group])
                     )}
                   </Collapse.Panel>
                 ))}
@@ -1135,9 +1291,20 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
         onCancel={() => setQuickCreateResult(null)}
         width={480}
         footer={
-          <Button theme="solid" type="primary" onClick={() => setQuickCreateResult(null)}>
-            关闭
-          </Button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setQuickCreateResult(null)}>
+              关闭
+            </Button>
+            <Button
+              theme="solid"
+              type="primary"
+              icon={<IconCopy />}
+              disabled={!quickCreateResult}
+              onClick={handleCopyQuickCreateCredentials}
+            >
+              复制账号密码
+            </Button>
+          </div>
         }
       >
         <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>
@@ -1154,7 +1321,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           }}
         >
           <div>
-            <Text strong size="small">用户名：</Text>
+            <Text strong size="small">账号：</Text>
             <Text code>{quickCreateResult?.username}</Text>
           </div>
           <div>
@@ -1177,6 +1344,74 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           queryClient.invalidateQueries({ queryKey: ['admin-employee-identities'] })
         }}
       />
+
+      <Modal
+        title={resetPasswordResult ? '密码已重置' : '重置密码'}
+        visible={!!resetPasswordMember}
+        onCancel={closeResetPassword}
+        width={480}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            {resetPasswordResult ? (
+              <>
+                <Button onClick={closeResetPassword}>
+                  关闭
+                </Button>
+                <Button
+                  theme="solid"
+                  type="primary"
+                  icon={<IconCopy />}
+                  onClick={handleCopyResetPasswordCredentials}
+                >
+                  复制账号密码
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button onClick={closeResetPassword}>
+                  取消
+                </Button>
+                <Button
+                  theme="solid"
+                  type="primary"
+                  loading={resetPasswordMutation.isPending}
+                  onClick={handleResetPasswordConfirm}
+                >
+                  确认重置
+                </Button>
+              </>
+            )}
+          </div>
+        }
+      >
+        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>
+          {resetPasswordResult
+            ? `员工「${resetPasswordResult.name}」的密码已重置成功，请记录以下登录信息。`
+            : `确定要重置员工「${resetPasswordMember?.name}」的密码吗？系统将自动生成新密码，原密码会立即失效。`
+          }
+        </Text>
+        {resetPasswordResult && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              padding: 12,
+              borderRadius: 6,
+              background: 'var(--semi-color-fill-0)',
+            }}
+          >
+            <div>
+              <Text strong size="small">账号：</Text>
+              <Text code>{resetPasswordResult.username}</Text>
+            </div>
+            <div>
+              <Text strong size="small">新密码：</Text>
+              <Text code>{resetPasswordResult.new_password}</Text>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         title={directVisitCampus ? `${directVisitCampus.name} · 直访码` : '直访码'}

@@ -278,7 +278,7 @@ export function YunkeCallLogs({ phone, className, showHeader = false, collapsibl
       render: (val, record) => {
         if (!record) return null
         return val ? (
-          <Button theme="borderless" size="small" icon={<Play style={{ width: 14, height: 14 }} />} onClick={() => handleOpenPlayer(record)} />
+          <Button theme="borderless" icon={<Play style={{ width: 14, height: 14 }} />} onClick={() => handleOpenPlayer(record)} />
         ) : <span style={{ color: 'var(--semi-color-text-2)' }}>-</span>
       },
     },
@@ -362,9 +362,9 @@ export function YunkeCallLogs({ phone, className, showHeader = false, collapsibl
               <span style={{ color: 'var(--semi-color-text-2)' }}>条</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Button size="small" theme="light" disabled={page <= 1} onClick={() => setPage(page - 1)} icon={<ChevronLeft style={{ width: 16, height: 16 }} />} />
+              <Button theme="light" disabled={page <= 1} onClick={() => setPage(page - 1)} icon={<ChevronLeft style={{ width: 16, height: 16 }} />} />
               <span style={{ fontSize: 12, padding: '0 8px' }}>{page} / {paginated.totalPages || 1}</span>
-              <Button size="small" theme="light" disabled={page >= paginated.totalPages} onClick={() => setPage(page + 1)} icon={<ChevronRight style={{ width: 16, height: 16 }} />} />
+              <Button theme="light" disabled={page >= paginated.totalPages} onClick={() => setPage(page + 1)} icon={<ChevronRight style={{ width: 16, height: 16 }} />} />
             </div>
           </div>
         )}

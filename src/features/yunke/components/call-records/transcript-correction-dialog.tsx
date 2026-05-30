@@ -306,7 +306,6 @@ export function TranscriptCorrectionDialog({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Button
                     theme="light"
-                    size="small"
                     onClick={handleSaveDictionary}
                     disabled={isSaving || !isDirty}
                     loading={isSaving}
@@ -315,7 +314,6 @@ export function TranscriptCorrectionDialog({
                   </Button>
                   <Button
                     theme="solid"
-                    size="small"
                     onClick={handlePreview}
                     disabled={isLoading || correctionCount === 0}
                     loading={isLoading && step === 'dictionary'}
@@ -354,7 +352,6 @@ export function TranscriptCorrectionDialog({
                               <Button
                                 theme="borderless"
                                 icon={<IconDelete style={{ color: 'var(--semi-color-text-2)' }} />}
-                                size="small"
                                 onClick={() => handleDeleteRule(wrong)}
                               />
                             </td>

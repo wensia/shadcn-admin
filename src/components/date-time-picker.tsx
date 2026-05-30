@@ -123,7 +123,6 @@ export function DateTimePicker({
             <Button
               key={option.label}
               theme='borderless'
-              size='small'
               disabled={disabled}
               onClick={() => handleQuickSelect(option.getValue)}
             >

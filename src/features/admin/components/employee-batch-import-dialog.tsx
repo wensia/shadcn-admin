@@ -191,7 +191,7 @@ export function EmployeeBatchImportDialog({ open, onOpenChange, onSuccess }: Pro
               <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <Text strong>账号信息（请妥善保存并通知员工）：</Text>
-                  <Button size="small" icon={<IconDownload />} onClick={handleCopyCredentials}>复制全部</Button>
+                  <Button icon={<IconDownload />} onClick={handleCopyCredentials}>复制全部</Button>
                 </div>
                 <Table
                   columns={credentialColumns}

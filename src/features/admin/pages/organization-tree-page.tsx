@@ -179,7 +179,6 @@ export function OrganizationTreePage() {
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             icon={<X className="h-4 w-4" />}
             onClick={() => setSearchTerm('')}
           >

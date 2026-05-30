@@ -39,7 +39,6 @@ export function CopyableCell({ content, maxWidthClass = 'max-w-[150px]', classNa
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320 }}>
           <p style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0 }}>{content}</p>
           <Button
-            size="small"
             icon={copied ? <IconTick /> : <IconCopy />}
             onClick={handleCopy}
             block

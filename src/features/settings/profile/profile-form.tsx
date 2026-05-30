@@ -101,7 +101,6 @@ export function ProfileForm() {
         ))}
         <Button
           theme='borderless'
-          size='small'
           className='mt-2'
           onClick={() => setUrls([...urls, { value: '' }])}
         >

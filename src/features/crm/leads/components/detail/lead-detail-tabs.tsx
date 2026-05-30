@@ -256,9 +256,9 @@ export function LeadDetailTabs({
                   <span style={{ color: 'var(--semi-color-text-2)' }}>条</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Button size="small" theme="light" disabled={followupPage <= 1} onClick={() => setFollowupPage(followupPage - 1)} icon={<ChevronLeft style={{ width: 16, height: 16 }} />} />
+                  <Button theme="light" disabled={followupPage <= 1} onClick={() => setFollowupPage(followupPage - 1)} icon={<ChevronLeft style={{ width: 16, height: 16 }} />} />
                   <span style={{ fontSize: 12, padding: '0 8px' }}>{followupPage} / {followupsPaginated.totalPages || 1}</span>
-                  <Button size="small" theme="light" disabled={followupPage >= followupsPaginated.totalPages} onClick={() => setFollowupPage(followupPage + 1)} icon={<ChevronRight style={{ width: 16, height: 16 }} />} />
+                  <Button theme="light" disabled={followupPage >= followupsPaginated.totalPages} onClick={() => setFollowupPage(followupPage + 1)} icon={<ChevronRight style={{ width: 16, height: 16 }} />} />
                 </div>
               </div>
             )}

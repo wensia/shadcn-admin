@@ -237,7 +237,7 @@ export function LeadCallRecords({
             {record.has_recording && (
               <Tooltip content="通话详情">
                 <span style={{ display: 'inline-flex' }}>
-                  <Button theme="borderless" size="small" icon={<Play style={{ width: 12, height: 12 }} />} onClick={() => setDetailRecord(toCallRecord(record))} />
+                  <Button theme="borderless" icon={<Play style={{ width: 12, height: 12 }} />} onClick={() => setDetailRecord(toCallRecord(record))} />
                 </span>
               </Tooltip>
             )}
@@ -276,9 +276,9 @@ export function LeadCallRecords({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid var(--semi-color-border)' }}>
               <span style={{ fontSize: 12, color: 'var(--semi-color-text-2)' }}>共 {total} 条</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Button size="small" theme="light" disabled={page <= 1} onClick={() => setPage(page - 1)} icon={<ChevronLeft style={{ width: 12, height: 12 }} />} />
+                <Button theme="light" disabled={page <= 1} onClick={() => setPage(page - 1)} icon={<ChevronLeft style={{ width: 12, height: 12 }} />} />
                 <span style={{ fontSize: 12, padding: '0 8px' }}>{page} / {totalPages}</span>
-                <Button size="small" theme="light" disabled={page >= totalPages} onClick={() => setPage(page + 1)} icon={<ChevronRight style={{ width: 12, height: 12 }} />} />
+                <Button theme="light" disabled={page >= totalPages} onClick={() => setPage(page + 1)} icon={<ChevronRight style={{ width: 12, height: 12 }} />} />
               </div>
             </div>
           )}

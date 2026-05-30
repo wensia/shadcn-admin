@@ -287,7 +287,6 @@ export function YunkeCredentialsPage() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<LogIn style={{ width: 16, height: 16 }} />}
                 onClick={() => handleLogin(record)}
                 disabled={loginMutation.isPending}
@@ -312,7 +311,6 @@ export function YunkeCredentialsPage() {
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  size="small"
                   icon={<MoreHorizontal style={{ width: 16, height: 16 }} />}
                 />
               </Dropdown>

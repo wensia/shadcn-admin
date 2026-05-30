@@ -67,6 +67,11 @@ export const crmNavGroups: NavGroup[] = [
         icon: BarChart3,
       },
       {
+        title: '线索缴费统计',
+        url: '/crm/data-statistics/lead-payment',
+        icon: Wallet,
+      },
+      {
         title: '创建日志',
         url: '/crm/lead-creation-logs',
         icon: ClipboardList,
@@ -586,7 +591,7 @@ export const yunkeTeams = [
   },
 ]
 
-// 工具导航组（在 /tools 下使用，侧边栏只留单入口，具体工具通过 Hub 卡片进入）
+// 工具导航组（在 /tools 下使用）
 export const toolsNavGroups: NavGroup[] = [
   {
     title: '工具',
@@ -596,6 +601,21 @@ export const toolsNavGroups: NavGroup[] = [
         title: '工具导航',
         url: '/tools',
         icon: Wrench,
+      },
+      {
+        title: '中考分析记录',
+        url: '/tools/zhongkao-records',
+        icon: ClipboardList,
+      },
+      {
+        title: '兑换码管理',
+        url: '/tools/redemption-codes',
+        icon: KeyRound,
+      },
+      {
+        title: '用量配额',
+        url: '/tools/quota-settings',
+        icon: Settings2,
       },
     ],
   },

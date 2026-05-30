@@ -292,7 +292,7 @@ export function EducationListPage({ config }: EducationListPageProps) {
                 </Dropdown.Menu>
               }
             >
-              <Button data-stop-row-click icon={<IconMore />} theme="borderless" size="small" />
+              <Button data-stop-row-click icon={<IconMore />} theme="borderless" />
             </Dropdown>
           )
         },

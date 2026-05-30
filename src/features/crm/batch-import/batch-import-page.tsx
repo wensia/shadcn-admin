@@ -71,6 +71,7 @@ const methodOptions = [
   { value: 'csv', label: 'CSV' },
   { value: 'manual', label: '手动' },
   { value: 'api', label: 'API' },
+  { value: 'xiaoditui', label: '小地推' },
 ]
 
 // 列定义
@@ -483,7 +484,7 @@ export function BatchImportPage() {
             }
           >
             <span data-stop-row-click>
-              <Button theme="borderless" icon={<IconMore />} size="small" />
+              <Button theme="borderless" icon={<IconMore />} />
             </span>
           </Dropdown>
         )

@@ -253,7 +253,6 @@ export function AIDocumentLibrary() {
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  size="small"
                   icon={<Pencil className="h-3.5 w-3.5" />}
                   onClick={() => handleEdit(record)}
                 />
@@ -264,7 +263,6 @@ export function AIDocumentLibrary() {
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  size="small"
                   icon={record.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   onClick={() =>
                     toggleMutation.mutate({
@@ -281,7 +279,6 @@ export function AIDocumentLibrary() {
                 <Button
                   theme="borderless"
                   type="danger"
-                  size="small"
                   icon={<Trash2 className="h-3.5 w-3.5" />}
                   onClick={() => setDeleteDoc(record)}
                 />
@@ -299,7 +296,7 @@ export function AIDocumentLibrary() {
         title="资料库管理"
         total={total}
         headerActions={
-          <Button size="small" theme="solid" type="primary" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleCreate}>
+          <Button theme="solid" type="primary" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleCreate}>
             新建文档
           </Button>
         }

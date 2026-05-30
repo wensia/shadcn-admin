@@ -137,7 +137,6 @@ function VersionHistoryPanel({
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  size="small"
                   icon={<Eye className="h-3.5 w-3.5" />}
                   onClick={() => onPreview(prompt)}
                 />
@@ -148,7 +147,6 @@ function VersionHistoryPanel({
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  size="small"
                   icon={<Pencil className="h-3.5 w-3.5" />}
                   onClick={() => onEdit(prompt)}
                 />
@@ -159,7 +157,6 @@ function VersionHistoryPanel({
                 <Button
                   theme="borderless"
                   type="tertiary"
-                  size="small"
                   icon={<Copy className="h-3.5 w-3.5" />}
                   onClick={() => onCopy(prompt)}
                 />
@@ -170,7 +167,6 @@ function VersionHistoryPanel({
                 <span style={{ display: 'inline-flex' }}>
                   <Button
                     theme="borderless"
-                    size="small"
                     icon={<CircleCheck className="h-3.5 w-3.5" />}
                     style={{ color: '#16a34a' }}
                     onClick={() => onActivate(prompt.id)}
@@ -423,7 +419,6 @@ export function AIPromptManager() {
           return (
             <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
               <Button
-                size="small"
                 theme="outline"
                 icon={<Plus className="h-3.5 w-3.5" />}
                 onClick={() => activePrompt ? openDialog('copy', record.sceneKey, activePrompt) : openDialog('create', record.sceneKey)}
@@ -447,7 +442,6 @@ export function AIPromptManager() {
             <span style={{ display: 'inline-flex' }}>
               <Button
                 theme="outline"
-                size="small"
                 icon={<Database className="h-3.5 w-3.5" />}
                 onClick={() => seedMutation.mutate()}
                 disabled={seedMutation.isPending}

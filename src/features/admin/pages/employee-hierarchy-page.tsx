@@ -267,7 +267,6 @@ export function EmployeeHierarchyPage() {
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             onClick={() => setSearchTerm('')}
           >
             清除

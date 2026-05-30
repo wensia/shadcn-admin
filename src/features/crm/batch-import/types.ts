@@ -6,7 +6,7 @@
 export type BatchStatus = 'processing' | 'completed' | 'failed'
 
 // 导入方式
-export type ImportMethod = 'excel' | 'csv' | 'manual' | 'api'
+export type ImportMethod = 'excel' | 'csv' | 'manual' | 'api' | 'xiaoditui'
 
 // 失败类型
 export type FailureType =
@@ -97,7 +97,7 @@ export interface UploadOptions {
   batchDescription?: string
   startRow?: number
   importCount?: number
-  campusId?: string  // 兼容旧调用；新版导入以 Excel 归属校区为准
+  campusId?: string // 兼容旧调用；新版导入以 Excel 归属校区为准
   onProgress?: (percent: number) => void
 }
 
@@ -127,6 +127,7 @@ export const importMethodLabels: Record<ImportMethod, string> = {
   csv: 'CSV',
   manual: '手动',
   api: 'API',
+  xiaoditui: '小地推',
 }
 
 // 上传响应类型（区分同步/异步模式）
@@ -148,6 +149,7 @@ export interface BatchProgress {
   status: BatchStatus
   total_count: number
   success_count: number
+  activated_count?: number
   failed_count: number
   started_at: string | null
   completed_at: string | null
@@ -156,6 +158,8 @@ export interface BatchProgress {
     status?: string
     message?: string
     success_count?: number
+    created_count?: number
+    activated_count?: number
     failed_count?: number
     total_count?: number
     updated_at?: string

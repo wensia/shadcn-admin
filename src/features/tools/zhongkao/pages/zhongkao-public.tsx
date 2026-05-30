@@ -39,6 +39,18 @@ const DISTRICT_CONFIG: Record<string, { examName: string; maxScore: number }> = 
 };
 const SUPPORTED_DISTRICTS = Object.keys(DISTRICT_CONFIG);
 
+const ANALYZE_ERROR_MESSAGES: Record<string, string> = {
+  ACCESS_TICKET_INVALID: "访问凭证无效，请重新输入兑换码",
+  ACCESS_TICKET_EXPIRED: "访问凭证已过期，请重新输入兑换码",
+  REDEMPTION_TICKET_INVALID: "访问凭证无效或已过期，请重新输入兑换码",
+  REDEMPTION_TICKET_REQUIRED: "请先登录员工账号，或使用有效兑换码后再查询",
+  REDEMPTION_CODE_INVALID: "兑换码无效，请重新获取后再试",
+  REDEMPTION_CODE_EXPIRED: "兑换码已过期，请重新获取后再试",
+  REDEMPTION_CODE_EXHAUSTED: "兑换码已用尽，请重新获取后再试",
+  TOOL_QUOTA_BLOCKED: "您已被限制使用此工具，请联系管理员",
+  TOOL_QUOTA_EXCEEDED: "今日使用次数已达上限，请联系管理员调整配额",
+};
+
 export function ZhongkaoPublicPage() {
   useDocumentTitle('中考志愿填报');
   const search = useSearch({ strict: false }) as { district?: string };
@@ -60,6 +72,7 @@ export function ZhongkaoPublicPage() {
   const [history, setHistory] = useState("");
   const [subjectsOpen, setSubjectsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [localOnly, setLocalOnly] = useState(false);
@@ -75,11 +88,29 @@ export function ZhongkaoPublicPage() {
   function clearTicketAndReset() {
     setAccessTicket(null);
     setResult(null);
+    setErrorMessage(null);
+  }
+
+  function getAnalyzeErrorMessage(err: unknown) {
+    const error = err as Error & { code?: string };
+    if (error.code && ANALYZE_ERROR_MESSAGES[error.code]) {
+      return ANALYZE_ERROR_MESSAGES[error.code];
+    }
+    return error.message || "查询失败，请稍后重试";
   }
 
   async function handleAnalyze() {
+    setErrorMessage(null);
     const s = parseFloat(score);
-    if (isNaN(s) || s < 0 || s > 800) return;
+    const maxScore = DISTRICT_CONFIG[district]?.maxScore || 800;
+    if (!score.trim() || isNaN(s)) {
+      setErrorMessage(`请输入${DISTRICT_CONFIG[district]?.examName || "考试"}总分`);
+      return;
+    }
+    if (s < 0 || s > maxScore) {
+      setErrorMessage(`请输入 0-${maxScore} 之间的分数`);
+      return;
+    }
     setLoading(true);
     try {
       const ticket = isAuthenticated ? undefined : (accessTicket ?? undefined);
@@ -88,15 +119,21 @@ export function ZhongkaoPublicPage() {
       setLocalOnly(false);
     } catch (err: unknown) {
       const errCode = (err as Error & { code?: string }).code;
-      if (errCode === 'ACCESS_TICKET_INVALID' || errCode === 'ACCESS_TICKET_EXPIRED') {
+      if (
+        errCode === 'ACCESS_TICKET_INVALID' ||
+        errCode === 'ACCESS_TICKET_EXPIRED' ||
+        errCode === 'REDEMPTION_TICKET_INVALID'
+      ) {
         clearTicketAndReset();
       }
+      setErrorMessage(getAnalyzeErrorMessage(err));
     }
     finally { setLoading(false); }
   }
 
   async function handleLocalOnly() {
     if (!result) return;
+    setErrorMessage(null);
     setLoading(true);
     try {
       const ticket = isAuthenticated ? undefined : (accessTicket ?? undefined);
@@ -105,9 +142,14 @@ export function ZhongkaoPublicPage() {
       setLocalOnly(true);
     } catch (err: unknown) {
       const errCode = (err as Error & { code?: string }).code;
-      if (errCode === 'ACCESS_TICKET_INVALID' || errCode === 'ACCESS_TICKET_EXPIRED') {
+      if (
+        errCode === 'ACCESS_TICKET_INVALID' ||
+        errCode === 'ACCESS_TICKET_EXPIRED' ||
+        errCode === 'REDEMPTION_TICKET_INVALID'
+      ) {
         clearTicketAndReset();
       }
+      setErrorMessage(getAnalyzeErrorMessage(err));
     }
     finally { setLoading(false); }
   }
@@ -115,7 +157,7 @@ export function ZhongkaoPublicPage() {
   function handleReset() {
     setScore(""); setChinese(""); setMath(""); setEnglish("");
     setPhysics(""); setChemistry(""); setPolitics(""); setHistory("");
-    setResult(null); setLocalOnly(false);
+    setResult(null); setLocalOnly(false); setErrorMessage(null);
   }
 
   const tierConfig = {
@@ -262,18 +304,28 @@ export function ZhongkaoPublicPage() {
               </button>
               <button
                 onClick={() => {
-                  setLocalOnly(!localOnly);
                   if (!localOnly) {
                     handleLocalOnly();
                   } else {
                     // 切回全市
+                    setErrorMessage(null);
                     const s = result.score;
                     setLoading(true);
                     const ticket = isAuthenticated ? undefined : (accessTicket ?? undefined);
                     analyzeScore(s, district, false, ticket).then(data => {
                       setResult(data);
                       setLocalOnly(false);
-                    }).catch(() => {}).finally(() => setLoading(false));
+                    }).catch((err: unknown) => {
+                      const errCode = (err as Error & { code?: string }).code;
+                      if (
+                        errCode === 'ACCESS_TICKET_INVALID' ||
+                        errCode === 'ACCESS_TICKET_EXPIRED' ||
+                        errCode === 'REDEMPTION_TICKET_INVALID'
+                      ) {
+                        clearTicketAndReset();
+                      }
+                      setErrorMessage(getAnalyzeErrorMessage(err));
+                    }).finally(() => setLoading(false));
                   }
                 }}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] transition-colors ${
@@ -303,6 +355,14 @@ export function ZhongkaoPublicPage() {
               </button>
             </div>
           </div>
+
+          {errorMessage && (
+            <div className="mb-6 rounded-xl border border-[#d97757]/20 bg-[#d97757]/8 px-4 py-3">
+              <p className="text-[13px] leading-relaxed" style={{ color: "#d97757", fontFamily: "var(--font-serif-local)" }}>
+                {errorMessage}
+              </p>
+            </div>
+          )}
 
           {/* 统计卡片 */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-8">
@@ -409,7 +469,10 @@ export function ZhongkaoPublicPage() {
                 min={0}
                 max={DISTRICT_CONFIG[district]?.maxScore || 800}
                 value={score}
-                onChange={(e) => setScore(e.target.value)}
+                onChange={(e) => {
+                  setScore(e.target.value);
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 className="ant-input h-10"
               />
             </div>
@@ -456,6 +519,14 @@ export function ZhongkaoPublicPage() {
             <Button onClick={handleAnalyze} disabled={loading} className="ant-btn w-full h-10 bg-primary text-primary-foreground hover:bg-[#c4654a]">
               {loading ? '分析中...' : '开始分析'}
             </Button>
+
+            {errorMessage && (
+              <div className="rounded-xl border border-[#d97757]/20 bg-[#d97757]/8 px-4 py-3">
+                <p className="text-[13px] leading-relaxed" style={{ color: "#d97757", fontFamily: "var(--font-serif-local)" }}>
+                  {errorMessage}
+                </p>
+              </div>
+            )}
 
             {/* Tips */}
             <div className="rounded-xl bg-[#788c5d]/8 p-4">

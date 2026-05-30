@@ -503,14 +503,12 @@ export function OrderDialog({
             type="tertiary"
             theme="borderless"
             icon={<IconEdit />}
-            size="small"
             onClick={() => handleEditCourse(index)}
           />
           <Button
             type="danger"
             theme="borderless"
             icon={<IconDelete />}
-            size="small"
             onClick={() => handleDeleteCourse(index)}
           />
         </div>
@@ -587,7 +585,6 @@ export function OrderDialog({
                       type="danger"
                       theme="borderless"
                       icon={<IconClose />}
-                      size="small"
                       onClick={handleClearLead}
                     />
                   )}
@@ -650,7 +647,7 @@ export function OrderDialog({
               text={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                   <span>课程明细</span>
-                  <Button icon={<IconPlus />} size="small" onClick={handleAddCourse}>
+                  <Button icon={<IconPlus />} onClick={handleAddCourse}>
                     添加课程
                   </Button>
                 </div>

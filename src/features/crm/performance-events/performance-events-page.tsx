@@ -348,7 +348,6 @@ export function PerformanceEventsPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
               <span data-stop-row-click style={{ display: 'inline-flex' }}>
                 <Button
-                  size="small"
                   theme="borderless"
                   type="tertiary"
                   icon={<IconEdit />}
@@ -363,7 +362,6 @@ export function PerformanceEventsPage() {
               </span>
               <span data-stop-row-click style={{ display: 'inline-flex' }}>
                 <Button
-                  size="small"
                   theme="borderless"
                   type="danger"
                   icon={<IconDelete />}

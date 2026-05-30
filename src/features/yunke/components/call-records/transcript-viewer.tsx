@@ -351,7 +351,6 @@ export function TranscriptViewer({ transcript, currentTime = 0, staffName, onSee
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             icon={<IconChevronUp />}
             disabled={!matches.length}
             onClick={goToPrevMatch}
@@ -362,7 +361,6 @@ export function TranscriptViewer({ transcript, currentTime = 0, staffName, onSee
           <Button
             theme="borderless"
             type="tertiary"
-            size="small"
             icon={<IconChevronDown />}
             disabled={!matches.length}
             onClick={goToNextMatch}

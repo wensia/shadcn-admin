@@ -144,9 +144,9 @@ export function EmailConfigPage() {
           onClick={() => refetch()}
           loading={isFetching}
           theme="light"
-        >
-          刷新
-        </Button>
+          title="刷新"
+          aria-label="刷新"
+        />
       </div>
 
       <Banner

@@ -349,7 +349,6 @@ export function ExcelDemoPage() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<FileUp className="h-3.5 w-3.5" />}
                 onClick={handleImportJSON}
               >
@@ -363,7 +362,6 @@ export function ExcelDemoPage() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<Download className="h-3.5 w-3.5" />}
                 onClick={handleExportJSON}
                 disabled={!isReady}
@@ -378,7 +376,6 @@ export function ExcelDemoPage() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<Terminal className="h-3.5 w-3.5" />}
                 onClick={handlePrintData}
                 disabled={!isReady}
@@ -395,7 +392,6 @@ export function ExcelDemoPage() {
               <Button
                 theme="borderless"
                 type="tertiary"
-                size="small"
                 icon={<Plus className="h-3.5 w-3.5" />}
                 onClick={handleClear}
                 disabled={!isReady}

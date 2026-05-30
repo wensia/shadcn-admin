@@ -44,7 +44,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         theme='borderless'
         type='tertiary'
         icon={<IconMore />}
-        size='small'
       />
     </Dropdown>
   )

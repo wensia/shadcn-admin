@@ -244,14 +244,12 @@ export function IdentitiesPage() {
               theme="borderless"
               type="tertiary"
               icon={<Pencil className="h-4 w-4" />}
-              size="small"
               onClick={() => handleEdit(record)}
             />
             <Button
               theme="borderless"
               type="danger"
               icon={<Trash2 className="h-4 w-4" />}
-              size="small"
               onClick={() => handleDeleteClick(record)}
             />
           </div>

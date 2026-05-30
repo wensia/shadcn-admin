@@ -281,14 +281,12 @@ export function ASRConfigPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Pencil className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleEdit(record!)}
               />
               <Button
                 theme="borderless"
                 type="tertiary"
                 icon={<Play className="h-4 w-4" />}
-                size="small"
                 onClick={() => testMutation.mutate(record!.id)}
                 disabled={testMutation.isPending}
               />
@@ -296,7 +294,6 @@ export function ASRConfigPage() {
                 theme="borderless"
                 type="danger"
                 icon={<Trash2 className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleDeleteClick(record!)}
               />
             </div>

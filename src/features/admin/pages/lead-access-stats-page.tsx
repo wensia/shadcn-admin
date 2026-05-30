@@ -274,7 +274,6 @@ export function LeadAccessStatsPage() {
             <Button
               theme="borderless"
               type="tertiary"
-              size="small"
               icon={<Pencil className="h-3 w-3" />}
               iconPosition="right"
               onClick={() => handleEditLimit(record)}

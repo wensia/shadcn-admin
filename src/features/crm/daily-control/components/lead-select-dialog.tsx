@@ -154,8 +154,8 @@ export function LeadSelectDialog({
       bodyStyle={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 16, gap: 16, maxHeight: 'calc(70vh - 120px)' }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <Button size="small" onClick={() => onOpenChange(false)}>取消</Button>
-          <Button size="small" theme="solid" onClick={handleConfirm} disabled={!selectedLead}>
+          <Button onClick={() => onOpenChange(false)}>取消</Button>
+          <Button theme="solid" onClick={handleConfirm} disabled={!selectedLead}>
             {selectedLead ? `确定选择 ${selectedLead.child_name || selectedLead.parent_phone}` : '请先选择线索'}
           </Button>
         </div>

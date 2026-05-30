@@ -319,8 +319,8 @@ export function SourceChannelsPage() {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={64} />
         return (
           <div style={{ display: 'flex', gap: 4 }}>
-            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} size="small" onClick={() => handleEdit(record)} />
-            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} size="small" onClick={() => handleDeleteClick(record)} />
+            <Button theme="borderless" type="tertiary" icon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(record)} />
+            <Button theme="borderless" type="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleDeleteClick(record)} />
           </div>
         )
       },
@@ -664,8 +664,8 @@ export function SourceChannelsPage() {
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                                  <Button theme="borderless" type="tertiary" icon={<Copy className="h-3.5 w-3.5" />} size="small" onClick={() => handleCopyTokenLink(tok)} />
-                                  <Button theme="borderless" type="danger" icon={<Trash2 className="h-3.5 w-3.5" />} size="small" onClick={() => removeTokenMutation.mutate({ channelId: editingItem.id, token: tok })} />
+                                  <Button theme="borderless" type="tertiary" icon={<Copy className="h-3.5 w-3.5" />} onClick={() => handleCopyTokenLink(tok)} />
+                                  <Button theme="borderless" type="danger" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => removeTokenMutation.mutate({ channelId: editingItem.id, token: tok })} />
                                 </div>
                               </div>
                             ))}
@@ -732,7 +732,7 @@ export function SourceChannelsPage() {
                     <Settings2 className="h-4 w-4" />
                     <span>配置该来源渠道特有的额外字段</span>
                   </div>
-                  <Button theme="outline" size="small" icon={<Plus className="h-4 w-4" />} onClick={handleAddExtraField}>
+                  <Button theme="outline" icon={<Plus className="h-4 w-4" />} onClick={handleAddExtraField}>
                     添加字段
                   </Button>
                 </div>
@@ -748,7 +748,7 @@ export function SourceChannelsPage() {
                     <div key={index} style={{ border: '1px solid var(--semi-color-border)', borderRadius: 6, marginBottom: 12, padding: 16, position: 'relative' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                         <Text strong size="small">字段 {index + 1}</Text>
-                        <Button theme="borderless" type="tertiary" icon={<X className="h-4 w-4" />} size="small" onClick={() => handleRemoveExtraField(index)} />
+                        <Button theme="borderless" type="tertiary" icon={<X className="h-4 w-4" />} onClick={() => handleRemoveExtraField(index)} />
                       </div>
 
                       {/* 第一行：字段名和标签 */}
@@ -793,7 +793,7 @@ export function SourceChannelsPage() {
                         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--semi-color-border)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                             <Text size="small" type="tertiary">选项配置</Text>
-                            <Button theme="borderless" type="tertiary" size="small" icon={<Plus className="h-3 w-3" />} onClick={() => handleAddOption(index)}>
+                            <Button theme="borderless" type="tertiary" icon={<Plus className="h-3 w-3" />} onClick={() => handleAddOption(index)}>
                               添加选项
                             </Button>
                           </div>
@@ -807,7 +807,7 @@ export function SourceChannelsPage() {
                                 <div key={optIndex} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                   <Input placeholder="选项标签" value={opt.label} onChange={(v) => updateOption(index, optIndex, 'label', v)} style={{ flex: 1 }} />
                                   <Input placeholder="选项值" value={opt.value} onChange={(v) => updateOption(index, optIndex, 'value', v)} style={{ flex: 1 }} />
-                                  <Button theme="borderless" type="tertiary" icon={<X className="h-3 w-3" />} size="small" onClick={() => handleRemoveOption(index, optIndex)} />
+                                  <Button theme="borderless" type="tertiary" icon={<X className="h-3 w-3" />} onClick={() => handleRemoveOption(index, optIndex)} />
                                 </div>
                               ))}
                             </div>

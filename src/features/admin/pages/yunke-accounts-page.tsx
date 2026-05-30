@@ -315,7 +315,6 @@ export function YunkeAccountsPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Unlink className="h-3 w-3" />}
-                size="small"
                 style={{ width: 24, height: 24 }}
                 onClick={() => handleUnbindClick(record)}
               />
@@ -323,7 +322,7 @@ export function YunkeAccountsPage() {
           )
         }
         return (
-          <Button theme="outline" size="small" icon={<Link className="h-3 w-3" />} onClick={() => handleBindClick(record)}>
+          <Button theme="outline" icon={<Link className="h-3 w-3" />} onClick={() => handleBindClick(record)}>
             绑定员工
           </Button>
         )
@@ -361,7 +360,7 @@ export function YunkeAccountsPage() {
       render: (_id: string, record: YunkeSubAccount) => {
         if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={80} />
         return (
-          <Button theme="outline" size="small" icon={<Key className="h-4 w-4" />} onClick={() => handleResetPasswordClick(record)}>
+          <Button theme="outline" icon={<Key className="h-4 w-4" />} onClick={() => handleResetPasswordClick(record)}>
             重置密码
           </Button>
         )
@@ -626,7 +625,7 @@ export function YunkeAccountsPage() {
                   </div>
                 )}
               </div>
-              <Button theme="borderless" type="tertiary" size="small" disabled={bindMutation.isPending}>
+              <Button theme="borderless" type="tertiary" disabled={bindMutation.isPending}>
                 选择
               </Button>
             </div>
@@ -656,21 +655,21 @@ export function YunkeAccountsPage() {
             <Text strong>姓名：</Text>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>{selectedAccount?.real_name}</span>
-              <Button theme="borderless" type="tertiary" icon={<Copy className="h-3 w-3" />} size="small" onClick={() => handleCopyToClipboard(selectedAccount?.real_name || '', '姓名')} />
+              <Button theme="borderless" type="tertiary" icon={<Copy className="h-3 w-3" />} onClick={() => handleCopyToClipboard(selectedAccount?.real_name || '', '姓名')} />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 8, alignItems: 'center' }}>
             <Text strong>账号：</Text>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <code style={{ background: 'var(--semi-color-fill-0)', padding: '2px 8px', borderRadius: 4 }}>{selectedAccount?.username}</code>
-              <Button theme="borderless" type="tertiary" icon={<Copy className="h-3 w-3" />} size="small" onClick={() => handleCopyToClipboard(selectedAccount?.username || '', '账号')} />
+              <Button theme="borderless" type="tertiary" icon={<Copy className="h-3 w-3" />} onClick={() => handleCopyToClipboard(selectedAccount?.username || '', '账号')} />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 8, alignItems: 'center' }}>
             <Text strong>新密码：</Text>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <code style={{ background: 'var(--semi-color-fill-0)', padding: '2px 8px', borderRadius: 4, fontWeight: 'bold' }}>{passwordResult?.new_password}</code>
-              <Button theme="borderless" type="tertiary" icon={<Copy className="h-3 w-3" />} size="small" onClick={() => handleCopyToClipboard(passwordResult?.new_password || '', '密码')} />
+              <Button theme="borderless" type="tertiary" icon={<Copy className="h-3 w-3" />} onClick={() => handleCopyToClipboard(passwordResult?.new_password || '', '密码')} />
             </div>
           </div>
 

@@ -165,9 +165,9 @@ export function AdvisorTaskSection({
               loading={dashboardQuery.isRefetching}
               onClick={() => void dashboardQuery.refetch()}
               style={{ borderRadius: 12 }}
-            >
-              刷新考核
-            </Button>
+              title="刷新考核"
+              aria-label="刷新考核"
+            />
           </div>
         </div>
 

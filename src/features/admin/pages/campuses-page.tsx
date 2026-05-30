@@ -325,7 +325,6 @@ export function CampusesPage() {
                   theme="borderless"
                   type="tertiary"
                   icon={<QrCode className="h-4 w-4" />}
-                  size="small"
                   disabled={!record.is_active}
                   onClick={() => handleOpenDirectVisit(record)}
                 />
@@ -334,14 +333,12 @@ export function CampusesPage() {
                 theme="borderless"
                 type="tertiary"
                 icon={<Pencil className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleEdit(record)}
               />
               <Button
                 theme="borderless"
                 type={record.is_active ? 'warning' : 'tertiary'}
                 icon={record.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4 text-green-600" />}
-                size="small"
                 loading={togglingId === record.id}
                 onClick={() => toggleStatusMutation.mutate({ id: record.id, is_active: !record.is_active })}
               />
@@ -349,7 +346,6 @@ export function CampusesPage() {
                 theme="borderless"
                 type="danger"
                 icon={<Trash2 className="h-4 w-4" />}
-                size="small"
                 onClick={() => handleDeleteClick(record)}
               />
             </div>

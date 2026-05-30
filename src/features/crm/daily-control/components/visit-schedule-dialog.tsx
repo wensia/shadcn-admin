@@ -217,7 +217,6 @@ export function VisitScheduleDialog({
                     type="tertiary"
                     theme="borderless"
                     icon={<IconClose />}
-                    size="small"
                     onClick={handleClearLead}
                     style={{ marginLeft: 'auto' }}
                   />

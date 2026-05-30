@@ -56,21 +56,18 @@ export function ChangeHistoryTimeline({
       {/* 筛选按钮 */}
       <div style={{ display: 'flex', gap: 8 }}>
         <Button
-          size="small"
           theme={filter === 'all' ? 'solid' : 'light'}
           onClick={() => setFilter('all')}
         >
           全部 ({(infoChanges?.length || 0) + (ownershipChanges?.length || 0)})
         </Button>
         <Button
-          size="small"
           theme={filter === 'info' ? 'solid' : 'light'}
           onClick={() => setFilter('info')}
         >
           信息变更 ({infoChanges?.length || 0})
         </Button>
         <Button
-          size="small"
           theme={filter === 'ownership' ? 'solid' : 'light'}
           onClick={() => setFilter('ownership')}
         >

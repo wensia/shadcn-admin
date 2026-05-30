@@ -3,10 +3,13 @@
  * 使用Zustand + localStorage持久化
  * 实现多tab页面导航功能
  */
-
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import { hasRouteComponent } from '@/lib/route-components'
+import {
+  persist,
+  createJSONStorage,
+  type StateStorage,
+} from 'zustand/middleware'
+import { getRouteConfig, hasRouteComponent } from '@/lib/route-components'
 
 /**
  * Tab信息接口
@@ -31,7 +34,7 @@ interface TabsState {
   addTab: (tab: Omit<TabInfo, 'id'>) => void
   removeTab: (tabId: string) => void
   removeOtherTabs: (tabId: string) => void
-  removeAllTabs: () => void
+  removeAllTabs: (group?: string) => void
   setActiveTab: (tabId: string) => void
   setActiveTabByPath: (path: string) => void
   getTabByPath: (path: string) => TabInfo | undefined
@@ -51,6 +54,18 @@ function generateTabId(path: string): string {
 const MAX_TABS = 6
 
 /**
+ * 获取路径所属的模块分组
+ * 顶部 Tab 按模块独立缓存，避免隐藏模块的 Tab 被当前模块操作误清理
+ */
+export function getTabGroup(path: string): string {
+  if (path.startsWith('/yunke')) return 'yunke'
+  if (path.startsWith('/admin')) return 'admin'
+  if (path.startsWith('/hr')) return 'hr'
+  if (path.startsWith('/tools')) return 'tools'
+  return 'crm'
+}
+
+/**
  * 首页Tab配置
  */
 const HOME_TAB: TabInfo = {
@@ -58,6 +73,28 @@ const HOME_TAB: TabInfo = {
   title: 'Dashboard',
   path: '/',
   closable: false,
+}
+
+const tabsStorage: StateStorage = {
+  getItem: (name) => {
+    const stored = localStorage.getItem(name)
+    if (stored !== null) return stored
+
+    const legacyStored = sessionStorage.getItem(name)
+    if (legacyStored !== null) {
+      localStorage.setItem(name, legacyStored)
+      sessionStorage.removeItem(name)
+    }
+    return legacyStored
+  },
+  setItem: (name, value) => {
+    localStorage.setItem(name, value)
+    sessionStorage.removeItem(name)
+  },
+  removeItem: (name) => {
+    localStorage.removeItem(name)
+    sessionStorage.removeItem(name)
+  },
 }
 
 /**
@@ -78,7 +115,7 @@ export const useTabsStore = create<TabsState>()(
         const { tabs } = get()
 
         // 检查是否已存在相同path的tab
-        const existingTab = tabs.find(t => t.path === tabData.path)
+        const existingTab = tabs.find((t) => t.path === tabData.path)
 
         if (existingTab) {
           // 已存在则激活
@@ -93,12 +130,18 @@ export const useTabsStore = create<TabsState>()(
         }
 
         let newTabs = [...tabs, newTab]
+        const newTabGroup = getTabGroup(newTab.path)
 
-        // 超出最大数量时，关闭最早的可关闭tab
-        while (newTabs.length > MAX_TABS) {
-          const firstClosable = newTabs.find(t => t.closable)
+        // 超出当前模块最大数量时，关闭同模块最早的可关闭tab
+        while (
+          newTabs.filter((t) => getTabGroup(t.path) === newTabGroup).length >
+          MAX_TABS
+        ) {
+          const firstClosable = newTabs.find(
+            (t) => t.closable && getTabGroup(t.path) === newTabGroup
+          )
           if (!firstClosable) break
-          newTabs = newTabs.filter(t => t.id !== firstClosable.id)
+          newTabs = newTabs.filter((t) => t.id !== firstClosable.id)
         }
 
         set({
@@ -113,24 +156,32 @@ export const useTabsStore = create<TabsState>()(
       removeTab: (tabId) => {
         const { tabs, activeTabId } = get()
 
-        const tabToRemove = tabs.find(t => t.id === tabId)
+        const tabToRemove = tabs.find((t) => t.id === tabId)
 
         // 不允许关闭不可关闭的tab
         if (!tabToRemove || !tabToRemove.closable) {
           return
         }
 
-        const tabIndex = tabs.findIndex(t => t.id === tabId)
-        const newTabs = tabs.filter(t => t.id !== tabId)
+        const newTabs = tabs.filter((t) => t.id !== tabId)
 
         // 如果关闭的是当前激活的tab，需要切换到其他tab
         let newActiveTabId = activeTabId
         if (activeTabId === tabId) {
+          const tabGroup = getTabGroup(tabToRemove.path)
+          const groupTabs = tabs.filter((t) => getTabGroup(t.path) === tabGroup)
+          const groupTabIndex = groupTabs.findIndex((t) => t.id === tabId)
+          const newGroupTabs = newTabs.filter(
+            (t) => getTabGroup(t.path) === tabGroup
+          )
+
           // 优先切换到右边的tab，否则切换到左边
-          if (tabIndex < newTabs.length) {
-            newActiveTabId = newTabs[tabIndex].id
+          if (groupTabIndex < newGroupTabs.length) {
+            newActiveTabId = newGroupTabs[groupTabIndex].id
+          } else if (newGroupTabs.length > 0) {
+            newActiveTabId = newGroupTabs[newGroupTabs.length - 1].id
           } else if (newTabs.length > 0) {
-            newActiveTabId = newTabs[newTabs.length - 1].id
+            newActiveTabId = newTabs[0].id
           } else {
             newActiveTabId = null
           }
@@ -147,7 +198,17 @@ export const useTabsStore = create<TabsState>()(
        */
       removeOtherTabs: (tabId) => {
         const { tabs } = get()
-        const newTabs = tabs.filter(t => t.id === tabId || !t.closable)
+        const targetTab = tabs.find((t) => t.id === tabId)
+
+        if (!targetTab) {
+          return
+        }
+
+        const targetGroup = getTabGroup(targetTab.path)
+        const newTabs = tabs.filter(
+          (t) =>
+            getTabGroup(t.path) !== targetGroup || t.id === tabId || !t.closable
+        )
 
         set({
           tabs: newTabs,
@@ -158,13 +219,26 @@ export const useTabsStore = create<TabsState>()(
       /**
        * 关闭所有可关闭的Tab
        */
-      removeAllTabs: () => {
-        const { tabs } = get()
-        const newTabs = tabs.filter(t => !t.closable)
+      removeAllTabs: (group) => {
+        const { tabs, activeTabId } = get()
+        const newTabs = tabs.filter(
+          (t) =>
+            !t.closable ||
+            (group !== undefined && getTabGroup(t.path) !== group)
+        )
+
+        let newActiveTabId = activeTabId
+        if (!newActiveTabId || !newTabs.some((t) => t.id === newActiveTabId)) {
+          const fallbackTab =
+            group !== undefined
+              ? newTabs.find((t) => getTabGroup(t.path) === group)
+              : newTabs[0]
+          newActiveTabId = fallbackTab?.id ?? newTabs[0]?.id ?? null
+        }
 
         set({
           tabs: newTabs,
-          activeTabId: newTabs.length > 0 ? newTabs[0].id : null,
+          activeTabId: newActiveTabId,
         })
       },
 
@@ -173,7 +247,7 @@ export const useTabsStore = create<TabsState>()(
        */
       setActiveTab: (tabId) => {
         const { tabs } = get()
-        const tab = tabs.find(t => t.id === tabId)
+        const tab = tabs.find((t) => t.id === tabId)
 
         if (tab) {
           set({ activeTabId: tabId })
@@ -185,7 +259,7 @@ export const useTabsStore = create<TabsState>()(
        */
       setActiveTabByPath: (path) => {
         const { tabs } = get()
-        const tab = tabs.find(t => t.path === path)
+        const tab = tabs.find((t) => t.path === path)
 
         if (tab) {
           set({ activeTabId: tab.id })
@@ -197,7 +271,7 @@ export const useTabsStore = create<TabsState>()(
        */
       getTabByPath: (path) => {
         const { tabs } = get()
-        return tabs.find(t => t.path === path)
+        return tabs.find((t) => t.path === path)
       },
 
       /**
@@ -205,16 +279,14 @@ export const useTabsStore = create<TabsState>()(
        */
       updateTabTitle: (tabId, title) => {
         const { tabs } = get()
-        const newTabs = tabs.map(t =>
-          t.id === tabId ? { ...t, title } : t
-        )
+        const newTabs = tabs.map((t) => (t.id === tabId ? { ...t, title } : t))
 
         set({ tabs: newTabs })
       },
     }),
     {
       name: 'tabs-storage',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => tabsStorage),
       version: 1,
       // 迁移旧版本数据
       migrate: (persistedState, _version) => {
@@ -230,12 +302,18 @@ export const useTabsStore = create<TabsState>()(
         }
 
         // 过滤无效的tab路径，只保留有对应路由配置的tab
-        let validTabs = persisted.tabs.filter(t =>
-          t.path === '/' || hasRouteComponent(t.path)
-        )
+        let validTabs = persisted.tabs
+          .filter((t) => t.path === '/' || hasRouteComponent(t.path))
+          .map((t) => {
+            if (t.path === '/')
+              return { ...HOME_TAB, ...t, id: HOME_TAB.id, closable: false }
+
+            const config = getRouteConfig(t.path)
+            return config ? { ...t, title: config.title } : t
+          })
 
         // 确保首页tab存在且配置正确
-        const homeTabIndex = validTabs.findIndex(t => t.path === '/')
+        const homeTabIndex = validTabs.findIndex((t) => t.path === '/')
         if (homeTabIndex === -1) {
           // 首页tab不存在，添加到开头
           validTabs = [HOME_TAB, ...validTabs]
@@ -250,7 +328,7 @@ export const useTabsStore = create<TabsState>()(
 
         // 验证activeTabId是否有效
         let activeTabId = persisted.activeTabId || 'tab-home'
-        const activeTabExists = validTabs.some(t => t.id === activeTabId)
+        const activeTabExists = validTabs.some((t) => t.id === activeTabId)
         if (!activeTabExists) {
           activeTabId = 'tab-home'
         }
@@ -271,7 +349,7 @@ export const useTabsStore = create<TabsState>()(
 export const useActiveTab = () =>
   useTabsStore((state) => {
     const { tabs, activeTabId } = state
-    return tabs.find(t => t.id === activeTabId)
+    return tabs.find((t) => t.id === activeTabId)
   })
 
 /**
@@ -285,6 +363,6 @@ export const useTabs = () => useTabsStore((state) => state.tabs)
 export const useActiveTabPath = () =>
   useTabsStore((state) => {
     const { tabs, activeTabId } = state
-    const activeTab = tabs.find(t => t.id === activeTabId)
+    const activeTab = tabs.find((t) => t.id === activeTabId)
     return activeTab?.path || '/'
   })

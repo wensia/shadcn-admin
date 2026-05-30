@@ -18,15 +18,17 @@ import {
 } from '@douyinfe/semi-ui-19'
 import { Check, Copy, RefreshCw } from 'lucide-react'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import { unwrapData } from '@/lib/api/types'
 import { toast } from '@/lib/toast'
 import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
 import { adminApi } from '@/features/admin/api'
 import type { EmployeeIdentityItem } from '@/features/admin/types'
-import type { EmployeeListItem } from '@/features/crm/leads/api'
+import { employeeApi, type EmployeeListItem } from '@/features/crm/leads/api'
 import { yunkeOnboardingApi } from '../api'
 import type { OnboardingConsultantResult, YunkeDeptNode } from '../types'
 
 const { Title, Text } = Typography
+const CONSULTING_DEPARTMENT_NAMES = '咨询部,TMK'
 
 interface Props {
   open: boolean
@@ -188,6 +190,34 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
       identities.find((identity) => identity.id === selectedIdentityId) ?? null,
     [identities, selectedIdentityId]
   )
+  const crmEmployeePhone = useMemo(
+    () => normalizePhoneInput(selectedEmployee?.phone ?? ''),
+    [selectedEmployee?.phone]
+  )
+  const normalizedEmployeePhoneInput = useMemo(
+    () => normalizePhoneInput(employeePhoneInput),
+    [employeePhoneInput]
+  )
+  const employeePhoneChanged = Boolean(
+    selectedEmployee &&
+      crmEmployeePhone &&
+      normalizedEmployeePhoneInput &&
+      normalizedEmployeePhoneInput !== crmEmployeePhone
+  )
+  const employeePhoneInvalid = Boolean(
+    normalizedEmployeePhoneInput &&
+      !/^\d{11}$/.test(normalizedEmployeePhoneInput)
+  )
+  let employeePhoneHelpText =
+    '默认读取 CRM 员工手机号，可在创建前修改以避开云客手机号重复'
+  if (!crmEmployeePhone) {
+    employeePhoneHelpText = '该员工档案暂无手机号，提交后会同步写入 CRM 员工资料'
+  } else if (employeePhoneChanged) {
+    employeePhoneHelpText =
+      '已修改手机号，提交后会同步更新 CRM 员工资料并用于创建云客账号'
+  }
+  const employeePhoneHelpType =
+    !crmEmployeePhone || employeePhoneChanged ? 'warning' : 'tertiary'
 
   useEffect(() => {
     if (!selectedEmployee || identitiesLoading) return
@@ -260,8 +290,7 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
       toast.error('请选择 CRM 员工')
       return
     }
-    const employeePhone =
-      selectedEmployee.phone?.trim() || normalizePhoneInput(employeePhoneInput)
+    const employeePhone = normalizePhoneInput(employeePhoneInput)
     if (!employeePhone) {
       toast.error('请填写员工手机号')
       return
@@ -286,7 +315,7 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
     mutation.mutate({
       employee_id: selectedEmployee.id,
       identity_id: selectedIdentityId,
-      employee_phone: selectedEmployee.phone?.trim() ? undefined : employeePhone,
+      employee_phone: employeePhone,
       yunke_admin_account_id: credential.id,
       yunke_dept_id: formValues.yunkeDeptId,
       yunke_role_id: formValues.yunkeRoleId,
@@ -434,11 +463,11 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
                   <>
                     <Text strong>{selectedEmployee.name}</Text>
                     <Text type='tertiary' style={{ marginLeft: 8 }}>
-                      {selectedEmployee.phone || selectedEmployee.username}
+                      {normalizedEmployeePhoneInput || selectedEmployee.username}
                     </Text>
                   </>
                 ) : (
-                  <Text type='tertiary'>请选择 CRM 中已有的课程顾问</Text>
+                  <Text type='tertiary'>请选择 CRM 中已有的咨询部/TMK员工</Text>
                 )}
               </div>
               <Button onClick={() => setEmployeeSelectorOpen(true)}>
@@ -447,22 +476,24 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
             </div>
           </Form.Slot>
 
-          {selectedEmployee && !selectedEmployee.phone?.trim() && (
+          {selectedEmployee && (
             <Form.Slot label='员工手机号'>
               <Input
                 value={employeePhoneInput}
                 placeholder='请输入 11 位手机号'
                 maxLength={11}
+                showClear
+                validateStatus={employeePhoneInvalid ? 'error' : 'default'}
                 onChange={(value) =>
                   setEmployeePhoneInput(normalizePhoneInput(value))
                 }
               />
               <Text
-                type='warning'
+                type={employeePhoneHelpType}
                 size='small'
                 style={{ marginTop: 4, display: 'block' }}
               >
-                该员工档案暂无手机号，提交后会同步写入 CRM 员工资料
+                {employeePhoneHelpText}
               </Text>
             </Form.Slot>
           )}
@@ -568,9 +599,20 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
           setEmployeePhoneInput(employee.phone ?? '')
         }}
         title='选择课程顾问'
-        description='从 CRM 在职课程顾问中选择要开通云客账号的员工'
+        description='从 CRM 在职咨询部/TMK员工中选择要开通云客账号的员工'
         confirmText='选定顾问'
-        filterByAdvisorPosition
+        filterByAdvisorPosition={false}
+        employeeLoader={async ({ page, size, search, campusName }) => {
+          const response = await employeeApi.getEmployees({
+            page,
+            size,
+            search,
+            campus_name: campusName,
+            department_names: CONSULTING_DEPARTMENT_NAMES,
+            is_active: true,
+          })
+          return unwrapData(response)
+        }}
       />
     </>
   )
@@ -613,7 +655,6 @@ function ResultCard({
         </Title>
         <Button
           theme='outline'
-          size='small'
           icon={
             copied ? (
               <Check className='h-3 w-3' />

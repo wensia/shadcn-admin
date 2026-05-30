@@ -451,6 +451,7 @@ export interface YunkeRole {
 export interface OnboardingCreateConsultantRequest {
   employee_id: string
   identity_id: string
+  /** 本次开通使用的手机号；可覆盖 CRM 默认手机号并同步回员工档案 */
   employee_phone?: string
   yunke_admin_account_id: string
   yunke_dept_id: string
