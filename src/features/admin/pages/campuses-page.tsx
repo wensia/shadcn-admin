@@ -14,6 +14,7 @@ import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { copyToClipboard } from '@/lib/utils'
 import { adminApi, sourceChannelApi } from '../api'
@@ -610,9 +611,7 @@ export function CampusesPage() {
         style={{ maxWidth: 520 }}
       >
         {isDirectVisitTokensLoading ? (
-          <div style={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-            <Spin />
-          </div>
+          <DialogBodySkeleton variant="detail" rows={3} />
         ) : !directVisitCampus?.is_active ? (
           <Banner
             type="warning"

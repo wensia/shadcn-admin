@@ -54,7 +54,7 @@ const orgRows = [
 // 快捷操作
 const quickActions = [
   { label: '创建员工', path: '/admin/employees' },
-  { label: '组织架构', path: '/admin/organization-tree' },
+  { label: '组织架构', path: '/admin/organization' },
   { label: '部门管理', path: '/admin/departments' },
   { label: '职位管理', path: '/admin/positions' },
   { label: '校区管理', path: '/admin/campuses' },

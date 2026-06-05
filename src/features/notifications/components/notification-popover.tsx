@@ -18,23 +18,24 @@ interface NotificationPopoverProps {
 type TabKey = 'all' | 'unread' | 'todo'
 
 // 标签页与查询参数的映射
-function getQueryParams(tab: TabKey) {
+function getQueryParams(tab: TabKey, size: number) {
   switch (tab) {
     case 'unread':
-      return { page: 1, size: 10, is_read: false }
+      return { page: 1, size, is_read: false }
     case 'todo':
-      return { page: 1, size: 10, category: 'todo' as NotificationCategory }
+      return { page: 1, size, category: 'todo' as NotificationCategory }
     default:
-      return { page: 1, size: 10 }
+      return { page: 1, size }
   }
 }
 
 export function NotificationPopover({ onClose }: NotificationPopoverProps) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabKey>('all')
+  const [expanded, setExpanded] = useState(false)
 
   // 根据当前标签页查询
-  const params = getQueryParams(activeTab)
+  const params = getQueryParams(activeTab, expanded ? 100 : 10)
   const { data, isLoading } = useNotifications(params)
   const markAsRead = useMarkAsRead()
   const markAllAsRead = useMarkAllAsRead()
@@ -54,10 +55,35 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
           navigate({ to: '/crm/leads' })
           break
         case 'order':
-          navigate({ to: '/crm/performance-events' })
+          navigate({ to: '/crm/pending-approvals' })
           break
         case 'task':
-          navigate({ to: '/crm/leads/assignment-tasks' })
+          navigate({ to: '/crm/advisor-tasks' })
+          break
+        case 'lead_assignment_task':
+          if (notification.entity_id) {
+            navigate({
+              to: '/crm/leads/assignment-tasks/$taskId',
+              params: { taskId: notification.entity_id },
+            })
+          } else {
+            navigate({ to: '/crm/leads/assignment-tasks' })
+          }
+          break
+        case 'resignation':
+          navigate({
+            to: '/hr/identity-applications',
+            search: { type: 'resignations', status: 'all', page: 1, size: 20 },
+          })
+          break
+        case 'identity_application':
+          navigate({
+            to: '/hr/identity-applications',
+            search: { type: 'identity', status: 'all', page: 1, size: 20 },
+          })
+          break
+        case 'lead_access':
+          navigate({ to: '/crm/leads' })
           break
         default:
           break
@@ -72,9 +98,8 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
     markAllAsRead.mutate()
   }
 
-  // 查看全部 - 切换到未读标签
   const handleViewAll = () => {
-    setActiveTab('all')
+    setExpanded(true)
   }
 
   // 通知列表内容
@@ -148,7 +173,10 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
       {/* 标签页 */}
       <Tabs
         activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as TabKey)}
+        onChange={(key) => {
+          setActiveTab(key as TabKey)
+          setExpanded(false)
+        }}
         size="small"
         style={{ marginTop: -4 }}
         tabBarStyle={{ paddingLeft: 16, paddingRight: 16 }}
@@ -164,7 +192,7 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
       </div>
 
       {/* 底部操作 */}
-      {notifications.length > 0 && (
+      {!expanded && notifications.length > 0 && data && data.total > notifications.length && (
         <>
           <Divider style={{ margin: 0 }} />
           <div className="p-2">
@@ -174,7 +202,7 @@ export function NotificationPopover({ onClose }: NotificationPopoverProps) {
               block
               onClick={handleViewAll}
             >
-              查看全部通知
+              查看更多通知
             </Button>
           </div>
         </>

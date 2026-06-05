@@ -15,13 +15,7 @@ import {
   Spin,
   Space,
 } from '@douyinfe/semi-ui-19'
-import {
-  IconSearch,
-  IconFilter,
-  IconDownload,
-  IconUserAdd,
-  IconClose,
-} from '@douyinfe/semi-icons'
+import { IconDownload, IconUserAdd, IconClose } from '@douyinfe/semi-icons'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { formatTime } from '@/lib/utils/time'
@@ -32,6 +26,7 @@ import type { FilterTag } from '@/components/semi/filter-tags-bar'
 import { IntentionLevelBadge } from '../leads/components/status-badges'
 import { LeadDetailSheet } from '../leads/components/lead-detail-sheet'
 import { FilterSheet } from '../leads/components/filter-sheet'
+import { LeadListToolbarControls } from '../leads/components/lead-list-toolbar-controls'
 import { leadsPoolApi, type ExportStatusResult } from './api'
 import type { LeadPoolItem, LeadPoolListParams } from './types'
 import { leadStatusLabels, intentionLevelLabels, gradeLabels, followupResultLabels, type LeadListParams, type IntentionLevel } from '../leads/types'
@@ -568,70 +563,54 @@ export function LeadsPoolPage() {
 
   // 工具栏
   const toolbar = (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-      <Input
-        prefix={<IconSearch />}
-        placeholder="搜索姓名或手机号..."
-        value={searchValue}
-        onChange={(value) => {
-          setSearchValue(value)
-          setPagination(prev => ({ ...prev, page: 1 }))
-        }}
-        showClear
-        style={{ width: 240 }}
-      />
+    <LeadListToolbarControls
+      searchValue={searchValue}
+      searchWidth={240}
+      filterBadgeCount={advancedFiltersCount}
+      onSearchChange={(value) => {
+        setSearchValue(value)
+        setPagination(prev => ({ ...prev, page: 1 }))
+      }}
+      onFilterClick={() => setFilterSheetOpen(true)}
+      extraControls={
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Input
+              type="number"
+              placeholder="最少天数"
+              value={daysMin}
+              onChange={(value) => {
+                setDaysMin(value)
+                setPagination(prev => ({ ...prev, page: 1 }))
+              }}
+              style={{ width: 100 }}
+            />
+            <Text type="tertiary">-</Text>
+            <Input
+              type="number"
+              placeholder="最多天数"
+              value={daysMax}
+              onChange={(value) => {
+                setDaysMax(value)
+                setPagination(prev => ({ ...prev, page: 1 }))
+              }}
+              style={{ width: 100 }}
+            />
+          </div>
 
-      <Button
-        icon={<IconFilter />}
-        onClick={() => setFilterSheetOpen(true)}
-      >
-        高级筛选
-        {advancedFiltersCount > 0 && (
-          <Tag
-            color="blue"
-            shape="circle"
-            style={{ marginLeft: 6, minWidth: 20, height: 20, lineHeight: '20px' }}
-          >
-            {advancedFiltersCount}
-          </Tag>
-        )}
-      </Button>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <Input
-          type="number"
-          placeholder="最少天数"
-          value={daysMin}
-          onChange={(value) => {
-            setDaysMin(value)
-            setPagination(prev => ({ ...prev, page: 1 }))
-          }}
-          style={{ width: 100 }}
-        />
-        <Text type="tertiary">-</Text>
-        <Input
-          type="number"
-          placeholder="最多天数"
-          value={daysMax}
-          onChange={(value) => {
-            setDaysMax(value)
-            setPagination(prev => ({ ...prev, page: 1 }))
-          }}
-          style={{ width: 100 }}
-        />
-      </div>
-
-      {hasFilters && (
-        <Button
-          type="tertiary"
-          theme="borderless"
-          icon={<IconClose />}
-          onClick={handleClearFilters}
-        >
-          清除筛选
-        </Button>
-      )}
-    </div>
+          {hasFilters && (
+            <Button
+              type="tertiary"
+              theme="borderless"
+              icon={<IconClose />}
+              onClick={handleClearFilters}
+            >
+              清除筛选
+            </Button>
+          )}
+        </>
+      }
+    />
   )
 
   return (

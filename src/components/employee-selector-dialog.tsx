@@ -16,6 +16,7 @@ import {
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { Check } from 'lucide-react'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { employeeApi, type EmployeeListItem } from '@/features/crm/leads/api'
 
 const { Text } = Typography
@@ -339,6 +340,9 @@ export function EmployeeSelectorDialog({
       </div>
 
       {/* 员工表格 */}
+      {isLoading && !employeeData ? (
+        <DialogBodySkeleton variant="list" rows={pageSize} compact />
+      ) : (
       <Table
         columns={columns}
         dataSource={filteredItems}
@@ -382,6 +386,7 @@ export function EmployeeSelectorDialog({
           </div>
         }
       />
+      )}
     </Modal>
   )
 }

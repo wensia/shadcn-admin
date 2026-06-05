@@ -5,8 +5,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/lib/toast'
-import { Loader2 } from 'lucide-react'
 import { Modal, Button, Select, Switch, Typography } from '@douyinfe/semi-ui-19'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { leadAccessStatsApi, dingtalkRobotsApi } from '../api'
 import type { DingtalkRobot } from '../types'
 import { showApiErrorToast } from '@/lib/api/error-toast'
@@ -116,8 +116,8 @@ export function LeadAccessNotifyDialog({
       </Text>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--semi-color-text-2)' }} />
+        <div style={{ padding: '16px 0 4px' }}>
+          <DialogBodySkeleton variant="form" rows={4} />
         </div>
       ) : (
         <div className="space-y-6 py-4">

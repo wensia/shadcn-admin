@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
 import { copyToClipboard } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { callRecordsApi } from '../../api'
@@ -141,7 +142,9 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const [isMuted, setIsMuted] = useState(false)
   const [playbackRate, setPlaybackRate] = useState(1)
   const [reanalyzeConfirmOpen, setReanalyzeConfirmOpen] = useState(false)
+  const [retranscribeConfirmOpen, setRetranscribeConfirmOpen] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const isSuperuser = useAuthStore((state) => Boolean(state.user?.is_superuser))
 
   // 懒加载完整记录（含 transcript 和 ai_analysis）
   const [fullRecord, setFullRecord] = useState<CallRecord | null>(null)
@@ -158,22 +161,33 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     if (!open || !recordProp) {
       const frameId = requestAnimationFrame(() => {
         setFullRecord(null)
+        setIsDetailLoading(false)
       })
       return () => cancelAnimationFrame(frameId)
     }
 
+    let cancelled = false
     const frameId = requestAnimationFrame(() => {
       setIsDetailLoading(true)
       callRecordsApi.getCallRecord(recordProp.id)
-        .then((data) => setFullRecord(data))
-        .catch((err) => showApiErrorToast(err, '加载详情失败'))
-        .finally(() => setIsDetailLoading(false))
+        .then((data) => {
+          if (!cancelled) setFullRecord(data)
+        })
+        .catch((err) => {
+          if (!cancelled) showApiErrorToast(err, '加载详情失败')
+        })
+        .finally(() => {
+          if (!cancelled) setIsDetailLoading(false)
+        })
     })
 
-    return () => cancelAnimationFrame(frameId)
-  }, [open, recordProp])
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frameId)
+    }
+  }, [open, recordProp?.id])
 
-  const record = recordProp
+  const record = fullRecord ?? recordProp
 
   const handleCopyRecordId = useCallback(async () => {
     if (!record?.id) return
@@ -240,6 +254,35 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   })
   const { mutate: triggerAnalyze, isPending: isAnalyzePending } = analyzeMutation
 
+  const retranscribeMutation = useMutation({
+    mutationFn: () => {
+      if (!record?.id) throw new Error('通话记录不存在')
+      return callRecordsApi.retranscribeCallRecord(record.id)
+    },
+    onSuccess: () => {
+      setRetranscribeConfirmOpen(false)
+      setFullRecord((prev) =>
+        prev
+          ? {
+              ...prev,
+              transcript: null,
+              transcript_status: 'pending',
+              has_transcript: false,
+              ai_analysis: null,
+              ai_analysis_status: null,
+              ai_analyzed_at: null,
+            }
+          : prev
+      )
+      Toast.success('已提交重新 ASR 转录任务')
+      queryClient.invalidateQueries({ queryKey: ['call-records'] })
+    },
+    onError: (error: Error) => {
+      Toast.error(`提交重新转录失败: ${error.message}`)
+    },
+  })
+  const { mutate: triggerRetranscribe, isPending: isRetranscribePending } = retranscribeMutation
+
   // 重置播放状态
   useEffect(() => {
     if (open) return
@@ -253,6 +296,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     resetPlayerState()
     setFullRecord(null)
     setReanalyzeConfirmOpen(false)
+    setRetranscribeConfirmOpen(false)
     onOpenChange(false)
   }, [onOpenChange, resetPlayerState])
 
@@ -367,8 +411,13 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
   const fullTranscript = fullRecord?.transcript
   const hasFullTranscript = fullTranscript && fullTranscript.length > 0
   const transcriptStatus = fullRecord?.transcript_status ?? record?.transcript_status
+  const isTranscriptBusy = transcriptStatus === 'pending' || transcriptStatus === 'processing'
   const canDownloadTranscript = Boolean(hasFullTranscript && transcriptStatus === 'completed')
   const analysisStatus = fullRecord?.ai_analysis_status ?? record?.ai_analysis_status
+  const canRetranscribe = isSuperuser && Boolean(record?.id) && hasRecording
+  const transcriptEmptyText = isTranscriptBusy
+    ? 'ASR 转写处理中'
+    : hasRecording ? '暂无转写文本' : '此通话无录音'
 
   const handleAnalyzeClick = useCallback(() => {
     if (analysisStatus === 'completed') {
@@ -382,6 +431,10 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
     setReanalyzeConfirmOpen(false)
     triggerAnalyze()
   }, [triggerAnalyze])
+
+  const handleConfirmRetranscribe = useCallback(() => {
+    triggerRetranscribe()
+  }, [triggerRetranscribe])
 
   return (
     <>
@@ -496,6 +549,21 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
             </span>
             {(hasRecording || hasFullTranscript) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {canRetranscribe && (
+                  <Button
+                    theme="borderless"
+                    icon={isRetranscribePending
+                      ? <Spin size="small" />
+                      : <RefreshCw style={{ height: 12, width: 12 }} />
+                    }
+                    disabled={isRetranscribePending || isTranscriptBusy || isDetailLoading}
+                    onClick={() => setRetranscribeConfirmOpen(true)}
+                    aria-label="重新 ASR 转录"
+                    style={{ height: 24, padding: '0 8px', fontSize: 11, color: 'var(--semi-color-warning)' }}
+                  >
+                    {isTranscriptBusy ? '转写中' : '重新 ASR 转录'}
+                  </Button>
+                )}
                 {hasRecording && (
                   <Button
                     theme="borderless"
@@ -735,7 +803,7 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
               />
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 200, color: 'var(--semi-color-text-2)' }}>
-                {hasRecording ? '暂无转写文本' : '此通话无录音'}
+                {transcriptEmptyText}
               </div>
             )}
           </div>
@@ -830,6 +898,28 @@ export function RecordDetailModal({ record: recordProp, open, onOpenChange }: Re
         }
       >
         确定要重新分析当前通话记录吗？系统会基于当前转写内容重新生成 AI 分析结果，并覆盖当前展示内容。
+      </Modal>
+
+      <Modal
+        title="确认重新 ASR 转录"
+        visible={retranscribeConfirmOpen}
+        onCancel={() => setRetranscribeConfirmOpen(false)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setRetranscribeConfirmOpen(false)}>取消</Button>
+            <Button
+              theme="solid"
+              type="primary"
+              onClick={handleConfirmRetranscribe}
+              loading={isRetranscribePending}
+              disabled={isTranscriptBusy}
+            >
+              确认重新转录
+            </Button>
+          </div>
+        }
+      >
+        重新转录会清空当前转写文本和已有 AI 分析结果，并提交到 ASR 队列生成新的转写内容。
       </Modal>
     </>
   )

@@ -20,6 +20,7 @@ import {
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconSearch, IconRefresh, IconTick, IconDelete } from '@douyinfe/semi-icons'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { toast } from '@/lib/toast'
 import { formatTime } from '@/lib/utils/time'
 import { apiClient } from '@/lib/api/client'
@@ -368,6 +369,9 @@ export function DiscAccessGrantModal({ visible, onClose }: DiscAccessGrantModalP
             </div>
 
             {/* 员工表格 */}
+            {loadingEmployees && !employeeData ? (
+              <DialogBodySkeleton variant="list" rows={pageSize} compact />
+            ) : (
             <Table<EmployeeListItem>
               columns={employeeColumns}
               dataSource={employeeData?.items || []}
@@ -395,6 +399,7 @@ export function DiscAccessGrantModal({ visible, onClose }: DiscAccessGrantModalP
                 </div>
               }
             />
+            )}
           </>
         )}
 
@@ -404,6 +409,9 @@ export function DiscAccessGrantModal({ visible, onClose }: DiscAccessGrantModalP
               以下同事可以查看你推荐的DISC测试记录
             </Text>
 
+            {loadingGrants && grants.length === 0 ? (
+              <DialogBodySkeleton variant="list" rows={4} compact />
+            ) : (
             <Table<DiscAccessGrantItem>
               columns={grantColumns}
               dataSource={grants}
@@ -416,6 +424,7 @@ export function DiscAccessGrantModal({ visible, onClose }: DiscAccessGrantModalP
                 </div>
               }
             />
+            )}
           </>
         )}
       </div>

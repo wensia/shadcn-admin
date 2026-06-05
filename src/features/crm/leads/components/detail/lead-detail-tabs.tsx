@@ -10,6 +10,7 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconCopy, IconTick } from '@douyinfe/semi-icons'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { copyToClipboard } from '@/lib/utils'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { formatTime } from '@/lib/utils/time'
 
 import { leadsApi } from '../../api'
@@ -204,7 +205,7 @@ export function LeadDetailTabs({
         <div style={wrapperStyle}>
           <div style={{ padding: 16 }}>
             {isLoading ? (
-              <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '32px 0' }}>加载中...</div>
+              <DialogBodySkeleton variant="detail" rows={5} compact />
             ) : lead ? (
               <LeadInfoDisplay lead={lead} isOverdue={statistics.isOverdue} onFieldUpdate={onFieldUpdate} compact={compact} />
             ) : (
@@ -233,7 +234,7 @@ export function LeadDetailTabs({
             </div>
             <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 16 }}>
               {isFollowupsLoading ? (
-                <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>加载中...</div>
+                <DialogBodySkeleton variant="list" rows={5} compact />
               ) : !followupsPaginated.items.length ? (
                 <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>暂无跟进记录</div>
               ) : (

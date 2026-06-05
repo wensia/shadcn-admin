@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { SemiSkeletonCell, isSkeletonRow } from '@/lib/table-utils'
 import { toast } from '@/lib/toast'
 import { formatTime } from '@/lib/utils/time'
@@ -45,8 +46,8 @@ type IdentityApplicationsMode = 'mine' | 'admin'
 type ReviewAction = 'approve' | 'reject'
 type ReviewStage = 'department' | 'admin'
 
-type IdentityApplicationFormValues = IdentityApplicationCreate & {
-  joined_on?: string | Date
+type IdentityApplicationFormValues = Omit<IdentityApplicationCreate, 'joined_on'> & {
+  joined_on: string | Date
 }
 
 const STATUS_CONFIG: Record<string, { color: 'grey' | 'orange' | 'green' | 'red'; label: string }> = {
@@ -74,8 +75,7 @@ function StatusTag({ status }: { status: string }) {
   )
 }
 
-function formatDateValue(value?: string | Date) {
-  if (!value) return undefined
+function formatDateValue(value: string | Date) {
   if (typeof value === 'string') return value.slice(0, 10)
   const year = value.getFullYear()
   const month = `${value.getMonth() + 1}`.padStart(2, '0')
@@ -85,11 +85,13 @@ function formatDateValue(value?: string | Date) {
 
 export function IdentityApplicationsPage({
   mode = 'mine',
+  documentTitle,
 }: {
   mode?: IdentityApplicationsMode
+  documentTitle?: string
 }) {
   const isAdminMode = mode === 'admin'
-  useDocumentTitle(isAdminMode ? '员工身份申请审批' : '员工身份申请')
+  useDocumentTitle(documentTitle ?? (isAdminMode ? '员工身份申请审批' : '员工身份申请'))
 
   const queryClient = useQueryClient()
   const formRef = useRef<FormApi | null>(null)
@@ -140,9 +142,9 @@ export function IdentityApplicationsPage({
   })
 
   const { data: campuses = [] } = useQuery({
-    queryKey: ['identity-application-campuses'],
+    queryKey: ['identity-application-accessible-campuses'],
     queryFn: async () => {
-      const response = await adminApi.getCampusesSimple()
+      const response = await hrApi.getIdentityApplicationAccessibleCampuses()
       return response.data || []
     },
     enabled: createDialogOpen,
@@ -576,6 +578,7 @@ export function IdentityApplicationsPage({
             label="入职日期"
             type="date"
             placeholder="选择入职日期"
+            rules={[{ required: true, message: '请选择入职日期' }]}
             style={{ width: '100%' }}
           />
           <Form.Select
@@ -591,11 +594,8 @@ export function IdentityApplicationsPage({
               const campusId = (value as string) || ''
               setSelectedCampusId(campusId)
               setSelectedDepartmentId('')
-              formRef.current?.setValues({
-                campus_id: campusId || undefined,
-                department_id: undefined,
-                position_id: undefined,
-              })
+              formRef.current?.setValue('department_id', undefined)
+              formRef.current?.setValue('position_id', undefined)
             }}
           />
           <Form.Select
@@ -612,10 +612,7 @@ export function IdentityApplicationsPage({
             onChange={(value) => {
               const departmentId = (value as string) || ''
               setSelectedDepartmentId(departmentId)
-              formRef.current?.setValues({
-                department_id: departmentId || undefined,
-                position_id: undefined,
-              })
+              formRef.current?.setValue('position_id', undefined)
             }}
           />
           <Form.Select
@@ -701,8 +698,9 @@ export function IdentityApplicationsPage({
           </div>
         }
       >
-        {detailLoading && <Text type="tertiary">加载中...</Text>}
-        {detailData && (
+        {detailLoading && !detailData ? (
+          <DialogBodySkeleton variant="detail" rows={6} />
+        ) : detailData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <Descriptions
               row
@@ -745,7 +743,7 @@ export function IdentityApplicationsPage({
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </Modal>
 
       <Modal

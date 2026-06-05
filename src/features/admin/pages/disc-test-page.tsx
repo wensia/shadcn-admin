@@ -176,7 +176,7 @@ function QrHoverPopover({
             {url}
           </p>
           <div className="flex w-full gap-2">
-            <Button theme="outline" icon={<IconCopy />} onClick={handleCopy} style={{ flex: 1 }}>
+            <Button theme="outline" className="rmf-copy-button" icon={<IconCopy />} onClick={handleCopy} style={{ flex: 1 }}>
               复制链接
             </Button>
             <Button theme="outline" icon={<Download className="h-3.5 w-3.5" />} onClick={handleDownload} style={{ flex: 1 }}>
@@ -1014,7 +1014,7 @@ function LinksTab() {
                   过期: {link.expires_at ? formatTime(link.expires_at) : '-'}
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <Button theme="outline" icon={<IconCopy />} onClick={() => handleCopyLink(link.test_url)}>
+                  <Button theme="outline" className="rmf-copy-button" icon={<IconCopy />} onClick={() => handleCopyLink(link.test_url)}>
                     复制
                   </Button>
                   <QrHoverPopover url={getFullUrl(link.test_url)}>

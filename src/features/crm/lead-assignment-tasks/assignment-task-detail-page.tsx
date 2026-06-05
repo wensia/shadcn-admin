@@ -1,17 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Button,
   Modal,
   Select,
+  Table,
   Tag,
   Toast,
   Typography,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import { ArrowLeft, Users, UserCheck, UserX, Percent, Info, User, UserPlus, Calendar, CalendarCheck, FileText, XCircle } from 'lucide-react'
-import { StatsBar, type StatsBarItem } from '@/components/semi/stats-bar'
+import { ArrowLeft } from 'lucide-react'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { formatTime } from '@/lib/utils/time'
@@ -28,6 +28,7 @@ import {
   completionStatusLabels,
   skippedReasonLabels,
   taskStatusLabels,
+  type LeadAssignmentTaskFollowupResultStat,
   type LeadAssignmentTaskItem,
   type TaskCompletionStatus,
 } from './types'
@@ -51,6 +52,75 @@ const completionStatusColors = {
 
 interface AssignmentTaskDetailPageProps {
   taskId: string
+}
+
+interface AssignmentSummaryCell {
+  key: string
+  metric: string
+  value: ReactNode
+}
+
+interface AssignmentSummaryGridRow {
+  key: string
+  cell0?: AssignmentSummaryCell
+  cell1?: AssignmentSummaryCell
+  cell2?: AssignmentSummaryCell
+  cell3?: AssignmentSummaryCell
+  cell4?: AssignmentSummaryCell
+  cell5?: AssignmentSummaryCell
+}
+
+type AssignmentSummaryCellKey = 'cell0' | 'cell1' | 'cell2' | 'cell3' | 'cell4' | 'cell5'
+
+const summaryCellKeys: AssignmentSummaryCellKey[] = ['cell0', 'cell1', 'cell2', 'cell3', 'cell4', 'cell5']
+
+function formatPercentValue(value?: number | null) {
+  return `${Number(value ?? 0).toFixed(1)}%`
+}
+
+function buildSummaryGridRows(items: AssignmentSummaryCell[]): AssignmentSummaryGridRow[] {
+  const rows: AssignmentSummaryGridRow[] = []
+
+  for (let start = 0; start < items.length; start += summaryCellKeys.length) {
+    const row: AssignmentSummaryGridRow = { key: `row-${start / summaryCellKeys.length}` }
+    summaryCellKeys.forEach((cellKey, offset) => {
+      row[cellKey] = items[start + offset]
+    })
+    rows.push(row)
+  }
+
+  return rows
+}
+
+function buildFollowupResultSummaryItems(
+  stats?: LeadAssignmentTaskFollowupResultStat[]
+): AssignmentSummaryCell[] {
+  if (!stats?.length) {
+    return [{ key: 'followup-result-empty', metric: '跟进结果', value: '暂无' }]
+  }
+
+  return stats.map((item) => ({
+    key: `followup-result-${item.result}`,
+    metric: `结果：${followupResultLabels[item.result] || item.result}`,
+    value: `${item.count}条`,
+  }))
+}
+
+function SummaryGridCell({ item }: { item?: AssignmentSummaryCell }) {
+  if (!item) {
+    return <div style={{ minHeight: 28 }} />
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 28 }}>
+      <Text type='tertiary' size='small' style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
+        {item.metric}
+      </Text>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--semi-color-text-0)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+        {item.value}
+      </div>
+    </div>
+  )
 }
 
 export function AssignmentTaskDetailPage({
@@ -223,6 +293,47 @@ export function AssignmentTaskDetailPage({
     []
   )
 
+  const summaryItems = useMemo<AssignmentSummaryCell[]>(() => [
+    { key: 'total-leads', metric: '总线索', value: `${task?.total_leads ?? 0}条` },
+    { key: 'completed-count', metric: '已回访', value: `${task?.completed_count ?? 0}条` },
+    { key: 'pending-count', metric: '未回访', value: `${task?.pending_count ?? 0}条` },
+    { key: 'skipped-count', metric: '已跳过', value: `${task?.skipped_count ?? 0}条` },
+    { key: 'completion-rate', metric: '回访率', value: formatPercentValue(task?.completion_rate) },
+    { key: 'progress-rate', metric: '任务进度', value: formatPercentValue(task?.task_progress_rate) },
+    {
+      key: 'status',
+      metric: '状态',
+      value: task?.status ? (
+        <Tag color={taskStatusColors[task.status]} shape='circle'>
+          {taskStatusLabels[task.status]}
+        </Tag>
+      ) : '-',
+    },
+    { key: 'advisor', metric: '负责人', value: task?.advisor.name || '-' },
+    { key: 'created-by', metric: '创建人', value: task?.created_by.name || '-' },
+    { key: 'created-at', metric: '创建时间', value: task?.created_at ? formatTime(task.created_at) : '-' },
+    { key: 'completed-at', metric: '完成时间', value: task?.completed_at ? formatTime(task.completed_at) : '-' },
+    { key: 'remark', metric: '备注', value: task?.remark || '无' },
+    ...buildFollowupResultSummaryItems(task?.followup_result_stats),
+  ], [task])
+
+  const summaryRows = useMemo(() => buildSummaryGridRows(summaryItems), [summaryItems])
+
+  const summaryColumns = useMemo<ColumnProps<AssignmentSummaryGridRow>[]>(
+    () => summaryCellKeys.map((cellKey) => ({
+      title: '',
+      dataIndex: cellKey,
+      width: 160,
+      render: (item?: AssignmentSummaryCell) => <SummaryGridCell item={item} />,
+      onCell: () => ({
+        style: {
+          padding: '5px 10px',
+        },
+      }),
+    })),
+    []
+  )
+
   const items = itemsData?.items ?? []
 
   return (
@@ -312,28 +423,26 @@ export function AssignmentTaskDetailPage({
               gap: 8,
             }}
           >
-            <StatsBar
-              items={[
-                { label: '总线索', value: `${task?.total_leads ?? 0}条`, icon: Users, color: 'var(--semi-color-primary)' },
-                { label: '已回访', value: `${task?.completed_count ?? 0}条`, icon: UserCheck, color: 'var(--semi-color-success)' },
-                { label: '未回访', value: `${task?.pending_count ?? 0}条`, icon: UserX, color: 'var(--semi-color-warning)' },
-                { label: '已跳过', value: `${task?.skipped_count ?? 0}条`, icon: XCircle, color: 'var(--semi-color-text-2)' },
-                { label: '回访率', value: `${Number(task?.completion_rate ?? 0).toFixed(1)}%`, icon: Percent, color: 'var(--semi-color-primary)' },
-                { label: '任务进度', value: `${Number(task?.task_progress_rate ?? 0).toFixed(1)}%`, icon: Percent, color: 'var(--semi-color-primary)' },
-              ] satisfies StatsBarItem[]}
-              isLoading={taskLoading}
-            />
-            <StatsBar
-              items={[
-                { label: '状态', value: task?.status ? taskStatusLabels[task.status] : '-', icon: Info, color: task?.status ? `var(--semi-color-${taskStatusColors[task.status] === 'grey' ? 'text-2' : taskStatusColors[task.status] === 'blue' ? 'primary' : 'success'})` : undefined },
-                { label: '负责人', value: task?.advisor.name || '-', icon: User, color: 'var(--semi-color-primary)' },
-                { label: '创建人', value: task?.created_by.name || '-', icon: UserPlus, color: 'var(--semi-color-text-2)' },
-                { label: '创建时间', value: task?.created_at ? formatTime(task.created_at) : '-', icon: Calendar, color: 'var(--semi-color-text-2)' },
-                { label: '完成时间', value: task?.completed_at ? formatTime(task.completed_at) : '-', icon: CalendarCheck, color: 'var(--semi-color-success)' },
-                { label: '备注', value: task?.remark || '无', icon: FileText, color: 'var(--semi-color-text-2)' },
-              ] satisfies StatsBarItem[]}
-              isLoading={taskLoading}
-            />
+            <div
+              style={{
+                border: '1px solid var(--semi-color-border)',
+                borderRadius: 8,
+                overflow: 'hidden',
+                background: 'var(--semi-color-bg-0)',
+              }}
+            >
+              <Table<AssignmentSummaryGridRow>
+                bordered
+                columns={summaryColumns}
+                dataSource={summaryRows}
+                rowKey='key'
+                pagination={false}
+                showHeader={false}
+                size='small'
+                loading={taskLoading}
+                empty='暂无统计数据'
+              />
+            </div>
           </div>
 
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

@@ -7,6 +7,7 @@ import { Table, Tag, Button, Pagination } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { FileEdit, UserCog, ArrowRight } from 'lucide-react'
 import { formatTime } from '@/lib/utils/time'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { EmptyState } from './empty-state'
 import {
   infoChangeTypeLabels,
@@ -41,8 +42,8 @@ export function ChangeHistoryTimeline({
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0', fontSize: 13, color: 'var(--semi-color-text-2)' }}>
-        加载中...
+      <div style={{ padding: '8px 0' }}>
+        <DialogBodySkeleton variant="detail" rows={4} compact />
       </div>
     )
   }

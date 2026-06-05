@@ -42,6 +42,13 @@ interface RowData {
   startTime: number
   duration: number
   text: string
+  timingBadge: TimingBadge | null
+}
+
+interface TimingBadge {
+  label: string
+  tooltip: string
+  color: 'orange' | 'grey'
 }
 
 interface TranscriptMatch {
@@ -111,6 +118,26 @@ function highlightText(text: string, query: string, activeOccurrenceIndex: numbe
   return pieces
 }
 
+function getTimingBadge(segment: TranscriptSegment): TimingBadge | null {
+  if (segment.timestamp_source === 'channel_vad_estimated_split') {
+    return {
+      label: 'VAD',
+      tooltip: 'VAD 辅助估算：声道语音窗口来自音频，句子边界仍按文本估算。',
+      color: 'orange',
+    }
+  }
+
+  if (segment.timestamp_source === 'estimated_sentence_split' || segment.estimated_timing) {
+    return {
+      label: '估',
+      tooltip: '估算时间：句子边界按文本拆分推算，不是上游 ASR 原生时间戳。',
+      color: 'grey',
+    }
+  }
+
+  return null
+}
+
 export function TranscriptViewer({ transcript, currentTime = 0, staffName, onSeek }: TranscriptViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [tableHeight, setTableHeight] = useState(400)
@@ -145,6 +172,7 @@ export function TranscriptViewer({ transcript, currentTime = 0, staffName, onSee
       startTime: seg.start_time,
       duration: seg.end_time - seg.start_time,
       text: seg.text,
+      timingBadge: getTimingBadge(seg),
     })),
     [transcript, staffName]
   )
@@ -244,12 +272,30 @@ export function TranscriptViewer({ transcript, currentTime = 0, staffName, onSee
     {
       title: '时间',
       dataIndex: 'startTime',
-      width: 44,
-      render: (val: unknown) => (
-        <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)', whiteSpace: 'nowrap' }}>
-          {fmtTime(val as number)}
-        </span>
-      ),
+      width: 72,
+      render: (val: unknown, row: RowData | undefined) => {
+        if (!row) return null
+        const content = (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums', color: 'var(--semi-color-text-2)' }}>
+              {fmtTime(val as number)}
+            </span>
+            {row.timingBadge && (
+              <Tooltip content={row.timingBadge.tooltip}>
+                <Tag
+                  size="small"
+                  color={row.timingBadge.color}
+                  type="light"
+                  style={{ fontSize: 10, height: 16, padding: '0 3px', lineHeight: '16px' }}
+                >
+                  {row.timingBadge.label}
+                </Tag>
+              </Tooltip>
+            )}
+          </span>
+        )
+        return content
+      },
     },
     {
       title: '时长',

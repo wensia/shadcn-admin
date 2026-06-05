@@ -25,7 +25,11 @@ import { adminApi } from '@/features/admin/api'
 import type { EmployeeIdentityItem } from '@/features/admin/types'
 import { employeeApi, type EmployeeListItem } from '@/features/crm/leads/api'
 import { yunkeOnboardingApi } from '../api'
-import type { OnboardingConsultantResult, YunkeDeptNode } from '../types'
+import type {
+  OnboardingConsultantResult,
+  OnboardingCreateConsultantRequest,
+  YunkeDeptNode,
+} from '../types'
 
 const { Title, Text } = Typography
 const CONSULTING_DEPARTMENT_NAMES = '咨询部,TMK'
@@ -274,7 +278,9 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
     mutationFn: yunkeOnboardingApi.createConsultant,
     onSuccess: (res) => {
       setResult(res)
-      if (!res.step_errors?.length) {
+      if (res.requires_confirmation) {
+        toast.warning('云客要求确认后继续新建')
+      } else if (!res.step_errors?.length) {
         toast.success(`已为 ${res.employee.name} 创建云客账号`)
       } else {
         toast.warning('已处理，但部分步骤失败，请查看对话框内提示')
@@ -285,34 +291,36 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
     },
   })
 
-  const handleSubmit = () => {
+  const buildSubmitPayload = (
+    confirmOtherCompanyContinue: boolean
+  ): OnboardingCreateConsultantRequest | null => {
     if (!selectedEmployee) {
       toast.error('请选择 CRM 员工')
-      return
+      return null
     }
     const employeePhone = normalizePhoneInput(employeePhoneInput)
     if (!employeePhone) {
       toast.error('请填写员工手机号')
-      return
+      return null
     }
     if (!/^\d{11}$/.test(employeePhone)) {
       toast.error('员工手机号必须是 11 位数字')
-      return
+      return null
     }
     if (!selectedIdentityId) {
       toast.error('请选择员工身份')
-      return
+      return null
     }
     if (!formValues.yunkeDeptId) {
       toast.error('请选择云客部门')
-      return
+      return null
     }
     if (!formValues.yunkeRoleId) {
       toast.error('请选择云客角色')
-      return
+      return null
     }
 
-    mutation.mutate({
+    return {
       employee_id: selectedEmployee.id,
       identity_id: selectedIdentityId,
       employee_phone: employeePhone,
@@ -320,7 +328,18 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
       yunke_dept_id: formValues.yunkeDeptId,
       yunke_role_id: formValues.yunkeRoleId,
       send_sms: formValues.sendSms ? 1 : 0,
-    })
+      confirm_other_company_continue: confirmOtherCompanyContinue,
+    }
+  }
+
+  const handleSubmit = () => {
+    const payload = buildSubmitPayload(false)
+    if (payload) mutation.mutate(payload)
+  }
+
+  const handleConfirmOtherCompanyContinue = () => {
+    const payload = buildSubmitPayload(true)
+    if (payload) mutation.mutate(payload)
   }
 
   const copyText = (text: string, label: string) => {
@@ -333,6 +352,12 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
 
   if (result) {
     const { employee, yunke, step_errors } = result
+    const waitingForOtherCompanyConfirm =
+      result.requires_confirmation &&
+      result.confirmation_type === 'other_company_phone'
+    const modalTitle = waitingForOtherCompanyConfirm
+      ? `云客账号需确认：${employee.name}`
+      : `已创建云客账号：${employee.name}`
     const identityText = [
       employee.campus?.name,
       employee.department?.name,
@@ -359,13 +384,38 @@ export function CreateConsultantDialog({ open, onClose, credential }: Props) {
 
     return (
       <Modal
-        title={`已创建云客账号：${employee.name}`}
+        title={modalTitle}
         visible={open}
         onCancel={onClose}
         width={560}
-        footer={<Button onClick={onClose}>关闭</Button>}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={onClose}>关闭</Button>
+            {waitingForOtherCompanyConfirm && (
+              <Button
+                theme='solid'
+                type='primary'
+                loading={mutation.isPending}
+                onClick={handleConfirmOtherCompanyContinue}
+              >
+                确认继续新建
+              </Button>
+            )}
+          </div>
+        }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {waitingForOtherCompanyConfirm && (
+            <Banner
+              type='warning'
+              title='云客要求确认继续新建'
+              description={
+                result.confirmation_message ||
+                '该账号已在其他企业使用，继续新建可能导致数据风险。'
+              }
+            />
+          )}
+
           {step_errors && step_errors.length > 0 && (
             <Banner
               type='warning'
@@ -655,6 +705,7 @@ function ResultCard({
         </Title>
         <Button
           theme='outline'
+          className='rmf-copy-button'
           icon={
             copied ? (
               <Check className='h-3 w-3' />

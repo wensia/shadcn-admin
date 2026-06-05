@@ -1,89 +1,23 @@
 /**
- * 组织架构树顶部统计卡
+ * 组织架构树顶部统计卡（仅旧版 organization-tree-page.tsx 使用）
+ *
+ * 新版 organization-page.tsx 已不再渲染独立的统计条，转而通过
+ * computeOrgStats(tree) 把数字嵌入树面板 header 与右侧空状态的告警 CTA。
+ * 统计/定位工具函数已移到 ./org-stats-helpers.ts。
  */
 import { useMemo } from 'react'
 import { Typography } from '@douyinfe/semi-ui-19'
 import type { OrganizationTreeNode } from '../../types'
+import { computeOrgStats } from './org-stats-helpers'
 
 const { Text } = Typography
 
 interface OrgTreeStatsProps {
   tree: OrganizationTreeNode[]
-  compact?: boolean
 }
 
-interface StatsData {
-  region_count: number
-  district_count: number
-  area_count: number
-  campus_count: number
-  area_office_count: number
-  department_count: number
-  employee_count: number
-  leader_count: number
-  missing_leader_count: number
-}
-
-function walk(
-  nodes: OrganizationTreeNode[],
-  acc: StatsData,
-  seenCampusIds: Set<string>,
-): void {
-  for (const n of nodes) {
-    switch (n.type) {
-      case 'region':
-        acc.region_count += 1
-        break
-      case 'district':
-        acc.district_count += 1
-        break
-      case 'area':
-        acc.area_count += 1
-        break
-      case 'area_office':
-        acc.area_office_count += 1
-        if (n.employee_count && !seenCampusIds.has(n.id)) {
-          acc.employee_count += n.employee_count
-          seenCampusIds.add(n.id)
-        }
-        break
-      case 'campus':
-        acc.campus_count += 1
-        if (n.employee_count && !seenCampusIds.has(n.id)) {
-          acc.employee_count += n.employee_count
-          seenCampusIds.add(n.id)
-        }
-        break
-      case 'campus_department':
-      case 'area_department':
-      case 'district_department':
-        acc.department_count += 1
-        break
-    }
-    acc.leader_count += n.leaders?.length ?? 0
-    acc.missing_leader_count += n.missing_singleton_roles?.length ?? 0
-    if (n.children?.length) {
-      walk(n.children, acc, seenCampusIds)
-    }
-  }
-}
-
-export function OrgTreeStats({ tree, compact = false }: OrgTreeStatsProps) {
-  const stats = useMemo(() => {
-    const acc: StatsData = {
-      region_count: 0,
-      district_count: 0,
-      area_count: 0,
-      campus_count: 0,
-      area_office_count: 0,
-      department_count: 0,
-      employee_count: 0,
-      leader_count: 0,
-      missing_leader_count: 0,
-    }
-    walk(tree, acc, new Set())
-    return acc
-  }, [tree])
+export function OrgTreeStats({ tree }: OrgTreeStatsProps) {
+  const stats = useMemo(() => computeOrgStats(tree), [tree])
 
   const tiles: Array<{ label: string; value: number; tone?: 'danger' }> = [
     { label: '大区', value: stats.region_count },
@@ -100,34 +34,6 @@ export function OrgTreeStats({ tree, compact = false }: OrgTreeStatsProps) {
     },
   ]
 
-  if (compact) {
-    return (
-      <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
-        {tiles.map((t) => (
-          <div
-            key={t.label}
-            className="min-h-9 rounded-md border px-3 py-1.5 flex items-center justify-between gap-2"
-            style={{
-              background: 'var(--semi-color-fill-0)',
-              borderColor: t.tone === 'danger' ? 'var(--semi-color-danger-light-default)' : 'var(--semi-color-border)',
-            }}
-          >
-            <Text type="tertiary" className="text-xs truncate">
-              {t.label}
-            </Text>
-            <Text
-              strong
-              className="text-sm shrink-0"
-              style={{ color: t.tone === 'danger' && t.value > 0 ? 'var(--semi-color-danger)' : undefined }}
-            >
-              {t.value}
-            </Text>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <div className="grid grid-cols-4 gap-3 md:grid-cols-8">
       {tiles.map((t) => (
@@ -136,7 +42,10 @@ export function OrgTreeStats({ tree, compact = false }: OrgTreeStatsProps) {
           className="rounded-md border p-3"
           style={{
             background: 'var(--semi-color-fill-0)',
-            borderColor: t.tone === 'danger' ? 'var(--semi-color-danger-light-default)' : 'var(--semi-color-border)',
+            borderColor:
+              t.tone === 'danger'
+                ? 'var(--semi-color-danger-light-default)'
+                : 'var(--semi-color-border)',
           }}
         >
           <Text type="tertiary" className="text-xs block">
@@ -145,7 +54,12 @@ export function OrgTreeStats({ tree, compact = false }: OrgTreeStatsProps) {
           <Text
             strong
             className="text-lg"
-            style={{ color: t.tone === 'danger' && t.value > 0 ? 'var(--semi-color-danger)' : undefined }}
+            style={{
+              color:
+                t.tone === 'danger' && t.value > 0
+                  ? 'var(--semi-color-danger)'
+                  : undefined,
+            }}
           >
             {t.value}
           </Text>

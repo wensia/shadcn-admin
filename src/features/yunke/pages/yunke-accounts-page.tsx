@@ -834,7 +834,7 @@ function SubAccountsTable({
             </div>
           </div>
 
-          <Button theme="outline" block icon={<Copy style={{ width: 16, height: 16 }} />} onClick={copyAllInfo}>
+          <Button theme="outline" className="rmf-copy-button" block icon={<Copy style={{ width: 16, height: 16 }} />} onClick={copyAllInfo}>
             一键复制（姓名/账号/密码）
           </Button>
 

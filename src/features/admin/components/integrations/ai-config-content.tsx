@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BrainCircuit, Plus, Pencil, Trash2, Play, Star, Copy, MoreHorizontal, CheckCircle, AlertCircle } from 'lucide-react'
+import { BrainCircuit, Plus, Star, MoreHorizontal, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import type { SemiTagColor } from '@/lib/semi-types'
@@ -122,6 +122,19 @@ export function AIConfigContent() {
     },
     onError: (error: Error) => {
       showApiErrorToast(error, '更新失败')
+    },
+  })
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      aiConfigApi.update(id, { is_active }),
+    onSuccess: (_res, { is_active }) => {
+      toast.success(is_active ? '已启用' : '已停用')
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-configs'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-ai-configs-all'] })
+    },
+    onError: (error: Error) => {
+      showApiErrorToast(error, '操作失败')
     },
   })
 
@@ -266,29 +279,33 @@ export function AIConfigContent() {
               render={
                 <Dropdown.Menu>
                   <Dropdown.Item onClick={() => handleEdit(record)}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Pencil className="h-4 w-4" />
-                      编辑
-                    </span>
+                    编辑
                   </Dropdown.Item>
                   <Dropdown.Item onClick={() => handleCopy(record)}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Copy className="h-4 w-4" />
-                      复制
-                    </span>
+                    复制
                   </Dropdown.Item>
                   <Dropdown.Item onClick={() => testMutation.mutate(record.id)} disabled={testMutation.isPending}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Play className="h-4 w-4" />
-                      测试连接
-                    </span>
+                    测试连接
                   </Dropdown.Item>
+                  {record.is_active ? (
+                    <Dropdown.Item
+                      type="warning"
+                      onClick={() => toggleStatusMutation.mutate({ id: record.id, is_active: false })}
+                      disabled={toggleStatusMutation.isPending}
+                    >
+                      停用
+                    </Dropdown.Item>
+                  ) : (
+                    <Dropdown.Item
+                      onClick={() => toggleStatusMutation.mutate({ id: record.id, is_active: true })}
+                      disabled={toggleStatusMutation.isPending}
+                    >
+                      启用
+                    </Dropdown.Item>
+                  )}
                   <Dropdown.Divider />
                   <Dropdown.Item type="danger" onClick={() => handleDeleteClick(record)}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Trash2 className="h-4 w-4" />
-                      删除
-                    </span>
+                    删除
                   </Dropdown.Item>
                 </Dropdown.Menu>
               }

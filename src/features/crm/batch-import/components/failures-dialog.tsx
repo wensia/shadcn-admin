@@ -17,6 +17,7 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import {
   IconDownload,
 } from '@douyinfe/semi-icons'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { batchImportApi } from '../api'
@@ -199,6 +200,9 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
 
           {/* 失败记录表格 */}
           <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
+            {loadingFailures && failureList.length === 0 ? (
+              <DialogBodySkeleton variant="list" rows={8} compact />
+            ) : (
             <Table
               columns={columns}
               dataSource={failureList}
@@ -208,6 +212,7 @@ export function FailuresDialog({ open, onOpenChange, batch }: FailuresDialogProp
               loading={loadingFailures}
               empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无失败记录</div>}
             />
+            )}
           </div>
 
           {/* 分页 */}

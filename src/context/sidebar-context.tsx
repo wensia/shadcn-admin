@@ -19,13 +19,22 @@ const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b'
 
+type SetSidebarOpenOptions = {
+  persist?: boolean
+  userInitiated?: boolean
+}
+
 type SidebarContextProps = {
   state: 'expanded' | 'collapsed'
   open: boolean
-  setOpen: (open: boolean | ((prev: boolean) => boolean)) => void
+  setOpen: (
+    open: boolean | ((prev: boolean) => boolean),
+    options?: SetSidebarOpenOptions
+  ) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
+  hasUserInteracted: boolean
   toggleSidebar: () => void
 }
 
@@ -49,12 +58,26 @@ export function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = useState(false)
   const [open, _setOpen] = useState(defaultOpen)
+  const [hasUserInteracted, setHasUserInteracted] = useState(false)
 
   const setOpen = useCallback(
-    (value: boolean | ((prev: boolean) => boolean)) => {
+    (
+      value: boolean | ((prev: boolean) => boolean),
+      options: SetSidebarOpenOptions = {}
+    ) => {
+      const { persist = true, userInitiated = true } = options
+      if (userInitiated) {
+        setHasUserInteracted(true)
+      }
       _setOpen((prev) => {
         const newValue = typeof value === 'function' ? value(prev) : value
-        setCookie(SIDEBAR_COOKIE_NAME, String(newValue), SIDEBAR_COOKIE_MAX_AGE)
+        if (persist) {
+          setCookie(
+            SIDEBAR_COOKIE_NAME,
+            String(newValue),
+            SIDEBAR_COOKIE_MAX_AGE
+          )
+        }
         return newValue
       })
     },
@@ -88,11 +111,21 @@ export function SidebarProvider({
       open,
       setOpen,
       isMobile,
+      hasUserInteracted,
       openMobile,
       setOpenMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      hasUserInteracted,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+    ]
   )
 
   return <SidebarContext value={value}>{children}</SidebarContext>

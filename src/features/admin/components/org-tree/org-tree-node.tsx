@@ -17,6 +17,10 @@ import type { OrganizationTreeNode, AssignmentRole, OrgTreeNodeType } from '../.
 import { ASSIGNMENT_ROLE_LABELS } from '../../types'
 import { OrgNodeIcon } from './org-tree-icons'
 import { orgNodeTypeLabel, orgNodeTypeColor, roleTagColor } from '../../lib/assignment-format'
+import {
+  getVisibleMissingSingletonRoles,
+  hasVisibleMissingSingletonRoles,
+} from './org-stats-helpers'
 
 const { Text } = Typography
 
@@ -52,7 +56,7 @@ export function OrgTreeNode({
   const isMatch =
     searchTerm.length > 0 && node.name.toLowerCase().includes(searchTerm.toLowerCase())
 
-  const missing = node.missing_singleton_roles ?? []
+  const missing = getVisibleMissingSingletonRoles(node)
   const leaders = node.leaders ?? []
   const shownLeaders = leaders.slice(0, 2)
   const moreLeadersCount = Math.max(0, leaders.length - shownLeaders.length)
@@ -261,7 +265,7 @@ function DeptGroup({
   onToggleGroup: () => void
 }) {
   const deptEmployeeSum = depts.reduce((sum, d) => sum + (d.employee_count ?? 0), 0)
-  const missingCount = depts.filter((d) => (d.missing_singleton_roles?.length ?? 0) > 0).length
+  const missingCount = depts.filter(hasVisibleMissingSingletonRoles).length
 
   return (
     <div>

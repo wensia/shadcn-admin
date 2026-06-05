@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { copyToClipboard } from '@/lib/utils'
@@ -362,7 +363,7 @@ function ReceptionDialog({ record, open, onClose, onSuccess }: ReceptionDialogPr
   const [nextAction, setNextAction] = useState('')
   const [nextFollowupAt, setNextFollowupAt] = useState<Date | undefined>()
 
-  const { data: detailData } = useQuery({
+  const { data: detailData, isLoading: isReceptionDetailLoading } = useQuery({
     queryKey: ['direct-visit-lead-detail', record?.id, 'reception-edit'],
     queryFn: async () => {
       if (!record?.id) throw new Error('缺少直访记录ID')
@@ -391,6 +392,10 @@ function ReceptionDialog({ record, open, onClose, onSuccess }: ReceptionDialogPr
     effectiveRecord?.campus_id && receptionistData?.campusId === effectiveRecord.campus_id,
   )
   const receptionists = isReceptionistsReady ? receptionistData?.items ?? EMPTY_RECEPTIONISTS : EMPTY_RECEPTIONISTS
+  const isReceptionFormLoading = open && (
+    (!!record?.id && isReceptionDetailLoading && !detailData) ||
+    (!!effectiveRecord?.campus_id && isReceptionistsLoading && !isReceptionistsReady)
+  )
 
   useEffect(() => {
     if (!open || !effectiveRecord) return
@@ -502,7 +507,7 @@ function ReceptionDialog({ record, open, onClose, onSuccess }: ReceptionDialogPr
             <Button
               theme="solid"
               loading={saveMutation.isPending}
-              disabled={!effectiveRecord || saveMutation.isPending || isReceptionistsLoading || !isReceptionistsReady}
+              disabled={!effectiveRecord || saveMutation.isPending || isReceptionFormLoading || isReceptionistsLoading || !isReceptionistsReady}
               onClick={() => saveMutation.mutate()}
             >
               保存接待信息
@@ -511,6 +516,10 @@ function ReceptionDialog({ record, open, onClose, onSuccess }: ReceptionDialogPr
         }
       >
         <div style={{ padding: 20, background: 'var(--semi-color-bg-0)' }}>
+        {isReceptionFormLoading ? (
+          <DialogBodySkeleton variant="form" rows={8} compact />
+        ) : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
           <div>
             <Text type="tertiary" size="small">直访人</Text>
@@ -702,6 +711,8 @@ function ReceptionDialog({ record, open, onClose, onSuccess }: ReceptionDialogPr
             />
           </div>
         </div>
+        </>
+        )}
         </div>
       </Modal>
 
@@ -840,11 +851,13 @@ function DetailField({
 
 function DetailModal({
   detail,
+  loading,
   open,
   onClose,
   onOpenLead,
 }: {
   detail?: DirectVisitLeadDetail
+  loading?: boolean
   open: boolean
   onClose: () => void
   onOpenLead: (leadId: string) => void
@@ -904,6 +917,18 @@ function DetailModal({
       }
     >
       <div style={{ padding: '18px 20px 20px', background: 'var(--semi-color-bg-0)' }}>
+        {loading && !detail ? (
+          <DialogBodySkeleton variant="detail" rows={6} compact />
+        ) : !detail ? (
+          <Banner
+            type="warning"
+            fullMode={false}
+            closeIcon={null}
+            title="无法加载直访线索详情"
+            description="请关闭后重试。"
+          />
+        ) : (
+        <>
         <div
           style={{
             display: 'grid',
@@ -987,6 +1012,8 @@ function DetailModal({
             )}
           </DetailSection>
         </div>
+        </>
+        )}
       </div>
     </Modal>
   )
@@ -1113,9 +1140,7 @@ function DirectVisitTokenDialog({
     >
       <div style={{ padding: 20, background: 'var(--semi-color-bg-0)' }}>
         {isTokensLoading ? (
-          <div style={{ padding: '48px 0', display: 'flex', justifyContent: 'center' }}>
-            <Spin />
-          </div>
+          <DialogBodySkeleton variant="detail" rows={3} compact />
         ) : tokenItems.length === 0 ? (
           <Banner
             type="warning"
@@ -1608,7 +1633,8 @@ export function DirectVisitLeadsPage() {
 
       <DetailModal
         detail={detailData}
-        open={!!detailId && !isDetailLoading}
+        loading={isDetailLoading}
+        open={!!detailId}
         onClose={() => setDetailId(null)}
         onOpenLead={handleOpenLead}
       />

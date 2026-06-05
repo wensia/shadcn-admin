@@ -420,7 +420,7 @@ export function ApiKeysPage() {
                   </code>
                   <Button theme="borderless" type="tertiary" icon={showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />} onClick={() => setShowKey(!showKey)} />
                 </div>
-                <Button theme="outline" icon={<Copy className="h-4 w-4" />} block onClick={() => handleCopyToClipboard(createdKey?.api_key || '')}>
+                <Button theme="outline" className="rmf-copy-button" icon={<Copy className="h-4 w-4" />} block onClick={() => handleCopyToClipboard(createdKey?.api_key || '')}>
                   复制API密钥
                 </Button>
               </div>

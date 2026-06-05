@@ -7,21 +7,11 @@ import {
   Card,
   DatePicker,
   Select,
-  Skeleton,
   Table,
   Typography,
 } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
-import {
-  Calendar,
-  Phone,
-  PhoneIncoming,
-  RefreshCw,
-  TrendingUp,
-  Users,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { adminApi } from '@/features/admin/api'
 import {
@@ -73,6 +63,13 @@ interface AppCallSummary {
   totalOutboundDuration: number
   totalInboundDuration: number
   totalDuration: number
+}
+
+interface DashboardMetricRow {
+  key: string
+  category: string
+  metric: string
+  value: string
 }
 
 function formatDate(value: Date) {
@@ -219,54 +216,65 @@ function summarizeAppCallRows(rows: AdvisorAppCallRankingRow[]): AppCallSummary 
   })
 }
 
-/* ── 紧凑指标卡片 ── */
-function MetricCard({
-  label,
-  value,
-  icon: Icon,
-  color,
+/* ── 顶部汇总表 ── */
+function SummaryMetricTable({
+  rows,
   loading,
 }: {
-  label: string
-  value: string
-  icon: LucideIcon
-  color: string
+  rows: DashboardMetricRow[]
   loading?: boolean
 }) {
+  const columns = useMemo<ColumnProps<DashboardMetricRow>[]>(() => [
+    {
+      title: '分类',
+      dataIndex: 'category',
+      width: 90,
+      render: (text: string) => (
+        <Text type="tertiary" style={{ fontWeight: 600 }}>
+          {text}
+        </Text>
+      ),
+    },
+    {
+      title: '指标',
+      dataIndex: 'metric',
+      width: 150,
+      render: (text: string) => (
+        <Text strong style={{ color: 'var(--semi-color-text-0)' }}>
+          {text}
+        </Text>
+      ),
+    },
+    {
+      title: '数值',
+      dataIndex: 'value',
+      align: 'right' as const,
+      render: (text: string) => (
+        <span style={{ fontWeight: 700, color: 'var(--semi-color-text-0)' }}>
+          {text}
+        </span>
+      ),
+    },
+  ], [])
+
   return (
-    <Card
-      style={{ borderRadius: 10, border: '1px solid var(--semi-color-border)' }}
-      bodyStyle={{ padding: '14px 16px' }}
+    <div
+      style={{
+        border: '1px solid var(--semi-color-border)',
+        borderRadius: 8,
+        overflow: 'hidden',
+        background: 'var(--semi-color-bg-0)',
+      }}
     >
-      {loading ? (
-        <Skeleton.Title style={{ width: '60%', marginBottom: 0 }} />
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: 'var(--semi-color-text-2)', marginBottom: 4, fontWeight: 500 }}>
-              {label}
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--semi-color-text-0)' }}>
-              {value}
-            </div>
-          </div>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: 'var(--semi-color-fill-0)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Icon size={18} color={color} />
-          </div>
-        </div>
-      )}
-    </Card>
+      <Table<DashboardMetricRow>
+        columns={columns}
+        dataSource={rows}
+        rowKey="key"
+        pagination={false}
+        loading={loading}
+        empty="暂无统计数据"
+      />
+    </div>
   )
 }
 
@@ -438,13 +446,11 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
     [appCallRankingData.rows],
   )
 
-  const outboundMetricCard = useMemo(() => ({
+  const outboundMetric = useMemo(() => ({
     label: '外呼总量',
     value: shouldUseSingleDayCallSummary
       ? formatCount(singleDayAppCallSummary.totalOutboundCallCount)
       : formatCount(callData.totals.totalCallCount),
-    icon: Phone,
-    color: 'var(--semi-color-primary)',
     loading: shouldUseSingleDayCallSummary ? appCallRankingData.isLoading : callData.isLoading,
   }), [
     appCallRankingData.isLoading,
@@ -454,13 +460,11 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
     singleDayAppCallSummary.totalOutboundCallCount,
   ])
 
-  const secondaryCallMetricCard = useMemo(() => ({
+  const secondaryCallMetric = useMemo(() => ({
     label: shouldUseSingleDayCallSummary ? '呼入电话量' : '联系人数',
     value: shouldUseSingleDayCallSummary
       ? formatCount(singleDayAppCallSummary.totalInboundCallCount)
       : formatCount(callData.totals.totalContactCount),
-    icon: shouldUseSingleDayCallSummary ? PhoneIncoming : Users,
-    color: 'var(--semi-color-success)',
     loading: shouldUseSingleDayCallSummary ? appCallRankingData.isLoading : callData.isLoading,
   }), [
     appCallRankingData.isLoading,
@@ -469,6 +473,28 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
     shouldUseSingleDayCallSummary,
     singleDayAppCallSummary.totalInboundCallCount,
   ])
+
+  const summaryMetricRows = useMemo<DashboardMetricRow[]>(() => [
+    { key: 'outbound', category: '通话', metric: outboundMetric.label, value: outboundMetric.value },
+    { key: 'secondary-call', category: '通话', metric: secondaryCallMetric.label, value: secondaryCallMetric.value },
+    { key: 'promised', category: '转化', metric: '诺到数', value: formatCount(conversionData.summary.totalPromised) },
+    { key: 'visited', category: '转化', metric: '到访数', value: formatCount(conversionData.summary.totalVisited) },
+    { key: 'visit-rate', category: '转化', metric: '到访率', value: formatPercent(conversionData.summary.visitRate) },
+    { key: 'payment-count', category: '业绩', metric: '业绩笔数', value: formatCount(conversionData.summary.totalPaymentCount) },
+    { key: 'payment-amount', category: '业绩', metric: '净业绩额', value: formatMoney(conversionData.summary.totalPaymentAmount) },
+  ], [
+    conversionData.summary.totalPaymentAmount,
+    conversionData.summary.totalPaymentCount,
+    conversionData.summary.totalPromised,
+    conversionData.summary.totalVisited,
+    conversionData.summary.visitRate,
+    outboundMetric.label,
+    outboundMetric.value,
+    secondaryCallMetric.label,
+    secondaryCallMetric.value,
+  ])
+
+  const summaryMetricLoading = outboundMetric.loading || secondaryCallMetric.loading || conversionData.isLoading
 
   const conversionDetailRows = useMemo<ConversionDetailRow[]>(() => {
     return conversionData.rows.map((row) => {
@@ -858,58 +884,7 @@ export function AdvisorDashboardPage({ externalFilter }: AdvisorDashboardPagePro
   /* ── 主内容区（嵌入和独立模式共用） ── */
   const dashboardContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 16px' }}>
-      {/* 指标卡片 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10 }}>
-        <MetricCard
-          label={outboundMetricCard.label}
-          value={outboundMetricCard.value}
-          icon={outboundMetricCard.icon}
-          color={outboundMetricCard.color}
-          loading={outboundMetricCard.loading}
-        />
-        <MetricCard
-          label={secondaryCallMetricCard.label}
-          value={secondaryCallMetricCard.value}
-          icon={secondaryCallMetricCard.icon}
-          color={secondaryCallMetricCard.color}
-          loading={secondaryCallMetricCard.loading}
-        />
-        <MetricCard
-          label="诺到数"
-          value={formatCount(conversionData.summary.totalPromised)}
-          icon={Calendar}
-          color="var(--semi-color-warning)"
-          loading={conversionData.isLoading}
-        />
-        <MetricCard
-          label="到访数"
-          value={formatCount(conversionData.summary.totalVisited)}
-          icon={TrendingUp}
-          color="var(--semi-color-info)"
-          loading={conversionData.isLoading}
-        />
-        <MetricCard
-          label="到访率"
-          value={formatPercent(conversionData.summary.visitRate)}
-          icon={TrendingUp}
-          color="var(--semi-color-text-2)"
-          loading={conversionData.isLoading}
-        />
-        <MetricCard
-          label="业绩笔数"
-          value={formatCount(conversionData.summary.totalPaymentCount)}
-          icon={Wallet}
-          color="var(--semi-color-success)"
-          loading={conversionData.isLoading}
-        />
-        <MetricCard
-          label="净业绩额"
-          value={formatMoney(conversionData.summary.totalPaymentAmount)}
-          icon={Wallet}
-          color="var(--semi-color-primary)"
-          loading={conversionData.isLoading}
-        />
-      </div>
+      <SummaryMetricTable rows={summaryMetricRows} loading={summaryMetricLoading} />
 
       {/* 转化结果 */}
       <Card

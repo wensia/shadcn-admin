@@ -22,7 +22,7 @@ import { adminApi } from '@/features/admin/api'
 import { yunkeCredentialsApi } from '@/features/yunke/api'
 import { useIsSuperUser } from '@/stores/auth-store'
 import { AdvisorTaskMatrix } from './components/advisor-task-matrix'
-import { AdvisorTaskOverviewCards } from './components/advisor-task-overview-cards'
+import { AdvisorTaskOverviewTable } from './components/advisor-task-overview-table'
 import { AdvisorTaskReviewDrawer } from './components/advisor-task-review-drawer'
 import {
   useAdvisorTaskActions,
@@ -480,13 +480,13 @@ export function AdvisorTaskBattlePage({ externalFilter }: AdvisorTaskBattlePageP
             overflow: 'visible',
           }}
         >
-          {/* 任务总览指标卡片 */}
+          {/* 任务总览指标表 */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
           >
-            <AdvisorTaskOverviewCards
+            <AdvisorTaskOverviewTable
               summary={dashboardQuery.data.summary}
               loading={dashboardQuery.isLoading || isAccountsLoading}
             />

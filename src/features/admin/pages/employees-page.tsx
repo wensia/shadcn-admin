@@ -89,6 +89,7 @@ export function EmployeesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [batchImportDialogOpen, setBatchImportDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<EmployeeItem | null>(null)
+  const [editingItemOpenKey, setEditingItemOpenKey] = useState(0)
   const [deletingItem, setDeletingItem] = useState<EmployeeItem | null>(null)
   const [resetPasswordItem, setResetPasswordItem] = useState<EmployeeItem | null>(null)
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
@@ -883,7 +884,8 @@ export function EmployeesPage() {
 
   // 处理编辑
   const handleEdit = (item: EmployeeItem) => {
-    setEditingItem(item)
+    setEditingItem({ ...item })
+    setEditingItemOpenKey((key) => key + 1)
   }
 
   // 处理重置密码
@@ -1470,6 +1472,7 @@ export function EmployeesPage() {
       </Modal>
 
       <EmployeeEditDialog
+        key={editingItem ? `${editingItem.id}:${editingItemOpenKey}` : 'employee-edit-closed'}
         open={!!editingItem}
         employeeId={editingItem?.id ?? null}
         employee={editingItem}

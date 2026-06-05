@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, CheckCircle, Plus, X } from 'lucide-react'
-import { Button, Empty, Form, Modal, Select, Spin, Switch, TabPane, Tabs, Tag, TreeSelect, Typography } from '@douyinfe/semi-ui-19'
+import { Button, Empty, Form, Modal, Select, Switch, TabPane, Tabs, Tag, TreeSelect, Typography } from '@douyinfe/semi-ui-19'
 import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { toast } from '@/lib/toast'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { adminApi } from '../../api'
@@ -61,7 +62,6 @@ interface EmployeeEditDialogProps {
   open: boolean
   employeeId: string | null
   employee?: EmployeeItem | null
-  lookupKeyword?: string | null
   onClose: () => void
   onSuccess?: () => void
 }
@@ -70,7 +70,9 @@ interface EmployeeEditDialogContentProps {
   open: boolean
   employee: EmployeeItem
   identityItems: EmployeeIdentityItem[]
+  formRef: { current: FormApi | null }
   onClose: () => void
+  onSavingChange: (saving: boolean) => void
   onSuccess?: () => void
 }
 
@@ -149,11 +151,12 @@ function EmployeeEditDialogContent({
   open,
   employee,
   identityItems,
+  formRef,
   onClose,
+  onSavingChange,
   onSuccess,
 }: EmployeeEditDialogContentProps) {
   const queryClient = useQueryClient()
-  const formRef = useRef<FormApi | null>(null)
   const initialIdentities = useMemo(() => buildInitialIdentities(identityItems), [identityItems])
   const identityPreloadKey = useMemo(
     () => initialIdentities
@@ -178,7 +181,6 @@ function EmployeeEditDialogContent({
   const [deptToCampusDeptMap, setDeptToCampusDeptMap] = useState<Record<string, string>>({})
   const [districtOptionsMap, setDistrictOptionsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({})
   const [areaOptionsMap, setAreaOptionsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({})
-  const [isSaving, setIsSaving] = useState(false)
 
   const { data: orgTreeData } = useQuery({
     queryKey: ['admin-organization-tree'],
@@ -509,7 +511,7 @@ function EmployeeEditDialogContent({
       joined_at: values.joined_at || undefined,
     }
 
-    setIsSaving(true)
+    onSavingChange(true)
     try {
       await adminApi.updateEmployee(employee.id, submitData)
       await adminApi.updateEmployeeIdentities(employee.id, validIdentities)
@@ -521,303 +523,281 @@ function EmployeeEditDialogContent({
       queryClient.invalidateQueries({ queryKey: ['organization-tree-full'] })
       queryClient.invalidateQueries({ queryKey: ['admin-assignments'] })
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+      onSavingChange(false)
       onSuccess?.()
       onClose()
     } catch (error) {
       showApiErrorToast(error, '更新失败')
-    } finally {
-      setIsSaving(false)
+      onSavingChange(false)
     }
   }
 
   return (
-    <Modal
-      title="编辑员工"
-      visible={open}
-      onCancel={onClose}
-      width={672}
-      style={{ maxHeight: '90vh' }}
-      bodyStyle={{ overflow: 'auto', maxHeight: 'calc(90vh - 130px)' }}
-      footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <Button onClick={onClose}>取消</Button>
-          <Button
-            theme="solid"
-            type="primary"
-            onClick={() => formRef.current?.submitForm()}
-            loading={isSaving}
-          >
-            保存
-          </Button>
-        </div>
-      }
+    <Form
+      getFormApi={(api) => { formRef.current = api }}
+      onSubmit={handleSubmit}
+      labelPosition="top"
+      initValues={{
+        username: employee.username,
+        name: employee.name,
+        email: employee.email || '',
+        phone: employee.phone || '',
+        is_active: employee.is_active,
+        is_superuser: employee.is_superuser,
+        joined_at: normalizeDateInputValue(employee.joined_at),
+      }}
     >
-      <Form
-        getFormApi={(api) => { formRef.current = api }}
-        onSubmit={handleSubmit}
-        labelPosition="top"
-        initValues={{
-          username: employee.username,
-          name: employee.name,
-          email: employee.email || '',
-          phone: employee.phone || '',
-          is_active: employee.is_active,
-          is_superuser: employee.is_superuser,
-          joined_at: normalizeDateInputValue(employee.joined_at),
-        }}
-      >
-        <Tabs defaultActiveKey="basic" type="line">
-          <TabPane tab="基本信息" itemKey="basic">
-            <div style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Form.Input field="username" label="用户名" placeholder="请输入用户名" disabled />
-                <Form.Input
-                  field="name"
-                  label="姓名"
-                  placeholder="请输入姓名"
-                  rules={[{ required: true, message: '请输入姓名' }]}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Form.Input field="phone" label="手机号" placeholder="请输入手机号（可选）" />
-                <Form.Input field="email" label="邮箱" placeholder="请输入邮箱（可选）" />
-              </div>
-              <Form.DatePicker
-                field="joined_at"
-                label="入职日期"
-                placeholder="请选择入职日期"
-                type="date"
-                style={{ width: '100%' }}
+      <Tabs defaultActiveKey="basic" type="line">
+        <TabPane tab="基本信息" itemKey="basic">
+          <div style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Form.Input field="username" label="用户名" placeholder="请输入用户名" disabled />
+              <Form.Input
+                field="name"
+                label="姓名"
+                placeholder="请输入姓名"
+                rules={[{ required: true, message: '请输入姓名' }]}
               />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Form.Switch field="is_active" label="在职状态" />
-                <Form.Switch field="is_superuser" label="超级管理员" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Form.Input field="phone" label="手机号" placeholder="请输入手机号（可选）" />
+              <Form.Input field="email" label="邮箱" placeholder="请输入邮箱（可选）" />
+            </div>
+            <Form.DatePicker
+              field="joined_at"
+              label="入职日期"
+              placeholder="请选择入职日期"
+              type="date"
+              style={{ width: '100%' }}
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Form.Switch field="is_active" label="在职状态" />
+              <Form.Switch field="is_superuser" label="超级管理员" />
+            </div>
+          </div>
+        </TabPane>
+
+        <TabPane tab={`组织身份 (${identities.length})`} itemKey="identity">
+          <div style={{ paddingTop: 16 }}>
+            <div style={{ marginBottom: 16 }}>
+              <Text strong>校区职务</Text>
+              <div style={{ marginTop: 8 }}>
+                {(employee.campus_leaderships || []).length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {(employee.campus_leaderships || []).map((leadership) => (
+                      <Tag key={`${leadership.campus_id}-${leadership.role}`} size="small">
+                        {leadership.campus_name} {leadership.role_label}
+                      </Tag>
+                    ))}
+                  </div>
+                ) : (
+                  <Text type="tertiary" size="small">当前未担任校区校长或助理校长</Text>
+                )}
               </div>
             </div>
-          </TabPane>
 
-          <TabPane tab={`组织身份 (${identities.length})`} itemKey="identity">
-            <div style={{ paddingTop: 16 }}>
-              <div style={{ marginBottom: 16 }}>
-                <Text strong>校区职务</Text>
-                <div style={{ marginTop: 8 }}>
-                  {(employee.campus_leaderships || []).length > 0 ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {(employee.campus_leaderships || []).map((leadership) => (
-                        <Tag key={`${leadership.campus_id}-${leadership.role}`} size="small">
-                          {leadership.campus_name} {leadership.role_label}
-                        </Tag>
-                      ))}
-                    </div>
-                  ) : (
-                    <Text type="tertiary" size="small">当前未担任校区校长或助理校长</Text>
-                  )}
+            <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text strong>组织身份配置</Text>
+                <Button theme="outline" icon={<Plus className="h-4 w-4" />} onClick={addIdentity}>
+                  添加身份
+                </Button>
+              </div>
+
+              <div style={{ padding: '8px 12px', borderRadius: 6, backgroundColor: 'var(--semi-color-fill-0)', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
+                  <AlertCircle className="h-4 w-4" />
+                  员工需要至少一个有效的组织身份配置才能正常使用系统功能。若该员工担任校区领导，移除对应校区有效身份后系统会自动解绑任命。
                 </div>
               </div>
 
-              <div style={{ borderTop: '1px solid var(--semi-color-border)', paddingTop: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <Text strong>组织身份配置</Text>
-                  <Button theme="outline" icon={<Plus className="h-4 w-4" />} onClick={addIdentity}>
-                    添加身份
-                  </Button>
-                </div>
-
-                <div style={{ padding: '8px 12px', borderRadius: 6, backgroundColor: 'var(--semi-color-fill-0)', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--semi-color-text-2)' }}>
-                    <AlertCircle className="h-4 w-4" />
-                    员工需要至少一个有效的组织身份配置才能正常使用系统功能。若该员工担任校区领导，移除对应校区有效身份后系统会自动解绑任命。
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {identities.map((identity, index) => (
-                    <div key={index} style={{ border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Text type="tertiary">身份 {index + 1}</Text>
-                          {isIdentityComplete(identity) ? (
-                            <Tag color="green">
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                                <CheckCircle className="h-3 w-3" />
-                                完整
-                              </span>
-                            </Tag>
-                          ) : (
-                            <Tag color="orange">
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                                <AlertCircle className="h-3 w-3" />
-                                未完成
-                              </span>
-                            </Tag>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Text type="tertiary">启用</Text>
-                          <Switch
-                            checked={identity.is_active}
-                            onChange={(checked) => handleIdentityActiveChange(index, checked)}
-                          />
-                          <Button
-                            icon={<X className="h-3 w-3" />}
-                            onClick={() => removeIdentity(index)}
-                            disabled={identities.length <= 1}
-                          />
-                        </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {identities.map((identity, index) => (
+                  <div key={index} style={{ border: '1px solid var(--semi-color-border)', borderRadius: 8, padding: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Text type="tertiary">身份 {index + 1}</Text>
+                        {isIdentityComplete(identity) ? (
+                          <Tag color="green">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                              <CheckCircle className="h-3 w-3" />
+                              完整
+                            </span>
+                          </Tag>
+                        ) : (
+                          <Tag color="orange">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                              <AlertCircle className="h-3 w-3" />
+                              未完成
+                            </span>
+                          </Tag>
+                        )}
                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Text type="tertiary">启用</Text>
+                        <Switch
+                          checked={identity.is_active}
+                          onChange={(checked) => handleIdentityActiveChange(index, checked)}
+                        />
+                        <Button
+                          icon={<X className="h-3 w-3" />}
+                          onClick={() => removeIdentity(index)}
+                          disabled={identities.length <= 1}
+                        />
+                      </div>
+                    </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                          <Select
-                            value={identity.scope_type}
-                            onChange={(value) => handleIdentityScopeChange(index, value as ScopeType)}
-                            style={DIALOG_SELECT_STYLE}
-                            optionList={(Object.entries(SCOPE_TYPE_LABELS) as [ScopeType, string][]).map(([value, label]) => ({
-                              label,
-                              value,
-                            }))}
-                          />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <Select
+                          value={identity.scope_type}
+                          onChange={(value) => handleIdentityScopeChange(index, value as ScopeType)}
+                          style={DIALOG_SELECT_STYLE}
+                          optionList={(Object.entries(SCOPE_TYPE_LABELS) as [ScopeType, string][]).map(([value, label]) => ({
+                            label,
+                            value,
+                          }))}
+                        />
 
-                          {identity.scope_type === 'campus' && (
-                            <div style={{ gridColumn: 'span 3' }}>
-                              <TreeSelect
-                                value={identity.campus_id || undefined}
-                                onChange={(value) => handleIdentityCampusChange(index, value as string)}
-                                placeholder="搜索或选择校区"
-                                style={DIALOG_SELECT_STYLE}
-                                treeData={campusTreeData}
-                                filterTreeNode
-                                showSearchClear
-                                dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
-                              />
-                            </div>
-                          )}
+                        {identity.scope_type === 'campus' && (
+                          <div style={{ gridColumn: 'span 3' }}>
+                            <TreeSelect
+                              value={identity.campus_id || undefined}
+                              onChange={(value) => handleIdentityCampusChange(index, value as string)}
+                              placeholder="搜索或选择校区"
+                              style={DIALOG_SELECT_STYLE}
+                              treeData={campusTreeData}
+                              filterTreeNode
+                              showSearchClear
+                              dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                            />
+                          </div>
+                        )}
 
-                          {identity.scope_type === 'region' && (
-                            <div style={{ gridColumn: 'span 3' }}>
-                              <Select
-                                value={identity.region_id || undefined}
-                                onChange={(value) => handleIdentityRegionChange(index, value as string)}
-                                placeholder="选择大区"
-                                style={DIALOG_SELECT_STYLE}
-                                optionList={regions.map((region) => ({ label: region.name, value: region.id }))}
-                              />
-                            </div>
-                          )}
+                        {identity.scope_type === 'region' && (
+                          <div style={{ gridColumn: 'span 3' }}>
+                            <Select
+                              value={identity.region_id || undefined}
+                              onChange={(value) => handleIdentityRegionChange(index, value as string)}
+                              placeholder="选择大区"
+                              style={DIALOG_SELECT_STYLE}
+                              optionList={regions.map((region) => ({ label: region.name, value: region.id }))}
+                            />
+                          </div>
+                        )}
 
-                          {identity.scope_type === 'district' && (
-                            <>
-                              <Select
-                                value={identity.region_id || undefined}
-                                onChange={(value) => handleIdentityRegionChange(index, value as string)}
-                                placeholder="选择大区"
-                                style={DIALOG_SELECT_STYLE}
-                                optionList={regions.map((region) => ({ label: region.name, value: region.id }))}
-                              />
-                              <div style={{ gridColumn: 'span 2' }}>
-                                <Select
-                                  value={identity.district_id || undefined}
-                                  onChange={(value) => handleIdentityDistrictChange(index, value as string)}
-                                  placeholder="选择地区"
-                                  style={DIALOG_SELECT_STYLE}
-                                  disabled={!identity.region_id}
-                                  optionList={(districtOptionsMap[identity.region_id] || []).map((district) => ({ label: district.name, value: district.id }))}
-                                />
-                              </div>
-                            </>
-                          )}
-
-                          {identity.scope_type === 'area' && (
-                            <>
-                              <Select
-                                value={identity.region_id || undefined}
-                                onChange={(value) => handleIdentityRegionChange(index, value as string)}
-                                placeholder="大区"
-                                style={DIALOG_SELECT_STYLE}
-                                optionList={regions.map((region) => ({ label: region.name, value: region.id }))}
-                              />
+                        {identity.scope_type === 'district' && (
+                          <>
+                            <Select
+                              value={identity.region_id || undefined}
+                              onChange={(value) => handleIdentityRegionChange(index, value as string)}
+                              placeholder="选择大区"
+                              style={DIALOG_SELECT_STYLE}
+                              optionList={regions.map((region) => ({ label: region.name, value: region.id }))}
+                            />
+                            <div style={{ gridColumn: 'span 2' }}>
                               <Select
                                 value={identity.district_id || undefined}
                                 onChange={(value) => handleIdentityDistrictChange(index, value as string)}
-                                placeholder="地区"
+                                placeholder="选择地区"
                                 style={DIALOG_SELECT_STYLE}
                                 disabled={!identity.region_id}
                                 optionList={(districtOptionsMap[identity.region_id] || []).map((district) => ({ label: district.name, value: district.id }))}
                               />
-                              <Select
-                                value={identity.area_id || undefined}
-                                onChange={(value) => handleIdentityAreaChange(index, value as string)}
-                                placeholder="片区"
-                                style={DIALOG_SELECT_STYLE}
-                                disabled={!identity.district_id}
-                                optionList={(areaOptionsMap[identity.district_id] || []).map((area) => ({ label: area.name, value: area.id }))}
-                              />
-                            </>
-                          )}
-                        </div>
+                            </div>
+                          </>
+                        )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                          {identity.scope_type === 'campus' ? (
+                        {identity.scope_type === 'area' && (
+                          <>
                             <Select
-                              value={identity.department_id || undefined}
-                              onChange={(value) => { void handleIdentityDepartmentChange(index, value as string) }}
-                              placeholder="选择部门"
+                              value={identity.region_id || undefined}
+                              onChange={(value) => handleIdentityRegionChange(index, value as string)}
+                              placeholder="大区"
                               style={DIALOG_SELECT_STYLE}
-                              disabled={!identity.campus_id}
-                              optionList={(departmentOptionsMap[identity.campus_id] || []).map((department) => ({ label: department.name, value: department.id }))}
+                              optionList={regions.map((region) => ({ label: region.name, value: region.id }))}
                             />
-                          ) : (
                             <Select
-                              value={identity.department_id || undefined}
-                              onChange={(value) => {
-                                setIdentities((prev) => {
-                                  const next = [...prev]
-                                  next[index] = { ...next[index], department_id: value as string, position_id: '' }
-                                  return next
-                                })
-                              }}
-                              placeholder="选择部门"
+                              value={identity.district_id || undefined}
+                              onChange={(value) => handleIdentityDistrictChange(index, value as string)}
+                              placeholder="地区"
                               style={DIALOG_SELECT_STYLE}
-                              optionList={globalDepartments.map((department) => ({ label: department.name, value: department.id }))}
+                              disabled={!identity.region_id}
+                              optionList={(districtOptionsMap[identity.region_id] || []).map((district) => ({ label: district.name, value: district.id }))}
                             />
-                          )}
+                            <Select
+                              value={identity.area_id || undefined}
+                              onChange={(value) => handleIdentityAreaChange(index, value as string)}
+                              placeholder="片区"
+                              style={DIALOG_SELECT_STYLE}
+                              disabled={!identity.district_id}
+                              optionList={(areaOptionsMap[identity.district_id] || []).map((area) => ({ label: area.name, value: area.id }))}
+                            />
+                          </>
+                        )}
+                      </div>
 
-                          {identity.scope_type === 'campus' ? (
-                            <Select
-                              value={identity.position_id || undefined}
-                              onChange={(value) => handleIdentityPositionChange(index, value as string)}
-                              placeholder="选择职位"
-                              style={DIALOG_SELECT_STYLE}
-                              disabled={!identity.department_id}
-                              optionList={(positionOptionsMap[identity.department_id] || []).map((position) => ({
-                                label: `${position.name} (${position.level_display})`,
-                                value: position.id,
-                              }))}
-                            />
-                          ) : (
-                            <Select
-                              value={identity.position_id || undefined}
-                              onChange={(value) => handleIdentityPositionChange(index, value as string)}
-                              placeholder="选择职位"
-                              style={DIALOG_SELECT_STYLE}
-                              disabled={!identity.department_id}
-                              optionList={getScopedGlobalPositions(identity.department_id).map((position) => ({
-                                label: `${position.name} (${position.level_display})`,
-                                value: position.id,
-                              }))}
-                            />
-                          )}
-                        </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        {identity.scope_type === 'campus' ? (
+                          <Select
+                            value={identity.department_id || undefined}
+                            onChange={(value) => { void handleIdentityDepartmentChange(index, value as string) }}
+                            placeholder="选择部门"
+                            style={DIALOG_SELECT_STYLE}
+                            disabled={!identity.campus_id}
+                            optionList={(departmentOptionsMap[identity.campus_id] || []).map((department) => ({ label: department.name, value: department.id }))}
+                          />
+                        ) : (
+                          <Select
+                            value={identity.department_id || undefined}
+                            onChange={(value) => {
+                              setIdentities((prev) => {
+                                const next = [...prev]
+                                next[index] = { ...next[index], department_id: value as string, position_id: '' }
+                                return next
+                              })
+                            }}
+                            placeholder="选择部门"
+                            style={DIALOG_SELECT_STYLE}
+                            optionList={globalDepartments.map((department) => ({ label: department.name, value: department.id }))}
+                          />
+                        )}
+
+                        {identity.scope_type === 'campus' ? (
+                          <Select
+                            value={identity.position_id || undefined}
+                            onChange={(value) => handleIdentityPositionChange(index, value as string)}
+                            placeholder="选择职位"
+                            style={DIALOG_SELECT_STYLE}
+                            disabled={!identity.department_id}
+                            optionList={(positionOptionsMap[identity.department_id] || []).map((position) => ({
+                              label: `${position.name} (${position.level_display})`,
+                              value: position.id,
+                            }))}
+                          />
+                        ) : (
+                          <Select
+                            value={identity.position_id || undefined}
+                            onChange={(value) => handleIdentityPositionChange(index, value as string)}
+                            placeholder="选择职位"
+                            style={DIALOG_SELECT_STYLE}
+                            disabled={!identity.department_id}
+                            optionList={getScopedGlobalPositions(identity.department_id).map((position) => ({
+                              label: `${position.name} (${position.level_display})`,
+                              value: position.id,
+                            }))}
+                          />
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </TabPane>
-        </Tabs>
-      </Form>
-    </Modal>
+          </div>
+        </TabPane>
+      </Tabs>
+    </Form>
   )
 }
 
@@ -825,36 +805,22 @@ export function EmployeeEditDialog({
   open,
   employeeId,
   employee: employeeProp,
-  lookupKeyword,
   onClose,
   onSuccess,
 }: EmployeeEditDialogProps) {
+  const formRef = useRef<FormApi | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const fallbackEmployee = employeeProp?.id === employeeId ? employeeProp : undefined
+
   const { data: employee, isLoading: isEmployeeLoading } = useQuery({
-    queryKey: [
-      'admin-employee-detail',
-      employeeId,
-      employeeProp,
-      employeeProp?.id,
-      employeeProp?.username,
-      employeeProp?.name,
-      employeeProp?.updated_at,
-      lookupKeyword,
-    ],
+    queryKey: ['admin-employee-detail', employeeId],
     queryFn: async () => {
       if (!employeeId) return null
-      if (employeeProp?.id === employeeId) return employeeProp
-
-      const keywords = [...new Set([lookupKeyword, employeeProp?.username, employeeProp?.name].filter(Boolean))] as string[]
-      for (const keyword of keywords) {
-        const response = await adminApi.getEmployees({ page: 1, size: 50, search: keyword })
-        const matched = response.data?.items.find((item) => item.id === employeeId)
-        if (matched) return matched
-      }
-
-      const response = await adminApi.getEmployees({ page: 1, size: 2000 })
-      return response.data?.items.find((item) => item.id === employeeId) ?? null
+      const response = await adminApi.getEmployee(employeeId)
+      return response.data ?? null
     },
     enabled: open && !!employeeId,
+    placeholderData: fallbackEmployee,
   })
 
   const { data: identitiesData, isLoading: isIdentitiesLoading } = useQuery({
@@ -867,50 +833,84 @@ export function EmployeeEditDialog({
     enabled: open && !!employeeId,
   })
 
+  const handleClose = useCallback(() => {
+    formRef.current = null
+    setIsSaving(false)
+    onClose()
+  }, [onClose])
+
+  useEffect(() => {
+    if (!open) {
+      formRef.current = null
+    }
+  }, [open])
+
   if (!open) return null
 
-  if (isEmployeeLoading || isIdentitiesLoading) {
-    return (
-      <Modal
-        title="编辑员工"
-        visible={open}
-        onCancel={onClose}
-        width={672}
-        footer={<Button onClick={onClose}>取消</Button>}
-      >
-        <div style={{ padding: '48px 0', display: 'flex', justifyContent: 'center' }}>
-          <Spin />
-        </div>
-      </Modal>
-    )
-  }
-
-  if (!employee) {
-    return (
-      <Modal
-        title="编辑员工"
-        visible={open}
-        onCancel={onClose}
-        width={672}
-        footer={<Button onClick={onClose}>关闭</Button>}
-      >
-        <Empty title="员工不存在" description="请刷新后重试" />
-      </Modal>
-    )
-  }
-
+  const isLoading = isEmployeeLoading || isIdentitiesLoading
   const identityKey = (identitiesData || [])
     .map((identity) => `${identity.id}:${identity.updated_at || ''}`)
     .join('|')
 
+  let footer = <Button onClick={handleClose}>取消</Button>
+  let content: ReactNode
+
+  if (isLoading) {
+    footer = (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <Button onClick={handleClose}>取消</Button>
+        <Button theme="solid" type="primary" disabled>
+          保存
+        </Button>
+      </div>
+    )
+    content = (
+      <div style={{ paddingTop: 4 }}>
+        <DialogBodySkeleton variant="form" rows={6} />
+      </div>
+    )
+  } else if (!employee) {
+    footer = <Button onClick={handleClose}>关闭</Button>
+    content = <Empty title="员工不存在" description="请刷新后重试" />
+  } else {
+    footer = (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <Button onClick={handleClose}>取消</Button>
+        <Button
+          theme="solid"
+          type="primary"
+          onClick={() => formRef.current?.submitForm()}
+          loading={isSaving}
+        >
+          保存
+        </Button>
+      </div>
+    )
+    content = (
+      <EmployeeEditDialogContent
+        key={`${employee.id}:${identityKey}`}
+        open={open}
+        employee={employee}
+        identityItems={identitiesData || []}
+        formRef={formRef}
+        onClose={handleClose}
+        onSavingChange={setIsSaving}
+        onSuccess={onSuccess}
+      />
+    )
+  }
+
   return (
-    <EmployeeEditDialogContent
-      key={`${employee.id}:${identityKey}`}
-      open={open}
-      employee={employee}
-      identityItems={identitiesData || []}
-      onClose={onClose}
-      onSuccess={onSuccess}
-    />
+    <Modal
+      title="编辑员工"
+      visible={open}
+      onCancel={handleClose}
+      width={672}
+      style={{ maxHeight: '90vh' }}
+      bodyStyle={{ overflow: 'auto', maxHeight: 'calc(90vh - 130px)' }}
+      footer={footer}
+    >
+      {content}
+    </Modal>
   )
 }

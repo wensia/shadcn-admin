@@ -28,6 +28,15 @@ export interface ResignationItem {
   approved_by_name?: string
   approved_at?: string
   approval_comment?: string
+  business_reviewed_by_id?: string
+  business_reviewed_by_name?: string
+  business_reviewed_at?: string
+  business_review_comment?: string
+  lead_disposition?: string
+  lead_disposition_display?: string
+  transfer_to_advisor_id?: string
+  transfer_to_advisor_name?: string
+  handover_note?: string
   is_executed: boolean
   executed_at?: string
   created_at: string
@@ -51,6 +60,9 @@ export interface ResignationCreate {
   resignation_type: string
   resignation_date: string
   reason: string
+  lead_disposition?: string
+  transfer_to_advisor_id?: string
+  handover_note?: string
 }
 
 export interface ResignationApprovalAction {
@@ -96,7 +108,7 @@ export interface IdentityApplicationCreate {
   name: string
   phone: string
   email: string
-  joined_on?: string
+  joined_on: string
   campus_id: string
   department_id: string
   position_id: string
@@ -105,6 +117,11 @@ export interface IdentityApplicationCreate {
 
 export interface IdentityApplicationReviewAction {
   comment?: string
+}
+
+export interface IdentityApplicationCampusOption {
+  id: string
+  name: string
 }
 
 export const hrApi = {
@@ -142,6 +159,20 @@ export const hrApi = {
   async approveResignation(id: string, data: ResignationApprovalAction): Promise<ApiResponse<ResignationItem>> {
     return apiClient.post<ApiResponse<ResignationItem>>(
       `${BASE_URL}/resignations/${id}/approve`,
+      data
+    )
+  },
+
+  async businessApproveResignation(id: string, data: ResignationApprovalAction): Promise<ApiResponse<ResignationItem>> {
+    return apiClient.post<ApiResponse<ResignationItem>>(
+      `${BASE_URL}/resignations/${id}/business-approve`,
+      data
+    )
+  },
+
+  async businessRejectResignation(id: string, data: ResignationApprovalAction): Promise<ApiResponse<ResignationItem>> {
+    return apiClient.post<ApiResponse<ResignationItem>>(
+      `${BASE_URL}/resignations/${id}/business-reject`,
       data
     )
   },
@@ -185,6 +216,12 @@ export const hrApi = {
   async getIdentityApplicationDetail(id: string): Promise<ApiResponse<IdentityApplicationItem>> {
     return apiClient.get<ApiResponse<IdentityApplicationItem>>(
       `${BASE_URL}/identity-applications/${id}`
+    )
+  },
+
+  async getIdentityApplicationAccessibleCampuses(): Promise<ApiResponse<IdentityApplicationCampusOption[]>> {
+    return apiClient.get<ApiResponse<IdentityApplicationCampusOption[]>>(
+      `${BASE_URL}/identity-applications/accessible-campuses`
     )
   },
 

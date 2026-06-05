@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Nav, SideSheet } from '@douyinfe/semi-ui-19'
 import type { NavProps } from '@douyinfe/semi-ui-19/lib/es/navigation'
-import { ChevronsLeft, ChevronsRight, HelpCircle } from 'lucide-react'
+import { HelpCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { AnthropicLogo } from '@/assets/anthropic-logo'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSidebar } from '@/context/sidebar-context'
@@ -69,6 +69,11 @@ const COMMON_HELP_GROUP: NavGroup = {
     },
   ],
 }
+
+const SIDEBAR_RAIL_WIDTH = 56
+const SIDEBAR_PANEL_WIDTH = 260
+const SIDEBAR_HEADER_HEIGHT = 52
+const SIDEBAR_ICON_BUTTON_SIZE = 36
 
 // ─── Group collapse persistence ────────────────────────────────
 const COLLAPSED_GROUPS_KEY = 'sidebar_collapsed_groups'
@@ -178,6 +183,8 @@ export function AppSidebar() {
   }, [location.pathname, hasPermission, isSuperUser, canAccessDirectVisitLeads])
 
   const isCollapsed = !open && !isMobile
+  const [railButtonHovered, setRailButtonHovered] = useState(false)
+
   // ─── Open keys (分组展开状态) ──────────────────────────────
   const [openKeys, setOpenKeys] = useState<string[]>(() =>
     getInitialOpenKeys(navGroups, location.pathname)
@@ -210,7 +217,12 @@ export function AppSidebar() {
   )
 
   // ─── Selected keys ────────────────────────────────────────
-  const selectedKeys = useMemo(() => [location.pathname], [location.pathname])
+  const selectedKeys = useMemo(() => {
+    if (location.pathname === '/hr/resignations') {
+      return ['/hr/identity-applications']
+    }
+    return [location.pathname]
+  }, [location.pathname])
 
   // ─── Navigation selection ─────────────────────────────────
   const handleSelect = useCallback<NonNullable<NavProps['onSelect']>>(
@@ -226,107 +238,19 @@ export function AppSidebar() {
     [isMobile, navigate, setOpenMobile]
   )
 
-  // ─── Sidebar content ─────────────────────────────────────
-  const sidebarContent = (
-    <Nav
-      isCollapsed={isCollapsed}
-      selectedKeys={selectedKeys}
-      openKeys={resolvedOpenKeys}
-      onOpenChange={handleOpenChange}
-      onSelect={handleSelect}
-      onCollapseChange={(collapsed: boolean) => setOpen(!collapsed)}
-      style={{ height: '100%', userSelect: 'none' }}
-    >
-      <Nav.Header
-        logo={
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            <AnthropicLogo className='size-7' />
-            {!isMobile && (
-              <div
-                style={{
-                  maxHeight: isCollapsed ? 36 : 0,
-                  marginTop: isCollapsed ? 6 : 0,
-                  opacity: isCollapsed ? 1 : 0,
-                  overflow: 'hidden',
-                  transition:
-                    'max-height 0.25s ease, opacity 0.15s ease 0.08s, margin-top 0.25s ease',
-                }}
-              >
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setOpen(true)
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 28,
-                    height: 28,
-                    cursor: 'pointer',
-                    color: 'var(--semi-color-text-2)',
-                    borderRadius: 6,
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      'var(--semi-color-fill-0)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }}
-                >
-                  <ChevronsRight style={{ width: 16, height: 16 }} />
-                </div>
-              </div>
-            )}
-          </div>
-        }
-        text={teams[0]?.name || 'RMF CRM'}
-      >
-        {!isCollapsed && !isMobile && (
-          <div
-            onClick={() => setOpen(false)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              cursor: 'pointer',
-              color: 'var(--semi-color-text-2)',
-              borderRadius: 6,
-              transition: 'background-color 0.2s',
-              marginLeft: 'auto',
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--semi-color-fill-0)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-          >
-            <ChevronsLeft style={{ width: 16, height: 16 }} />
-          </div>
-        )}
-      </Nav.Header>
+  const renderNavGroups = () =>
+    navGroups.map((group) => {
+      const GroupIcon = group.icon
 
-      {navGroups.map((group) => (
+      return (
         <Nav.Sub
           key={group.title}
           itemKey={`group-${group.title}`}
           text={group.title}
           icon={
-            isCollapsed && group.icon ? (
+            GroupIcon ? (
               <span className='inline-flex'>
-                <group.icon size={16} />
+                <GroupIcon size={16} />
               </span>
             ) : undefined
           }
@@ -346,17 +270,118 @@ export function AppSidebar() {
             />
           ))}
         </Nav.Sub>
-      ))}
+      )
+    })
 
-      <Nav.Footer
+  // ─── Sidebar content ─────────────────────────────────────
+  const sidebarContent = (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div
         style={{
-          borderTop: '1px solid var(--semi-color-border)',
-          paddingTop: 8,
+          height: SIDEBAR_HEADER_HEIGHT,
+          display: 'flex',
+          alignItems: 'center',
+          flexShrink: 0,
         }}
       >
-        <NavUser collapsed={isCollapsed} />
-      </Nav.Footer>
-    </Nav>
+        <div
+          aria-hidden='true'
+          style={{
+            width: SIDEBAR_RAIL_WIDTH,
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <AnthropicLogo className='size-6' />
+        </div>
+        <div
+          style={{
+            minWidth: 0,
+            flex: 1,
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'var(--semi-color-text-0)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {teams[0]?.name || 'RMF CRM'}
+        </div>
+        {!isMobile ? (
+          <button
+            type='button'
+            aria-label='关闭边栏'
+            onClick={() => setOpen(false)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              border: 0,
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              color: 'var(--semi-color-text-2)',
+              borderRadius: 6,
+              transition: 'background-color 0.2s',
+              marginLeft: 8,
+              marginRight: 12,
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--semi-color-fill-0)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <PanelLeftClose style={{ width: 16, height: 16 }} />
+          </button>
+        ) : null}
+      </div>
+
+      <Nav
+        className='rmf-app-sidebar-nav'
+        isCollapsed={false}
+        selectedKeys={selectedKeys}
+        openKeys={resolvedOpenKeys}
+        onOpenChange={handleOpenChange}
+        onSelect={handleSelect}
+        onCollapseChange={(collapsed: boolean) => setOpen(!collapsed)}
+        bodyStyle={{
+          flex: '1 1 0%',
+          minHeight: 0,
+        }}
+        style={{
+          width: '100%',
+          flex: '1 1 0%',
+          minHeight: 0,
+          userSelect: 'none',
+        }}
+      >
+        {renderNavGroups()}
+
+        <Nav.Footer
+          style={{
+            borderTop: '1px solid var(--semi-color-border)',
+            paddingTop: 8,
+          }}
+        >
+          <NavUser collapsed={isCollapsed} />
+        </Nav.Footer>
+      </Nav>
+    </div>
   )
 
   // 移动端: SideSheet 抽屉
@@ -377,5 +402,111 @@ export function AppSidebar() {
   }
 
   // 桌面: 直接渲染
-  return sidebarContent
+  return (
+    <aside
+      aria-label='全局侧边栏'
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: 'var(--semi-color-bg-1)',
+        color: 'var(--semi-color-text-0)',
+      }}
+    >
+      {!open ? (
+        <nav
+          aria-label='侧边栏'
+          style={{
+            width: SIDEBAR_RAIL_WIDTH,
+            height: '100%',
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: 'inset -1px 0 0 var(--semi-color-border)',
+            backgroundColor: 'var(--semi-color-bg-1)',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              height: SIDEBAR_HEADER_HEIGHT,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <button
+              type='button'
+              aria-label='打开边栏'
+              title='打开边栏'
+              onClick={() => {
+                setRailButtonHovered(false)
+                setOpen(true)
+              }}
+              onMouseEnter={() => setRailButtonHovered(true)}
+              onMouseLeave={() => setRailButtonHovered(false)}
+              style={{
+                width: SIDEBAR_ICON_BUTTON_SIZE,
+                height: SIDEBAR_ICON_BUTTON_SIZE,
+                border: 0,
+                borderRadius: 8,
+                backgroundColor: railButtonHovered
+                  ? 'var(--semi-color-fill-0)'
+                  : 'transparent',
+                color: railButtonHovered
+                  ? 'var(--semi-color-text-2)'
+                  : 'var(--semi-color-primary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background-color 0.15s ease, color 0.15s ease',
+              }}
+            >
+              {railButtonHovered ? (
+                <PanelLeftOpen size={19} strokeWidth={1.8} />
+              ) : (
+                <AnthropicLogo className='size-6' />
+              )}
+            </button>
+          </div>
+
+          <Nav
+            className='rmf-app-sidebar-nav rmf-app-sidebar-rail-nav'
+            isCollapsed
+            selectedKeys={selectedKeys}
+            onSelect={handleSelect}
+            bodyStyle={{
+              flex: '1 1 0%',
+              minHeight: 0,
+            }}
+            style={{
+              width: '100%',
+              flex: '1 1 0%',
+              minHeight: 0,
+              userSelect: 'none',
+            }}
+          >
+            {renderNavGroups()}
+          </Nav>
+        </nav>
+      ) : null}
+
+      {open ? (
+        <div
+          style={{
+            width: SIDEBAR_PANEL_WIDTH,
+            height: '100%',
+            overflow: 'hidden',
+            boxShadow: 'inset -1px 0 0 var(--semi-color-border)',
+          }}
+        >
+          {sidebarContent}
+        </div>
+      ) : null}
+    </aside>
+  )
 }

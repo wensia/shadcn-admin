@@ -32,6 +32,7 @@ import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
 import { IconRefresh } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { scheduledTasksApi } from '../api'
 import {
@@ -991,6 +992,9 @@ export function ScheduledTasksPage() {
           {viewingTaskName} - {viewingTaskId}
         </Text>
 
+        {taskResultLoading && !taskResultData ? (
+          <DialogBodySkeleton variant="detail" rows={4} />
+        ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* 执行状态 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1070,6 +1074,7 @@ export function ScheduledTasksPage() {
             </div>
           )}
         </div>
+        )}
       </Modal>
     </>
   )

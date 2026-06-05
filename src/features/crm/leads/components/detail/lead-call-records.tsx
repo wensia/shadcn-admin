@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { getLeadCallRecords, type LeadCallRecord } from '../../api'
 import { RecordDetailModal } from '@/features/yunke/components/call-records/record-detail-modal'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import type { CallRecord } from '@/features/yunke/types'
 
 interface LeadCallRecordsProps {
@@ -260,7 +261,9 @@ export function LeadCallRecords({
   const content = (
     <div className={className} style={{ display: 'flex', flexDirection: 'column' }}>
       {isLoading ? (
-        <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>加载中...</div>
+        <div style={{ padding: 16 }}>
+          <DialogBodySkeleton variant="list" rows={3} compact />
+        </div>
       ) : records.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)', textAlign: 'center', padding: '16px 0' }}>暂无通话记录</div>
       ) : (

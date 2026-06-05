@@ -673,7 +673,7 @@ export function YunkeAccountsPage() {
             </div>
           </div>
 
-          <Button theme="outline" block icon={<Copy className="h-4 w-4" />} onClick={copyAllInfo}>
+          <Button theme="outline" className="rmf-copy-button" block icon={<Copy className="h-4 w-4" />} onClick={copyAllInfo}>
             一键复制（姓名/账号/密码）
           </Button>
 

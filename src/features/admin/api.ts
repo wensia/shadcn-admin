@@ -811,16 +811,18 @@ export const adminApi = {
     return apiClient.post(`${BASE_URL}/assignments/${id}/transfer`, data)
   },
 
-  /** 查询某作用域下的在任员工列表（用于组织架构树右侧部门成员展示） */
+  /** 查询某作用域下的员工列表（用于组织架构树右侧部门成员展示） */
   async listScopeMembers(params: {
     scope_type: 'campus_department' | 'area_department' | 'district_department' | 'campus' | 'area'
     scope_id: string
+    is_active?: boolean
   }): Promise<ApiResponse<Array<{
     employee_id: string
     name: string
     username: string
     phone: string | null
     email: string | null
+    is_active: boolean
     department_name: string | null
     position_name: string | null
   }>>> {

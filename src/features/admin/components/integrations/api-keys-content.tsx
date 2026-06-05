@@ -459,6 +459,7 @@ export function ApiKeysContent() {
                 </div>
                 <Button
                   theme="outline"
+                  className="rmf-copy-button"
                   block
                   icon={<Copy className="h-4 w-4" />}
                   onClick={() => handleCopyToClipboard(createdKey?.api_key || '')}

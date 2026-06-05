@@ -18,6 +18,7 @@ import {
   IconDownload,
 } from '@douyinfe/semi-icons'
 import { format } from 'date-fns'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 
 import { batchImportApi } from '../api'
@@ -160,6 +161,9 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
         <>
           {/* 激活线索表格 */}
           <div ref={wrapperRef} style={{ flex: 1, overflow: 'hidden' }}>
+            {isLoading && leadsList.length === 0 ? (
+              <DialogBodySkeleton variant="list" rows={8} compact />
+            ) : (
             <Table
               columns={columns}
               dataSource={leadsList}
@@ -169,6 +173,7 @@ export function ActivatedLeadsDialog({ open, onOpenChange, batch }: ActivatedLea
               loading={isLoading}
               empty={<div style={{ padding: 48, textAlign: 'center', color: 'var(--semi-color-text-2)' }}>暂无激活线索</div>}
             />
+            )}
           </div>
 
           {/* 分页 */}

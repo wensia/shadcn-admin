@@ -42,9 +42,7 @@ import {
   BrainCircuit,
   Bell,
   BrainCog,
-  UserMinus,
   Wrench,
-  Crown,
   Megaphone,
   Mail,
 } from 'lucide-react'
@@ -215,9 +213,9 @@ export const crmNavGroups: NavGroup[] = [
         icon: UserCog,
       },
       {
-        title: '员工身份申请',
+        title: '人事审批',
         url: '/hr/identity-applications',
-        icon: UserCheck,
+        icon: ClipboardList,
       },
       {
         title: '财务管理',
@@ -283,11 +281,6 @@ export const adminNavGroups: NavGroup[] = [
         icon: Network,
       },
       {
-        title: '组织架构树（旧）',
-        url: '/admin/organization-tree',
-        icon: Network,
-      },
-      {
         title: '大区管理',
         url: '/admin/regions',
         icon: MapPin,
@@ -306,11 +299,6 @@ export const adminNavGroups: NavGroup[] = [
         title: '校区管理',
         url: '/admin/campuses',
         icon: Building2,
-      },
-      {
-        title: '组织任命管理（旧）',
-        url: '/admin/organization-assignments',
-        icon: Crown,
       },
     ],
   },
@@ -453,14 +441,9 @@ export const hrNavGroups: NavGroup[] = [
     icon: ClipboardList,
     items: [
       {
-        title: '身份申请',
+        title: '人事审批',
         url: '/hr/identity-applications',
-        icon: UserCheck,
-      },
-      {
-        title: '离职审批',
-        url: '/hr/resignations',
-        icon: UserMinus,
+        icon: ClipboardList,
       },
       {
         title: 'DISC 测试管理',

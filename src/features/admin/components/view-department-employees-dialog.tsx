@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Users, Building2, Network } from 'lucide-react'
 import { Modal, Table, Tag, Typography } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { adminApi } from '../api'
 import type { CampusDepartmentItem, EmployeeIdentityItem } from '../types'
 import { PositionNameBadge, PositionLevelBadge } from './status-badge'
@@ -164,18 +165,7 @@ export function ViewDepartmentEmployeesDialog({
 
         {/* 员工列表 */}
         {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
-                <div className="h-10 w-10 rounded-full bg-[var(--semi-color-fill-0)] animate-pulse" />
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-4 w-24 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
-                  <div className="h-3 w-32 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
-                </div>
-                <div className="h-6 w-14 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
-              </div>
-            ))}
-          </div>
+          <DialogBodySkeleton variant="list" rows={5} compact />
         ) : employees.length === 0 ? (
           <div className="text-center py-12 border rounded-lg border-dashed" style={{ color: 'var(--semi-color-text-2)' }}>
             <Users className="h-12 w-12 mx-auto mb-3" style={{ opacity: 0.5 }} />

@@ -16,7 +16,17 @@ import {
   CallRecordsToolbar,
 } from '../components/call-records'
 
-function CallRecordsContent() {
+export interface CallRecordsRouteBinding {
+  activeRecordId?: string
+  onOpenRecord?: (recordId: string) => void
+  onCloseRecord?: () => void
+}
+
+interface CallRecordsContentProps {
+  recordRoute?: CallRecordsRouteBinding
+}
+
+function CallRecordsContent({ recordRoute }: CallRecordsContentProps) {
   const {
     records,
     total,
@@ -77,6 +87,9 @@ function CallRecordsContent() {
           onPageChange={setPage}
           onSizeChange={setSize}
           onViewLead={handleViewLead}
+          activeRecordId={recordRoute?.activeRecordId}
+          onOpenRecord={recordRoute?.onOpenRecord}
+          onCloseRecord={recordRoute?.onCloseRecord}
         />
       </DataTableLayout>
 
@@ -89,10 +102,14 @@ function CallRecordsContent() {
   )
 }
 
-export function YunkeCallRecordsPage() {
+interface YunkeCallRecordsPageProps {
+  recordRoute?: CallRecordsRouteBinding
+}
+
+export function YunkeCallRecordsPage({ recordRoute }: YunkeCallRecordsPageProps = {}) {
   return (
     <CallRecordsProvider>
-      <CallRecordsContent />
+      <CallRecordsContent recordRoute={recordRoute} />
     </CallRecordsProvider>
   )
 }

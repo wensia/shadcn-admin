@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { Button, Card, Empty, Typography } from '@douyinfe/semi-ui-19'
 import { ClipboardCheck, RefreshCw, ShieldAlert } from 'lucide-react'
-import { AdvisorTaskOverviewCards } from './advisor-task-overview-cards'
+import { AdvisorTaskOverviewTable } from './advisor-task-overview-table'
 import { AdvisorTaskReviewDrawer } from './advisor-task-review-drawer'
 import { AdvisorTaskTable } from './advisor-task-table'
 import { useAdvisorTaskActions, useAdvisorTaskDashboard, useAdvisorTaskDetail } from '../hooks/use-advisor-task-dashboard'
@@ -229,7 +229,7 @@ export function AdvisorTaskSection({
             </div>
           </div>
 
-          <AdvisorTaskOverviewCards
+          <AdvisorTaskOverviewTable
             summary={dashboardQuery.data.summary}
             loading={accountLoading || dashboardQuery.isLoading}
           />

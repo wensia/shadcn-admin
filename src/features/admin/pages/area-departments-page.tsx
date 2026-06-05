@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Network, Users } from 'lucide-react'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { Button, Select, Typography, Tag, Modal, Form } from '@douyinfe/semi-ui-19'
 import type { ColumnProps } from '@douyinfe/semi-ui-19/lib/es/table'
@@ -318,7 +319,7 @@ function ManageAreaManagersDialog({
       )}
 
       {isLoading ? (
-        <Text type="tertiary">加载中...</Text>
+        <DialogBodySkeleton variant="list" rows={2} compact />
       ) : (managers ?? []).length === 0 ? (
         <Text type="tertiary">暂无负责人</Text>
       ) : (

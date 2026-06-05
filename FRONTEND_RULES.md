@@ -97,6 +97,13 @@ import { Play, FileText, UserRound } from 'lucide-react'
 import { toast } from '@/lib/toast'
 ```
 
+### 图标使用原则
+
+非必要，不要使用图标。普通状态、标签、说明文案、列表项默认用文字表达，不叠加装饰性图标。
+
+- 仅在纯图标按钮、输入框前后缀、常见工具栏动作、或图标能明显提升扫描效率且含义清晰时使用图标。
+- 纯图标按钮必须提供 `aria-label` / `title`，避免只有视觉符号没有可访问说明。
+
 ### Button 尺寸规范
 
 Semi `Button` / `ButtonGroup` 默认使用标准尺寸，也就是 Semi 默认的 `size="default"`。业务代码中默认不要显式写 `size` 属性。
@@ -644,17 +651,36 @@ Semi Design Tabs 内部有三层默认 `flex: 0 1 auto` 的容器会**打断**�
 3. 找到第一个**高度等于内容高度**（而非父容器分配的高度）的 flex 子项 → 该层缺少 `min-height: 0`
 4. 检查 Semi Tabs 相关层 → 确认 `index.css` 中的 `.semi-tabs-pane-motion-overlay` 修复存在
 
-## SideSheet 抽屉加载规范
+## Modal / SideSheet 加载规范
 
-**核心原则：抽屉必须在用户点击时立即打开，数据加载期间显示骨架屏，禁止等待 API 响应后才打开抽屉。**
+**核心原则：详情/编辑类 Modal 和 SideSheet 必须在用户点击时立即打开，数据加载期间主体区域显示骨架屏，禁止等待 API 响应后才打开。确认类、提示类、新建空表单不要为了统一而套骨架屏。**
+
+### 何时使用骨架屏
+
+| 场景 | 加载方式 | 说明 |
+|------|----------|------|
+| 详情查看 Modal / SideSheet | 主体骨架屏 | 打开后请求详情、统计、列表、报告等内容 |
+| 编辑 Modal / SideSheet | 主体骨架屏 + 保存按钮禁用 | 打开后请求详情、组织身份、字典选项等内容 |
+| 抽屉型复杂页面 | Header/Tab/内容结构化骨架 | 抽屉内容通常更长，优先使用骨架屏保持布局稳定 |
+| 新建空表单 | 不使用整页骨架屏 | 直接展示表单；Select 等异步选项使用组件自身 `loading` |
+| 确认/删除/二次确认弹窗 | 不使用骨架屏 | 使用 `Modal.confirm` 或普通 Modal 文案即可 |
+| 保存/提交/删除中 | 不使用骨架屏 | 使用按钮 `loading`、禁用相关控件或局部状态提示 |
+
+### 交互规则
+
+- Modal / SideSheet 的标题、关闭按钮和 footer 必须在加载期间保持可见；用户任何时候都能取消或关闭。
+- 骨架屏只替代 body 主体内容，不用全屏 Spin 覆盖整个弹窗。
+- 编辑表单加载期间不要渲染半初始化的真实表单；保存按钮应禁用，数据就绪后再启用。
+- 加载失败时在 body 主体区域展示 `Empty` / 错误态和重试动作，不要自动关闭弹窗。
+- 通用表单、列表、详情骨架屏优先使用 `@/components/semi/dialog-body-skeleton`；高度定制的复杂抽屉可以在组件内定义贴合业务结构的 Skeleton。
 
 ### 标准模式
 
 ```tsx
-// ✅ 正确 — 先打开抽屉，再加载数据
+// ✅ 正确 — 先打开弹窗/抽屉，再加载数据
 const handleViewDetail = (id: string) => {
   setDetailId(id)     // 触发查询
-  setDetailOpen(true) // 立即打开抽屉
+  setDetailOpen(true) // 立即打开
 }
 
 const { data, isLoading } = useQuery({
@@ -671,12 +697,36 @@ const handleViewDetail = async (id: string) => {
 }
 
 // ❌ 错误 — 数据未就绪时阻止渲染
-if (!data && !isLoading) return null  // 抽屉无法展示
+if (!data && !isLoading) return null  // 弹窗/抽屉无法展示
 ```
 
-### 抽屉内骨架屏
+### 通用骨架屏
 
-使用 Semi Design `<Skeleton>` 组件，根据抽屉内容类型选择骨架屏布局：
+普通表单、列表、详情类弹窗优先复用通用骨架屏：
+
+```tsx
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
+
+<Modal
+  title="编辑员工"
+  visible={open}
+  onCancel={onClose}
+  footer={
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <Button onClick={onClose}>取消</Button>
+      <Button theme="solid" disabled={isLoading} loading={isSaving}>保存</Button>
+    </div>
+  }
+>
+  {isLoading ? (
+    <DialogBodySkeleton variant="form" rows={6} />
+  ) : (
+    <EmployeeForm />
+  )}
+</Modal>
+```
+
+高度定制的抽屉使用 Semi Design `<Skeleton>` 组件，根据内容类型选择贴近真实结构的骨架屏布局：
 
 ```tsx
 <SideSheet visible={open} ...>
@@ -699,17 +749,15 @@ if (!data && !isLoading) return null  // 抽屉无法展示
 
 ### 各场景骨架屏参考
 
-| 抽屉类型 | 骨架屏布局 | 参考实现 |
+| 类型 | 骨架屏布局 | 参考实现 |
 |---------|-----------|---------|
-| 详情查看（Tab 式） | Header 标签占位 + Tab 栏 + 表单字段网格 | `lead-detail-sheet.tsx` |
+| 详情查看（Tab 式抽屉） | Header 标签占位 + Tab 栏 + 表单字段网格 | `lead-detail-sheet.tsx` |
 | 报告/文档 | 标题 + 段落 + 数据表格 | `disc-detail-drawer.tsx` |
 | 对话/转写 | 头像 + 不等宽文本行（气泡式） | `record-detail-modal.tsx` |
+| 编辑表单 Modal | 字段网格骨架 + footer 保存禁用 | `employee-edit-dialog.tsx` |
+| 列表 Modal | 列表行骨架 | `view-department-employees-dialog.tsx` |
 | 筛选面板 | Select 组件设置 `loading` prop | `filter-sheet.tsx` |
 | 表单编辑（prop 驱动） | 无需骨架屏（数据由 prop 传入） | `tasks-mutate-drawer.tsx` |
-
-### 关闭按钮
-
-骨架屏状态下**关闭按钮必须始终可用**，确保用户任何时候都能关闭抽屉。
 
 ## 禁止使用原生 HTML/JS 组件（强制）
 
@@ -914,10 +962,12 @@ const handleNext = async () => {
 |------|------|
 | `submitForm()` | 触发验证 + 提交 |
 | `validate(fields?)` | 验证全部或指定字段 |
-| `setValues(data)` | 批量设置字段值（编辑回填） |
+| `setValues(data)` | 批量设置字段值（仅用于完整编辑回填或完整重置） |
 | `reset()` | 重置所有字段 |
 | `getValue(field)` | 获取单个字段值 |
 | `setValue(field, value)` | 设置单个字段值 |
+
+`setValues` 默认会遍历已注册字段，未包含在入参里的字段会被置空。Select 联动、局部清空依赖字段时必须使用 `setValue(field, value)` 逐个更新，不能传部分对象给 `setValues`。
 
 ### 动态字段处理
 
@@ -938,6 +988,7 @@ const handleSubmit = (values) => {
 - **禁止**手动调用 `e.preventDefault()` → Semi Form 的 `onSubmit` 已处理
 - **禁止**在 Modal `onOk` 中直接提交 → 必须通过 `formRef.current.submitForm()` 触发验证
 - **禁止**使用 `<Form.Label>` 独立标签 → 用 `Form.Input/Select` 的 `label` prop
+- **禁止**在 `Form.Select` 联动里用部分对象调用 `setValues` → 会清空未传入字段，改用 `setValue`
 
 ### 参考实现
 

@@ -65,6 +65,28 @@
     cursor: pointer;
   }
 
+  .rmf-copy-button.semi-button-outline:not(.semi-button-disabled) {
+    border-color: var(--semi-color-primary);
+    color: var(--semi-color-primary);
+  }
+
+  .rmf-copy-button.semi-button-outline:not(.semi-button-disabled):hover {
+    border-color: var(--semi-color-primary-hover);
+    background-color: var(--semi-color-primary-hover);
+    color: rgba(var(--semi-white), 1);
+  }
+
+  .rmf-copy-button.semi-button-outline:not(.semi-button-disabled):active {
+    border-color: var(--semi-color-primary-active);
+    background-color: var(--semi-color-primary-active);
+    color: rgba(var(--semi-white), 1);
+  }
+
+  .rmf-copy-button.semi-button-outline:focus-visible {
+    outline: 2px solid var(--semi-color-primary-light-active) !important;
+    outline-offset: 1px;
+  }
+
   /* Override browser autofill background color */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
@@ -369,20 +391,92 @@
    out of view. Override to flex: 1 so footer stays pinned at the bottom.
 ============================================================================= */
 
-.semi-navigation-vertical .semi-navigation-inner {
+/* Scope this to the app sidebar so unrelated vertical Nav usages keep Semi defaults. */
+.rmf-app-sidebar-nav.semi-navigation-vertical .semi-navigation-inner {
   overflow: hidden !important;
+  min-height: 0 !important;
 }
 
-.semi-navigation-vertical .semi-navigation-header-list-outer {
+.rmf-app-sidebar-nav.semi-navigation-vertical
+  .semi-navigation-header-list-outer {
+  display: flex !important;
+  flex-direction: column !important;
   height: auto !important;
   flex: 1 1 0% !important;
   min-height: 0 !important;
   overflow: hidden !important;
 }
 
-.semi-navigation-vertical .semi-navigation-list-wrapper {
+.rmf-app-sidebar-nav.semi-navigation-vertical .semi-navigation-list-wrapper {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+}
+
+.rmf-app-sidebar-nav.semi-navigation-vertical .semi-navigation-footer {
+  flex-shrink: 0 !important;
+}
+
+.rmf-app-sidebar-rail-nav.semi-navigation {
+  width: 100% !important;
+  border-right: 0 !important;
+  background: transparent !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.rmf-app-sidebar-rail-nav.semi-navigation-collapsed {
+  width: 100% !important;
+}
+
+/* Organization assignment cards: switch to two columns only when the panel itself is wide enough. */
+.rmf-assignment-table-container {
+  container-type: inline-size;
+  margin-top: 12px;
+}
+
+.rmf-assignment-table-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.rmf-assignment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--semi-color-border);
+  border-radius: 6px;
+}
+
+.rmf-assignment-card:hover {
+  background: var(--semi-color-fill-0);
+}
+
+.rmf-assignment-card-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@container (min-width: 920px) {
+  .rmf-assignment-table-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 520px) {
+  .rmf-assignment-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rmf-assignment-card-actions {
+    margin-left: 0;
+  }
 }
 
 /* =============================================================================

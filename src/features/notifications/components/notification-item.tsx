@@ -5,7 +5,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import { Bell, FileText, Users, Info, AlertTriangle, ClipboardList } from 'lucide-react'
+import { Bell, FileText, Users, Info, AlertTriangle, ClipboardList, UserCheck, UserX } from 'lucide-react'
 import { NotificationType, isTodoNotification, type Notification } from '../types'
 
 interface NotificationItemProps {
@@ -25,6 +25,14 @@ function getNotificationIcon(type: string) {
       return <FileText className="h-4 w-4" />
     case NotificationType.TASK_ASSIGNED:
       return <ClipboardList className="h-4 w-4" />
+    case NotificationType.RESIGNATION_PENDING:
+    case NotificationType.RESIGNATION_APPROVED:
+    case NotificationType.RESIGNATION_REJECTED:
+      return <UserX className="h-4 w-4" />
+    case NotificationType.IDENTITY_APPLICATION_PENDING:
+    case NotificationType.IDENTITY_APPLICATION_APPROVED:
+    case NotificationType.IDENTITY_APPLICATION_REJECTED:
+      return <UserCheck className="h-4 w-4" />
     case NotificationType.SYSTEM:
       return <Info className="h-4 w-4" />
     default:
@@ -45,6 +53,16 @@ function getNotificationIconBg(type: string) {
       return 'bg-green-100 text-green-600'
     case NotificationType.TASK_ASSIGNED:
       return 'bg-purple-100 text-purple-600'
+    case NotificationType.RESIGNATION_PENDING:
+      return 'bg-orange-100 text-orange-600'
+    case NotificationType.RESIGNATION_APPROVED:
+    case NotificationType.IDENTITY_APPLICATION_APPROVED:
+      return 'bg-green-100 text-green-600'
+    case NotificationType.RESIGNATION_REJECTED:
+    case NotificationType.IDENTITY_APPLICATION_REJECTED:
+      return 'bg-red-100 text-red-600'
+    case NotificationType.IDENTITY_APPLICATION_PENDING:
+      return 'bg-blue-100 text-blue-600'
     case NotificationType.SYSTEM:
       return 'bg-gray-100 text-gray-600'
     default:

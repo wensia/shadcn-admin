@@ -464,6 +464,24 @@ export const callRecordsApi = {
     return unwrapData(response)
   },
 
+  /** 重新提交 ASR 转写任务 */
+  async retranscribeCallRecord(recordId: string): Promise<{
+    task_id: string
+    record_id: string
+    status: string
+    provider: string
+  }> {
+    const response = await apiClient.post<
+      ApiResponse<{
+        task_id: string
+        record_id: string
+        status: string
+        provider: string
+      }>
+    >(`/yunke/call-records/${recordId}/retranscribe`)
+    return unwrapData(response)
+  },
+
   /** 获取录音 URL */
   async getRecordUrl(voiceId: string): Promise<RecordUrlResponse> {
     const response = await apiClient.post<ApiResponse<RecordUrlResponse>>(

@@ -9,6 +9,12 @@ export enum NotificationType {
   ORDER_APPROVAL_PENDING = 'order_approval_pending',
   ORDER_APPROVAL_RESULT = 'order_approval_result',
   TASK_ASSIGNED = 'task_assigned',
+  RESIGNATION_PENDING = 'resignation_pending',
+  RESIGNATION_APPROVED = 'resignation_approved',
+  RESIGNATION_REJECTED = 'resignation_rejected',
+  IDENTITY_APPLICATION_PENDING = 'identity_application_pending',
+  IDENTITY_APPLICATION_APPROVED = 'identity_application_approved',
+  IDENTITY_APPLICATION_REJECTED = 'identity_application_rejected',
   SYSTEM = 'system',
 }
 
@@ -19,6 +25,12 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   [NotificationType.ORDER_APPROVAL_PENDING]: '待审批订单',
   [NotificationType.ORDER_APPROVAL_RESULT]: '审批结果',
   [NotificationType.TASK_ASSIGNED]: '任务分配',
+  [NotificationType.RESIGNATION_PENDING]: '离职申请待审批',
+  [NotificationType.RESIGNATION_APPROVED]: '离职审批通过',
+  [NotificationType.RESIGNATION_REJECTED]: '离职审批驳回',
+  [NotificationType.IDENTITY_APPLICATION_PENDING]: '员工身份申请待审批',
+  [NotificationType.IDENTITY_APPLICATION_APPROVED]: '员工身份申请通过',
+  [NotificationType.IDENTITY_APPLICATION_REJECTED]: '员工身份申请驳回',
   [NotificationType.SYSTEM]: '系统通知',
 }
 
@@ -30,6 +42,8 @@ export const TODO_TYPES = new Set([
   NotificationType.LEAD_ASSIGNED,
   NotificationType.ORDER_APPROVAL_PENDING,
   NotificationType.TASK_ASSIGNED,
+  NotificationType.RESIGNATION_PENDING,
+  NotificationType.IDENTITY_APPLICATION_PENDING,
 ])
 
 // 判断是否为待办通知

@@ -1,9 +1,18 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { Plus, MoreHorizontal, Pencil, Trash2, MessageSquare } from 'lucide-react'
-import { Button, Input, Dropdown, Typography } from '@douyinfe/semi-ui-19'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Dropdown, Input } from '@douyinfe/semi-ui-19'
+import {
+  Folder,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Search,
+  SquarePen,
+  Trash2,
+  UserRound,
+  X,
+} from 'lucide-react'
 import type { ChatSession } from './use-chat-sessions'
-
-const { Text } = Typography
 
 interface ChatSessionSidebarProps {
   sessions: ChatSession[]
@@ -13,12 +22,33 @@ interface ChatSessionSidebarProps {
   onDeleteSession: (id: string) => void
   onRenameSession: (id: string, title: string) => void
   isLoading: boolean
+  onCloseSidebar?: () => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 interface DateGroup {
   label: string
   sessions: ChatSession[]
 }
+
+const GROUP_ORDER = ['今天', '昨天', '最近7天', '更早']
+
+const menuButtonStyle = {
+  height: 36,
+  width: '100%',
+  border: '1px solid transparent',
+  borderRadius: 10,
+  background: 'transparent',
+  color: 'rgb(13, 13, 13)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  padding: '0 10px',
+  fontSize: 14,
+  lineHeight: '20px',
+  cursor: 'pointer',
+} satisfies React.CSSProperties
 
 function getDateGroup(dateStr: string | null): string {
   if (!dateStr) return '更早'
@@ -34,7 +64,70 @@ function getDateGroup(dateStr: string | null): string {
   return '更早'
 }
 
-const GROUP_ORDER = ['今天', '昨天', '最近7天', '更早']
+function SidebarIconButton({
+  label,
+  children,
+  onClick,
+}: {
+  label: string
+  children: React.ReactNode
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type='button'
+      aria-label={label}
+      onClick={onClick}
+      style={{
+        width: 36,
+        height: 36,
+        border: 0,
+        borderRadius: 8,
+        background: 'transparent',
+        color: 'rgb(143, 143, 143)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.background = 'rgb(244, 244, 244)'
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.background = 'transparent'
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function SidebarMenuButton({
+  icon,
+  children,
+  onClick,
+}: {
+  icon: React.ReactNode
+  children: React.ReactNode
+  onClick: () => void
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      style={menuButtonStyle}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.background = 'rgb(244, 244, 244)'
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.background = 'transparent'
+      }}
+    >
+      {icon}
+      <span>{children}</span>
+    </button>
+  )
+}
 
 function SessionItem({
   session,
@@ -50,6 +143,7 @@ function SessionItem({
   onRename: (title: string) => void
 }) {
   const [isEditing, setIsEditing] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
   const [editTitle, setEditTitle] = useState(session.title)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -72,99 +166,120 @@ function SessionItem({
 
   if (isEditing) {
     return (
-      <div style={{ padding: '2px 4px' }}>
+      <div style={{ padding: '2px 8px' }}>
         <Input
           ref={inputRef}
           value={editTitle}
-          onChange={v => setEditTitle(v)}
+          onChange={(value) => setEditTitle(value)}
           onBlur={handleSave}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleSave()
-            if (e.key === 'Escape') {
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') handleSave()
+            if (event.key === 'Escape') {
               setEditTitle(session.title)
               setIsEditing(false)
             }
           }}
-          size="small"
-          style={{ height: 32, fontSize: 13 }}
+          style={{
+            height: 32,
+            fontSize: 14,
+            borderRadius: 8,
+          }}
         />
       </div>
     )
   }
 
   return (
-    <div
+    <button
+      type='button'
+      onClick={onSelect}
+      onMouseEnter={(event) => {
+        setIsHovered(true)
+        if (!isActive) {
+          event.currentTarget.style.background = 'rgb(244, 244, 244)'
+        }
+      }}
+      onMouseLeave={(event) => {
+        setIsHovered(false)
+        if (!isActive) {
+          event.currentTarget.style.background = 'transparent'
+        }
+      }}
       style={{
+        height: 36,
+        width: '100%',
+        border: '1px solid transparent',
+        borderRadius: 10,
+        background: isActive ? 'rgb(243, 243, 243)' : 'transparent',
+        color: 'rgb(13, 13, 13)',
         display: 'flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '6px 8px',
-        borderRadius: 6,
+        padding: '0 8px 0 10px',
+        gap: 8,
+        fontSize: 14,
+        lineHeight: '20px',
+        textAlign: 'left',
         cursor: 'pointer',
-        fontSize: 13,
-        transition: 'background 0.15s',
-        background: isActive ? 'var(--semi-color-fill-0)' : undefined,
-        color: isActive ? 'var(--semi-color-text-0)' : 'var(--semi-color-text-1)',
-      }}
-      className="group"
-      onClick={onSelect}
-      onMouseEnter={e => {
-        if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--semi-color-fill-0)'
-      }}
-      onMouseLeave={e => {
-        if (!isActive) (e.currentTarget as HTMLElement).style.background = ''
       }}
     >
-      <MessageSquare style={{ width: 14, height: 14, flexShrink: 0, color: 'var(--semi-color-text-2)' }} />
-      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</span>
+      <span
+        style={{
+          minWidth: 0,
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {session.title}
+      </span>
       <Dropdown
-        trigger="click"
-        position="bottomRight"
+        trigger='click'
+        position='bottomRight'
         clickToHide
         render={
           <Dropdown.Menu>
             <Dropdown.Item
-              onClick={(e) => {
-                e?.stopPropagation()
+              onClick={(event) => {
+                event?.stopPropagation()
                 setEditTitle(session.title)
                 setIsEditing(true)
               }}
             >
-              <Pencil style={{ width: 14, height: 14, marginRight: 8 }} />
+              <Pencil size={14} style={{ marginRight: 8 }} />
               重命名
             </Dropdown.Item>
             <Dropdown.Item
-              type="danger"
-              onClick={(e) => {
-                e?.stopPropagation()
+              type='danger'
+              onClick={(event) => {
+                event?.stopPropagation()
                 onDelete()
               }}
             >
-              <Trash2 style={{ width: 14, height: 14, marginRight: 8 }} />
+              <Trash2 size={14} style={{ marginRight: 8 }} />
               删除
             </Dropdown.Item>
           </Dropdown.Menu>
         }
       >
-        <Button
-          theme="borderless"
+        <span
+          onClick={(event) => event.stopPropagation()}
           style={{
-            opacity: 0,
-            flexShrink: 0,
-            padding: 2,
-            borderRadius: 4,
-            display: 'flex',
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            display: 'inline-flex',
             alignItems: 'center',
-            minWidth: 'auto',
-            height: 'auto',
+            justifyContent: 'center',
+            color: 'rgb(143, 143, 143)',
+            opacity: isActive || isHovered ? 1 : 0,
+            flexShrink: 0,
           }}
-          className="group-hover:!opacity-100"
-          onClick={e => e.stopPropagation()}
         >
-          <MoreHorizontal style={{ width: 14, height: 14, color: 'var(--semi-color-text-2)' }} />
-        </Button>
+          <MoreHorizontal size={18} strokeWidth={1.8} />
+        </span>
       </Dropdown>
-    </div>
+    </button>
   )
 }
 
@@ -176,6 +291,9 @@ export function ChatSessionSidebar({
   onDeleteSession,
   onRenameSession,
   isLoading,
+  onCloseSidebar,
+  collapsed = false,
+  onToggleCollapse,
 }: ChatSessionSidebarProps) {
   const groups = useMemo<DateGroup[]>(() => {
     const map = new Map<string, ChatSession[]>()
@@ -185,67 +303,280 @@ export function ChatSessionSidebar({
       list.push(session)
       map.set(label, list)
     }
-    return GROUP_ORDER
-      .filter(label => map.has(label))
-      .map(label => ({ label, sessions: map.get(label)! }))
+    return GROUP_ORDER.filter((label) => map.has(label)).map((label) => ({
+      label,
+      sessions: map.get(label)!,
+    }))
   }, [sessions])
 
+  if (collapsed) {
+    return (
+      <aside
+        aria-label='历史聊天记录'
+        style={{
+          width: 52,
+          height: '100%',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          background: 'rgb(249, 249, 249)',
+          borderRight: '1px solid rgb(232, 232, 232)',
+          color: 'rgb(13, 13, 13)',
+          transition: 'width 0.18s ease',
+        }}
+      >
+        <div
+          style={{
+            height: 52,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <SidebarIconButton label='展开边栏' onClick={onToggleCollapse}>
+            <PanelLeftOpen size={20} strokeWidth={1.8} />
+          </SidebarIconButton>
+        </div>
+
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 4,
+            padding: '0 0 10px',
+            borderBottom: '1px solid rgb(232, 232, 232)',
+          }}
+        >
+          <SidebarIconButton label='新聊天' onClick={onNewChat}>
+            <SquarePen size={19} strokeWidth={1.8} />
+          </SidebarIconButton>
+          <SidebarIconButton label='搜索聊天'>
+            <Search size={19} strokeWidth={1.8} />
+          </SidebarIconButton>
+          <SidebarIconButton label='CRM 数据助手'>
+            <Folder size={19} strokeWidth={1.8} />
+          </SidebarIconButton>
+        </div>
+
+        <div style={{ minHeight: 0, flex: 1 }} />
+
+        <div
+          style={{
+            width: '100%',
+            borderTop: '1px solid rgb(232, 232, 232)',
+            padding: '8px 0',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: '50%',
+              background: 'rgb(238, 238, 238)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <UserRound size={16} strokeWidth={1.8} />
+          </span>
+        </div>
+      </aside>
+    )
+  }
+
   return (
-    <div
+    <aside
+      aria-label='历史聊天记录'
       style={{
         width: 260,
-        borderRight: '1px solid var(--semi-color-border)',
+        height: '100%',
+        flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
-        background: 'var(--semi-color-bg-0)',
+        background: 'rgb(249, 249, 249)',
+        borderRight: '1px solid rgb(232, 232, 232)',
+        color: 'rgb(13, 13, 13)',
+        transition: 'width 0.18s ease',
       }}
     >
-      <div style={{ padding: 12 }}>
-        <Button
-          theme="outline"
-          block
-          icon={<Plus style={{ width: 16, height: 16 }} />}
-          onClick={onNewChat}
-          style={{ justifyContent: 'flex-start', gap: 8 }}
+      <div
+        style={{
+          height: 52,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 8px 8px 16px',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 600,
+            letterSpacing: 0,
+            color: 'rgb(13, 13, 13)',
+          }}
         >
-          新对话
-        </Button>
+          RMF CRM
+        </div>
+        {onCloseSidebar ? (
+          <SidebarIconButton label='关闭边栏' onClick={onCloseSidebar}>
+            <X size={20} strokeWidth={1.8} />
+          </SidebarIconButton>
+        ) : (
+          <SidebarIconButton label='收起边栏' onClick={onToggleCollapse}>
+            <PanelLeftClose size={20} strokeWidth={1.8} />
+          </SidebarIconButton>
+        )}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 8px' }}>
+      <div
+        style={{
+          padding: '0 6px 10px',
+          borderBottom: '1px solid rgb(232, 232, 232)',
+        }}
+      >
+        <SidebarMenuButton
+          icon={<SquarePen size={18} strokeWidth={1.8} />}
+          onClick={onNewChat}
+        >
+          新聊天
+        </SidebarMenuButton>
+        <SidebarMenuButton
+          icon={<Search size={18} strokeWidth={1.8} />}
+          onClick={() => undefined}
+        >
+          搜索聊天
+        </SidebarMenuButton>
+        <SidebarMenuButton
+          icon={<Folder size={18} strokeWidth={1.8} />}
+          onClick={() => undefined}
+        >
+          CRM 数据助手
+        </SidebarMenuButton>
+      </div>
+
+      <div
+        style={{
+          minHeight: 0,
+          flex: 1,
+          overflowY: 'auto',
+          padding: '0 6px 8px',
+        }}
+      >
         {isLoading && sessions.length === 0 ? (
-          <Text type="tertiary" size="small" style={{ display: 'block', textAlign: 'center', padding: '16px 0' }}>
+          <div
+            style={{
+              padding: '18px 10px',
+              color: 'rgb(143, 143, 143)',
+              fontSize: 14,
+            }}
+          >
             加载中...
-          </Text>
+          </div>
         ) : sessions.length === 0 ? (
-          <Text type="tertiary" size="small" style={{ display: 'block', textAlign: 'center', padding: '16px 0' }}>
+          <div
+            style={{
+              padding: '18px 10px',
+              color: 'rgb(143, 143, 143)',
+              fontSize: 14,
+            }}
+          >
             暂无对话
-          </Text>
+          </div>
         ) : (
-          groups.map(group => (
-            <div key={group.label} style={{ marginBottom: 8 }}>
-              <Text
-                type="tertiary"
-                size="small"
-                style={{ display: 'block', padding: '6px 8px', fontWeight: 500 }}
+          groups.map((group) => (
+            <div key={group.label} style={{ marginTop: 12 }}>
+              <div
+                style={{
+                  padding: '6px 10px',
+                  color: 'rgb(95, 95, 95)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
               >
-                {group.label}
-              </Text>
-              {group.sessions.map(session => (
-                <SessionItem
-                  key={session.id}
-                  session={session}
-                  isActive={session.id === currentSessionId}
-                  onSelect={() => onSelectSession(session.id)}
-                  onDelete={() => onDeleteSession(session.id)}
-                  onRename={(title) => onRenameSession(session.id, title)}
-                />
-              ))}
+                {group.label === '最近7天' ? '最近' : group.label}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {group.sessions.map((session) => (
+                  <SessionItem
+                    key={session.id}
+                    session={session}
+                    isActive={session.id === currentSessionId}
+                    onSelect={() => onSelectSession(session.id)}
+                    onDelete={() => onDeleteSession(session.id)}
+                    onRename={(title) => onRenameSession(session.id, title)}
+                  />
+                ))}
+              </div>
             </div>
           ))
         )}
       </div>
-    </div>
+
+      <div
+        style={{
+          flexShrink: 0,
+          borderTop: '1px solid rgb(232, 232, 232)',
+          padding: '8px 10px',
+        }}
+      >
+        <div
+          style={{
+            height: 44,
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '0 6px',
+            color: 'rgb(13, 13, 13)',
+          }}
+        >
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: 'rgb(238, 238, 238)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <UserRound size={16} strokeWidth={1.8} />
+          </span>
+          <span style={{ minWidth: 0, flex: 1 }}>
+            <span
+              style={{
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontSize: 14,
+              }}
+            >
+              超级管理员
+            </span>
+            <span
+              style={{
+                display: 'block',
+                color: 'rgb(143, 143, 143)',
+                fontSize: 12,
+              }}
+            >
+              CRM Pro
+            </span>
+          </span>
+        </div>
+      </div>
+    </aside>
   )
 }

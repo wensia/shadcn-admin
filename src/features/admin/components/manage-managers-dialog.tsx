@@ -10,6 +10,7 @@ import { Users, UserPlus, Trash2 } from 'lucide-react'
 import { Button, Modal, Select, Tag, Typography } from '@douyinfe/semi-ui-19'
 import { IconLoading } from '@douyinfe/semi-icons'
 import { EmployeeSelectorDialog } from '@/components/employee-selector-dialog'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import type { SemiTagColor } from '@/lib/semi-types'
 import { adminApi } from '../api'
 import {
@@ -185,18 +186,7 @@ export function ManageManagersDialog({
           <div>
             <h4 className="text-sm font-medium mb-3">当前负责人</h4>
             {isLoadingManagers ? (
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
-                    <div className="h-10 w-10 rounded-full bg-[var(--semi-color-fill-0)] animate-pulse" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-4 w-24 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
-                      <div className="h-3 w-32 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
-                    </div>
-                    <div className="h-6 w-14 bg-[var(--semi-color-fill-0)] rounded animate-pulse" />
-                  </div>
-                ))}
-              </div>
+              <DialogBodySkeleton variant="list" rows={2} compact />
             ) : managers.length === 0 ? (
               <div className="text-center py-8 border rounded-lg border-dashed" style={{ color: 'var(--semi-color-text-2)' }}>
                 暂无负责人，请添加

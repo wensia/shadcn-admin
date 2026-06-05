@@ -24,6 +24,7 @@ import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import { IconSearch } from '@douyinfe/semi-icons'
 import { DataTableLayout } from '@/components/semi/data-table-layout'
 import { SemiDataTable } from '@/components/semi/semi-data-table'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { isSkeletonRow, SemiSkeletonCell } from '@/lib/table-utils'
 import { hrApi, type ResignationItem, type ResignationCreate } from '../api'
 import { adminApi } from '@/features/admin/api'
@@ -36,6 +37,8 @@ const { Text } = Typography
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   draft: { color: 'grey', label: '草稿' },
   pending: { color: 'orange', label: '待审批' },
+  pending_business: { color: 'orange', label: '待业务确认' },
+  pending_admin: { color: 'amber', label: '待超管终审' },
   approved: { color: 'green', label: '已通过' },
   rejected: { color: 'red', label: '已驳回' },
   cancelled: { color: 'grey', label: '已取消' },
@@ -49,12 +52,26 @@ const TYPE_CONFIG: Record<string, string> = {
 
 const ACTION_LABELS: Record<string, string> = {
   create: '创建申请',
-  submit: '提交审批',
+  submit: '提交业务确认',
   resubmit: '重新提交',
+  business_approve: '业务确认通过',
+  business_reject: '业务确认驳回',
   approve: '审批通过',
   reject: '审批驳回',
   cancel: '取消申请',
 }
+
+const LEAD_DISPOSITION_OPTIONS = [
+  { label: '释放到公海', value: 'release_to_pool' },
+  { label: '转交给指定顾问', value: 'transfer_to_advisor' },
+]
+
+const LEAD_DISPOSITION_LABELS: Record<string, string> = {
+  release_to_pool: '释放到公海',
+  transfer_to_advisor: '转交给指定顾问',
+}
+
+type ApprovalAction = 'business_approve' | 'business_reject' | 'approve' | 'reject'
 
 function StatusTag({ status }: { status: string }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft
@@ -65,8 +82,8 @@ function StatusTag({ status }: { status: string }) {
   )
 }
 
-export function ResignationsPage() {
-  useDocumentTitle('离职审批')
+export function ResignationsPage({ documentTitle }: { documentTitle?: string } = {}) {
+  useDocumentTitle(documentTitle ?? '离职审批')
   const queryClient = useQueryClient()
   const formRef = useRef<FormApi | null>(null)
   const user = useAuthStore((s) => s.user)
@@ -78,7 +95,7 @@ export function ResignationsPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<ResignationItem | null>(null)
-  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve')
+  const [approvalAction, setApprovalAction] = useState<ApprovalAction>('approve')
   const [approvalComment, setApprovalComment] = useState('')
 
   // 查询列表
@@ -118,11 +135,6 @@ export function ResignationsPage() {
   // 创建
   const createMutation = useMutation({
     mutationFn: (data: ResignationCreate) => hrApi.createResignation(data),
-    onSuccess: () => {
-      toast.success('离职申请创建成功')
-      setCreateDialogOpen(false)
-      queryClient.invalidateQueries({ queryKey: ['hr-resignations'] })
-    },
     onError: (error: Error) => showApiErrorToast(error, '创建失败'),
   })
 
@@ -130,14 +142,41 @@ export function ResignationsPage() {
   const submitMutation = useMutation({
     mutationFn: (id: string) => hrApi.submitResignation(id),
     onSuccess: () => {
-      toast.success('已提交审批')
+      toast.success('已提交业务确认')
       queryClient.invalidateQueries({ queryKey: ['hr-resignations'] })
       queryClient.invalidateQueries({ queryKey: ['hr-resignation-detail'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '提交失败'),
   })
 
-  // 审批
+  // 业务确认
+  const businessApproveMutation = useMutation({
+    mutationFn: ({ id, comment }: { id: string; comment?: string }) =>
+      hrApi.businessApproveResignation(id, { comment }),
+    onSuccess: () => {
+      toast.success('业务确认已通过')
+      setApprovalDialogOpen(false)
+      setDetailDialogOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['hr-resignations'] })
+      queryClient.invalidateQueries({ queryKey: ['hr-resignation-detail'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '业务确认失败'),
+  })
+
+  const businessRejectMutation = useMutation({
+    mutationFn: ({ id, comment }: { id: string; comment?: string }) =>
+      hrApi.businessRejectResignation(id, { comment }),
+    onSuccess: () => {
+      toast.success('业务确认已驳回')
+      setApprovalDialogOpen(false)
+      setDetailDialogOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['hr-resignations'] })
+      queryClient.invalidateQueries({ queryKey: ['hr-resignation-detail'] })
+    },
+    onError: (error: Error) => showApiErrorToast(error, '业务确认驳回失败'),
+  })
+
+  // 超管终审
   const approveMutation = useMutation({
     mutationFn: ({ id, comment }: { id: string; comment?: string }) =>
       hrApi.approveResignation(id, { comment }),
@@ -146,6 +185,7 @@ export function ResignationsPage() {
       setApprovalDialogOpen(false)
       setDetailDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['hr-resignations'] })
+      queryClient.invalidateQueries({ queryKey: ['hr-resignation-detail'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '审批失败'),
   })
@@ -159,6 +199,7 @@ export function ResignationsPage() {
       setApprovalDialogOpen(false)
       setDetailDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['hr-resignations'] })
+      queryClient.invalidateQueries({ queryKey: ['hr-resignation-detail'] })
     },
     onError: (error: Error) => showApiErrorToast(error, '驳回失败'),
   })
@@ -209,6 +250,15 @@ export function ResignationsPage() {
       },
     },
     {
+      title: '线索处理',
+      dataIndex: 'lead_disposition',
+      width: 120,
+      render: (value: string, record: ResignationItem) => {
+        if (isSkeletonRow(record.id)) return <SemiSkeletonCell width={72} />
+        return <Text>{record.lead_disposition_display || LEAD_DISPOSITION_LABELS[value] || '-'}</Text>
+      },
+    },
+    {
       title: '计划离职日期',
       dataIndex: 'resignation_date',
       width: 130,
@@ -255,7 +305,7 @@ export function ResignationsPage() {
             >
               详情
             </Button>
-            {record.status === 'draft' && (
+            {record.status === 'draft' && (user?.is_superuser || record.submitted_by_id === user?.id) && (
               <Button
                 theme="borderless"
                 type="primary"
@@ -265,7 +315,7 @@ export function ResignationsPage() {
                 提交
               </Button>
             )}
-            {record.status === 'rejected' && (
+            {record.status === 'rejected' && (user?.is_superuser || record.submitted_by_id === user?.id) && (
               <Button
                 theme="borderless"
                 type="primary"
@@ -275,7 +325,37 @@ export function ResignationsPage() {
                 重新提交
               </Button>
             )}
-            {record.status === 'pending' && user?.is_superuser && (
+            {record.status === 'pending_business' && (user?.is_superuser || record.submitted_by_id !== user?.id) && (
+              <>
+                <Button
+                  theme="borderless"
+                  type="primary"
+                  icon={<Check className="h-4 w-4" />}
+                  onClick={() => {
+                    setSelectedItem(record)
+                    setApprovalAction('business_approve')
+                    setApprovalComment('')
+                    setApprovalDialogOpen(true)
+                  }}
+                >
+                  确认
+                </Button>
+                <Button
+                  theme="borderless"
+                  type="danger"
+                  icon={<X className="h-4 w-4" />}
+                  onClick={() => {
+                    setSelectedItem(record)
+                    setApprovalAction('business_reject')
+                    setApprovalComment('')
+                    setApprovalDialogOpen(true)
+                  }}
+                >
+                  驳回
+                </Button>
+              </>
+            )}
+            {(record.status === 'pending_admin' || record.status === 'pending') && user?.is_superuser && (
               <>
                 <Button
                   theme="borderless"
@@ -305,7 +385,7 @@ export function ResignationsPage() {
                 </Button>
               </>
             )}
-            {(record.status === 'draft' || record.status === 'rejected') && (
+            {(record.status === 'draft' || record.status === 'rejected') && (user?.is_superuser || record.submitted_by_id === user?.id) && (
               <Button
                 theme="borderless"
                 type="danger"
@@ -326,7 +406,9 @@ export function ResignationsPage() {
   const statusOptions = [
     { value: 'all', label: '全部状态' },
     { value: 'draft', label: '草稿' },
-    { value: 'pending', label: '待审批' },
+    { value: 'pending_business', label: '待业务确认' },
+    { value: 'pending_admin', label: '待超管终审' },
+    { value: 'pending', label: '待审批（旧）' },
     { value: 'approved', label: '已通过' },
     { value: 'rejected', label: '已驳回' },
     { value: 'cancelled', label: '已取消' },
@@ -337,13 +419,13 @@ export function ResignationsPage() {
     [employeesData]
   )
 
-  const handleCreateSubmit = (values: any) => {
-    createMutation.mutate(values)
-  }
-
   const handleApprovalConfirm = () => {
     if (!selectedItem) return
-    if (approvalAction === 'approve') {
+    if (approvalAction === 'business_approve') {
+      businessApproveMutation.mutate({ id: selectedItem.id, comment: approvalComment || undefined })
+    } else if (approvalAction === 'business_reject') {
+      businessRejectMutation.mutate({ id: selectedItem.id, comment: approvalComment || undefined })
+    } else if (approvalAction === 'approve') {
       approveMutation.mutate({ id: selectedItem.id, comment: approvalComment || undefined })
     } else {
       rejectMutation.mutate({ id: selectedItem.id, comment: approvalComment || undefined })
@@ -407,22 +489,23 @@ export function ResignationsPage() {
               onClick={() => formRef.current?.submitForm()}
               loading={createMutation.isPending}
             >
-              创建并提交审批
+              创建并提交业务确认
             </Button>
           </div>
         }
       >
         <Form
           getFormApi={(api) => { formRef.current = api }}
+          initValues={{ lead_disposition: 'release_to_pool' }}
           onSubmit={(values) => {
-            // 创建后自动提交审批
-            createMutation.mutate(values, {
+            // 创建后自动提交业务确认
+            createMutation.mutate(values as ResignationCreate, {
               onSuccess: async (response) => {
                 const id = response.data?.id
                 if (id) {
                   try {
                     await hrApi.submitResignation(id)
-                    toast.success('已创建并提交审批')
+                    toast.success('已创建并提交业务确认')
                   } catch {
                     toast.success('已创建（草稿状态），请手动提交')
                   }
@@ -463,12 +546,35 @@ export function ResignationsPage() {
             rules={[{ required: true, message: '请选择日期' }]}
             style={{ width: '100%' }}
           />
+          <Form.Select
+            field="lead_disposition"
+            label="线索处理方式"
+            placeholder="选择线索处理方式"
+            optionList={LEAD_DISPOSITION_OPTIONS}
+            rules={[{ required: true, message: '请选择线索处理方式' }]}
+            style={{ width: '100%' }}
+          />
+          <Form.Select
+            field="transfer_to_advisor_id"
+            label="转交顾问"
+            placeholder="选择接收顾问"
+            optionList={employeeOptions}
+            filter
+            showClear
+            style={{ width: '100%' }}
+          />
           <Form.TextArea
             field="reason"
             label="离职原因"
             placeholder="请详细说明离职原因"
             rows={4}
             rules={[{ required: true, message: '请填写离职原因' }]}
+          />
+          <Form.TextArea
+            field="handover_note"
+            label="交接说明"
+            placeholder="填写交接安排或特殊事项"
+            rows={3}
           />
         </Form>
       </Modal>
@@ -484,7 +590,32 @@ export function ResignationsPage() {
             <Button onClick={() => { setDetailDialogOpen(false); setSelectedItem(null) }}>
               关闭
             </Button>
-            {detailData?.status === 'pending' && user?.is_superuser && (
+            {detailData?.status === 'pending_business' && (user?.is_superuser || detailData.submitted_by_id !== user?.id) && (
+              <>
+                <Button
+                  type="danger"
+                  onClick={() => {
+                    setApprovalAction('business_reject')
+                    setApprovalComment('')
+                    setApprovalDialogOpen(true)
+                  }}
+                >
+                  驳回
+                </Button>
+                <Button
+                  theme="solid"
+                  type="primary"
+                  onClick={() => {
+                    setApprovalAction('business_approve')
+                    setApprovalComment('')
+                    setApprovalDialogOpen(true)
+                  }}
+                >
+                  业务确认
+                </Button>
+              </>
+            )}
+            {(detailData?.status === 'pending_admin' || detailData?.status === 'pending') && user?.is_superuser && (
               <>
                 <Button
                   type="danger"
@@ -512,7 +643,9 @@ export function ResignationsPage() {
           </div>
         }
       >
-        {detailData && (
+        {detailLoading && !detailData ? (
+          <DialogBodySkeleton variant="detail" rows={6} />
+        ) : detailData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <Descriptions
               data={[
@@ -520,10 +653,14 @@ export function ResignationsPage() {
                 { key: '状态', value: <StatusTag status={detailData.status} /> },
                 { key: '离职类型', value: TYPE_CONFIG[detailData.resignation_type] || detailData.resignation_type },
                 { key: '计划离职日期', value: detailData.resignation_date },
+                { key: '线索处理', value: detailData.lead_disposition_display || LEAD_DISPOSITION_LABELS[detailData.lead_disposition || ''] || '-' },
+                { key: '转交顾问', value: detailData.transfer_to_advisor_name || '-' },
                 { key: '校区', value: detailData.campus_name || '-' },
                 { key: '部门', value: detailData.department_name || '-' },
                 { key: '提交人', value: detailData.submitted_by_name || '-' },
                 { key: '提交时间', value: detailData.submitted_at ? formatTime(detailData.submitted_at) : '-' },
+                { key: '业务确认人', value: detailData.business_reviewed_by_name || '-' },
+                { key: '业务确认时间', value: detailData.business_reviewed_at ? formatTime(detailData.business_reviewed_at) : '-' },
                 { key: '审批人', value: detailData.approved_by_name || '-' },
                 { key: '审批时间', value: detailData.approved_at ? formatTime(detailData.approved_at) : '-' },
               ]}
@@ -540,6 +677,20 @@ export function ResignationsPage() {
               <div>
                 <Text strong style={{ marginBottom: 8, display: 'block' }}>审批意见</Text>
                 <Text type="tertiary">{detailData.approval_comment}</Text>
+              </div>
+            )}
+
+            {detailData.business_review_comment && (
+              <div>
+                <Text strong style={{ marginBottom: 8, display: 'block' }}>业务确认意见</Text>
+                <Text type="tertiary">{detailData.business_review_comment}</Text>
+              </div>
+            )}
+
+            {detailData.handover_note && (
+              <div>
+                <Text strong style={{ marginBottom: 8, display: 'block' }}>交接说明</Text>
+                <Text type="tertiary">{detailData.handover_note}</Text>
               </div>
             )}
 
@@ -567,12 +718,12 @@ export function ResignationsPage() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </Modal>
 
       {/* 审批确认弹窗 */}
       <Modal
-        title={approvalAction === 'approve' ? '确认通过' : '确认驳回'}
+        title={approvalAction === 'approve' || approvalAction === 'business_approve' ? '确认通过' : '确认驳回'}
         visible={approvalDialogOpen}
         onCancel={() => setApprovalDialogOpen(false)}
         footer={
@@ -580,25 +731,34 @@ export function ResignationsPage() {
             <Button onClick={() => setApprovalDialogOpen(false)}>取消</Button>
             <Button
               theme="solid"
-              type={approvalAction === 'approve' ? 'primary' : 'danger'}
+              type={approvalAction === 'approve' || approvalAction === 'business_approve' ? 'primary' : 'danger'}
               onClick={handleApprovalConfirm}
-              loading={approveMutation.isPending || rejectMutation.isPending}
+              loading={
+                approveMutation.isPending
+                || rejectMutation.isPending
+                || businessApproveMutation.isPending
+                || businessRejectMutation.isPending
+              }
             >
-              {approvalAction === 'approve' ? '确认通过' : '确认驳回'}
+              {approvalAction === 'approve' || approvalAction === 'business_approve' ? '确认通过' : '确认驳回'}
             </Button>
           </div>
         }
       >
         <div style={{ marginBottom: 12 }}>
           <Text>
-            {approvalAction === 'approve'
-              ? `确认通过 ${selectedItem?.employee_name} 的离职申请？通过后将自动释放该员工线索并停用账号。`
-              : `确认驳回 ${selectedItem?.employee_name} 的离职申请？`
+            {approvalAction === 'business_approve'
+              ? `确认 ${selectedItem?.employee_name} 的离职事实和交接方案？通过后将进入超管终审。`
+              : approvalAction === 'business_reject'
+                ? `确认在业务确认环节驳回 ${selectedItem?.employee_name} 的离职申请？`
+                : approvalAction === 'approve'
+                  ? `确认终审通过 ${selectedItem?.employee_name} 的离职申请？通过后将按线索处理方式执行，并停用账号。`
+                  : `确认在终审环节驳回 ${selectedItem?.employee_name} 的离职申请？`
             }
           </Text>
         </div>
         <TextArea
-          placeholder={approvalAction === 'approve' ? '审批意见（可选）' : '请填写驳回原因'}
+          placeholder={approvalAction === 'approve' || approvalAction === 'business_approve' ? '意见（可选）' : '请填写驳回原因'}
           value={approvalComment}
           onChange={setApprovalComment}
           rows={3}

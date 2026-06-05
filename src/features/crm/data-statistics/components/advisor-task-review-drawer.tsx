@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@douyinfe/semi-ui-19'
 import { ClipboardCheck, Link2, NotebookPen } from 'lucide-react'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { formatDurationShort } from '../utils/advisor-call-stats'
 import type {
   AdvisorTaskCandidate,
@@ -100,7 +101,7 @@ export function AdvisorTaskReviewDrawer({
     >
       {loading && !detail ? (
         <Card bodyStyle={{ padding: 20 }}>
-          <Text type="tertiary">正在加载顾问任务明细...</Text>
+          <DialogBodySkeleton variant="detail" rows={5} compact />
         </Card>
       ) : !row ? (
         <Empty

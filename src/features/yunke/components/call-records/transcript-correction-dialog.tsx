@@ -9,7 +9,6 @@ import {
   Button,
   Input,
   Tag,
-  Spin,
 } from '@douyinfe/semi-ui-19'
 import {
   IconPlus,
@@ -18,6 +17,7 @@ import {
   IconTickCircle,
 } from '@douyinfe/semi-icons'
 import { toast } from '@/lib/toast'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { showApiErrorToast } from '@/lib/api/error-toast'
 import { callRecordsApi } from '../../api'
 
@@ -289,9 +289,8 @@ export function TranscriptCorrectionDialog({
 
         {/* 词库加载中 */}
         {isDictLoading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
-            <Spin size="middle" />
-            <span style={{ marginLeft: 8, color: 'var(--semi-color-text-2)' }}>加载词库中...</span>
+          <div style={{ padding: '16px 0 4px' }}>
+            <DialogBodySkeleton variant="detail" rows={4} />
           </div>
         ) : (
           <>

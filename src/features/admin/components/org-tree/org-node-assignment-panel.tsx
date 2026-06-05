@@ -7,24 +7,8 @@
  * Stage 1：只处理"本节点任命"，不做"下挂部门任命"和"任命历史"段（见 Stage 2/3）。
  * 设计文档：docs/dev/organization-admin-page-consolidation.md §7
  */
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import QRCode from 'qrcode'
-import {
-  Banner,
-  Button,
-  Collapse,
-  Dropdown,
-  Empty,
-  Form,
-  Modal,
-  Popconfirm,
-  Spin,
-  Tag,
-  Typography,
-} from '@douyinfe/semi-ui-19'
-import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
 import {
   IconCopy,
   IconDelete,
@@ -32,12 +16,33 @@ import {
   IconPlus,
   IconQrCode,
   IconRefresh,
+  IconSearch,
 } from '@douyinfe/semi-icons'
-import { MoreHorizontal } from 'lucide-react'
-import { toast } from '@/lib/toast'
+import {
+  Banner,
+  Button,
+  Collapse,
+  Dropdown,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Radio,
+  RadioGroup,
+  Spin,
+  Tag,
+  Typography,
+} from '@douyinfe/semi-ui-19'
+import type { FormApi } from '@douyinfe/semi-ui-19/lib/es/form'
+import { MoreHorizontal, AlertTriangle, ArrowRight } from 'lucide-react'
+import QRCode from 'qrcode'
 import { showApiErrorToast } from '@/lib/api/error-toast'
+import { toast } from '@/lib/toast'
 import { copyToClipboard } from '@/lib/utils'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { adminApi, sourceChannelApi } from '../../api'
+import { orgNodeTypeColor, orgNodeTypeLabel } from '../../lib/assignment-format'
 import {
   ASSIGNMENT_ROLE_LABELS,
   type AssignmentItem,
@@ -50,7 +55,6 @@ import {
   type QuickCreateEmployeeData,
   type QuickCreateEmployeeResult,
 } from '../../types'
-import { orgNodeTypeColor, orgNodeTypeLabel } from '../../lib/assignment-format'
 import {
   AssignmentTable,
   CreateAssignmentDialog,
@@ -58,6 +62,7 @@ import {
   type ScopeField,
 } from '../assignments'
 import { EmployeeEditDialog } from '../employees/employee-edit-dialog'
+import { getVisibleMissingSingletonRoles } from './org-stats-helpers'
 import { OrgNodeIcon } from './org-tree-icons'
 
 const { Title, Text } = Typography
@@ -74,9 +79,12 @@ interface ScopeMember {
   username: string
   phone: string | null
   email: string | null
+  is_active: boolean
   department_name: string | null
   position_name: string | null
 }
+
+type MemberStatusFilter = 'active' | 'inactive'
 
 interface PositionOption {
   id: string
@@ -93,7 +101,10 @@ interface QuickCreateScope {
   sourceDepartmentId: string
   departmentName: string
   assignmentScope: {
-    field: Extract<ScopeField, 'campus_department_id' | 'area_department_id' | 'district_department_id'>
+    field: Extract<
+      ScopeField,
+      'campus_department_id' | 'area_department_id' | 'district_department_id'
+    >
     id: string
   }
 }
@@ -171,12 +182,14 @@ function getNodeScopeConfig(type: OrgTreeNodeType): NodeScopeConfig | null {
 function findNodePath(
   nodes: OrganizationTreeNode[],
   id: string,
-  path: OrganizationTreeNode[] = [],
+  path: OrganizationTreeNode[] = []
 ): OrganizationTreeNode[] | null {
   for (const node of nodes) {
     const nextPath = [...path, node]
     if (node.id === id) return nextPath
-    const childPath = node.children?.length ? findNodePath(node.children, id, nextPath) : null
+    const childPath = node.children?.length
+      ? findNodePath(node.children, id, nextPath)
+      : null
     if (childPath) return childPath
   }
   return null
@@ -184,7 +197,7 @@ function findNodePath(
 
 function getDepartmentCreateScope(
   departmentNode: OrganizationTreeNode,
-  parentNode: OrganizationTreeNode | undefined,
+  parentNode: OrganizationTreeNode | undefined
 ): QuickCreateScope | null {
   if (!departmentNode.department_id || !parentNode) return null
 
@@ -223,7 +236,10 @@ function getDepartmentCreateScope(
     }
   }
 
-  if (departmentNode.type === 'district_department' && parentNode.type === 'district') {
+  if (
+    departmentNode.type === 'district_department' &&
+    parentNode.type === 'district'
+  ) {
     return {
       key: `${departmentNode.type}:${departmentNode.id}`,
       scopeType: 'district',
@@ -245,37 +261,63 @@ function getDepartmentCreateScope(
 export interface OrgNodeAssignmentPanelProps {
   node: OrganizationTreeNode | null
   tree: OrganizationTreeNode[]
+  missingLeaderCount?: number
+  onJumpToMissing?: () => void
   onNodeDeleted?: () => void
 }
 
-export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAssignmentPanelProps) {
+export function OrgNodeAssignmentPanel({
+  node,
+  tree,
+  missingLeaderCount = 0,
+  onJumpToMissing,
+  onNodeDeleted,
+}: OrgNodeAssignmentPanelProps) {
   const queryClient = useQueryClient()
   const quickCreateFormRef = useRef<FormApi | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
-  const [departmentAssignmentGroup, setDepartmentAssignmentGroup] = useState<MemberGroup | null>(null)
+  const [departmentAssignmentGroup, setDepartmentAssignmentGroup] =
+    useState<MemberGroup | null>(null)
   const [quickCreateOpen, setQuickCreateOpen] = useState(false)
-  const [quickCreateGroup, setQuickCreateGroup] = useState<MemberGroup | null>(null)
-  const [quickCreateResult, setQuickCreateResult] = useState<QuickCreateEmployeeResult | null>(null)
+  const [quickCreateGroup, setQuickCreateGroup] = useState<MemberGroup | null>(
+    null
+  )
+  const [quickCreateResult, setQuickCreateResult] =
+    useState<QuickCreateEmployeeResult | null>(null)
   const [editingMember, setEditingMember] = useState<ScopeMember | null>(null)
-  const [resetPasswordMember, setResetPasswordMember] = useState<ScopeMember | null>(null)
-  const [resetPasswordResult, setResetPasswordResult] = useState<ResetPasswordResult | null>(null)
-  const [directVisitCampusId, setDirectVisitCampusId] = useState<string | null>(null)
-  const [directVisitQr, setDirectVisitQr] = useState<{ link: string; url: string } | null>(null)
+  const [editingMemberOpenKey, setEditingMemberOpenKey] = useState(0)
+  const [resetPasswordMember, setResetPasswordMember] =
+    useState<ScopeMember | null>(null)
+  const [resetPasswordResult, setResetPasswordResult] =
+    useState<ResetPasswordResult | null>(null)
+  const [directVisitCampusId, setDirectVisitCampusId] = useState<string | null>(
+    null
+  )
+  const [directVisitQr, setDirectVisitQr] = useState<{
+    link: string
+    url: string
+  } | null>(null)
   const [transferItem, setTransferItem] = useState<AssignmentItem | null>(null)
+  const [memberStatusFilter, setMemberStatusFilter] =
+    useState<MemberStatusFilter>('active')
+  const [memberSearchKeyword, setMemberSearchKeyword] = useState('')
 
   const config = useMemo(
     () => (node ? getNodeScopeConfig(node.type) : null),
-    [node],
+    [node]
   )
 
   const listQuery = useMemo<AssignmentListQuery | null>(() => {
     if (!node || !config) return null
-    return { [config.scopeField]: node.id, active_only: true } as AssignmentListQuery
+    return {
+      [config.scopeField]: node.id,
+      active_only: true,
+    } as AssignmentListQuery
   }, [node, config])
 
   const queryKey = useMemo(
     () => ['admin-assignments', 'scoped', listQuery] as const,
-    [listQuery],
+    [listQuery]
   )
 
   const {
@@ -336,78 +378,117 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   const canDelete = isDeptNode && employeeCount === 0
   const selectedPath = useMemo(
     () => (node ? findNodePath(tree, node.id) : null),
-    [node, tree],
+    [node, tree]
   )
-  const directVisitOperationAssistant = node?.type === 'campus'
-    ? node.leaders?.find((item) => item.role === 'operation_assistant' && item.rank === 0)
-    : null
-  const directVisitCampus = node?.type === 'campus'
-    ? {
-        id: node.id,
-        name: node.name,
-        is_active: node.is_active,
-        operation_assistant_id: directVisitOperationAssistant?.employee_id ?? null,
-        operation_assistant_name: directVisitOperationAssistant?.employee_name ?? null,
-      }
-    : null
-  const directVisitVisible = !!directVisitCampus && directVisitCampusId === directVisitCampus.id
+  const directVisitOperationAssistant =
+    node?.type === 'campus'
+      ? node.leaders?.find(
+          (item) => item.role === 'operation_assistant' && item.rank === 0
+        )
+      : null
+  const directVisitCampus =
+    node?.type === 'campus'
+      ? {
+          id: node.id,
+          name: node.name,
+          is_active: node.is_active,
+          operation_assistant_id:
+            directVisitOperationAssistant?.employee_id ?? null,
+          operation_assistant_name:
+            directVisitOperationAssistant?.employee_name ?? null,
+        }
+      : null
+  const directVisitVisible =
+    !!directVisitCampus && directVisitCampusId === directVisitCampus.id
 
   // 部门成员列表（仅在叶子部门节点或 campus/area 节点上查）
-  const memberScopeType: 'campus_department' | 'area_department' | 'district_department' | 'campus' | 'area' | null =
-    node?.type === 'campus_department' ? 'campus_department'
-    : node?.type === 'area_department' ? 'area_department'
-    : node?.type === 'district_department' ? 'district_department'
-    : node?.type === 'campus' || node?.type === 'area_office' ? 'campus'
-    : node?.type === 'area' ? 'area'
-    : null
+  const memberScopeType:
+    | 'campus_department'
+    | 'area_department'
+    | 'district_department'
+    | 'campus'
+    | 'area'
+    | null =
+    node?.type === 'campus_department'
+      ? 'campus_department'
+      : node?.type === 'area_department'
+        ? 'area_department'
+        : node?.type === 'district_department'
+          ? 'district_department'
+          : node?.type === 'campus' || node?.type === 'area_office'
+            ? 'campus'
+            : node?.type === 'area'
+              ? 'area'
+              : null
   const memberScopeId = node?.id
 
-  const { data: members = [], isLoading: membersLoading } = useQuery<ScopeMember[]>({
-    queryKey: ['scope-members', memberScopeType, memberScopeId],
+  const { data: members = [], isLoading: membersLoading } = useQuery<
+    ScopeMember[]
+  >({
+    queryKey: [
+      'scope-members',
+      memberScopeType,
+      memberScopeId,
+      memberStatusFilter,
+    ],
     queryFn: async () => {
       if (!memberScopeType || !memberScopeId) return []
       const response = await adminApi.listScopeMembers({
         scope_type: memberScopeType,
         scope_id: memberScopeId,
+        is_active: memberStatusFilter === 'active',
       })
       return response.data || []
     },
     enabled: !!memberScopeType && !!memberScopeId,
   })
 
-  const { data: directVisitTokensData, isLoading: isDirectVisitTokensLoading } = useQuery({
-    queryKey: ['admin-direct-visit-campus-tokens'],
-    queryFn: () => sourceChannelApi.getDirectVisitCampusTokens(),
-    enabled: directVisitVisible,
-  })
+  const { data: directVisitTokensData, isLoading: isDirectVisitTokensLoading } =
+    useQuery({
+      queryKey: ['admin-direct-visit-campus-tokens'],
+      queryFn: () => sourceChannelApi.getDirectVisitCampusTokens(),
+      enabled: directVisitVisible,
+    })
 
-  const directVisitTokenItem: DirectVisitCampusTokenItem | undefined = directVisitCampus
-    ? directVisitTokensData?.items.find((item) => item.campus_id === directVisitCampus.id)
-    : undefined
+  const directVisitTokenItem: DirectVisitCampusTokenItem | undefined =
+    directVisitCampus
+      ? directVisitTokensData?.items.find(
+          (item) => item.campus_id === directVisitCampus.id
+        )
+      : undefined
 
   const directVisitLink = directVisitTokenItem?.token
     ? `${window.location.origin}/direct-visit?token=${encodeURIComponent(directVisitTokenItem.token)}`
     : ''
-  const directVisitQrDataUrl = directVisitQr?.link === directVisitLink ? directVisitQr.url : ''
+  const directVisitQrDataUrl =
+    directVisitQr?.link === directVisitLink ? directVisitQr.url : ''
   const directVisitOperationAssistantId = directVisitTokenItem
-    ? directVisitTokenItem.operation_assistant_id ?? null
-    : directVisitCampus?.operation_assistant_id ?? null
-  const hasDirectVisitOperationAssistant = Boolean(directVisitOperationAssistantId)
+    ? (directVisitTokenItem.operation_assistant_id ?? null)
+    : (directVisitCampus?.operation_assistant_id ?? null)
+  const hasDirectVisitOperationAssistant = Boolean(
+    directVisitOperationAssistantId
+  )
 
   const generateDirectVisitMutation = useMutation({
-    mutationFn: (campusId: string) => sourceChannelApi.createDirectVisitCampusToken(campusId),
+    mutationFn: (campusId: string) =>
+      sourceChannelApi.createDirectVisitCampusToken(campusId),
     onSuccess: async () => {
       toast.success('直访码已生成')
-      await queryClient.invalidateQueries({ queryKey: ['admin-direct-visit-campus-tokens'] })
+      await queryClient.invalidateQueries({
+        queryKey: ['admin-direct-visit-campus-tokens'],
+      })
     },
     onError: (error: Error) => showApiErrorToast(error, '生成直访码失败'),
   })
 
   const rotateDirectVisitMutation = useMutation({
-    mutationFn: (campusId: string) => sourceChannelApi.rotateDirectVisitCampusToken(campusId),
+    mutationFn: (campusId: string) =>
+      sourceChannelApi.rotateDirectVisitCampusToken(campusId),
     onSuccess: async () => {
       toast.success('直访码已更新')
-      await queryClient.invalidateQueries({ queryKey: ['admin-direct-visit-campus-tokens'] })
+      await queryClient.invalidateQueries({
+        queryKey: ['admin-direct-visit-campus-tokens'],
+      })
     },
     onError: (error: Error) => showApiErrorToast(error, '更新直访码失败'),
   })
@@ -423,10 +504,16 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
       margin: 2,
       color: { dark: '#111827', light: '#ffffff' },
     })
-      .then((url) => { if (!cancelled) setDirectVisitQr({ link: directVisitLink, url }) })
-      .catch(() => { if (!cancelled) setDirectVisitQr(null) })
+      .then((url) => {
+        if (!cancelled) setDirectVisitQr({ link: directVisitLink, url })
+      })
+      .catch(() => {
+        if (!cancelled) setDirectVisitQr(null)
+      })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [directVisitLink])
 
   const quickCreateScopes = useMemo(() => {
@@ -435,7 +522,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
 
     const addDepartmentNode = (
       departmentNode: OrganizationTreeNode,
-      parentNode: OrganizationTreeNode | undefined,
+      parentNode: OrganizationTreeNode | undefined
     ) => {
       const scope = getDepartmentCreateScope(departmentNode, parentNode)
       if (scope) scopes.push(scope)
@@ -478,7 +565,10 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
     }
 
     for (const member of members) {
-      const departmentName = member.department_name || (isDeptNode ? node?.name : null) || '未分配部门'
+      const departmentName =
+        member.department_name ||
+        (isDeptNode ? node?.name : null) ||
+        '未分配部门'
       const group = groupsByDepartmentName.get(departmentName)
 
       if (group) {
@@ -501,13 +591,62 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
     })
   }, [isDeptNode, members, node?.name, quickCreateScopes])
 
+  const normalizedMemberSearch = memberSearchKeyword.trim().toLowerCase()
+  const filteredMemberGroups = useMemo(() => {
+    if (!normalizedMemberSearch) return memberGroups
+
+    const nextGroups: MemberGroup[] = []
+    for (const group of memberGroups) {
+      const groupMatched = group.departmentName
+        .toLowerCase()
+        .includes(normalizedMemberSearch)
+      if (groupMatched) {
+        nextGroups.push(group)
+        continue
+      }
+
+      const filteredItems = group.items.filter((member) => {
+        const values = [
+          member.name,
+          member.username,
+          member.phone,
+          member.email,
+          member.department_name,
+          member.position_name,
+        ]
+        return values.some((value) =>
+          (value ?? '').toLowerCase().includes(normalizedMemberSearch)
+        )
+      })
+
+      if (filteredItems.length > 0) {
+        nextGroups.push({ ...group, items: filteredItems })
+      }
+    }
+
+    return nextGroups
+  }, [memberGroups, normalizedMemberSearch])
+
+  const filteredMemberCount = useMemo(
+    () =>
+      filteredMemberGroups.reduce((sum, group) => sum + group.items.length, 0),
+    [filteredMemberGroups]
+  )
+  const memberStatusLabel = memberStatusFilter === 'active' ? '在职' : '离职'
+
   const assignmentLabelsByGroupAndEmployee = useMemo(() => {
     const result = new Map<string, Map<string, string[]>>()
-    const addLeaders = (groupKey: string, leaders?: OrganizationTreeNode['leaders']) => {
+    const addLeaders = (
+      groupKey: string,
+      leaders?: OrganizationTreeNode['leaders']
+    ) => {
       if (!leaders?.length) return
       const employeeMap = result.get(groupKey) ?? new Map<string, string[]>()
       for (const leader of leaders) {
-        const label = leader.role_label ?? ASSIGNMENT_ROLE_LABELS[leader.role as AssignmentRole] ?? leader.role
+        const label =
+          leader.role_label ??
+          ASSIGNMENT_ROLE_LABELS[leader.role as AssignmentRole] ??
+          leader.role
         const labels = employeeMap.get(leader.employee_id) ?? []
         if (!labels.includes(label)) labels.push(label)
         employeeMap.set(leader.employee_id, labels)
@@ -532,44 +671,62 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   }, [isDeptNode, node])
 
   const quickCreateScope = quickCreateGroup?.createScope ?? null
-  const departmentAssignmentScope = departmentAssignmentGroup?.createScope?.assignmentScope ?? null
+  const departmentAssignmentScope =
+    departmentAssignmentGroup?.createScope?.assignmentScope ?? null
   const assignmentDialogOpen = createOpen || !!departmentAssignmentScope
-  const assignmentDialogScope = departmentAssignmentScope ?? (config ? { field: config.scopeField, id: node?.id ?? '' } : null)
+  const assignmentDialogScope =
+    departmentAssignmentScope ??
+    (config ? { field: config.scopeField, id: node?.id ?? '' } : null)
   const assignmentDialogRoles = departmentAssignmentScope
-    ? (['dept_manager', 'dept_deputy', 'dept_supervisor'] satisfies AssignmentRole[])
+    ? ([
+        'dept_manager',
+        'dept_deputy',
+        'dept_supervisor',
+      ] satisfies AssignmentRole[])
     : config?.allowedRoles
-  const assignmentDialogDefaultRole = departmentAssignmentScope ? 'dept_manager' : config?.defaultRole
+  const assignmentDialogDefaultRole = departmentAssignmentScope
+    ? 'dept_manager'
+    : config?.defaultRole
   const assignmentDialogTitle = departmentAssignmentScope
     ? `添加${departmentAssignmentGroup?.departmentName ?? ''}负责人`
     : assignmentActionLabel
 
-  const { data: quickCreatePositions = [], isLoading: quickCreatePositionsLoading } = useQuery<PositionOption[]>({
+  const {
+    data: quickCreatePositions = [],
+    isLoading: quickCreatePositionsLoading,
+  } = useQuery<PositionOption[]>({
     queryKey: ['org-member-quick-create-positions', quickCreateScope],
     queryFn: async () => {
       if (!quickCreateScope) return []
       if (quickCreateScope.scopeType === 'campus') {
         const response = await adminApi.getCampusDepartmentPositionsSimple(
-          quickCreateScope.submitDepartmentId,
+          quickCreateScope.submitDepartmentId
         )
         return response.data || []
       }
 
-      const response = await adminApi.getPositions({ size: 200, is_active: true })
+      const response = await adminApi.getPositions({
+        size: 200,
+        is_active: true,
+      })
       const positions = (response.data?.items || []) as PositionItem[]
       const scopedPositions = positions.filter((position) =>
-        position.department_ids?.includes(quickCreateScope.sourceDepartmentId),
+        position.department_ids?.includes(quickCreateScope.sourceDepartmentId)
       )
-      return (scopedPositions.length > 0 ? scopedPositions : positions).map((position) => ({
-        id: position.id,
-        name: position.name,
-        level_display: position.level_display,
-      }))
+      return (scopedPositions.length > 0 ? scopedPositions : positions).map(
+        (position) => ({
+          id: position.id,
+          name: position.name,
+          level_display: position.level_display,
+        })
+      )
     },
     enabled: quickCreateOpen && !!quickCreateScope,
   })
 
   const quickCreateMutation = useMutation({
-    mutationFn: (data: QuickCreateEmployeeData) => adminApi.quickCreateEmployee(data),
+    mutationFn: (data: QuickCreateEmployeeData) =>
+      adminApi.quickCreateEmployee(data),
     onSuccess: (response) => {
       toast.success('员工创建成功')
       setQuickCreateOpen(false)
@@ -584,8 +741,12 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   })
 
   const leaveEmployeeMutation = useMutation({
-    mutationFn: ({ employeeId }: { employeeId: string; employeeName: string }) =>
-      adminApi.updateEmployeeStatus(employeeId, { is_active: false }),
+    mutationFn: ({
+      employeeId,
+    }: {
+      employeeId: string
+      employeeName: string
+    }) => adminApi.updateEmployeeStatus(employeeId, { is_active: false }),
     onSuccess: (_response, variables) => {
       toast.success(`已将 ${variables.employeeName} 设为离职`)
       queryClient.invalidateQueries({ queryKey: ['scope-members'] })
@@ -599,7 +760,8 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   })
 
   const resetPasswordMutation = useMutation({
-    mutationFn: (employeeId: string) => adminApi.resetEmployeePassword(employeeId),
+    mutationFn: (employeeId: string) =>
+      adminApi.resetEmployeePassword(employeeId),
     onSuccess: (response) => {
       toast.success('密码重置成功')
       setResetPasswordResult(response.data ?? null)
@@ -641,7 +803,8 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   }
 
   const openEditMember = (member: ScopeMember) => {
-    setEditingMember(member)
+    setEditingMember({ ...member })
+    setEditingMemberOpenKey((key) => key + 1)
   }
 
   const openResetPassword = (member: ScopeMember) => {
@@ -700,9 +863,12 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
       position_id: formValues.position_id,
     }
 
-    if (quickCreateScope.scopeType === 'campus') data.campus_id = quickCreateScope.scopeId
-    if (quickCreateScope.scopeType === 'area') data.area_id = quickCreateScope.scopeId
-    if (quickCreateScope.scopeType === 'district') data.district_id = quickCreateScope.scopeId
+    if (quickCreateScope.scopeType === 'campus')
+      data.campus_id = quickCreateScope.scopeId
+    if (quickCreateScope.scopeType === 'area')
+      data.area_id = quickCreateScope.scopeId
+    if (quickCreateScope.scopeType === 'district')
+      data.district_id = quickCreateScope.scopeId
 
     quickCreateMutation.mutate(data)
   }
@@ -739,7 +905,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
     if (!quickCreateResult) return
 
     const success = await copyToClipboard(
-      `账号: ${quickCreateResult.username}\n密码: ${quickCreateResult.password}`,
+      `账号: ${quickCreateResult.username}\n密码: ${quickCreateResult.password}`
     )
     if (success) {
       toast.success('账号密码已复制')
@@ -752,7 +918,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
     if (!resetPasswordResult) return
 
     const success = await copyToClipboard(
-      `账号: ${resetPasswordResult.username}\n密码: ${resetPasswordResult.new_password}`,
+      `账号: ${resetPasswordResult.username}\n密码: ${resetPasswordResult.new_password}`
     )
     if (success) {
       toast.success('账号密码已复制')
@@ -764,7 +930,9 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   const memberListCopyText = useMemo(() => {
     if (!node || members.length === 0) return ''
 
-    const groupsWithMembers = memberGroups.filter((group) => group.items.length > 0)
+    const groupsWithMembers = memberGroups.filter(
+      (group) => group.items.length > 0
+    )
     const lines = [`${node.name}员工列表（共 ${members.length} 人）`]
 
     for (const group of groupsWithMembers) {
@@ -775,7 +943,8 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           member.phone ? `手机：${member.phone}` : null,
           member.email ? `邮箱：${member.email}` : null,
         ].filter(Boolean)
-        const details = detailParts.length > 0 ? `，${detailParts.join('，')}` : ''
+        const details =
+          detailParts.length > 0 ? `，${detailParts.join('，')}` : ''
         lines.push(`${index + 1}. ${member.name}${details}`)
       })
     }
@@ -798,42 +967,53 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
   }
 
   const renderMemberRows = (groups: MemberGroup[]) => (
-    <div className="flex flex-col divide-y">
+    <div className='flex flex-col divide-y'>
       {groups.flatMap((group) =>
         group.items.map((m) => {
-          const assignmentLabels = assignmentLabelsByGroupAndEmployee
-            .get(group.key)
-            ?.get(m.employee_id) ?? []
+          const assignmentLabels =
+            assignmentLabelsByGroupAndEmployee
+              .get(group.key)
+              ?.get(m.employee_id) ?? []
           return (
             <div
               key={`${group.key}:${m.employee_id}`}
-              className="flex items-center gap-3 px-3 py-2 text-sm"
+              className='flex items-center gap-3 px-3 py-2 text-sm'
             >
-              <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+              <div className='flex min-w-0 flex-1 flex-wrap items-center gap-2'>
                 <Text strong>{m.name}</Text>
+                <Text
+                  size='small'
+                  style={{
+                    color: m.is_active
+                      ? 'var(--semi-color-text-2)'
+                      : 'var(--semi-color-warning)',
+                  }}
+                >
+                  {m.is_active ? '在职' : '离职'}
+                </Text>
                 {m.position_name && (
-                  <Tag size="small" color="blue">
-                    岗位：{m.position_name}
+                  <Tag size='small' color='blue'>
+                    {m.position_name}
                   </Tag>
                 )}
                 {assignmentLabels.map((label) => (
-                  <Tag key={label} size="small" color="green">
+                  <Tag key={label} size='small' color='green'>
                     任命：{label}
                   </Tag>
                 ))}
               </div>
               <div
-                className="hidden md:flex flex-col items-end text-xs shrink-0"
+                className='hidden shrink-0 flex-col items-end text-xs md:flex'
                 style={{ color: 'var(--semi-color-text-2)' }}
               >
                 {m.phone && <span>{m.phone}</span>}
                 {m.email && (
-                  <span className="truncate max-w-[200px]">{m.email}</span>
+                  <span className='max-w-[200px] truncate'>{m.email}</span>
                 )}
               </div>
               <Dropdown
-                trigger="click"
-                position="bottomRight"
+                trigger='click'
+                position='bottomRight'
                 clickToHide
                 render={
                   <Dropdown.Menu>
@@ -843,64 +1023,111 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                     <Dropdown.Item onClick={() => openResetPassword(m)}>
                       重置密码
                     </Dropdown.Item>
-                    <Dropdown.Divider />
-                    <Dropdown.Item onClick={() => confirmLeaveEmployee(m)}>
-                      离职
-                    </Dropdown.Item>
+                    {m.is_active
+                      ? [
+                          <Dropdown.Divider key='leave-divider' />,
+                          <Dropdown.Item
+                            key='leave'
+                            onClick={() => confirmLeaveEmployee(m)}
+                          >
+                            离职
+                          </Dropdown.Item>,
+                        ]
+                      : null}
                   </Dropdown.Menu>
                 }
               >
                 <Button
-                  theme="borderless"
-                  type="tertiary"
+                  theme='borderless'
+                  type='tertiary'
                   icon={<MoreHorizontal size={16} />}
                   loading={
-                    (
-                      leaveEmployeeMutation.isPending &&
-                      leaveEmployeeMutation.variables?.employeeId === m.employee_id
-                    ) ||
-                    (
-                      resetPasswordMutation.isPending &&
-                      resetPasswordMutation.variables === m.employee_id
-                    )
+                    (leaveEmployeeMutation.isPending &&
+                      leaveEmployeeMutation.variables?.employeeId ===
+                        m.employee_id) ||
+                    (resetPasswordMutation.isPending &&
+                      resetPasswordMutation.variables === m.employee_id)
                   }
-                  title="更多操作"
+                  title='更多操作'
                 />
               </Dropdown>
             </div>
           )
-        }),
+        })
       )}
     </div>
   )
 
   const singleDepartmentMemberGroup = isDeptNode
-    ? memberGroups.find((group) => group.createScope) ?? memberGroups[0] ?? null
+    ? (memberGroups.find((group) => group.createScope) ??
+      memberGroups[0] ??
+      null)
     : null
   const singleDepartmentMemberGroups = isDeptNode
-    ? memberGroups.filter((group) => group.items.length > 0)
+    ? filteredMemberGroups.filter((group) => group.items.length > 0)
     : []
 
   if (!node) {
+    const showMissingCta = missingLeaderCount > 0 && !!onJumpToMissing
     return (
-      <div className="flex items-center justify-center h-full text-center px-8">
+      <div className='flex h-full flex-col items-center justify-center gap-6 px-8 text-center'>
         <Empty
-          title="请选择一个组织节点"
-          description="在左侧树中选择校区、区域或部门，在此管理其负责人任命"
+          title='请选择一个组织节点'
+          description='在左侧树中选择校区、区域或部门，在此管理其负责人任命'
         />
+        {showMissingCta && (
+          <div className='flex w-full max-w-sm flex-col items-stretch gap-2'>
+            <div
+              className='h-px w-full'
+              style={{ background: 'var(--semi-color-border)' }}
+            />
+            <button
+              type='button'
+              onClick={onJumpToMissing}
+              className='group flex cursor-pointer items-center justify-between gap-3 rounded-md px-4 py-3 text-left transition-colors'
+              style={{
+                background: 'var(--semi-color-danger-light-default)',
+                color: 'var(--semi-color-danger)',
+                border: '1px solid transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--semi-color-danger)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'transparent'
+              }}
+            >
+              <span className='flex items-center gap-2.5'>
+                <AlertTriangle className='h-4 w-4 shrink-0' strokeWidth={2.5} />
+                <span className='flex flex-col items-start gap-0.5'>
+                  <span className='text-sm leading-none font-semibold'>
+                    {missingLeaderCount} 个未任命岗位
+                  </span>
+                  <span
+                    className='text-xs leading-none'
+                    style={{ color: 'var(--semi-color-danger)', opacity: 0.75 }}
+                  >
+                    点击定位第一个并集中处理
+                  </span>
+                </span>
+              </span>
+              <ArrowRight className='h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5' />
+            </button>
+          </div>
+        )}
       </div>
     )
   }
 
-  const missing = node.missing_singleton_roles ?? []
+  const missing = getVisibleMissingSingletonRoles(node)
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className='flex h-full flex-col overflow-y-auto'>
       {/* 头部：节点基础信息 */}
-      <div className="px-4 py-2 border-b border-[var(--semi-color-border)]">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-x-3 gap-y-1 flex-wrap">
-            <div className="flex items-center gap-2 min-w-0">
+      <div className='border-b border-[var(--semi-color-border)] px-4 py-2'>
+        <div className='flex items-center justify-between gap-3'>
+          <div className='flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1'>
+            <div className='flex min-w-0 items-center gap-2'>
               <OrgNodeIcon type={node.type} />
               <Title
                 heading={6}
@@ -910,30 +1137,38 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 {node.name}
               </Title>
             </div>
-            <Tag size="small" color={orgNodeTypeColor(node.type)}>
+            <Tag size='small' color={orgNodeTypeColor(node.type)}>
               {orgNodeTypeLabel(node.type)}
             </Tag>
             {!node.is_active && (
-              <Tag size="small" color="grey">
+              <Tag size='small' color='grey'>
                 已停用
               </Tag>
             )}
             {typeof node.employee_count === 'number' && (
-              <div className="flex items-center gap-1">
-                <Text type="tertiary" size="small">在任员工</Text>
-                <Text strong size="small">{node.employee_count}</Text>
+              <div className='flex items-center gap-1'>
+                <Text type='tertiary' size='small'>
+                  在任员工
+                </Text>
+                <Text strong size='small'>
+                  {node.employee_count}
+                </Text>
               </div>
             )}
             {typeof node.department_count === 'number' && (
-              <div className="flex items-center gap-1">
-                <Text type="tertiary" size="small">下挂部门</Text>
-                <Text strong size="small">{node.department_count}</Text>
+              <div className='flex items-center gap-1'>
+                <Text type='tertiary' size='small'>
+                  下挂部门
+                </Text>
+                <Text strong size='small'>
+                  {node.department_count}
+                </Text>
               </div>
             )}
             {node.address && (
               <Text
-                type="tertiary"
-                size="small"
+                type='tertiary'
+                size='small'
                 ellipsis={{ showTooltip: true }}
                 style={{ maxWidth: 180 }}
               >
@@ -941,28 +1176,28 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               </Text>
             )}
             {node.contact_phone && (
-              <Text type="tertiary" size="small">
+              <Text type='tertiary' size='small'>
                 {node.contact_phone}
               </Text>
             )}
             {missing.length > 0 && (
-              <div className="flex items-center gap-1 flex-wrap">
-                <Text type="warning" size="small">
+              <div className='flex flex-wrap items-center gap-1'>
+                <Text type='warning' size='small'>
                   未任命：
                 </Text>
                 {missing.map((r) => (
-                  <Tag key={r} size="small" color="orange">
+                  <Tag key={r} size='small' color='orange'>
                     {ASSIGNMENT_ROLE_LABELS[r as AssignmentRole] ?? r}
                   </Tag>
                 ))}
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className='flex shrink-0 items-center gap-2'>
             {node.type === 'campus' && (
               <Button
-                theme="outline"
-                type="primary"
+                theme='outline'
+                type='primary'
                 icon={<IconQrCode />}
                 disabled={!node.is_active}
                 onClick={() => setDirectVisitCampusId(node.id)}
@@ -972,8 +1207,8 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
             )}
             {config && (
               <Button
-                theme="solid"
-                type="primary"
+                theme='solid'
+                type='primary'
                 icon={<IconPlus />}
                 onClick={() => {
                   setDepartmentAssignmentGroup(null)
@@ -983,18 +1218,18 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 {assignmentActionLabel}
               </Button>
             )}
-            {isDeptNode && (
-              canDelete ? (
+            {isDeptNode &&
+              (canDelete ? (
                 <Popconfirm
-                  title="确认删除该部门？"
-                  content="删除后不可恢复。负责人任命会自动卸任。"
+                  title='确认删除该部门？'
+                  content='删除后不可恢复。负责人任命会自动卸任。'
                   onConfirm={() => deleteDeptMutation.mutate()}
-                  okText="删除"
-                  cancelText="取消"
-                  okType="danger"
+                  okText='删除'
+                  cancelText='取消'
+                  okType='danger'
                 >
                   <Button
-                    type="danger"
+                    type='danger'
                     icon={<IconDelete />}
                     loading={deleteDeptMutation.isPending}
                   >
@@ -1003,24 +1238,23 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 </Popconfirm>
               ) : (
                 <Button
-                  type="danger"
+                  type='danger'
                   icon={<IconDelete />}
                   disabled
                   title={`该部门下有 ${employeeCount} 名员工，需先全部转出或停用`}
                 >
                   删除部门
                 </Button>
-              )
-            )}
+              ))}
           </div>
         </div>
       </div>
 
       {/* 任命列表主体 */}
-      <div className="flex-1 p-4">
+      <div className='flex-1 p-4'>
         {!config ? (
           <Empty
-            title="此节点类型不承载任命"
+            title='此节点类型不承载任命'
             description={
               node.type === 'region' || node.type === 'district'
                 ? `${orgNodeTypeLabel(node.type)}本身不设独立负责人；展开到下属节点后可管理任命`
@@ -1030,17 +1264,17 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           />
         ) : (
           <>
-            <div className="flex items-center justify-between mb-2">
-              <Text type="tertiary" size="small">
+            <div className='mb-2 flex items-center justify-between'>
+              <Text type='tertiary' size='small'>
                 在任负责人
               </Text>
               <Button
-                theme="borderless"
+                theme='borderless'
                 icon={<IconRefresh />}
                 loading={isFetching}
                 onClick={() => refetch()}
-                title="刷新"
-                aria-label="刷新"
+                title='刷新'
+                aria-label='刷新'
               />
             </div>
             <AssignmentTable
@@ -1050,6 +1284,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               onRelieve={(id) => relieveMutation.mutate(id)}
               onTransfer={(a) => setTransferItem(a)}
               hideScope
+              responsiveTwoColumns
               emptyTitle={isDeptNode ? '暂无负责人' : '暂无任命'}
               emptyDescription={`点击右上角"${assignmentActionLabel}"按钮开始`}
             />
@@ -1058,37 +1293,37 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
 
         {/* 部门成员列表 */}
         {memberScopeType && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <Text type="tertiary" size="small">
+          <div className='mt-6'>
+            <div className='mb-2 flex items-center justify-between'>
+              <div className='flex flex-col gap-0.5'>
+                <div className='flex items-center gap-2'>
+                  <Text type='tertiary' size='small'>
                     部门成员
                   </Text>
-                  <Tag size="small" color="grey">
+                  <Tag size='small' color='grey'>
                     {members.length}
                   </Tag>
                 </div>
-                <Text type="tertiary" size="small">
+                <Text type='tertiary' size='small'>
                   岗位来自员工身份；任命只表示职责和权限，不会修改岗位。
                 </Text>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className='flex shrink-0 items-center gap-2'>
                 <Button
-                  theme="light"
-                  type="tertiary"
+                  theme='light'
+                  type='tertiary'
                   icon={<IconCopy />}
                   disabled={membersLoading || members.length === 0}
                   style={{ border: '1px solid var(--semi-color-border)' }}
-                  title="复制全部员工列表文本"
+                  title='复制全部员工列表文本'
                   onClick={handleCopyMemberList}
                 >
                   复制全部员工
                 </Button>
                 {singleDepartmentMemberGroup?.createScope && (
                   <Button
-                    theme="light"
-                    type="primary"
+                    theme='light'
+                    type='primary'
                     style={{ border: '1px solid var(--semi-color-border)' }}
                     onClick={() => openQuickCreate(singleDepartmentMemberGroup)}
                   >
@@ -1097,13 +1332,56 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 )}
               </div>
             </div>
+            <div className='mb-3 flex flex-wrap items-center gap-2'>
+              <Input
+                prefix={<IconSearch />}
+                showClear
+                placeholder='搜索姓名 / 账号 / 手机 / 岗位'
+                value={memberSearchKeyword}
+                onChange={setMemberSearchKeyword}
+                style={{
+                  flex: '1 1 260px',
+                  minWidth: 220,
+                  maxWidth: 380,
+                }}
+              />
+              <RadioGroup
+                type='button'
+                buttonSize='middle'
+                value={memberStatusFilter}
+                onChange={(event) => {
+                  setMemberStatusFilter(
+                    event.target.value as MemberStatusFilter
+                  )
+                }}
+                aria-label='成员状态筛选'
+                name={`member-status-${node.id}`}
+                style={{ flexShrink: 0 }}
+              >
+                <Radio value='active'>在职</Radio>
+                <Radio value='inactive'>离职</Radio>
+              </RadioGroup>
+              {normalizedMemberSearch && (
+                <Text type='tertiary' size='small'>
+                  匹配 {filteredMemberCount}
+                </Text>
+              )}
+            </div>
             {membersLoading ? (
-              <Text type="tertiary" size="small">加载中...</Text>
+              <Text type='tertiary' size='small'>
+                加载中...
+              </Text>
             ) : isDeptNode ? (
               members.length === 0 ? (
                 <Empty
-                  title="暂无成员"
-                  description="该部门下暂无在任员工"
+                  title='暂无成员'
+                  description={`该部门下暂无${memberStatusLabel}员工`}
+                  style={{ padding: '16px 0' }}
+                />
+              ) : singleDepartmentMemberGroups.length === 0 ? (
+                <Empty
+                  title='无匹配成员'
+                  description={`当前${memberStatusLabel}员工中没有匹配结果`}
                   style={{ padding: '16px 0' }}
                 />
               ) : (
@@ -1120,19 +1398,21 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               )
             ) : memberGroups.length === 0 ? (
               <Empty
-                title="暂无成员"
-                description={
-                  isDeptNode
-                    ? '该部门下暂无在任员工'
-                    : '该单位下暂无直接在任员工'
-                }
+                title='暂无成员'
+                description={`该单位下暂无直接${memberStatusLabel}员工`}
+                style={{ padding: '16px 0' }}
+              />
+            ) : filteredMemberGroups.length === 0 ? (
+              <Empty
+                title='无匹配成员'
+                description={`当前${memberStatusLabel}员工中没有匹配结果`}
                 style={{ padding: '16px 0' }}
               />
             ) : (
               <Collapse
-                className="organization-member-collapse"
+                className='organization-member-collapse'
                 key={node.id}
-                expandIconPosition="left"
+                expandIconPosition='left'
                 keepDOM
                 style={{
                   border: '1px solid var(--semi-color-border)',
@@ -1141,16 +1421,16 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                   background: 'var(--semi-color-bg-0)',
                 }}
               >
-                {memberGroups.map((group) => (
+                {filteredMemberGroups.map((group) => (
                   <Collapse.Panel
                     key={group.key}
                     itemKey={group.key}
                     header={
                       <div
-                        className="flex min-w-0 flex-1 items-center justify-between gap-2"
+                        className='flex min-w-0 flex-1 items-center justify-between gap-2'
                         style={{ minHeight: 44, padding: '4px 0' }}
                       >
-                        <div className="flex min-w-0 items-center gap-2">
+                        <div className='flex min-w-0 items-center gap-2'>
                           <Text
                             strong
                             ellipsis={{ showTooltip: true }}
@@ -1158,16 +1438,18 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                           >
                             {group.departmentName}
                           </Text>
-                          <Tag size="small" color="grey">
+                          <Tag size='small' color='grey'>
                             {group.items.length}
                           </Tag>
                         </div>
                         {group.createScope && (
-                          <div className="flex shrink-0 items-center gap-1">
+                          <div className='flex shrink-0 items-center gap-1'>
                             <Button
-                              theme="light"
-                              type="tertiary"
-                              style={{ border: '1px solid var(--semi-color-border)' }}
+                              theme='light'
+                              type='tertiary'
+                              style={{
+                                border: '1px solid var(--semi-color-border)',
+                              }}
                               onClick={(event) => {
                                 event.stopPropagation()
                                 openDepartmentAssignment(group)
@@ -1176,9 +1458,11 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                               添加负责人
                             </Button>
                             <Button
-                              theme="light"
-                              type="primary"
-                              style={{ border: '1px solid var(--semi-color-border)' }}
+                              theme='light'
+                              type='primary'
+                              style={{
+                                border: '1px solid var(--semi-color-border)',
+                              }}
                               onClick={(event) => {
                                 event.stopPropagation()
                                 openQuickCreate(group)
@@ -1193,8 +1477,8 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                   >
                     {group.items.length === 0 ? (
                       <Empty
-                        title="暂无成员"
-                        description="可点击右上角添加员工"
+                        title='暂无成员'
+                        description='可点击右上角添加员工'
                         style={{ padding: '16px 0' }}
                       />
                     ) : (
@@ -1208,21 +1492,27 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
         )}
       </div>
 
-      {assignmentDialogScope && assignmentDialogRoles && assignmentDialogDefaultRole && (
-        <CreateAssignmentDialog
-          open={assignmentDialogOpen}
-          onClose={closeAssignmentDialog}
-          onSuccess={invalidateAfterMutation}
-          initialRole={assignmentDialogDefaultRole}
-          initialScope={assignmentDialogScope}
-          roleWhitelist={assignmentDialogRoles}
-          lockScope
-          title={assignmentDialogTitle}
-        />
-      )}
+      {assignmentDialogScope &&
+        assignmentDialogRoles &&
+        assignmentDialogDefaultRole && (
+          <CreateAssignmentDialog
+            open={assignmentDialogOpen}
+            onClose={closeAssignmentDialog}
+            onSuccess={invalidateAfterMutation}
+            initialRole={assignmentDialogDefaultRole}
+            initialScope={assignmentDialogScope}
+            roleWhitelist={assignmentDialogRoles}
+            lockScope
+            title={assignmentDialogTitle}
+          />
+        )}
 
       <Modal
-        title={quickCreateScope ? `添加员工到 ${quickCreateScope.departmentName}` : '添加员工'}
+        title={
+          quickCreateScope
+            ? `添加员工到 ${quickCreateScope.departmentName}`
+            : '添加员工'
+        }
         visible={quickCreateOpen}
         onCancel={closeQuickCreate}
         width={520}
@@ -1230,8 +1520,8 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <Button onClick={closeQuickCreate}>取消</Button>
             <Button
-              theme="solid"
-              type="primary"
+              theme='solid'
+              type='primary'
               loading={quickCreateMutation.isPending}
               onClick={() => quickCreateFormRef.current?.submitForm()}
             >
@@ -1241,30 +1531,38 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
         }
       >
         {quickCreateScope && (
-          <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>
+          <Text
+            type='tertiary'
+            size='small'
+            style={{ display: 'block', marginBottom: 12 }}
+          >
             {quickCreateScope.scopeName} / {quickCreateScope.departmentName}
           </Text>
         )}
         <Form
           key={quickCreateScope?.key}
-          getFormApi={(api) => { quickCreateFormRef.current = api }}
+          getFormApi={(api) => {
+            quickCreateFormRef.current = api
+          }}
           onSubmit={handleQuickCreateSubmit}
-          labelPosition="top"
+          labelPosition='top'
         >
           <Form.Input
-            field="name"
-            label="姓名"
-            placeholder="请输入姓名"
+            field='name'
+            label='姓名'
+            placeholder='请输入姓名'
             rules={[{ required: true, message: '请输入姓名' }]}
           />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Form.Input field="phone" label="手机号" placeholder="可选" />
-            <Form.Input field="email" label="邮箱" placeholder="可选" />
+          <div
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}
+          >
+            <Form.Input field='phone' label='手机号' placeholder='可选' />
+            <Form.Input field='email' label='邮箱' placeholder='可选' />
           </div>
           <Form.Select
-            field="position_id"
-            label="职位"
-            placeholder="请选择职位"
+            field='position_id'
+            label='职位'
+            placeholder='请选择职位'
             optionList={quickCreatePositions.map((position) => ({
               label: `${position.name} (${position.level_display})`,
               value: position.id,
@@ -1276,28 +1574,26 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
             style={{ width: '100%' }}
           />
           <Form.DatePicker
-            field="joined_at"
-            label="入职日期"
-            type="date"
-            placeholder="默认今天"
+            field='joined_at'
+            label='入职日期'
+            type='date'
+            placeholder='默认今天'
             style={{ width: '100%' }}
           />
         </Form>
       </Modal>
 
       <Modal
-        title="员工创建成功"
+        title='员工创建成功'
         visible={!!quickCreateResult}
         onCancel={() => setQuickCreateResult(null)}
         width={480}
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button onClick={() => setQuickCreateResult(null)}>
-              关闭
-            </Button>
+            <Button onClick={() => setQuickCreateResult(null)}>关闭</Button>
             <Button
-              theme="solid"
-              type="primary"
+              theme='solid'
+              type='primary'
               icon={<IconCopy />}
               disabled={!quickCreateResult}
               onClick={handleCopyQuickCreateCredentials}
@@ -1307,7 +1603,11 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           </div>
         }
       >
-        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>
+        <Text
+          type='tertiary'
+          size='small'
+          style={{ display: 'block', marginBottom: 12 }}
+        >
           员工「{quickCreateResult?.name}」已创建成功，请记录以下登录信息。
         </Text>
         <div
@@ -1321,27 +1621,39 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           }}
         >
           <div>
-            <Text strong size="small">账号：</Text>
+            <Text strong size='small'>
+              账号：
+            </Text>
             <Text code>{quickCreateResult?.username}</Text>
           </div>
           <div>
-            <Text strong size="small">初始密码：</Text>
+            <Text strong size='small'>
+              初始密码：
+            </Text>
             <Text code>{quickCreateResult?.password}</Text>
           </div>
         </div>
       </Modal>
 
       <EmployeeEditDialog
+        key={
+          editingMember
+            ? `${editingMember.employee_id}:${editingMemberOpenKey}`
+            : 'employee-edit-closed'
+        }
         open={!!editingMember}
         employeeId={editingMember?.employee_id ?? null}
-        lookupKeyword={editingMember?.username || editingMember?.name}
         onClose={() => setEditingMember(null)}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['scope-members'] })
-          queryClient.invalidateQueries({ queryKey: ['organization-tree-full'] })
+          queryClient.invalidateQueries({
+            queryKey: ['organization-tree-full'],
+          })
           queryClient.invalidateQueries({ queryKey: ['admin-assignments'] })
           queryClient.invalidateQueries({ queryKey: ['admin-employees'] })
-          queryClient.invalidateQueries({ queryKey: ['admin-employee-identities'] })
+          queryClient.invalidateQueries({
+            queryKey: ['admin-employee-identities'],
+          })
         }}
       />
 
@@ -1354,12 +1666,10 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             {resetPasswordResult ? (
               <>
-                <Button onClick={closeResetPassword}>
-                  关闭
-                </Button>
+                <Button onClick={closeResetPassword}>关闭</Button>
                 <Button
-                  theme="solid"
-                  type="primary"
+                  theme='solid'
+                  type='primary'
                   icon={<IconCopy />}
                   onClick={handleCopyResetPasswordCredentials}
                 >
@@ -1368,12 +1678,10 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               </>
             ) : (
               <>
-                <Button onClick={closeResetPassword}>
-                  取消
-                </Button>
+                <Button onClick={closeResetPassword}>取消</Button>
                 <Button
-                  theme="solid"
-                  type="primary"
+                  theme='solid'
+                  type='primary'
                   loading={resetPasswordMutation.isPending}
                   onClick={handleResetPasswordConfirm}
                 >
@@ -1384,11 +1692,14 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
           </div>
         }
       >
-        <Text type="tertiary" size="small" style={{ display: 'block', marginBottom: 12 }}>
+        <Text
+          type='tertiary'
+          size='small'
+          style={{ display: 'block', marginBottom: 12 }}
+        >
           {resetPasswordResult
             ? `员工「${resetPasswordResult.name}」的密码已重置成功，请记录以下登录信息。`
-            : `确定要重置员工「${resetPasswordMember?.name}」的密码吗？系统将自动生成新密码，原密码会立即失效。`
-          }
+            : `确定要重置员工「${resetPasswordMember?.name}」的密码吗？系统将自动生成新密码，原密码会立即失效。`}
         </Text>
         {resetPasswordResult && (
           <div
@@ -1402,11 +1713,15 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
             }}
           >
             <div>
-              <Text strong size="small">账号：</Text>
+              <Text strong size='small'>
+                账号：
+              </Text>
               <Text code>{resetPasswordResult.username}</Text>
             </div>
             <div>
-              <Text strong size="small">新密码：</Text>
+              <Text strong size='small'>
+                新密码：
+              </Text>
               <Text code>{resetPasswordResult.new_password}</Text>
             </div>
           </div>
@@ -1414,60 +1729,71 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
       </Modal>
 
       <Modal
-        title={directVisitCampus ? `${directVisitCampus.name} · 直访码` : '直访码'}
+        title={
+          directVisitCampus ? `${directVisitCampus.name} · 直访码` : '直访码'
+        }
         visible={directVisitVisible}
         onCancel={closeDirectVisit}
         footer={null}
         style={{ maxWidth: 520 }}
       >
-        {directVisitCampus && (
-          isDirectVisitTokensLoading ? (
-            <div style={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-              <Spin />
-            </div>
+        {directVisitCampus &&
+          (isDirectVisitTokensLoading ? (
+            <DialogBodySkeleton variant='detail' rows={3} />
           ) : !directVisitCampus.is_active ? (
             <Banner
-              type="warning"
+              type='warning'
               fullMode={false}
               closeIcon={null}
-              title="校区已停用"
-              description="停用校区不能生成直访码。"
+              title='校区已停用'
+              description='停用校区不能生成直访码。'
             />
-          ) : !hasDirectVisitOperationAssistant && !directVisitTokenItem?.token ? (
+          ) : !hasDirectVisitOperationAssistant &&
+            !directVisitTokenItem?.token ? (
             <Banner
-              type="warning"
+              type='warning'
               fullMode={false}
               closeIcon={null}
-              title="未任命运营助理"
-              description="请先在组织任命中为该校区任命运营助理，再生成直访码。"
+              title='未任命运营助理'
+              description='请先在组织任命中为该校区任命运营助理，再生成直访码。'
             />
           ) : !directVisitTokenItem?.token ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <Banner
-                type="info"
+                type='info'
                 fullMode={false}
                 closeIcon={null}
-                title="尚未生成直访码"
-                description="生成后家长可扫码进入手机端直访登记页。"
+                title='尚未生成直访码'
+                description='生成后家长可扫码进入手机端直访登记页。'
               />
               <Button
-                theme="solid"
+                theme='solid'
                 icon={<IconQrCode />}
                 loading={generateDirectVisitMutation.isPending}
-                onClick={() => generateDirectVisitMutation.mutate(directVisitCampus.id)}
+                onClick={() =>
+                  generateDirectVisitMutation.mutate(directVisitCampus.id)
+                }
               >
                 生成直访码
               </Button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, paddingBottom: 20 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 14,
+                paddingBottom: 20,
+              }}
+            >
               {!hasDirectVisitOperationAssistant && (
                 <Banner
-                  type="warning"
+                  type='warning'
                   fullMode={false}
                   closeIcon={null}
-                  title="未任命运营助理"
-                  description="当前只能查看已有直访码；补齐运营助理后才能更新直访码。"
+                  title='未任命运营助理'
+                  description='当前只能查看已有直访码；补齐运营助理后才能更新直访码。'
                 />
               )}
 
@@ -1484,7 +1810,12 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 }}
               >
                 {directVisitQrDataUrl ? (
-                  <img src={directVisitQrDataUrl} alt="校区直访二维码" width={220} height={220} />
+                  <img
+                    src={directVisitQrDataUrl}
+                    alt='校区直访二维码'
+                    width={220}
+                    height={220}
+                  />
                 ) : (
                   <Spin />
                 )}
@@ -1507,25 +1838,41 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
               </div>
 
               {directVisitTokenItem.updated_at && (
-                <Text type="tertiary" size="small">
-                  更新时间：{new Date(directVisitTokenItem.updated_at).toLocaleString('zh-CN')}
+                <Text type='tertiary' size='small'>
+                  更新时间：
+                  {new Date(directVisitTokenItem.updated_at).toLocaleString(
+                    'zh-CN'
+                  )}
                 </Text>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 8,
+                  width: '100%',
+                }}
+              >
                 <Button icon={<IconCopy />} onClick={handleCopyDirectVisitLink}>
                   复制链接
                 </Button>
-                <Button icon={<IconDownload />} onClick={handleDownloadDirectVisitQr}>
+                <Button
+                  icon={<IconDownload />}
+                  onClick={handleDownloadDirectVisitQr}
+                >
                   下载二维码
                 </Button>
               </div>
 
               <Button
-                type="warning"
-                theme="outline"
+                type='warning'
+                theme='outline'
                 icon={<IconRefresh />}
-                loading={generateDirectVisitMutation.isPending || rotateDirectVisitMutation.isPending}
+                loading={
+                  generateDirectVisitMutation.isPending ||
+                  rotateDirectVisitMutation.isPending
+                }
                 disabled={!hasDirectVisitOperationAssistant}
                 onClick={handleRotateDirectVisitToken}
                 block
@@ -1533,8 +1880,7 @@ export function OrgNodeAssignmentPanel({ node, tree, onNodeDeleted }: OrgNodeAss
                 更新直访码
               </Button>
             </div>
-          )
-        )}
+          ))}
       </Modal>
 
       <TransferAssignmentDialog

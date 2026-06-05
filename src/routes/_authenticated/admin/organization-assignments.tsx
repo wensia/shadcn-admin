@@ -1,24 +1,18 @@
 /**
- * 组织任命管理路由
+ * 组织任命管理旧路由
  * 路径: /admin/organization-assignments
  *
- * 支持从 /admin/organization-tree 点击节点后跳转并携带:
- *   ?scope_type=campus&scope_id=<uuid>
+ * 新版 /admin/organization 已合并组织浏览与任命管理。
+ * 该路由仅保留历史链接兼容，进入后直接替换到新版页面。
  */
 
-import { createFileRoute } from '@tanstack/react-router'
-import { OrganizationAssignmentsPage } from '@/features/admin/pages/organization-assignments-page'
-
-type AssignmentsSearch = {
-  scope_type?: string
-  scope_id?: string
-}
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/admin/organization-assignments')({
-  staticData: { title: '组织任命管理' },
-  validateSearch: (search: Record<string, unknown>): AssignmentsSearch => ({
-    scope_type: typeof search.scope_type === 'string' ? search.scope_type : undefined,
-    scope_id: typeof search.scope_id === 'string' ? search.scope_id : undefined,
-  }),
-  component: OrganizationAssignmentsPage,
+  beforeLoad: () => {
+    throw redirect({
+      to: '/admin/organization',
+      replace: true,
+    })
+  },
 })

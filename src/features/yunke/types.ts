@@ -258,6 +258,11 @@ export interface TranscriptSegment {
   text: string
   channel_id?: number | string | null
   channelId?: number | string | null
+  channel_name?: string | null
+  timestamp_source?: string | null
+  estimated_timing?: boolean | null
+  vad_refined?: boolean | null
+  timing_confidence?: number | null
 }
 
 // 通话记录
@@ -458,6 +463,7 @@ export interface OnboardingCreateConsultantRequest {
   yunke_role_id: string
   yunke_major?: string
   send_sms?: 0 | 1
+  confirm_other_company_continue?: boolean
 }
 
 export interface OnboardingConsultantEmployee {
@@ -489,6 +495,9 @@ export interface OnboardingConsultantResult {
   employee: OnboardingConsultantEmployee
   yunke: OnboardingConsultantYunke | null
   step_errors: string[]
+  requires_confirmation?: boolean
+  confirmation_type?: string | null
+  confirmation_message?: string | null
 }
 
 export interface YunkeDeviceUnbindResult {

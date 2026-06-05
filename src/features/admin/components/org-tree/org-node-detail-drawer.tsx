@@ -17,6 +17,7 @@ import {
   roleTagColor,
 } from '../../lib/assignment-format'
 import { OrgNodeIcon } from './org-tree-icons'
+import { getVisibleMissingSingletonRoles } from './org-stats-helpers'
 
 const { Text, Title } = Typography
 
@@ -58,7 +59,7 @@ export function OrgNodeDetailDrawer({ node, open, onClose }: OrgNodeDetailDrawer
 
   const scopeType = nodeTypeToScopeType(node.type)
   const leaders = node.leaders ?? []
-  const missing = node.missing_singleton_roles ?? []
+  const missing = getVisibleMissingSingletonRoles(node)
 
   const handleGoToAssignments = () => {
     if (!scopeType) return

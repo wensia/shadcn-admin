@@ -7,6 +7,7 @@ import { Timeline, Tag, Avatar } from '@douyinfe/semi-ui-19'
 import { IconMail } from '@douyinfe/semi-icons'
 import { Phone, MessageSquare, Users, MessageCircle, Sparkles } from 'lucide-react'
 import { formatTime, formatRelativeTime } from '@/lib/utils/time'
+import { DialogBodySkeleton } from '@/components/semi/dialog-body-skeleton'
 import { EmptyState } from './empty-state'
 import { FollowupResultBadge } from '../status-badges'
 import { followupMethodLabels, type LeadFollowup, type FollowupMethod, type FollowupResult } from '../../types'
@@ -147,8 +148,8 @@ export function FollowupTimeline({
 }: FollowupTimelineProps) {
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0', fontSize: 13, color: 'var(--semi-color-text-2)' }}>
-        加载中...
+      <div style={{ padding: '8px 0' }}>
+        <DialogBodySkeleton variant="list" rows={4} compact />
       </div>
     )
   }

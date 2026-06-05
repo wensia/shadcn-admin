@@ -12,6 +12,7 @@ import { NotificationPopover } from './notification-popover'
 export function NotificationSidebarBell() {
   const [open, setOpen] = useState(false)
   const { data: unreadCount = 0 } = useUnreadCount()
+  const badgeCount = unreadCount > 0 ? unreadCount : undefined
 
   return (
     <Popover
@@ -42,7 +43,7 @@ export function NotificationSidebarBell() {
         }}
       >
         <Badge
-          count={unreadCount}
+          count={badgeCount}
           overflowCount={99}
           type="danger"
         >

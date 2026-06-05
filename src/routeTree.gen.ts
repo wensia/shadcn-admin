@@ -138,6 +138,7 @@ import { Route as AuthenticatedAdminAreaDepartmentsRouteImport } from './routes/
 import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin/api-keys'
 import { Route as AuthenticatedAdminAiConfigRouteImport } from './routes/_authenticated/admin/ai-config'
 import { Route as AuthenticatedCrmLeadsIndexRouteImport } from './routes/_authenticated/crm/leads/index'
+import { Route as AuthenticatedYunkeCallRecordsRecordIdRouteImport } from './routes/_authenticated/yunke/call-records/$recordId'
 import { Route as AuthenticatedCrmXiaodituiSalaryRouteImport } from './routes/_authenticated/crm/xiaoditui_.salary'
 import { Route as AuthenticatedCrmXiaodituiLeadsRouteImport } from './routes/_authenticated/crm/xiaoditui_.leads'
 import { Route as AuthenticatedCrmLeadsPoolRouteImport } from './routes/_authenticated/crm/leads/pool'
@@ -146,6 +147,7 @@ import { Route as AuthenticatedCrmDataStatisticsMarketingRouteImport } from './r
 import { Route as AuthenticatedCrmDataStatisticsLeadPaymentRouteImport } from './routes/_authenticated/crm/data-statistics/lead-payment'
 import { Route as AuthenticatedCrmDataStatisticsConsultingRouteImport } from './routes/_authenticated/crm/data-statistics/consulting'
 import { Route as AuthenticatedCrmDataStatisticsAdvisorRouteImport } from './routes/_authenticated/crm/data-statistics/advisor'
+import { Route as AuthenticatedCrmCallRecordsRecordIdRouteImport } from './routes/_authenticated/crm/call-records/$recordId'
 import { Route as AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/index'
 import { Route as AuthenticatedCrmLeadsAssignmentTasksTaskIdRouteImport } from './routes/_authenticated/crm/leads/assignment-tasks/$taskId'
 
@@ -866,6 +868,12 @@ const AuthenticatedCrmLeadsIndexRoute =
     path: '/leads/',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
   } as any)
+const AuthenticatedYunkeCallRecordsRecordIdRoute =
+  AuthenticatedYunkeCallRecordsRecordIdRouteImport.update({
+    id: '/$recordId',
+    path: '/$recordId',
+    getParentRoute: () => AuthenticatedYunkeCallRecordsRoute,
+  } as any)
 const AuthenticatedCrmXiaodituiSalaryRoute =
   AuthenticatedCrmXiaodituiSalaryRouteImport.update({
     id: '/xiaoditui_/salary',
@@ -913,6 +921,12 @@ const AuthenticatedCrmDataStatisticsAdvisorRoute =
     id: '/data-statistics/advisor',
     path: '/data-statistics/advisor',
     getParentRoute: () => AuthenticatedCrmRouteRoute,
+  } as any)
+const AuthenticatedCrmCallRecordsRecordIdRoute =
+  AuthenticatedCrmCallRecordsRecordIdRouteImport.update({
+    id: '/$recordId',
+    path: '/$recordId',
+    getParentRoute: () => AuthenticatedCrmCallRecordsRoute,
   } as any)
 const AuthenticatedCrmLeadsAssignmentTasksIndexRoute =
   AuthenticatedCrmLeadsAssignmentTasksIndexRouteImport.update({
@@ -998,7 +1012,7 @@ export interface FileRoutesByFullPath {
   '/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
   '/crm/balances': typeof AuthenticatedCrmBalancesRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
-  '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
+  '/crm/call-records': typeof AuthenticatedCrmCallRecordsRouteWithChildren
   '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
   '/crm/classes': typeof AuthenticatedCrmClassesRoute
   '/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
@@ -1035,7 +1049,7 @@ export interface FileRoutesByFullPath {
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
-  '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRouteWithChildren
   '/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
   '/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
   '/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
@@ -1052,6 +1066,7 @@ export interface FileRoutesByFullPath {
   '/tools/': typeof AuthenticatedToolsIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/yunke/': typeof AuthenticatedYunkeIndexRoute
+  '/crm/call-records/$recordId': typeof AuthenticatedCrmCallRecordsRecordIdRoute
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/crm/data-statistics/lead-payment': typeof AuthenticatedCrmDataStatisticsLeadPaymentRoute
@@ -1060,6 +1075,7 @@ export interface FileRoutesByFullPath {
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/xiaoditui/leads': typeof AuthenticatedCrmXiaodituiLeadsRoute
   '/crm/xiaoditui/salary': typeof AuthenticatedCrmXiaodituiSalaryRoute
+  '/yunke/call-records/$recordId': typeof AuthenticatedYunkeCallRecordsRecordIdRoute
   '/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
   '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
   '/crm/leads/assignment-tasks/': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
@@ -1130,7 +1146,7 @@ export interface FileRoutesByTo {
   '/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
   '/crm/balances': typeof AuthenticatedCrmBalancesRoute
   '/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
-  '/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
+  '/crm/call-records': typeof AuthenticatedCrmCallRecordsRouteWithChildren
   '/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
   '/crm/classes': typeof AuthenticatedCrmClassesRoute
   '/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
@@ -1167,7 +1183,7 @@ export interface FileRoutesByTo {
   '/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
-  '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRouteWithChildren
   '/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
   '/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
   '/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
@@ -1184,6 +1200,7 @@ export interface FileRoutesByTo {
   '/tools': typeof AuthenticatedToolsIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/yunke': typeof AuthenticatedYunkeIndexRoute
+  '/crm/call-records/$recordId': typeof AuthenticatedCrmCallRecordsRecordIdRoute
   '/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/crm/data-statistics/lead-payment': typeof AuthenticatedCrmDataStatisticsLeadPaymentRoute
@@ -1192,6 +1209,7 @@ export interface FileRoutesByTo {
   '/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/crm/xiaoditui/leads': typeof AuthenticatedCrmXiaodituiLeadsRoute
   '/crm/xiaoditui/salary': typeof AuthenticatedCrmXiaodituiSalaryRoute
+  '/yunke/call-records/$recordId': typeof AuthenticatedYunkeCallRecordsRecordIdRoute
   '/crm/leads': typeof AuthenticatedCrmLeadsIndexRoute
   '/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
   '/crm/leads/assignment-tasks': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
@@ -1272,7 +1290,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/asp-records': typeof AuthenticatedCrmAspRecordsRoute
   '/_authenticated/crm/balances': typeof AuthenticatedCrmBalancesRoute
   '/_authenticated/crm/batch-import': typeof AuthenticatedCrmBatchImportRoute
-  '/_authenticated/crm/call-records': typeof AuthenticatedCrmCallRecordsRoute
+  '/_authenticated/crm/call-records': typeof AuthenticatedCrmCallRecordsRouteWithChildren
   '/_authenticated/crm/channel-ledger': typeof AuthenticatedCrmChannelLedgerRoute
   '/_authenticated/crm/classes': typeof AuthenticatedCrmClassesRoute
   '/_authenticated/crm/consumption': typeof AuthenticatedCrmConsumptionRoute
@@ -1309,7 +1327,7 @@ export interface FileRoutesById {
   '/_authenticated/yunke/accounts': typeof AuthenticatedYunkeAccountsRoute
   '/_authenticated/yunke/advisor-training': typeof AuthenticatedYunkeAdvisorTrainingRoute
   '/_authenticated/yunke/ai-assistant': typeof AuthenticatedYunkeAiAssistantRoute
-  '/_authenticated/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRoute
+  '/_authenticated/yunke/call-records': typeof AuthenticatedYunkeCallRecordsRouteWithChildren
   '/_authenticated/yunke/credentials': typeof AuthenticatedYunkeCredentialsRoute
   '/_authenticated/yunke/dashboard': typeof AuthenticatedYunkeDashboardRoute
   '/_authenticated/yunke/login-status': typeof AuthenticatedYunkeLoginStatusRoute
@@ -1326,6 +1344,7 @@ export interface FileRoutesById {
   '/_authenticated/tools/': typeof AuthenticatedToolsIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/yunke/': typeof AuthenticatedYunkeIndexRoute
+  '/_authenticated/crm/call-records/$recordId': typeof AuthenticatedCrmCallRecordsRecordIdRoute
   '/_authenticated/crm/data-statistics/advisor': typeof AuthenticatedCrmDataStatisticsAdvisorRoute
   '/_authenticated/crm/data-statistics/consulting': typeof AuthenticatedCrmDataStatisticsConsultingRoute
   '/_authenticated/crm/data-statistics/lead-payment': typeof AuthenticatedCrmDataStatisticsLeadPaymentRoute
@@ -1334,6 +1353,7 @@ export interface FileRoutesById {
   '/_authenticated/crm/leads/pool': typeof AuthenticatedCrmLeadsPoolRoute
   '/_authenticated/crm/xiaoditui_/leads': typeof AuthenticatedCrmXiaodituiLeadsRoute
   '/_authenticated/crm/xiaoditui_/salary': typeof AuthenticatedCrmXiaodituiSalaryRoute
+  '/_authenticated/yunke/call-records/$recordId': typeof AuthenticatedYunkeCallRecordsRecordIdRoute
   '/_authenticated/crm/leads/': typeof AuthenticatedCrmLeadsIndexRoute
   '/_authenticated/crm/leads/assignment-tasks/$taskId': typeof AuthenticatedCrmLeadsAssignmentTasksTaskIdRoute
   '/_authenticated/crm/leads/assignment-tasks/': typeof AuthenticatedCrmLeadsAssignmentTasksIndexRoute
@@ -1465,6 +1485,7 @@ export interface FileRouteTypes {
     | '/tools/'
     | '/users/'
     | '/yunke/'
+    | '/crm/call-records/$recordId'
     | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
     | '/crm/data-statistics/lead-payment'
@@ -1473,6 +1494,7 @@ export interface FileRouteTypes {
     | '/crm/leads/pool'
     | '/crm/xiaoditui/leads'
     | '/crm/xiaoditui/salary'
+    | '/yunke/call-records/$recordId'
     | '/crm/leads/'
     | '/crm/leads/assignment-tasks/$taskId'
     | '/crm/leads/assignment-tasks/'
@@ -1597,6 +1619,7 @@ export interface FileRouteTypes {
     | '/tools'
     | '/users'
     | '/yunke'
+    | '/crm/call-records/$recordId'
     | '/crm/data-statistics/advisor'
     | '/crm/data-statistics/consulting'
     | '/crm/data-statistics/lead-payment'
@@ -1605,6 +1628,7 @@ export interface FileRouteTypes {
     | '/crm/leads/pool'
     | '/crm/xiaoditui/leads'
     | '/crm/xiaoditui/salary'
+    | '/yunke/call-records/$recordId'
     | '/crm/leads'
     | '/crm/leads/assignment-tasks/$taskId'
     | '/crm/leads/assignment-tasks'
@@ -1738,6 +1762,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tools/'
     | '/_authenticated/users/'
     | '/_authenticated/yunke/'
+    | '/_authenticated/crm/call-records/$recordId'
     | '/_authenticated/crm/data-statistics/advisor'
     | '/_authenticated/crm/data-statistics/consulting'
     | '/_authenticated/crm/data-statistics/lead-payment'
@@ -1746,6 +1771,7 @@ export interface FileRouteTypes {
     | '/_authenticated/crm/leads/pool'
     | '/_authenticated/crm/xiaoditui_/leads'
     | '/_authenticated/crm/xiaoditui_/salary'
+    | '/_authenticated/yunke/call-records/$recordId'
     | '/_authenticated/crm/leads/'
     | '/_authenticated/crm/leads/assignment-tasks/$taskId'
     | '/_authenticated/crm/leads/assignment-tasks/'
@@ -2685,6 +2711,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCrmLeadsIndexRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
     }
+    '/_authenticated/yunke/call-records/$recordId': {
+      id: '/_authenticated/yunke/call-records/$recordId'
+      path: '/$recordId'
+      fullPath: '/yunke/call-records/$recordId'
+      preLoaderRoute: typeof AuthenticatedYunkeCallRecordsRecordIdRouteImport
+      parentRoute: typeof AuthenticatedYunkeCallRecordsRoute
+    }
     '/_authenticated/crm/xiaoditui_/salary': {
       id: '/_authenticated/crm/xiaoditui_/salary'
       path: '/xiaoditui/salary'
@@ -2740,6 +2773,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/crm/data-statistics/advisor'
       preLoaderRoute: typeof AuthenticatedCrmDataStatisticsAdvisorRouteImport
       parentRoute: typeof AuthenticatedCrmRouteRoute
+    }
+    '/_authenticated/crm/call-records/$recordId': {
+      id: '/_authenticated/crm/call-records/$recordId'
+      path: '/$recordId'
+      fullPath: '/crm/call-records/$recordId'
+      preLoaderRoute: typeof AuthenticatedCrmCallRecordsRecordIdRouteImport
+      parentRoute: typeof AuthenticatedCrmCallRecordsRoute
     }
     '/_authenticated/crm/leads/assignment-tasks/': {
       id: '/_authenticated/crm/leads/assignment-tasks/'
@@ -2846,6 +2886,21 @@ const AuthenticatedAdminRouteRouteWithChildren =
     AuthenticatedAdminRouteRouteChildren,
   )
 
+interface AuthenticatedCrmCallRecordsRouteChildren {
+  AuthenticatedCrmCallRecordsRecordIdRoute: typeof AuthenticatedCrmCallRecordsRecordIdRoute
+}
+
+const AuthenticatedCrmCallRecordsRouteChildren: AuthenticatedCrmCallRecordsRouteChildren =
+  {
+    AuthenticatedCrmCallRecordsRecordIdRoute:
+      AuthenticatedCrmCallRecordsRecordIdRoute,
+  }
+
+const AuthenticatedCrmCallRecordsRouteWithChildren =
+  AuthenticatedCrmCallRecordsRoute._addFileChildren(
+    AuthenticatedCrmCallRecordsRouteChildren,
+  )
+
 interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmAdvisorCenterRoute: typeof AuthenticatedCrmAdvisorCenterRoute
   AuthenticatedCrmAdvisorTasksRoute: typeof AuthenticatedCrmAdvisorTasksRoute
@@ -2853,7 +2908,7 @@ interface AuthenticatedCrmRouteRouteChildren {
   AuthenticatedCrmAspRecordsRoute: typeof AuthenticatedCrmAspRecordsRoute
   AuthenticatedCrmBalancesRoute: typeof AuthenticatedCrmBalancesRoute
   AuthenticatedCrmBatchImportRoute: typeof AuthenticatedCrmBatchImportRoute
-  AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRoute
+  AuthenticatedCrmCallRecordsRoute: typeof AuthenticatedCrmCallRecordsRouteWithChildren
   AuthenticatedCrmChannelLedgerRoute: typeof AuthenticatedCrmChannelLedgerRoute
   AuthenticatedCrmClassesRoute: typeof AuthenticatedCrmClassesRoute
   AuthenticatedCrmConsumptionRoute: typeof AuthenticatedCrmConsumptionRoute
@@ -2896,7 +2951,8 @@ const AuthenticatedCrmRouteRouteChildren: AuthenticatedCrmRouteRouteChildren = {
   AuthenticatedCrmAspRecordsRoute: AuthenticatedCrmAspRecordsRoute,
   AuthenticatedCrmBalancesRoute: AuthenticatedCrmBalancesRoute,
   AuthenticatedCrmBatchImportRoute: AuthenticatedCrmBatchImportRoute,
-  AuthenticatedCrmCallRecordsRoute: AuthenticatedCrmCallRecordsRoute,
+  AuthenticatedCrmCallRecordsRoute:
+    AuthenticatedCrmCallRecordsRouteWithChildren,
   AuthenticatedCrmChannelLedgerRoute: AuthenticatedCrmChannelLedgerRoute,
   AuthenticatedCrmClassesRoute: AuthenticatedCrmClassesRoute,
   AuthenticatedCrmConsumptionRoute: AuthenticatedCrmConsumptionRoute,
@@ -3006,11 +3062,26 @@ const AuthenticatedToolsRouteRouteWithChildren =
     AuthenticatedToolsRouteRouteChildren,
   )
 
+interface AuthenticatedYunkeCallRecordsRouteChildren {
+  AuthenticatedYunkeCallRecordsRecordIdRoute: typeof AuthenticatedYunkeCallRecordsRecordIdRoute
+}
+
+const AuthenticatedYunkeCallRecordsRouteChildren: AuthenticatedYunkeCallRecordsRouteChildren =
+  {
+    AuthenticatedYunkeCallRecordsRecordIdRoute:
+      AuthenticatedYunkeCallRecordsRecordIdRoute,
+  }
+
+const AuthenticatedYunkeCallRecordsRouteWithChildren =
+  AuthenticatedYunkeCallRecordsRoute._addFileChildren(
+    AuthenticatedYunkeCallRecordsRouteChildren,
+  )
+
 interface AuthenticatedYunkeRouteRouteChildren {
   AuthenticatedYunkeAccountsRoute: typeof AuthenticatedYunkeAccountsRoute
   AuthenticatedYunkeAdvisorTrainingRoute: typeof AuthenticatedYunkeAdvisorTrainingRoute
   AuthenticatedYunkeAiAssistantRoute: typeof AuthenticatedYunkeAiAssistantRoute
-  AuthenticatedYunkeCallRecordsRoute: typeof AuthenticatedYunkeCallRecordsRoute
+  AuthenticatedYunkeCallRecordsRoute: typeof AuthenticatedYunkeCallRecordsRouteWithChildren
   AuthenticatedYunkeCredentialsRoute: typeof AuthenticatedYunkeCredentialsRoute
   AuthenticatedYunkeDashboardRoute: typeof AuthenticatedYunkeDashboardRoute
   AuthenticatedYunkeLoginStatusRoute: typeof AuthenticatedYunkeLoginStatusRoute
@@ -3023,7 +3094,8 @@ const AuthenticatedYunkeRouteRouteChildren: AuthenticatedYunkeRouteRouteChildren
     AuthenticatedYunkeAdvisorTrainingRoute:
       AuthenticatedYunkeAdvisorTrainingRoute,
     AuthenticatedYunkeAiAssistantRoute: AuthenticatedYunkeAiAssistantRoute,
-    AuthenticatedYunkeCallRecordsRoute: AuthenticatedYunkeCallRecordsRoute,
+    AuthenticatedYunkeCallRecordsRoute:
+      AuthenticatedYunkeCallRecordsRouteWithChildren,
     AuthenticatedYunkeCredentialsRoute: AuthenticatedYunkeCredentialsRoute,
     AuthenticatedYunkeDashboardRoute: AuthenticatedYunkeDashboardRoute,
     AuthenticatedYunkeLoginStatusRoute: AuthenticatedYunkeLoginStatusRoute,
